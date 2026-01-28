@@ -6,7 +6,6 @@ function App() {
   return (
     <>
       
-     <h1>leul yenealem </h1>
     </>
   )
 }
