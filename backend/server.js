@@ -7,11 +7,11 @@ connectdb()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({
-    extended:true
+    extended: true
 }))
-app.get("/", (req,res) => {
+app.get("/", (req, res) => {
     res.send("wellcome")
-    
+
 })
 app.listen(PORT, () => {
     console.log(`server runing http://localhost:${PORT}`)
