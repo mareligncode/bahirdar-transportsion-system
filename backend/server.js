@@ -14,5 +14,6 @@ app.get("/", (req,res) => {
     
 })
 app.listen(PORT, () => {
-    console.log(`server runing on the port http://localhost:${PORT}`)
+    console.log(`server runing http://localhost:${PORT}`)
 })
+
