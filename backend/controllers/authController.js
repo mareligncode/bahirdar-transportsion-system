@@ -1,7 +1,6 @@
 import User from '../models/Users.js';
 import { generateTokens, verifyRefreshToken } from '../utils/jwtUtils.js';
 
-// Register new user (default role: passenger)
 export const register = async (req, res) => {
     try {
         const { fullName, email, phoneNumber, password } = req.body;
@@ -55,7 +54,6 @@ export const register = async (req, res) => {
     }
 };
 
-// Login user
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -112,7 +110,6 @@ export const login = async (req, res) => {
     }
 };
 
-// Refresh token
 export const refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
@@ -170,7 +167,6 @@ export const refreshToken = async (req, res) => {
     }
 };
 
-// Logout
 export const logout = async (req, res) => {
     try {
         const { refreshToken } = req.body;
@@ -202,7 +198,6 @@ export const logout = async (req, res) => {
     }
 };
 
-// Get current user profile
 export const getProfile = async (req, res) => {
     try {
         res.json({
@@ -221,7 +216,6 @@ export const getProfile = async (req, res) => {
     }
 };
 
-// Update profile
 export const updateProfile = async (req, res) => {
     try {
         const { fullName, phoneNumber, emergencyContact } = req.body;
@@ -272,7 +266,6 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-// Change password
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;

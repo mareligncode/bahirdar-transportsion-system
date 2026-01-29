@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 
+
 app.listen(PORT, () => {
     console.log(`server runing http://localhost:${PORT}`)
 })
