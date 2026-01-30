@@ -15,7 +15,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/station',stationRoutes)
 
-
+app.get("/", (req, res) => {
+    res.send("server runinig ...")
+})
 app.listen(PORT, () => {
     console.log(`server runing http://localhost:${PORT}`)
 })
