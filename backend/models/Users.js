@@ -89,8 +89,3 @@ const User = mongoose.model('User', userSchema);
 
 export default User;
 
-
-dweuytur4ythuierhtueytuehtuetuhtueirhiernfkj
-jfieiuehfkjeh
-hjtbretreiekjk
-irtoej
