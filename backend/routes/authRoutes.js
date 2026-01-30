@@ -6,7 +6,10 @@ import {
     logout,
     getProfile,
     updateProfile,
-    changePassword
+    changePassword,
+    forgotPassword,
+    validateResetToken,
+    resetPassword
 } from '../controllers/authController.js';
 import {
     changeUserRole,
@@ -44,5 +47,8 @@ router.get('/station-user/:id', authMiddleware(['station_admin']), getUserById);
 
 // User self-view
 router.get('/user-profile/:id', authMiddleware(), getUserById);
+router.post('/forgot-password', forgotPassword);
+router.post('/validate-reset-token', validateResetToken);
+router.post('/reset-password', resetPassword);
 
 export default router;
