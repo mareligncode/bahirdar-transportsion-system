@@ -1,11 +1,10 @@
 import { verifyAccessToken } from '../utils/jwtUtils.js';
 import User from '../models/Users.js';
-// In your authMiddleware.js, add console logs:
 export const authMiddleware = (requiredRoles = []) => {
     return async (req, res, next) => {
         try {
-            console.log('Required roles:', requiredRoles); // Add this
-            console.log('Auth header:', req.headers.authorization); // Add this
+            console.log('Required roles:', requiredRoles); 
+            console.log('Auth header:', req.headers.authorization); 
 
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -56,7 +55,6 @@ export const authMiddleware = (requiredRoles = []) => {
 };
 
 
-// NEW: Separate protect middleware (just authentication)
 export const protect = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -95,7 +93,6 @@ export const protect = async (req, res, next) => {
     }
 };
 
-// NEW: Separate authorize middleware (role-based authorization)
 export const authorize = (...roles) => {
     return (req, res, next) => {
         console.log('🔐 AUTHORIZE MIDDLEWARE CALLED');
