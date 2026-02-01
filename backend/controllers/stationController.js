@@ -145,11 +145,6 @@ export const deleteStation = async (req, res) => {
             return res.status(404).json({ message: 'Station not found' });
         }
 
-        // Check if station has associated trips (you can add this later)
-        // const activeTrips = await Trip.countDocuments({ station: station._id, tripStatus: { $in: ['scheduled', 'ongoing'] } });
-        // if (activeTrips > 0) {
-        //     return res.status(400).json({ message: 'Cannot delete station with active trips' });
-        // }
 
         await station.deleteOne();
 

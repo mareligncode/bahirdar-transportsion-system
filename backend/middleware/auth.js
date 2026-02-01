@@ -122,7 +122,7 @@ export const authorize = (...roles) => {
             });
         }
 
-        console.log('✅ Authorization passed');
+        console.log(' Authorization passed');
         next();
     };
 };

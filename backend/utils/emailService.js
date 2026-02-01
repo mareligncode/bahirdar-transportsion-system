@@ -1,25 +1,21 @@
-// utils/emailService.js
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Log to verify environment variables are loaded
 console.log('Email Configuration Check:');
 console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✓ Set' : '✗ Missing');
 console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '✓ Set' : '✗ Missing');
 
 
-// Create transporter
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // or your email service
+    service: 'gmail', 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
     }
 });
 
-// Verify connection
 transporter.verify((error) => {
     if (error) {
         console.error('Email transporter error:', error);
