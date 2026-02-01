@@ -5,7 +5,7 @@ dotenv.config();
 
 console.log('Email Configuration Check:');
 console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✓ Set' : '✗ Missing');
-console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '✓ Set' : '✗ Missing');
+console.log('EMAIL_PASS:', process.env.EMAIL_PASSWORD ? '✓ Set' : '✗ Missing');
 
 
 const transporter = nodemailer.createTransport({
