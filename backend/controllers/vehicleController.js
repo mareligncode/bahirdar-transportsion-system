@@ -1147,7 +1147,6 @@ export const getInsuranceExpiring = async (req, res) => {
 };
 
 
-//==================== NEW IMAGE FUNCTIONS(ADDED) ====================
  //==================== NEW IMAGE FUNCTIONS(ADDED) ====================
 
 export const uploadVehicleImages = async (req, res) => {
