@@ -1,12 +1,7 @@
-// utils/multerConfig.js
 import multer from 'multer';
 import path from 'path';
-
-// Configure multer for memory storage (for Cloudinary)
 const storage = multer.memoryStorage();
-
 const fileFilter = (req, file, cb) => {
-    // Accept images only
     const filetypes = /jpeg|jpg|png|gif|webp/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = filetypes.test(file.mimetype);

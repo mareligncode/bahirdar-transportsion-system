@@ -427,60 +427,7 @@ export const getAllVehicles = async (req, res) => {
         });
     }
 };
-// export const getVehicleById = async (req, res) => {
-//     try {
-//         const { id } = req.params;
 
-//         const vehicle = await Vehicle.findById(id)
-//             .populate([
-//                 {
-//                     path: 'stationID',
-//                     select: 'stationCode stationName location.city contactPhone'
-//                 },
-//                 {
-//                     path: 'driverID',
-//                     select: 'fullName email phoneNumber licenseNumber'
-//                 },
-//                 {
-//                     path: 'createdBy',
-//                     select: 'fullName email'
-//                 },
-//                 {
-//                     path: 'updatedBy',
-//                     select: 'fullName email'
-//                 }
-//             ]);
-
-//         if (!vehicle) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'Vehicle not found'
-//             });
-//         }
-
-//         // Check if station_admin can access this vehicle
-//         if (req.user.role === 'station_admin' &&
-//             vehicle.stationID &&
-//             vehicle.stationID._id.toString() !== req.user.stationID?.toString()) {
-//             return res.status(403).json({
-//                 success: false,
-//                 message: 'Access denied. Vehicle belongs to another station'
-//             });
-//         }
-
-//         res.json({
-//             success: true,
-//             data: { vehicle }
-//         });
-//     } catch (error) {
-//         console.error('Get vehicle error:', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Failed to fetch vehicle',
-//             error: error.message
-//         });
-//     }
-// };
 
 export const getVehicleById = async (req, res) => {
     try {
