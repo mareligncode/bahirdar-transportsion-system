@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 const bookingSchema = new mongoose.Schema({
     bookingNumber: {
         type: String,
+        required: true,
+        unique: true
         unique: true,
         trim: true
     },
@@ -19,6 +21,13 @@ const bookingSchema = new mongoose.Schema({
     },
     vehicleID: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'Vehicle',
+        required: true
+    },
+    seatNumber: {
+        type: Number,
+        required: true,
+        min: 1
         ref: 'Vehicle'
     },
     seats: [{
@@ -52,6 +61,13 @@ const bookingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
+        enum: ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'refunded'],
+        default: 'pending'
+    },
+    cancellationReason: String,
+    refundAmount: {
+        type: Number,
+        default: 0
         enum: ['pending', 'confirmed', 'cancelled', 'refunded', 'no_show', 'completed'],
         default: 'confirmed'
     },
@@ -75,6 +91,14 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         unique: true
     },
+    boardingPass: String, // QR code URL
+    specialRequests: String,
+    passengerDetails: {
+        fullName: String,
+        phoneNumber: String,
+        email: String,
+        emergencyContact: String
+    },
     boardingPass: String, // QR code URL or PDF URL
     specialRequests: String,
     checkedIn: {
@@ -92,12 +116,28 @@ const bookingSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Indexes
+bookingSchema.index({ passengerID: 1 });
+bookingSchema.index({ tripID: 1 });
+bookingSchema.index({ vehicleID: 1 });
+bookingSchema.index({ status: 1 });
+bookingSchema.index({ bookingDate: 1 });
+bookingSchema.index({ ticketNumber: 1 });
+
+// Generate booking number
+bookingSchema.pre('save', async function (next) {
 // Pre-save middleware to generate booking and ticket numbers
 bookingSchema.pre('save', function (next) {
     if (!this.bookingNumber) {
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const count = await mongoose.model('Booking').countDocuments();
+        this.bookingNumber = `BK${year}${month}${(count + 1).toString().padStart(6, '0')}`;
+    }
+
+    if (!this.ticketNumber) {
+        this.ticketNumber = `TKT${Date.now().toString(36).toUpperCase()}`;
         const random = Math.random().toString(36).substr(2, 8).toUpperCase();
         this.bookingNumber = `BK-${year}${month}-${random}`;
     }

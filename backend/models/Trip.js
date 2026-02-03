@@ -1,3 +1,45 @@
+// models/Trip.js
+import mongoose from 'mongoose';
+
+const tripSchema = new mongoose.Schema({
+    tripNumber: {
+        type: String,
+       // required: true,
+        unique: true,
+        //uppercase: true
+    },
+    origin: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Station',
+        required: true
+    },
+    destination: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Station',
+        required: true
+    },
+    departureTime: {
+        type: Date,
+        required: true
+    },
+    arrivalTime: {
+        type: Date,
+        required: true
+    },
+    vehicleID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Vehicle',
+        required: true
+    },
+    driverID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0
 import mongoose from 'mongoose';
 
 const tripSchema = new mongoose.Schema({
@@ -26,6 +68,12 @@ const tripSchema = new mongoose.Schema({
     availableSeats: {
         type: Number,
         required: true,
+        min: 0
+    },
+    totalSeats: {
+        type: Number,
+        required: true,
+        min: 1
         min: [0, 'Available seats cannot be negative'],
         default: 0
     },
@@ -61,6 +109,14 @@ const tripSchema = new mongoose.Schema({
         enum: ['scheduled', 'boarding', 'ongoing', 'completed', 'cancelled', 'delayed'],
         default: 'scheduled'
     },
+    stationID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Station',
+        required: true
+    },
+    routePoints: [{
+        type: String,
+        trim: true
     routePoints: [{
         city: String,
         arrivalTime: Date,
@@ -71,6 +127,7 @@ const tripSchema = new mongoose.Schema({
         type: Number, // in minutes
         required: true
     },
+    notes: String,
     distance: {
         type: Number, // in kilometers
         min: 0
@@ -110,6 +167,19 @@ const tripSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Indexes
+tripSchema.index({ departureTime: 1 });
+tripSchema.index({ origin: 1, destination: 1 });
+tripSchema.index({ vehicleID: 1 });
+tripSchema.index({ driverID: 1 });
+tripSchema.index({ tripStatus: 1 });
+tripSchema.index({ stationID: 1 });
+
+// Pre-save to generate trip number
+tripSchema.pre('save', async function (next) {
+    if (!this.tripNumber) {
+        const count = await mongoose.model('Trip').countDocuments();
+        this.tripNumber = `TRIP${(count + 1).toString().padStart(6, '0')}`;
 tripSchema.pre('save', function (next) {
     if (!this.tripCode) {
         const date = new Date();
