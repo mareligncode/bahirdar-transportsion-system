@@ -4,47 +4,6 @@ import mongoose from 'mongoose';
 const tripSchema = new mongoose.Schema({
     tripNumber: {
         type: String,
-       // required: true,
-        unique: true,
-        //uppercase: true
-    },
-    origin: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Station',
-        required: true
-    },
-    destination: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Station',
-        required: true
-    },
-    departureTime: {
-        type: Date,
-        required: true
-    },
-    arrivalTime: {
-        type: Date,
-        required: true
-    },
-    vehicleID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Vehicle',
-        required: true
-    },
-    driverID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    price: {
-        type: Number,
-        required: true,
-        min: 0
-import mongoose from 'mongoose';
-
-const tripSchema = new mongoose.Schema({
-    tripNumber: {
-        type: String,
         required: true,
         unique: true,
         uppercase: true
@@ -84,13 +43,7 @@ const tripSchema = new mongoose.Schema({
     },
     availableSeats: {
         type: Number,
-        required: true,
-        min: 0
-    },
-    totalSeats: {
-        type: Number,
-        required: true,
-        min: 1
+        required: [true, 'Available seats is required'],
         min: [0, 'Available seats cannot be negative'],
         default: 0
     },
@@ -104,14 +57,11 @@ const tripSchema = new mongoose.Schema({
         enum: ['scheduled', 'boarding', 'ongoing', 'completed', 'cancelled', 'delayed'],
         default: 'scheduled'
     },
-    stationID: {
+    station: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Station',
-        required: true
+        required: [true, 'Station is required']
     },
-    routePoints: [{
-        type: String,
-        trim: true
     routePoints: [{
         type: String,
         trim: true
@@ -121,12 +71,7 @@ const tripSchema = new mongoose.Schema({
         required: [true, 'Estimated duration is required'],
         min: [15, 'Duration must be at least 15 minutes']
     },
-    notes: String,
-    distance: {
-        type: Number, // in kilometers
-        min: 0
-    },
-    amenities: [{
+    notes: {
         type: String,
         default: ''
     },
@@ -149,29 +94,12 @@ const tripSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Indexes
-tripSchema.index({ departureTime: 1 });
-tripSchema.index({ origin: 1, destination: 1 });
-tripSchema.index({ vehicleID: 1 });
-tripSchema.index({ driverID: 1 });
-tripSchema.index({ tripStatus: 1 });
-tripSchema.index({ stationID: 1 });
-
-// Pre-save to generate trip number
-tripSchema.pre('save', async function (next) {
-    if (!this.tripNumber) {
-        const count = await mongoose.model('Trip').countDocuments();
-        this.tripNumber = `TRIP${(count + 1).toString().padStart(6, '0')}`;
-tripSchema.pre('save', function (next) {
-    if (!this.tripCode) {
-        const date = new Date();
-        const year = date.getFullYear().toString().slice(-2);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const random = Math.random().toString(36).substr(2, 5).toUpperCase();
-        this.tripCode = `TRIP-${year}${month}${day}-${random}`;
-    }
-    next();
+// Virtual for bookings count
+tripSchema.virtual('bookings', {
+    ref: 'Booking',
+    localField: '_id',
+    foreignField: 'tripID',
+    count: true
 });
 
 // Virtual for confirmed bookings count
