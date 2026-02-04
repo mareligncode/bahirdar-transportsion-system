@@ -306,18 +306,24 @@ export const changePassword = async (req, res) => {
 
 
 
+// 1. Request Password Reset
 export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
         const user = await User.findOne({ email });
         if (!user) {
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            // Return success even if user not found (security measure)
             return res.json({
                 success: true,
                 message: 'If your email is registered, you will receive a password reset link'
             });
         }
 
+        // Check if user is active
         if (!user.isActive) {
             return res.status(400).json({
                 success: false,
@@ -325,6 +331,7 @@ export const forgotPassword = async (req, res) => {
             });
         }
 
+        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenHash = crypto
             .createHash('sha256')
@@ -333,6 +340,10 @@ export const forgotPassword = async (req, res) => {
 
         const resetTokenExpiry = Date.now() + 15 * 60 * 1000;
 
+        // Set token expiry (15 minutes from now)
+        const resetTokenExpiry = Date.now() + 15 * 60 * 1000;
+
+        // Save token to user
         user.passwordResetToken = resetTokenHash;
         user.passwordResetExpires = resetTokenExpiry;
         user.passwordResetAttempts = 0;
@@ -359,6 +370,7 @@ export const forgotPassword = async (req, res) => {
     }
 };
 
+// 2. Validate Reset Token
 export const validateResetToken = async (req, res) => {
     try {
         const { token } = req.body;
@@ -370,11 +382,13 @@ export const validateResetToken = async (req, res) => {
             });
         }
 
+        // Hash the token to compare with stored hash
         const hashedToken = crypto
             .createHash('sha256')
             .update(token)
             .digest('hex');
 
+        // Find user with valid token
         const user = await User.findOne({
             passwordResetToken: hashedToken,
             passwordResetExpires: { $gt: Date.now() }
@@ -413,6 +427,7 @@ export const validateResetToken = async (req, res) => {
     }
 };
 
+// 3. Reset Password
 export const resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
@@ -424,11 +439,13 @@ export const resetPassword = async (req, res) => {
             });
         }
 
+        // Hash the token to compare with stored hash
         const hashedToken = crypto
             .createHash('sha256')
             .update(token)
             .digest('hex');
 
+        // Find user with valid token
         const user = await User.findOne({
             passwordResetToken: hashedToken,
             passwordResetExpires: { $gt: Date.now() }
@@ -458,20 +475,24 @@ export const resetPassword = async (req, res) => {
             });
         }
 
+        // Update password and clear reset token
         user.password = newPassword;
         user.passwordResetToken = null;
         user.passwordResetExpires = null;
         user.passwordResetAttempts = 0;
         user.lastPasswordReset = new Date();
 
+        // Invalidate all refresh tokens (optional security measure)
         user.refreshToken = '';
 
         await user.save();
 
+        // Send password changed email
         try {
             await sendPasswordChangedEmail(user.email, user.fullName);
         } catch (emailError) {
             console.warn('Failed to send password changed email:', emailError);
+            // Continue even if email fails
         }
 
         res.json({
@@ -488,6 +509,7 @@ export const resetPassword = async (req, res) => {
     }
 };
 
+// 4. Increment Reset Attempts (helper function)
 export const incrementResetAttempts = async (token) => {
     try {
         const hashedToken = crypto
