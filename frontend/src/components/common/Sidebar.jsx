@@ -75,7 +75,7 @@ export default function Sidebar({ userRole }) {
     const superAdminItems = [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
        { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
-      { icon: Users, label: 'All Users', path: '/admin/users' },
+      { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
      
       { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },

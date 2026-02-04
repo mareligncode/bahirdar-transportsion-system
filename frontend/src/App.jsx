@@ -233,7 +233,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-          <Route path="/super-admin/users" element={
+          <Route path="/admin/AllUsers" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Layout showSidebar>
                 <AllUsers />
@@ -248,7 +248,9 @@ const queryClient = new QueryClient({
   path="/admin/role-management" 
   element={
     <ProtectedRoute allowedRoles={['super_admin']}>
-      <RoleManagement />
+      <Layout showSidebar>
+        <RoleManagement />
+      </Layout>
     </ProtectedRoute>
   } 
 />
