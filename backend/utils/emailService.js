@@ -10,7 +10,7 @@ console.log('EMAIL_PASS:', process.env.EMAIL_PASSWORD ? '✓ Set' : '✗ Missing
 
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail', 
+    service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
@@ -27,7 +27,7 @@ transporter.verify((error) => {
 
 export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     try {
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
         const expiryTime = process.env.PASSWORD_RESET_EXPIRY || '15 minutes';
 
         const mailOptions = {
