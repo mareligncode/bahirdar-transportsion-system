@@ -1,7 +1,6 @@
-// auth.service.js - REPLACE WITH THIS
-import api from './api';
+ import api from './api';
 
-const authService = {
+ const authService = {
   // Keep simple returns for useAuth methods
   register: async (userData) => {
     const response = await api.post('/api/auth/register', userData);
