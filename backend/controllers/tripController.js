@@ -2,33 +2,29 @@ import Trip from '../models/Trip.js';
 import Vehicle from '../models/Vehicle.js';
 import User from '../models/Users.js';
 import Station from '../models/Station.js';
+
+// Create a new trip
 export const createTrip = async (req, res) => {
     try {
         const {
-            origin,
-            destination,
-            departureTime,
-            arrivalTime,
-            vehicleID,
-            driverID,
-            price,
-            totalSeats,
-            stationID,
-            routePoints,
-            estimatedDuration,
-            notes
+            origin, destination, departureTime, arrivalTime,
+            vehicleID, driverID, price, totalSeats, stationID,
+            routePoints, estimatedDuration, notes
         } = req.body;
 
+        // Check vehicle exists
         const vehicle = await Vehicle.findById(vehicleID);
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
 
+        // Check driver exists and is driver
         const driver = await User.findById(driverID);
         if (!driver || driver.role !== 'driver') {
             return res.status(404).json({ message: 'Driver not found' });
         }
 
+        // Check stations exist
         const [originStation, destinationStation] = await Promise.all([
             Station.findById(origin),
             Station.findById(destination)
@@ -38,12 +34,14 @@ export const createTrip = async (req, res) => {
             return res.status(404).json({ message: 'Station not found' });
         }
 
+        // Check vehicle capacity
         if (vehicle.totalCapacity < totalSeats) {
             return res.status(400).json({
                 message: `Vehicle capacity is ${vehicle.totalCapacity}, requested ${totalSeats} seats`
             });
         }
 
+        // Create trip
         const trip = new Trip({
             origin,
             destination,
@@ -63,6 +61,7 @@ export const createTrip = async (req, res) => {
 
         await trip.save();
 
+        // Populate and return
         const populatedTrip = await Trip.findById(trip._id)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
@@ -87,12 +86,15 @@ export const createTrip = async (req, res) => {
     }
 };
 
+// Get all trips
 export const getAllTrips = async (req, res) => {
     try {
         const { status, origin, destination, page = 1, limit = 20 } = req.query;
 
+        // Build query based on user role
         let query = {};
 
+        // Station admin can only see their station's trips
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (station) {
@@ -100,9 +102,12 @@ export const getAllTrips = async (req, res) => {
             }
         }
 
+        // Driver can only see their trips
         if (req.user.role === 'driver') {
             query.driverID = req.user.id;
         }
+
+        // Passengers can only see available trips
         if (req.user.role === 'passenger') {
             query.isActive = true;
             query.tripStatus = { $in: ['scheduled', 'boarding'] };
@@ -110,6 +115,7 @@ export const getAllTrips = async (req, res) => {
             query.departureTime = { $gt: new Date() };
         }
 
+        // Add filters
         if (status && status !== 'all') {
             query.tripStatus = status;
         }
@@ -153,6 +159,7 @@ export const getAllTrips = async (req, res) => {
     }
 };
 
+// Get single trip by ID
 export const getTripById = async (req, res) => {
     try {
         const trip = await Trip.findById(req.params.id)
@@ -170,6 +177,7 @@ export const getTripById = async (req, res) => {
             });
         }
 
+        // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (station && !trip.stationID.equals(station._id)) {
@@ -204,6 +212,7 @@ export const getTripById = async (req, res) => {
     }
 };
 
+// Update trip
 export const updateTrip = async (req, res) => {
     try {
         const trip = await Trip.findById(req.params.id);
@@ -215,6 +224,7 @@ export const updateTrip = async (req, res) => {
             });
         }
 
+        // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (!station || !trip.stationID.equals(station._id)) {
@@ -225,7 +235,10 @@ export const updateTrip = async (req, res) => {
             }
         }
 
+        // Update trip fields
         const updates = req.body;
+
+        // Handle seat updates
         if (updates.totalSeats) {
             const vehicle = await Vehicle.findById(trip.vehicleID);
             if (vehicle.totalCapacity < updates.totalSeats) {
@@ -235,16 +248,19 @@ export const updateTrip = async (req, res) => {
                 });
             }
 
+            // Update available seats
             const seatDifference = updates.totalSeats - trip.totalSeats;
             updates.availableSeats = trip.availableSeats + seatDifference;
         }
 
+        // Update the trip
         Object.keys(updates).forEach(key => {
             trip[key] = updates[key];
         });
 
         await trip.save();
 
+        // Get updated trip with populated data
         const updatedTrip = await Trip.findById(trip._id)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
@@ -268,6 +284,7 @@ export const updateTrip = async (req, res) => {
     }
 };
 
+// Delete trip
 export const deleteTrip = async (req, res) => {
     try {
         const trip = await Trip.findById(req.params.id);
@@ -279,6 +296,7 @@ export const deleteTrip = async (req, res) => {
             });
         }
 
+        // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (!station || !trip.stationID.equals(station._id)) {
@@ -306,6 +324,7 @@ export const deleteTrip = async (req, res) => {
     }
 };
 
+// Search trips for passengers
 export const searchTrips = async (req, res) => {
     try {
         const { origin, destination, date } = req.query;
@@ -354,6 +373,7 @@ export const searchTrips = async (req, res) => {
     }
 };
 
+// Update trip status
 export const updateTripStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -366,6 +386,7 @@ export const updateTripStatus = async (req, res) => {
             });
         }
 
+        // Check driver can only update their own trips
         if (req.user.role === 'driver') {
             if (!trip.driverID.equals(req.user.id)) {
                 return res.status(403).json({
@@ -375,6 +396,7 @@ export const updateTripStatus = async (req, res) => {
             }
         }
 
+        // Check station admin permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (!station || !trip.stationID.equals(station._id)) {
@@ -405,6 +427,7 @@ export const updateTripStatus = async (req, res) => {
     }
 };
 
+// Get driver's assigned trips
 export const getDriverTrips = async (req, res) => {
     try {
         const trips = await Trip.find({ driverID: req.user.id })
@@ -430,6 +453,7 @@ export const getDriverTrips = async (req, res) => {
     }
 };
 
+// Toggle trip active status
 export const toggleTripActive = async (req, res) => {
     try {
         const trip = await Trip.findById(req.params.id);
