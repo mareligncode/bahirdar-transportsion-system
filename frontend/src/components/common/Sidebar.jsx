@@ -34,41 +34,49 @@ export default function Sidebar({ userRole }) {
   const getMenuItems = () => {
     // Common items for all roles
     const commonItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+
       { icon: UserCircle, label: 'Profile', path: '/profile' },
       { icon: Bell, label: 'Notifications', path: '/notifications' },
     ];
 
     // Passenger specific items
     const passengerItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
       { icon: Ticket, label: 'Book Trip', path: '/passenger/book-trip' },
       { icon: Calendar, label: 'My Trips', path: '/passenger/trips' },
       { icon: CreditCard, label: 'Payment Methods', path: '/passenger/payments' },
       { icon: MessageSquare, label: 'Support', path: '/passenger/support' },
+     
     ];
 
     // Driver specific items
     const driverItems = [
+     { icon: LayoutDashboard, label: 'Dashboard', path: '/driver/dashboard' },
       { icon: Car, label: 'Assigned Trips', path: '/driver/trips' },
       { icon: MapPin, label: 'Trip Tracking', path: '/driver/tracking' },
       { icon: BarChart3, label: 'Earnings', path: '/driver/earnings' },
       { icon: Calendar, label: 'Availability', path: '/driver/availability' },
       { icon: FileText, label: 'Documents', path: '/driver/documents' },
+       
     ];
 
     // Station Admin specific items
     const stationAdminItems = [
+       { icon: LayoutDashboard, label: 'Dashboard', path: '/station/dashboard' },
       { icon: Users, label: 'User Management', path: '/station/users' },
       { icon: Car, label: 'Drivers', path: '/station/drivers' },
       { icon: Calendar, label: 'Trip Management', path: '/station/trips' },
       { icon: BarChart3, label: 'Station Reports', path: '/station/reports' },
       { icon: Settings, label: 'Station Settings', path: '/station/settings' },
+      
     ];
 
     // Super Admin specific items
     const superAdminItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+       { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Users, label: 'All Users', path: '/admin/users' },
-      { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
+     
       { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },
       { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
@@ -79,13 +87,13 @@ export default function Sidebar({ userRole }) {
     // Combine items based on role
     switch(userRole) {
       case 'passenger':
-        return [...commonItems, ...passengerItems];
+        return [ ...passengerItems,...commonItems];
       case 'driver':
-        return [...commonItems, ...driverItems];
+        return [...driverItems,...commonItems];
       case 'station_admin':
-        return [...commonItems, ...stationAdminItems];
+        return [...stationAdminItems,...commonItems];
       case 'super_admin':
-        return [...commonItems, ...superAdminItems];
+        return [...superAdminItems,...commonItems];
       default:
         return commonItems;
     }
