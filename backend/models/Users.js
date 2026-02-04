@@ -22,8 +22,20 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Password is required'],
-        minlength: 6
+        minlength: 8,
+        validate: {
+            validator: function (value) {
+                // If password is already hashed, skip regex
+                if (value.startsWith('$2b$')) return true;
+
+                // Validate only plain password
+                return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/.test(value);
+            },
+            message:
+                'Password must be at least 8 characters and include uppercase, lowercase, number, and special character'
+        }
     },
+
     role: {
         type: String,
         enum: ['passenger', 'driver', 'station_admin', 'super_admin'],

@@ -7,7 +7,6 @@ export const register = async (req, res) => {
     try {
         const { fullName, email, phoneNumber, password } = req.body;
 
-        // Check if user already exists
         const existingUser = await User.findOne({
             $or: [{ email }, { phoneNumber }]
         });
@@ -19,21 +18,18 @@ export const register = async (req, res) => {
             });
         }
 
-        // Create new user with default passenger role
         const user = new User({
             fullName,
             email,
             phoneNumber,
             password,
-            role: 'passenger' // Default role
+            role: 'passenger' 
         });
 
         await user.save();
 
-        // Generate tokens
         const tokens = generateTokens(user);
 
-        // Save refresh token to user
         user.refreshToken = tokens.refreshToken;
         user.lastLogin = new Date();
         await user.save();
@@ -315,6 +311,8 @@ export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
+        const user = await User.findOne({ email });
+        if (!user) {
         // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
@@ -339,6 +337,8 @@ export const forgotPassword = async (req, res) => {
             .createHash('sha256')
             .update(resetToken)
             .digest('hex');
+
+        const resetTokenExpiry = Date.now() + 15 * 60 * 1000;
 
         // Set token expiry (15 minutes from now)
         const resetTokenExpiry = Date.now() + 15 * 60 * 1000;

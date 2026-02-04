@@ -4,6 +4,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+console.log('Email Configuration Check:');
+console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✓ Set' : '✗ Missing');
+console.log('EMAIL_PASS:', process.env.EMAIL_PASSWORD ? '✓ Set' : '✗ Missing');
+
+
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
 // Log to verify environment variables are loaded
 console.log('Email Configuration Check:');
 console.log('EMAIL_USER:', process.env.EMAIL_USER ? '✓ Set' : '✗ Missing');
@@ -30,6 +38,7 @@ transporter.verify((error) => {
 
 export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     try {
+        const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
         const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         const expiryTime = process.env.PASSWORD_RESET_EXPIRY || '15 minutes';
 
