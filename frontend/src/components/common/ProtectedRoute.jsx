@@ -46,12 +46,17 @@ export default function ProtectedRoute({
         </div>
       </div>
     );
+ 
+
   }
 
   // Role-based access control
   if (requiredRole || allowedRoles.length > 0) {
     const userRole = user?.role;
     let hasAccess = false;
+
+
+ console.log('ROLE DEBUG - User role:', userRole, 'Required:', requiredRole, 'Allowed:', allowedRoles);
 
     // Check specific required role
     if (requiredRole) {

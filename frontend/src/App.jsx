@@ -110,17 +110,17 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-          {/* ===== PASSENGER ROUTES ===== */}
+          {/* ===== PASSENGER ROUTES =====*/}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['passenger']}>
               <Layout showSidebar>
                 <PassengerDashboard />
               </Layout>
             </ProtectedRoute>
-          } />
+          } /> 
           
-          <Route path="/passenger/dashboard" element={
-            <ProtectedRoute allowedRoles={['passenger']}>
+           <Route path="/passenger/dashboard" element={
+             <ProtectedRoute allowedRoles={['passenger']}>
               <Layout showSidebar>
                 <PassengerDashboard />
               </Layout>
@@ -169,10 +169,9 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-{/* ===== STATION ADMIN ROUTES ===== */}
-<Route
-  path="/station/drivers"
-  element={
+     <Route
+     path="/station/drivers"
+     element={
     <ProtectedRoute allowedRoles={['station_admin']}>
       <Layout showSidebar>
         <Drivers />
@@ -199,13 +198,7 @@ const queryClient = new QueryClient({
           } />
           
           {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
-          <Route path="/admin/dashboard" element={
-            <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
-              <Layout showSidebar>
-                <AdminDashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
+    
           
           <Route path="/admin/schedules" element={
             <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
@@ -232,7 +225,7 @@ const queryClient = new QueryClient({
           } />
           
           {/* ===== SUPER ADMIN EXCLUSIVE ROUTES ===== */}
-          <Route path="/super-admin/dashboard" element={
+          <Route path="/admin/dashboard" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Layout showSidebar>
                 <AdminDashboard />
@@ -240,7 +233,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-          <Route path="/super-admin/users" element={
+          <Route path="/admin/AllUsers" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Layout showSidebar>
                 <AllUsers />
@@ -250,15 +243,14 @@ const queryClient = new QueryClient({
 
 
 
-
-
-
           // Add this route
 <Route 
   path="/admin/role-management" 
   element={
     <ProtectedRoute allowedRoles={['super_admin']}>
-      <RoleManagement />
+      <Layout showSidebar>
+        <RoleManagement />
+      </Layout>
     </ProtectedRoute>
   } 
 />
