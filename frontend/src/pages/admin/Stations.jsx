@@ -53,7 +53,8 @@ import {
   Visibility as ViewIcon,
   LocationCity as CityIcon,
   Code as CodeIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { format } from 'date-fns';
@@ -79,8 +80,9 @@ const Stations = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openAssignManagerDialog, setOpenAssignManagerDialog] = useState(false);
   
-  // Form states
+  // Form states with proper initialization
   const [formData, setFormData] = useState({
     stationCode: '',
     stationName: '',
@@ -92,13 +94,34 @@ const Stations = () => {
     isActive: true
   });
   
-  const [editFormData, setEditFormData] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    stationCode: '',
+    stationName: '',
+    location: '',
+    city: '',
+    contactPhone: '',
+    contactEmail: '',
+    manager: '',
+    isActive: true,
+    _id: ''
+  });
+
+  // Manager assignment form state
+  const [managerAssignmentData, setManagerAssignmentData] = useState({
+    stationId: '',
+    stationName: '',
+    manager: '',
+    action: 'assign' // 'assign' or 'remove'
+  });
+  
   const [selectedStation, setSelectedStation] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [managerAssignmentLoading, setManagerAssignmentLoading] = useState(false);
   
   // Data for dropdowns
   const [cities, setCities] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [availableManagers, setAvailableManagers] = useState([]);
   const [managersLoading, setManagersLoading] = useState(false);
   const [userRole, setUserRole] = useState('');
 
@@ -170,30 +193,43 @@ const Stations = () => {
     }
   }, []);
 
-  // Fetch station admins for manager dropdown (only for super_admin)
+  // Fetch station admins for manager dropdown (only for super_admin) - UPDATED
   const fetchStationAdmins = useCallback(async () => {
     if (userRole !== 'super_admin') {
       setManagers([]);
+      setAvailableManagers([]);
       return;
     }
 
     setManagersLoading(true);
     try {
-      // Fetch all users - FIXED: Your backend returns { success: true, data: { users: [] } }
       const usersRes = await api.get('/api/auth/all-users');
       
-      // CORRECTED: Access the correct data structure
-      const allUsers = usersRes.data?.data?.users || usersRes.data?.users || [];
+      let allUsers = [];
       
-      // Filter for active station admins
-      const stationAdmins = allUsers.filter(user => 
-        user.role === 'station_admin' && user.isActive
-      );
+      if (usersRes.data?.success && usersRes.data?.data?.users) {
+        allUsers = usersRes.data.data.users;
+      } else if (usersRes.data?.data?.users) {
+        allUsers = usersRes.data.data.users;
+      } else if (usersRes.data?.users) {
+        allUsers = usersRes.data.users;
+      } else if (Array.isArray(usersRes.data)) {
+        allUsers = usersRes.data;
+      }
+      
+      const stationAdmins = allUsers.filter(user => {
+        return user.role === 'station_admin' && user.isActive === true;
+      });
+      
+      console.log('Found station admins:', stationAdmins);
       
       setManagers(stationAdmins);
+      setAvailableManagers(stationAdmins);
+      
     } catch (userErr) {
       console.error('Error fetching station admins:', userErr);
       setManagers([]);
+      setAvailableManagers([]);
     } finally {
       setManagersLoading(false);
     }
@@ -287,7 +323,7 @@ const Stations = () => {
       const response = await api.put(`/api/station/${editFormData._id}`, stationData);
       setSuccess('Station updated successfully!');
       setOpenEditDialog(false);
-      setEditFormData(null);
+      resetEditForm();
       fetchStations();
       fetchActiveStations();
       fetchStationAdmins();
@@ -332,6 +368,41 @@ const Stations = () => {
     }
   };
 
+  // Handle assign/remove manager - UPDATED
+  const handleAssignManager = async () => {
+    if (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager) {
+      setError('Please select a manager to assign');
+      return;
+    }
+    
+    setManagerAssignmentLoading(true);
+    try {
+      const updateData = {
+        manager: managerAssignmentData.action === 'assign' ? managerAssignmentData.manager : ''
+      };
+
+      console.log('Sending manager update:', {
+        stationId: managerAssignmentData.stationId,
+        action: managerAssignmentData.action,
+        managerId: updateData.manager
+      });
+
+      const response = await api.put(`/api/station/${managerAssignmentData.stationId}`, updateData);
+      
+      const actionText = managerAssignmentData.action === 'assign' ? 'assigned' : 'removed';
+      setSuccess(`Manager ${actionText} successfully!`);
+      setOpenAssignManagerDialog(false);
+      resetManagerAssignmentForm();
+      fetchStations();
+      fetchStationAdmins();
+    } catch (err) {
+      console.error('Manager assignment error:', err);
+      setError(err.response?.data?.message || 'Failed to update manager. Please try again.');
+    } finally {
+      setManagerAssignmentLoading(false);
+    }
+  };
+
   // Reset form
   const resetForm = () => {
     setFormData({
@@ -346,11 +417,43 @@ const Stations = () => {
     });
   };
 
+  // Reset edit form
+  const resetEditForm = () => {
+    setEditFormData({
+      stationCode: '',
+      stationName: '',
+      location: '',
+      city: '',
+      contactPhone: '',
+      contactEmail: '',
+      manager: '',
+      isActive: true,
+      _id: ''
+    });
+  };
+
+  // Reset manager assignment form - ADDED
+  const resetManagerAssignmentForm = () => {
+    setManagerAssignmentData({
+      stationId: '',
+      stationName: '',
+      manager: '',
+      action: 'assign'
+    });
+  };
+
   // Open edit dialog
   const openEdit = (station) => {
     setEditFormData({
-      ...station,
-      manager: station.manager?._id || ''
+      stationCode: station.stationCode || '',
+      stationName: station.stationName || '',
+      location: station.location || '',
+      city: station.city || '',
+      contactPhone: station.contactPhone || '',
+      contactEmail: station.contactEmail || '',
+      manager: station.manager?._id || '',
+      isActive: station.isActive || true,
+      _id: station._id || ''
     });
     setOpenEditDialog(true);
   };
@@ -365,6 +468,17 @@ const Stations = () => {
   const openDelete = (station) => {
     setSelectedStation(station);
     setOpenDeleteDialog(true);
+  };
+
+  // Open assign manager dialog
+  const openAssignManager = (station) => {
+    setManagerAssignmentData({
+      stationId: station._id || '',
+      stationName: station.stationName || '',
+      manager: station.manager?._id || '',
+      action: station.manager ? 'remove' : 'assign'
+    });
+    setOpenAssignManagerDialog(true);
   };
 
   // Format phone number
@@ -591,7 +705,7 @@ const Stations = () => {
             <FormControl fullWidth size="small">
               <InputLabel>City</InputLabel>
               <Select
-                value={cityFilter}
+                value={cityFilter || ''}
                 onChange={(e) => setCityFilter(e.target.value)}
                 label="City"
               >
@@ -812,23 +926,6 @@ const Stations = () => {
                                 {station.manager.email || 'No email'}
                               </Typography>
                             </Box>
-                          ) : canAssignManagers() ? (
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              startIcon={<PersonIcon />}
-                              onClick={() => {
-                                setSelectedStation(station);
-                                setEditFormData({
-                                  ...station,
-                                  manager: station.manager?._id || ''
-                                });
-                                setOpenEditDialog(true);
-                              }}
-                              sx={{ borderRadius: 1 }}
-                            >
-                              Assign Manager
-                            </Button>
                           ) : (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary', opacity: 0.5 }} />
@@ -855,62 +952,88 @@ const Stations = () => {
                         <TableCell align="right">
                           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                             <Tooltip title="View Details">
-                              <IconButton 
-                                size="small" 
-                                onClick={() => openView(station)}
-                                sx={{ 
-                                  bgcolor: '#e3f2fd',
-                                  '&:hover': { bgcolor: '#bbdefb' }
-                                }}
-                              >
-                                <ViewIcon fontSize="small" color="primary" />
-                              </IconButton>
+                              <span>
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => openView(station)}
+                                  sx={{ 
+                                    bgcolor: '#e3f2fd',
+                                    '&:hover': { bgcolor: '#bbdefb' }
+                                  }}
+                                >
+                                  <ViewIcon fontSize="small" color="primary" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                             
                             {canManageStations() && (
                               <>
-                                <Tooltip title="Edit">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => openEdit(station)}
-                                    sx={{ 
-                                      bgcolor: '#e8f5e9',
-                                      '&:hover': { bgcolor: '#c8e6c9' }
-                                    }}
-                                  >
-                                    <EditIcon fontSize="small" color="success" />
-                                  </IconButton>
+                                <Tooltip title="Edit Station">
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => openEdit(station)}
+                                      sx={{ 
+                                        bgcolor: '#e8f5e9',
+                                        '&:hover': { bgcolor: '#c8e6c9' }
+                                      }}
+                                    >
+                                      <EditIcon fontSize="small" color="success" />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={station.manager ? "Remove Manager" : "Assign Manager"}>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => openAssignManager(station)}
+                                      sx={{ 
+                                        bgcolor: station.manager ? '#fff3e0' : '#e3f2fd',
+                                        '&:hover': { bgcolor: station.manager ? '#ffe0b2' : '#bbdefb' }
+                                      }}
+                                    >
+                                      {station.manager ? (
+                                        <PersonIcon fontSize="small" color="warning" />
+                                      ) : (
+                                        <AssignmentIcon fontSize="small" color="info" />
+                                      )}
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                                 <Tooltip title={`${station.isActive ? 'Deactivate' : 'Activate'}`}>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleToggleStatus(station)}
-                                    sx={{ 
-                                      bgcolor: station.isActive ? '#fff3e0' : '#e8f5e9',
-                                      '&:hover': { bgcolor: station.isActive ? '#ffe0b2' : '#c8e6c9' }
-                                    }}
-                                  >
-                                    {station.isActive ? (
-                                      <CancelIcon fontSize="small" color="warning" />
-                                    ) : (
-                                      <CheckIcon fontSize="small" color="success" />
-                                    )}
-                                  </IconButton>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleToggleStatus(station)}
+                                      sx={{ 
+                                        bgcolor: station.isActive ? '#fff3e0' : '#e8f5e9',
+                                        '&:hover': { bgcolor: station.isActive ? '#ffe0b2' : '#c8e6c9' }
+                                      }}
+                                    >
+                                      {station.isActive ? (
+                                        <CancelIcon fontSize="small" color="warning" />
+                                      ) : (
+                                        <CheckIcon fontSize="small" color="success" />
+                                      )}
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                                 <Tooltip title="Delete">
-                                  <IconButton 
-                                    size="small" 
-                                    color="error" 
-                                    onClick={() => openDelete(station)}
-                                    disabled={station.isActive}
-                                    sx={{ 
-                                      bgcolor: '#ffebee',
-                                      '&:hover': { bgcolor: '#ffcdd2' },
-                                      '&.Mui-disabled': { opacity: 0.3 }
-                                    }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      color="error" 
+                                      onClick={() => openDelete(station)}
+                                      disabled={station.isActive}
+                                      sx={{ 
+                                        bgcolor: '#ffebee',
+                                        '&:hover': { bgcolor: '#ffcdd2' },
+                                        '&.Mui-disabled': { opacity: 0.3 }
+                                      }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                               </>
                             )}
@@ -992,7 +1115,7 @@ const Stations = () => {
         </Alert>
       </Snackbar>
 
-      {/* Create Station Dialog */}
+      {/* Create Station Dialog (keep existing) */}
       <Dialog 
         open={openCreateDialog} 
         onClose={() => !formLoading && setOpenCreateDialog(false)} 
@@ -1107,7 +1230,7 @@ const Stations = () => {
                 <FormControl fullWidth size="small">
                   <InputLabel>Station Manager</InputLabel>
                   <Select
-                    value={formData.manager}
+                    value={formData.manager || ''}
                     onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
                     label="Station Manager"
                     disabled={formLoading || managersLoading}
@@ -1197,7 +1320,7 @@ const Stations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* View Station Dialog */}
+      {/* View Station Dialog (keep existing) */}
       <Dialog 
         open={openViewDialog} 
         onClose={() => setOpenViewDialog(false)} 
@@ -1323,6 +1446,21 @@ const Stations = () => {
                             <PhoneIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
                             {formatPhoneNumber(selectedStation.manager.phoneNumber)}
                           </Typography>
+                          {canAssignManagers() && (
+                            <Box sx={{ mt: 2 }}>
+                              <Button 
+                                variant="outlined" 
+                                size="small" 
+                                startIcon={<PersonIcon />}
+                                onClick={() => {
+                                  setOpenViewDialog(false);
+                                  openAssignManager(selectedStation);
+                                }}
+                              >
+                                Change Manager
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
                       ) : (
                         <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -1334,10 +1472,10 @@ const Stations = () => {
                             <Button 
                               variant="outlined" 
                               size="small" 
-                              startIcon={<PersonIcon />}
+                              startIcon={<AssignmentIcon />}
                               onClick={() => {
                                 setOpenViewDialog(false);
-                                openEdit(selectedStation);
+                                openAssignManager(selectedStation);
                               }}
                               sx={{ mt: 2 }}
                             >
@@ -1413,7 +1551,7 @@ const Stations = () => {
         )}
       </Dialog>
 
-      {/* Edit Station Dialog */}
+      {/* Edit Station Dialog (keep existing) */}
       <Dialog 
         open={openEditDialog} 
         onClose={() => !formLoading && setOpenEditDialog(false)} 
@@ -1423,181 +1561,303 @@ const Stations = () => {
           sx: { borderRadius: 3 }
         }}
       >
-        {editFormData && (
-          <>
-            <DialogTitle sx={{ 
-              bgcolor: 'primary.main', 
-              color: 'white',
-              borderTopLeftRadius: 3,
-              borderTopRightRadius: 3
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <EditIcon sx={{ mr: 2 }} />
-                Edit Station
-              </Box>
-            </DialogTitle>
-            <DialogContent sx={{ pt: 3 }}>
-              {formLoading && <LinearProgress sx={{ mb: 2 }} />}
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Station Code *"
-                    value={editFormData.stationCode}
-                    onChange={(e) => setEditFormData({ ...editFormData, stationCode: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Station Name *"
-                    value={editFormData.stationName}
-                    onChange={(e) => setEditFormData({ ...editFormData, stationName: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Location *"
-                    value={editFormData.location}
-                    onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="City *"
-                    value={editFormData.city}
-                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Contact Phone *"
-                    value={editFormData.contactPhone}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    type="email"
-                    label="Contact Email *"
-                    value={editFormData.contactEmail}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                {canAssignManagers() && (
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Station Manager</InputLabel>
-                      <Select
-                        value={editFormData.manager || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value })}
-                        label="Station Manager"
-                        disabled={formLoading || managersLoading}
-                      >
-                        {managersLoading ? (
-                          <MenuItem value="" disabled>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <CircularProgress size={16} />
-                              <Typography variant="body2" color="text.secondary">
-                                Loading station admins...
+        <DialogTitle sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EditIcon sx={{ mr: 2 }} />
+            Edit Station
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {formLoading && <LinearProgress sx={{ mb: 2 }} />}
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Station Code *"
+                value={editFormData.stationCode || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, stationCode: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Station Name *"
+                value={editFormData.stationName || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, stationName: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Location *"
+                value={editFormData.location || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="City *"
+                value={editFormData.city || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Contact Phone *"
+                value={editFormData.contactPhone || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                type="email"
+                label="Contact Email *"
+                value={editFormData.contactEmail || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            {canAssignManagers() && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Station Manager</InputLabel>
+                  <Select
+                    value={editFormData.manager || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value })}
+                    label="Station Manager"
+                    disabled={formLoading || managersLoading}
+                  >
+                    {managersLoading ? (
+                      <MenuItem value="" disabled>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CircularProgress size={16} />
+                          <Typography variant="body2" color="text.secondary">
+                            Loading station admins...
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ) : (
+                      <Box>
+                        <MenuItem value="">
+                          <Typography color="text.secondary" fontStyle="italic">
+                            No manager assigned
+                          </Typography>
+                        </MenuItem>
+                        {managers.map((manager) => (
+                          <MenuItem key={manager._id} value={manager._id}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">
+                                {manager.fullName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {manager.email} • {manager.phoneNumber || 'No phone'}
                               </Typography>
                             </Box>
                           </MenuItem>
-                        ) : (
-                          <Box>
-                            <MenuItem value="">
-                              <Typography color="text.secondary" fontStyle="italic">
-                                No manager assigned
-                              </Typography>
-                            </MenuItem>
-                            {managers.map((manager) => (
-                              <MenuItem key={manager._id} value={manager._id}>
-                                <Box>
-                                  <Typography variant="body2" fontWeight="bold">
-                                    {manager.fullName}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {manager.email} • {manager.phoneNumber || 'No phone'}
-                                  </Typography>
-                                </Box>
-                              </MenuItem>
-                            ))}
-                          </Box>
-                        )}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                )}
-                <Grid size={{ xs: 12, md: canAssignManagers() ? 6 : 12 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={editFormData.isActive}
-                        onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
-                        color="primary"
-                        disabled={formLoading}
-                      />
-                    }
-                    label="Active Station"
-                  />
-                </Grid>
+                        ))}
+                      </Box>
+                    )}
+                  </Select>
+                </FormControl>
               </Grid>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button 
-                onClick={() => setOpenEditDialog(false)} 
-                disabled={formLoading}
-                sx={{ borderRadius: 2 }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditStation} 
-                variant="contained" 
-                color="primary"
-                disabled={formLoading}
-                startIcon={formLoading ? <CircularProgress size={20} /> : <EditIcon />}
-                sx={{ 
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-              >
-                {formLoading ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </DialogActions>
-          </>
-        )}
+            )}
+            <Grid size={{ xs: 12, md: canAssignManagers() ? 6 : 12 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={editFormData.isActive || false}
+                    onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                    color="primary"
+                    disabled={formLoading}
+                  />
+                }
+                label="Active Station"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setOpenEditDialog(false)} 
+            disabled={formLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditStation} 
+            variant="contained" 
+            color="primary"
+            disabled={formLoading}
+            startIcon={formLoading ? <CircularProgress size={20} /> : <EditIcon />}
+            sx={{ 
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            }}
+          >
+            {formLoading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Assign/Remove Manager Dialog (NEW) */}
+      <Dialog 
+        open={openAssignManagerDialog} 
+        onClose={() => !managerAssignmentLoading && setOpenAssignManagerDialog(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: managerAssignmentData.action === 'assign' ? '#2196f3' : '#ff9800', 
+          color: 'white',
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {managerAssignmentData.action === 'assign' ? (
+              <AssignmentIcon sx={{ mr: 2 }} />
+            ) : (
+              <PersonIcon sx={{ mr: 2 }} />
+            )}
+            {managerAssignmentData.action === 'assign' ? 'Assign Manager' : 'Remove Manager'}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {managerAssignmentLoading && <LinearProgress sx={{ mb: 2 }} />}
+          
+          <Typography variant="h6" gutterBottom>
+            Station: {managerAssignmentData.stationName}
+          </Typography>
+          
+          {managerAssignmentData.action === 'assign' ? (
+            <FormControl fullWidth size="medium" sx={{ mt: 2 }}>
+              <InputLabel>Select Manager</InputLabel>
+              <Select
+                value={managerAssignmentData.manager || ''}
+                onChange={(e) => setManagerAssignmentData({ ...managerAssignmentData, manager: e.target.value })}
+                label="Select Manager"
+                disabled={managerAssignmentLoading || managersLoading}
+              >
+                {managersLoading ? (
+                  <MenuItem value="" disabled>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2" color="text.secondary">
+                        Loading station admins...
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ) : (
+                  <Box>
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        Select a manager
+                      </Typography>
+                    </MenuItem>
+                    {availableManagers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || 'No phone'}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Box>
+                )}
+              </Select>
+              {!managersLoading && availableManagers.length === 0 && (
+                <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    No active station admins available. Please create station admin users first.
+                  </Typography>
+                </Alert>
+              )}
+            </FormControl>
+          ) : (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mt: 2, 
+                borderRadius: 2,
+                '& .MuiAlert-icon': { alignItems: 'center' }
+              }}
+            >
+              <Typography variant="body2" fontWeight="bold">
+                Are you sure you want to remove the current manager?
+              </Typography>
+              <Typography variant="body2">
+                This station will no longer have a manager assigned.
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setOpenAssignManagerDialog(false)} 
+            disabled={managerAssignmentLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAssignManager} 
+            variant="contained" 
+            color={managerAssignmentData.action === 'assign' ? "primary" : "warning"}
+            disabled={managerAssignmentLoading || (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager)}
+            startIcon={managerAssignmentLoading ? <CircularProgress size={20} /> : 
+              (managerAssignmentData.action === 'assign' ? <AssignmentIcon /> : <PersonIcon />)}
+            sx={{ 
+              borderRadius: 2,
+              background: managerAssignmentData.action === 'assign' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)'
+            }}
+          >
+            {managerAssignmentLoading ? 'Processing...' : 
+              (managerAssignmentData.action === 'assign' ? 'Assign Manager' : 'Remove Manager')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog (keep existing) */}
       <Dialog 
         open={openDeleteDialog} 
         onClose={() => !formLoading && setOpenDeleteDialog(false)}
