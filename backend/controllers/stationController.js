@@ -17,6 +17,9 @@ export const createStation = async (req, res) => {
         }
 
         // Check if manager exists and is a station admin
+        if (!req.body.manager) {
+            return res.status(400).json({ message: 'Manager is required' });
+        }
         if (req.body.manager) {
             const manager = await User.findById(req.body.manager);
             if (!manager || manager.role !== 'station_admin') {
