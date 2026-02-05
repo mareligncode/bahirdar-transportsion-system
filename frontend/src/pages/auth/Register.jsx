@@ -107,6 +107,7 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
       navigate('/passenger/dashboard'); // Use specific route
   }
 }, 2000);
+        setTimeout(() => {navigate('/dashboard');}, 2000);
       } else {
         throw new Error(result.message || 'Registration failed');
       }
