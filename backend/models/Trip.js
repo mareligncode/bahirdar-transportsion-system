@@ -4,9 +4,7 @@ import mongoose from 'mongoose';
 const tripSchema = new mongoose.Schema({
     tripNumber: {
         type: String,
-        required: true,
-        unique: true,
-        uppercase: true
+        default: null
     },
     origin: {
         type: mongoose.Schema.Types.ObjectId,
@@ -123,31 +121,31 @@ tripSchema.index({ departureTime: 1, tripStatus: 1 });
 tripSchema.index({ price: 1 });
 
 // Generate trip number before save
-tripSchema.pre('save', async function (next) {
-    if (!this.tripNumber) {
-        const date = new Date();
-        const prefix = 'TRP';
-        const year = date.getFullYear().toString().slice(-2);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
+// tripSchema.pre('save', async function (next) {
+//     if (!this.tripNumber) {
+//         const date = new Date();
+//         const prefix = 'TRP';
+//         const year = date.getFullYear().toString().slice(-2);
+//         const month = (date.getMonth() + 1).toString().padStart(2, '0');
+//         const day = date.getDate().toString().padStart(2, '0');
 
-        const count = await mongoose.model('Trip').countDocuments({
-            departureTime: {
-                $gte: new Date(date.getFullYear(), date.getMonth(), 1),
-                $lt: new Date(date.getFullYear(), date.getMonth() + 1, 1)
-            }
-        });
+//         const count = await mongoose.model('Trip').countDocuments({
+//             departureTime: {
+//                 $gte: new Date(date.getFullYear(), date.getMonth(), 1),
+//                 $lt: new Date(date.getFullYear(), date.getMonth() + 1, 1)
+//             }
+//         });
 
-        this.tripNumber = `${prefix}${year}${month}${day}${(count + 1).toString().padStart(4, '0')}`;
-    }
+//         this.tripNumber = `${prefix}${year}${month}${day}${(count + 1).toString().padStart(4, '0')}`;
+//     }
 
-    // Calculate available seats if not set
-    if (!this.availableSeats && this.totalSeats) {
-        this.availableSeats = this.totalSeats;
-    }
+//     // Calculate available seats if not set
+//     if (!this.availableSeats && this.totalSeats) {
+//         this.availableSeats = this.totalSeats;
+//     }
 
-    next();
-});
+//     next();
+// });
 
 // Pre-find middleware for population
 tripSchema.pre(/^find/, function (next) {

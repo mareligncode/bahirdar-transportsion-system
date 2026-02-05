@@ -47,12 +47,12 @@ export const createTrip = async (req, res) => {
             destination,
             departureTime,
             arrivalTime,
-            vehicleID,
-            driverID,
+            vehicle: vehicleID,
+            driver: driverID,
             price,
             availableSeats: totalSeats,
             totalSeats,
-            stationID,
+            station: stationID,
             routePoints: routePoints || [],
             estimatedDuration,
             notes,
@@ -63,12 +63,19 @@ export const createTrip = async (req, res) => {
 
         // Populate and return
         const populatedTrip = await Trip.findById(trip._id)
+            // .populate('origin', 'stationName city')
+            // .populate('destination', 'stationName city')
+            // .populate('vehicleID', 'plateNumber carType totalCapacity')
+            // .populate('driverID', 'fullName phoneNumber')
+            // .populate('stationID', 'stationName')
+        // .populate('createdBy', 'fullName');
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
-            .populate('vehicleID', 'plateNumber carType totalCapacity')
-            .populate('driverID', 'fullName phoneNumber')
-            .populate('stationID', 'stationName')
+            .populate('vehicle', 'plateNumber carType totalCapacity')
+            .populate('driver', 'fullName phoneNumber')
+            .populate('station', 'stationName')
             .populate('createdBy', 'fullName');
+
 
         res.status(201).json({
             success: true,
@@ -133,9 +140,9 @@ export const getAllTrips = async (req, res) => {
         const trips = await Trip.find(query)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
-            .populate('vehicleID', 'plateNumber carType')
-            .populate('driverID', 'fullName')
-            .populate('stationID', 'stationName')
+            .populate('vehicle', 'plateNumber carType')
+            .populate('driver', 'fullName')
+            .populate('station', 'stationName')
             .sort({ departureTime: 1 })
             .skip(skip)
             .limit(parseInt(limit));
@@ -165,9 +172,9 @@ export const getTripById = async (req, res) => {
         const trip = await Trip.findById(req.params.id)
             .populate('origin', 'stationName city location')
             .populate('destination', 'stationName city location')
-            .populate('vehicleID', 'plateNumber carType totalCapacity color')
-            .populate('driverID', 'fullName phoneNumber licenseNumber')
-            .populate('stationID', 'stationName location')
+            .populate('vehicle', 'plateNumber carType totalCapacity color')
+            .populate('driver', 'fullName phoneNumber licenseNumber')
+            .populate('station', 'stationName location')
             .populate('createdBy', 'fullName');
 
         if (!trip) {
@@ -227,7 +234,7 @@ export const updateTrip = async (req, res) => {
         // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
-            if (!station || !trip.stationID.equals(station._id)) {
+            if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'
@@ -240,7 +247,7 @@ export const updateTrip = async (req, res) => {
 
         // Handle seat updates
         if (updates.totalSeats) {
-            const vehicle = await Vehicle.findById(trip.vehicleID);
+            const vehicle = await Vehicle.findById(trip.vehicle);
             if (vehicle.totalCapacity < updates.totalSeats) {
                 return res.status(400).json({
                     success: false,
@@ -264,9 +271,9 @@ export const updateTrip = async (req, res) => {
         const updatedTrip = await Trip.findById(trip._id)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
-            .populate('vehicleID', 'plateNumber carType')
-            .populate('driverID', 'fullName')
-            .populate('stationID', 'stationName');
+            .populate('vehicle', 'plateNumber carType')
+            .populate('driver', 'fullName')
+            .populate('station', 'stationName');
 
         res.status(200).json({
             success: true,
@@ -299,7 +306,7 @@ export const deleteTrip = async (req, res) => {
         // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
-            if (!station || !trip.stationID.equals(station._id)) {
+            if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to delete this trip'
@@ -352,9 +359,9 @@ export const searchTrips = async (req, res) => {
         const trips = await Trip.find(query)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
-            .populate('vehicleID', 'plateNumber carType totalCapacity')
-            .populate('driverID', 'fullName')
-            .populate('stationID', 'stationName')
+            .populate('vehicle', 'plateNumber carType totalCapacity')
+            .populate('driver', 'fullName')
+            .populate('station', 'stationName')
             .sort({ departureTime: 1 });
 
         res.status(200).json({
