@@ -39,6 +39,7 @@ import ChangePassword from './pages/profile/ChangePassword';
 // Super Admin Pages
 import AllUsers from './pages/admin/AllUsers';
 import RoleManagement from './pages/admin/RoleManagement';
+import Stations from './pages/admin/Stations';
 
 // Station Admin Pages
 import StationDashboard from './pages/station/Dashboard';
@@ -198,8 +199,7 @@ const queryClient = new QueryClient({
           } />
           
           {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
-    
-          
+      
           <Route path="/admin/schedules" element={
             <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
               <Layout showSidebar>
@@ -215,7 +215,20 @@ const queryClient = new QueryClient({
               </Layout>
             </ProtectedRoute>
           } />
+
+
+                    <Route path="/admin/stations" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <Layout showSidebar>
+                <Stations />
+              </Layout>
+            </ProtectedRoute>
+          } />
           
+
+
+
+
           <Route path="/admin/vehicles" element={
             <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
               <Layout showSidebar>

@@ -76,7 +76,7 @@ export default function Sidebar({ userRole }) {
       { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
        { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
-     
+      { icon: Calendar, label: 'Schedules', path: '/admin/schedules' },
       { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },
       { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
