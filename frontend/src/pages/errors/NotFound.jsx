@@ -3,6 +3,7 @@ const NotFound = () => {
     <div style={{ padding: "2rem" }}>
       <h1>404</h1>
       <p>Page not tttt found</p>
+      <p>Page not found</p>
     </div>
   );
 };

@@ -35,6 +35,7 @@ export default function Sidebar({ userRole }) {
     // Common items for all roles
     const commonItems = [
 
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
       { icon: UserCircle, label: 'Profile', path: '/profile' },
       { icon: Bell, label: 'Notifications', path: '/notifications' },
     ];
@@ -77,6 +78,8 @@ export default function Sidebar({ userRole }) {
        { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
      
+      { icon: Users, label: 'All Users', path: '/admin/users' },
+      { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },
       { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
@@ -94,6 +97,13 @@ export default function Sidebar({ userRole }) {
         return [...stationAdminItems,...commonItems];
       case 'super_admin':
         return [...superAdminItems,...commonItems];
+        return [...commonItems, ...passengerItems];
+      case 'driver':
+        return [...commonItems, ...driverItems];
+      case 'station_admin':
+        return [...commonItems, ...stationAdminItems];
+      case 'super_admin':
+        return [...commonItems, ...superAdminItems];
       default:
         return commonItems;
     }

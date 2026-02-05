@@ -32,12 +32,15 @@ export default function RoleManagement() {
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [actionType, setActionType] = useState('');
+  const [actionType, setActionType] = useState(''); // 'deactivate', 'activate', 'delete'
   const [newRole, setNewRole] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [stationID, setStationID] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [changingRole, setChangingRole] = useState(false);
 
+
+  // Fetch all users
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -55,6 +58,7 @@ export default function RoleManagement() {
         setMessage({ type: 'error', text: response.message || 'Failed to fetch users' });
       }
     } catch (error) {
+      console.error('Error fetching users:', error);
       setMessage({ type: 'error', text: 'Failed to load users' });
     } finally {
       setLoading(false);
@@ -65,6 +69,7 @@ export default function RoleManagement() {
     fetchUsers();
   }, [user]);
 
+  // Filter users based on search and filters
   const filteredUsers = users.filter(userItem => {
     const matchesSearch = 
       userItem.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,6 +84,7 @@ export default function RoleManagement() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  // Get role icon
   const getRoleIcon = (role) => {
     switch(role) {
       case 'super_admin': return <Shield className="w-4 h-4" />;
@@ -88,6 +94,7 @@ export default function RoleManagement() {
     }
   };
 
+  // Get role color
   const getRoleColor = (role) => {
     switch(role) {
       case 'super_admin': return 'bg-purple-100 text-purple-800';
@@ -97,6 +104,7 @@ export default function RoleManagement() {
     }
   };
 
+  // Get role display name
   const getRoleDisplay = (role) => {
     const roleMap = {
       'super_admin': 'Super Admin',
@@ -107,6 +115,7 @@ export default function RoleManagement() {
     return roleMap[role] || role;
   };
 
+  // Handle change role
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
 
@@ -124,6 +133,21 @@ export default function RoleManagement() {
           return;
         }
         licenseNumberParam = licenseNumber;
+      setMessage({ type: '', text: '' });
+      
+      // Prepare data based on role
+      const data = {
+        userId: selectedUser._id,
+        newRole
+      };
+
+      // Add additional fields based on role
+      if (newRole === 'driver') {
+        if (!licenseNumber.trim()) {
+          setMessage({ type: 'error', text: 'License number is required for driver role' });
+          return;
+        }
+        data.licenseNumber = licenseNumber;
       }
 
       if (newRole === 'station_admin') {
@@ -140,6 +164,16 @@ export default function RoleManagement() {
         newRole,
         licenseNumberParam,
         stationIDParam
+          return;
+        }
+        data.stationID = stationID;
+      }
+
+      const response = await authService.changeUserRole(
+        data.userId,
+        data.newRole,
+        data.licenseNumber,
+        data.stationID
       );
 
       if (response.success) {
@@ -175,6 +209,15 @@ export default function RoleManagement() {
           resetForm();
         }, 300);
         
+        // Update local state
+        setUsers(users.map(u => 
+          u._id === selectedUser._id 
+            ? { ...u, role: newRole, licenseNumber, stationID }
+            : u
+        ));
+        
+        setShowChangeRoleModal(false);
+        resetForm();
       } else {
         setMessage({ type: 'error', text: response.message });
       }
@@ -185,6 +228,12 @@ export default function RoleManagement() {
     }
   };
 
+      console.error('Error changing role:', error);
+      setMessage({ type: 'error', text: 'Failed to change role' });
+    }
+  };
+
+  // Handle toggle status
   const handleToggleStatus = async () => {
     if (!selectedUser) return;
 
@@ -206,12 +255,17 @@ export default function RoleManagement() {
             u._id === selectedUser._id ? { ...u, isActive: newStatus } : u
           )
         );
+        // Update local state
+        setUsers(users.map(u => 
+          u._id === selectedUser._id ? { ...u, isActive: newStatus } : u
+        ));
         
         setShowConfirmDialog(false);
       } else {
         setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
+      console.error('Error toggling status:', error);
       setMessage({ type: 'error', text: 'Failed to update user status' });
     }
   };
@@ -224,6 +278,9 @@ export default function RoleManagement() {
     setChangingRole(false);
   };
 
+  };
+
+  // Open change role modal
   const openChangeRoleModal = (user) => {
     setSelectedUser(user);
     setNewRole(user.role);
@@ -233,12 +290,14 @@ export default function RoleManagement() {
     setMessage({ type: '', text: '' });
   };
 
+  // Open confirm dialog
   const openConfirmDialog = (user, type) => {
     setSelectedUser(user);
     setActionType(type);
     setShowConfirmDialog(true);
   };
 
+  // Export users to CSV
   const exportToCSV = () => {
     const csvContent = [
       ['Name', 'Email', 'Phone', 'Role', 'Status', 'Created At'],
@@ -274,6 +333,7 @@ export default function RoleManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
@@ -288,6 +348,7 @@ export default function RoleManagement() {
         </button>
       </div>
 
+      {/* Message Alert */}
       {message.text && (
         <div className={`p-4 rounded-lg flex items-start gap-3 ${
           message.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' :
@@ -310,6 +371,10 @@ export default function RoleManagement() {
 
       <div className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Filters */}
+      <div className="card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -321,6 +386,7 @@ export default function RoleManagement() {
             />
           </div>
 
+          {/* Role Filter */}
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
@@ -337,6 +403,7 @@ export default function RoleManagement() {
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
 
+          {/* Status Filter */}
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
@@ -351,6 +418,7 @@ export default function RoleManagement() {
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
 
+          {/* Refresh Button */}
           <button 
             onClick={fetchUsers}
             className="btn-primary flex items-center justify-center gap-2"
@@ -371,6 +439,7 @@ export default function RoleManagement() {
         </div>
       </div>
 
+      {/* Users Table */}
       <div className="card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center min-h-[300px]">
@@ -508,6 +577,12 @@ export default function RoleManagement() {
                   &times;
                 </button>
               </div>
+      {/* Change Role Modal */}
+      {showChangeRoleModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Change User Role</h3>
               
               <div className="space-y-4">
                 <div>
@@ -575,6 +650,8 @@ export default function RoleManagement() {
                   }}
                   className="btn-secondary"
                   disabled={changingRole}
+                  onClick={() => setShowChangeRoleModal(false)}
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
@@ -591,6 +668,10 @@ export default function RoleManagement() {
                   ) : (
                     'Save Changes'
                   )}
+                  className="btn-primary"
+                  disabled={!newRole}
+                >
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -607,6 +688,9 @@ export default function RoleManagement() {
             }
           }}
         >
+      {/* Confirm Dialog */}
+      {showConfirmDialog && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-sm w-full">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -655,4 +739,5 @@ export default function RoleManagement() {
       )}
     </div>
     );
+  );
 }
