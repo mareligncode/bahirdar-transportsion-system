@@ -109,12 +109,6 @@ export default function Footer() {
                   'Express Routes',
                   'Monthly Subscription',
                   'Accessible Transport'
-                  'Student Pass',
-                  'Monthly Subscription',
-                  'Corporate Plans',
-                  'Tourist Packages',
-                  'Accessible Transport',
-                  'Night Service'
                 ].map((service) => (
                   <li key={service}>
                     <span className="text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center gap-2">

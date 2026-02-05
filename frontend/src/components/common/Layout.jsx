@@ -26,7 +26,6 @@ export default function Layout({ children, showSidebar = false }) {
 
   const shouldShowSidebar = showSidebar && isAuthenticated && user && 
     ['super_admin', 'station_admin', 'driver','passenger'].includes(user.role);
-    ['super_admin', 'station_admin', 'driver'].includes(user.role);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
