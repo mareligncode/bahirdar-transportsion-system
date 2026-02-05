@@ -89,6 +89,24 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
         setSuccess('Account created successfully! Redirecting to dashboard...');
         
         // Show success message for 2 seconds then redirect
+       setTimeout(() => {
+  const userRole = result.user?.role;
+  
+  switch(userRole) {
+    case 'driver':
+      navigate('/driver/dashboard');
+      break;
+    case 'station_admin':
+      navigate('/station/dashboard');
+      break;
+    case 'super_admin':
+      navigate('/admin/dashboard');
+      break;
+    case 'passenger':
+    default:
+      navigate('/passenger/dashboard'); // Use specific route
+  }
+}, 2000);
         setTimeout(() => {navigate('/dashboard');}, 2000);
       } else {
         throw new Error(result.message || 'Registration failed');

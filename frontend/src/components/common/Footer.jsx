@@ -107,6 +107,8 @@ export default function Footer() {
                 {[
                   'City Bus Service',
                   'Express Routes',
+                  'Monthly Subscription',
+                  'Accessible Transport'
                   'Student Pass',
                   'Monthly Subscription',
                   'Corporate Plans',

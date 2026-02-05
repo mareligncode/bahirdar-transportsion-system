@@ -25,6 +25,7 @@ export default function Layout({ children, showSidebar = false }) {
   }
 
   const shouldShowSidebar = showSidebar && isAuthenticated && user && 
+    ['super_admin', 'station_admin', 'driver','passenger'].includes(user.role);
     ['super_admin', 'station_admin', 'driver'].includes(user.role);
 
   return (

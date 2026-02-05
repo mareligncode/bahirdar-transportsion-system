@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import Layout from '../../components/common/Layout';
 import { 
   User, 
   UserCheck, 
@@ -30,11 +31,14 @@ export default function RoleManagement() {
   const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [actionType, setActionType] = useState('');
   const [actionType, setActionType] = useState(''); // 'deactivate', 'activate', 'delete'
   const [newRole, setNewRole] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [stationID, setStationID] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [changingRole, setChangingRole] = useState(false);
+
 
   // Fetch all users
   const fetchUsers = async () => {
@@ -116,6 +120,19 @@ export default function RoleManagement() {
     if (!selectedUser || !newRole) return;
 
     try {
+      setChangingRole(true);
+      setMessage({ type: '', text: '' });
+      
+      let licenseNumberParam = '';
+      let stationIDParam = '';
+
+      if (newRole === 'driver') {
+        if (!licenseNumber.trim()) {
+          setMessage({ type: 'error', text: 'License number is required for driver role' });
+          setChangingRole(false);
+          return;
+        }
+        licenseNumberParam = licenseNumber;
       setMessage({ type: '', text: '' });
       
       // Prepare data based on role
@@ -136,6 +153,17 @@ export default function RoleManagement() {
       if (newRole === 'station_admin') {
         if (!stationID.trim()) {
           setMessage({ type: 'error', text: 'Station ID is required for station admin role' });
+          setChangingRole(false);
+          return;
+        }
+        stationIDParam = stationID;
+      }
+
+      const response = await authService.changeUserRole(
+        selectedUser._id,
+        newRole,
+        licenseNumberParam,
+        stationIDParam
           return;
         }
         data.stationID = stationID;
@@ -154,6 +182,33 @@ export default function RoleManagement() {
           text: `Role changed to ${getRoleDisplay(newRole)} successfully!` 
         });
         
+        setUsers(prevUsers => 
+          prevUsers.map(u => {
+            if (u._id === selectedUser._id) {
+              const updatedUser = { ...u, role: newRole };
+              
+              if (newRole === 'driver') {
+                updatedUser.licenseNumber = licenseNumberParam;
+                updatedUser.stationID = '';
+              } else if (newRole === 'station_admin') {
+                updatedUser.stationID = stationIDParam;
+                updatedUser.licenseNumber = '';
+              } else {
+                updatedUser.licenseNumber = '';
+                updatedUser.stationID = '';
+              }
+              
+              return updatedUser;
+            }
+            return u;
+          })
+        );
+        
+        setTimeout(() => {
+          setShowChangeRoleModal(false);
+          resetForm();
+        }, 300);
+        
         // Update local state
         setUsers(users.map(u => 
           u._id === selectedUser._id 
@@ -167,6 +222,12 @@ export default function RoleManagement() {
         setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to change role' });
+    } finally {
+      setChangingRole(false);
+    }
+  };
+
       console.error('Error changing role:', error);
       setMessage({ type: 'error', text: 'Failed to change role' });
     }
@@ -178,15 +239,22 @@ export default function RoleManagement() {
 
     try {
       setMessage({ type: '', text: '' });
+      
       const response = await authService.toggleUserStatus(selectedUser._id);
 
       if (response.success) {
         const newStatus = !selectedUser.isActive;
+        
         setMessage({ 
           type: 'success', 
           text: `User ${newStatus ? 'activated' : 'deactivated'} successfully!` 
         });
         
+        setUsers(prevUsers => 
+          prevUsers.map(u => 
+            u._id === selectedUser._id ? { ...u, isActive: newStatus } : u
+          )
+        );
         // Update local state
         setUsers(users.map(u => 
           u._id === selectedUser._id ? { ...u, isActive: newStatus } : u
@@ -207,6 +275,9 @@ export default function RoleManagement() {
     setNewRole('');
     setLicenseNumber('');
     setStationID('');
+    setChangingRole(false);
+  };
+
   };
 
   // Open change role modal
@@ -298,6 +369,8 @@ export default function RoleManagement() {
         </div>
       )}
 
+      <div className="card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Filters */}
       <div className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -480,6 +553,30 @@ export default function RoleManagement() {
         )}
       </div>
 
+      {showChangeRoleModal && selectedUser && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowChangeRoleModal(false);
+              resetForm();
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Change User Role</h3>
+                <button
+                  onClick={() => {
+                    setShowChangeRoleModal(false);
+                    resetForm();
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
       {/* Change Role Modal */}
       {showChangeRoleModal && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -492,6 +589,7 @@ export default function RoleManagement() {
                   <p className="text-sm text-gray-600">User:</p>
                   <p className="font-medium">{selectedUser.fullName}</p>
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                  <p className="text-xs text-gray-400">Current role: {getRoleDisplay(selectedUser.role)}</p>
                 </div>
 
                 <div>
@@ -546,6 +644,12 @@ export default function RoleManagement() {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
+                  onClick={() => {
+                    setShowChangeRoleModal(false);
+                    resetForm();
+                  }}
+                  className="btn-secondary"
+                  disabled={changingRole}
                   onClick={() => setShowChangeRoleModal(false)}
                   className="btn-secondary"
                 >
@@ -553,6 +657,17 @@ export default function RoleManagement() {
                 </button>
                 <button
                   onClick={handleChangeRole}
+                  className="btn-primary flex items-center justify-center gap-2"
+                  disabled={!newRole || changingRole}
+                >
+                  {changingRole ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                   className="btn-primary"
                   disabled={!newRole}
                 >
@@ -564,6 +679,15 @@ export default function RoleManagement() {
         </div>
       )}
 
+      {showConfirmDialog && selectedUser && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowConfirmDialog(false);
+            }
+          }}
+        >
       {/* Confirm Dialog */}
       {showConfirmDialog && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -614,5 +738,6 @@ export default function RoleManagement() {
         </div>
       )}
     </div>
+    );
   );
 }

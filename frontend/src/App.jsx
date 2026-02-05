@@ -110,6 +110,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
+          {/* ===== PASSENGER ROUTES =====*/}
           {/* ===== PASSENGER ROUTES ===== */}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['passenger']}>
@@ -117,6 +118,10 @@ const queryClient = new QueryClient({
                 <PassengerDashboard />
               </Layout>
             </ProtectedRoute>
+          } /> 
+          
+           <Route path="/passenger/dashboard" element={
+             <ProtectedRoute allowedRoles={['passenger']}>
           } />
           
           <Route path="/passenger/dashboard" element={
@@ -169,6 +174,9 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
+     <Route
+     path="/station/drivers"
+     element={
 {/* ===== STATION ADMIN ROUTES ===== */}
 <Route
   path="/station/drivers"
@@ -199,6 +207,7 @@ const queryClient = new QueryClient({
           } />
           
           {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
+    
           <Route path="/admin/dashboard" element={
             <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
               <Layout showSidebar>
@@ -232,6 +241,7 @@ const queryClient = new QueryClient({
           } />
           
           {/* ===== SUPER ADMIN EXCLUSIVE ROUTES ===== */}
+          <Route path="/admin/dashboard" element={
           <Route path="/super-admin/dashboard" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Layout showSidebar>
@@ -240,6 +250,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
+          <Route path="/admin/AllUsers" element={
           <Route path="/super-admin/users" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Layout showSidebar>
@@ -258,6 +269,9 @@ const queryClient = new QueryClient({
   path="/admin/role-management" 
   element={
     <ProtectedRoute allowedRoles={['super_admin']}>
+      <Layout showSidebar>
+        <RoleManagement />
+      </Layout>
       <RoleManagement />
     </ProtectedRoute>
   } 

@@ -5,6 +5,9 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',   
     headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+    },
     },
     // Temporarily remove until CORS is fixed
     // withCredentials: true, 
@@ -17,6 +20,9 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+  },
+  (error) => {
     console.log('API Request:', config.method?.toUpperCase(), config.url, 'Token:', token ? 'Present' : 'Missing');
     return config;
   },
@@ -56,6 +62,24 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
 
+        // Use the SAME api instance (not axios.post directly)
+        const response = await api.post('/api/auth/refresh-token', { refreshToken });
+        
+        // Check structure of response
+        const data = response.data.data || response.data;
+        const tokens = data.tokens || data;
+        
+        if (tokens.accessToken) {
+          localStorage.setItem('accessToken', tokens.accessToken);
+          if (tokens.refreshToken) {
+            localStorage.setItem('refreshToken', tokens.refreshToken);
+          }
+          
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
         console.log('Attempting token refresh...');
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/refresh-token`,
