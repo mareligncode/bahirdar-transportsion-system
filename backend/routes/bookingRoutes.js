@@ -11,7 +11,7 @@ import {
     getTripBookings
 } from '../controllers/bookingController.js'
 import { protect, authorize } from '../middleware/auth.js';
-
+///sssss
 const router = express.Router();
 
 router.use(protect);
