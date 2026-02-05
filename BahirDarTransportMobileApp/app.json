@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "BahirDar Transport",
+    "slug": "bahirdar-transport",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "jsEngine": "jsc",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#3B82F6",
+      "resizeMode": "contain",
+      "image": "./assets/splash.png"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router"],
+    "scheme": "bahirdartransport"
+  }
+}
