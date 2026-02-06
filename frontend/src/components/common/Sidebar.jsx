@@ -73,11 +73,12 @@ export default function Sidebar({ userRole }) {
 
     // Super Admin specific items
     const superAdminItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },     
        { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
       { icon: Calendar, label: 'Schedules', path: '/admin/schedules' },
       { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
+      { icon: Car, label: 'Vehicles', path: '/admin/vehicles' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },
       { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
       { icon: Settings, label: 'System Settings', path: '/admin/settings' },
