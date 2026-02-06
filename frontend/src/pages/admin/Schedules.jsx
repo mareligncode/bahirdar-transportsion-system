@@ -674,6 +674,26 @@ const Schedules = () => {
     } catch (err) {
       showSnackbar('Bulk action failed', 'error');
     }
+    return false;
+  };
+
+  // Check if trip is searchable (for passengers)
+  const isSearchableTrip = (trip) => {
+    const now = new Date();
+    const departure = parseISO(trip.departureTime);
+    return (
+      trip.isActive &&
+      trip.tripStatus === 'scheduled' &&
+      trip.availableSeats > 0 &&
+      isAfter(departure, now)
+    );
+  };
+
+  // Format time duration
+  const formatDuration = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
 
   const exportTrips = () => {
