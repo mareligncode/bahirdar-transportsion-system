@@ -227,8 +227,6 @@ const queryClient = new QueryClient({
           
 
 
-
-
           <Route path="/admin/vehicles" element={
             <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
               <Layout showSidebar>
