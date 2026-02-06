@@ -17,7 +17,11 @@ import {
   ChevronDown,
   AlertCircle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 export default function RoleManagement() {
@@ -37,6 +41,10 @@ export default function RoleManagement() {
   const [stationID, setStationID] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [changingRole, setChangingRole] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchUsers = async () => {
     try {
@@ -78,6 +86,17 @@ export default function RoleManagement() {
 
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+  const indexOfLastUser = currentPage * rowsPerPage;
+  const indexOfFirstUser = indexOfLastUser - rowsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter, rowsPerPage]);
 
   const getRoleIcon = (role) => {
     switch(role) {
@@ -260,6 +279,13 @@ export default function RoleManagement() {
     a.click();
   };
 
+  // Pagination handlers
+  const goToPage = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
   if (user?.role !== 'super_admin') {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -386,101 +412,189 @@ export default function RoleManagement() {
             <p className="text-gray-600">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">User</th>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Contact</th>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Role</th>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Status</th>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Joined</th>
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredUsers.map((userItem) => (
-                  <tr key={userItem._id} className="hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                          <span className="font-semibold text-primary-600">
-                            {userItem.fullName?.charAt(0).toUpperCase() || 'U'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{userItem.fullName}</p>
-                          <p className="text-sm text-gray-500">ID: {userItem._id.substring(0, 8)}...</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <p className="font-medium">{userItem.email}</p>
-                      <p className="text-sm text-gray-500">{userItem.phoneNumber}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`p-1 rounded ${getRoleColor(userItem.role)}`}>
-                          {getRoleIcon(userItem.role)}
-                        </span>
-                        <span className="font-medium">{getRoleDisplay(userItem.role)}</span>
-                      </div>
-                      {userItem.licenseNumber && (
-                        <p className="text-xs text-gray-500 mt-1">License: {userItem.licenseNumber}</p>
-                      )}
-                      {userItem.stationID && (
-                        <p className="text-xs text-gray-500 mt-1">Station: {userItem.stationID}</p>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        userItem.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {userItem.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-600">
-                      {new Date(userItem.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setShowUserDetails(true) || setSelectedUser(userItem)}
-                          className="p-2 hover:bg-gray-100 rounded"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4 text-gray-600" />
-                        </button>
-                        <button
-                          onClick={() => openChangeRoleModal(userItem)}
-                          className="p-2 hover:bg-blue-50 rounded"
-                          title="Change Role"
-                        >
-                          <Edit className="w-4 h-4 text-blue-600" />
-                        </button>
-                        <button
-                          onClick={() => openConfirmDialog(
-                            userItem, 
-                            userItem.isActive ? 'deactivate' : 'activate'
-                          )}
-                          className="p-2 hover:bg-yellow-50 rounded"
-                          title={userItem.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {userItem.isActive ? (
-                            <UserX className="w-4 h-4 text-yellow-600" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 text-green-600" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">User</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Contact</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Role</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Status</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Joined</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {currentUsers.map((userItem) => (
+                    <tr key={userItem._id} className="hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span className="font-semibold text-primary-600">
+                              {userItem.fullName?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{userItem.fullName}</p>
+                            <p className="text-sm text-gray-500">ID: {userItem._id.substring(0, 8)}...</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <p className="font-medium">{userItem.email}</p>
+                        <p className="text-sm text-gray-500">{userItem.phoneNumber}</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`p-1 rounded ${getRoleColor(userItem.role)}`}>
+                            {getRoleIcon(userItem.role)}
+                          </span>
+                          <span className="font-medium">{getRoleDisplay(userItem.role)}</span>
+                        </div>
+                        {userItem.licenseNumber && (
+                          <p className="text-xs text-gray-500 mt-1">License: {userItem.licenseNumber}</p>
+                        )}
+                        {userItem.stationID && (
+                          <p className="text-xs text-gray-500 mt-1">Station: {userItem.stationID}</p>
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          userItem.isActive 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {userItem.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        {new Date(userItem.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowUserDetails(true) || setSelectedUser(userItem)}
+                            className="p-2 hover:bg-gray-100 rounded"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => openChangeRoleModal(userItem)}
+                            className="p-2 hover:bg-blue-50 rounded"
+                            title="Change Role"
+                          >
+                            <Edit className="w-4 h-4 text-blue-600" />
+                          </button>
+                          <button
+                            onClick={() => openConfirmDialog(
+                              userItem, 
+                              userItem.isActive ? 'deactivate' : 'activate'
+                            )}
+                            className="p-2 hover:bg-yellow-50 rounded"
+                            title={userItem.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {userItem.isActive ? (
+                              <UserX className="w-4 h-4 text-yellow-600" />
+                            ) : (
+                              <UserCheck className="w-4 h-4 text-green-600" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-gray-200">
+              <div className="flex items-center gap-2 mb-4 sm:mb-0">
+                <span className="text-sm text-gray-700">Rows per page:</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                <span className="text-sm text-gray-600 ml-4">
+                  Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => goToPage(pageNumber)}
+                        className={`w-8 h-8 rounded text-sm ${
+                          currentPage === pageNumber
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -654,5 +768,5 @@ export default function RoleManagement() {
         </div>
       )}
     </div>
-    );
+  );
 }
