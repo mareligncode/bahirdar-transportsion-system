@@ -70,7 +70,6 @@ bookingSchema.index({ tripID: 1 });
 bookingSchema.index({ vehicleID: 1 });
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ bookingDate: 1 });
-bookingSchema.index({ ticketNumber: 1 });
 
 // Generate booking number and ticket number
 bookingSchema.pre('save', async function (next) {

@@ -42,7 +42,7 @@ router.get('/user/:id', authMiddleware(['super_admin']), getUserById);
 // Station Admin routes
 router.post('/assign-driver', authMiddleware(['station_admin']), assignPassengerToDriver);
 router.get('/station-users', authMiddleware(['station_admin']), getStationUsers);
-router.post('/toggle-status', authMiddleware(['station_admin']), toggleUserStatus);
+router.post('/toggle-status', authMiddleware(['station_admin','super_admin']), toggleUserStatus);
 router.get('/station-user/:id', authMiddleware(['station_admin']), getUserById);
 
 // User self-view
