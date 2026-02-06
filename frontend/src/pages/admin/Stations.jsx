@@ -193,7 +193,7 @@ const Stations = () => {
     }
   }, []);
 
-  // Fetch station admins for manager dropdown (only for super_admin) - UPDATED
+  // Fetch station admins for manager dropdown (only for super_admin)
   const fetchStationAdmins = useCallback(async () => {
     if (userRole !== 'super_admin') {
       setManagers([]);
@@ -220,8 +220,6 @@ const Stations = () => {
       const stationAdmins = allUsers.filter(user => {
         return user.role === 'station_admin' && user.isActive === true;
       });
-      
-      console.log('Found station admins:', stationAdmins);
       
       setManagers(stationAdmins);
       setAvailableManagers(stationAdmins);
@@ -287,9 +285,19 @@ const Stations = () => {
     setFormLoading(true);
     try {
       const stationData = {
-        ...formData,
-        stationCode: formData.stationCode.toUpperCase().trim()
+        stationCode: formData.stationCode.toUpperCase().trim(),
+        stationName: formData.stationName.trim(),
+        location: formData.location.trim(),
+        city: formData.city.trim(),
+        contactPhone: formData.contactPhone.trim(),
+        contactEmail: formData.contactEmail.trim(),
+        isActive: formData.isActive
       };
+
+      // Only add manager field if a manager is selected
+      if (formData.manager && formData.manager.trim()) {
+        stationData.manager = formData.manager.trim();
+      }
 
       const response = await api.post('/api/station/register', stationData);
       setSuccess('Station created successfully!');
@@ -299,6 +307,7 @@ const Stations = () => {
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
+      console.error('Create station error:', err);
       setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to create station');
     } finally {
       setFormLoading(false);
@@ -316,9 +325,19 @@ const Stations = () => {
     setFormLoading(true);
     try {
       const stationData = {
-        ...editFormData,
-        stationCode: editFormData.stationCode.toUpperCase().trim()
+        stationCode: editFormData.stationCode.toUpperCase().trim(),
+        stationName: editFormData.stationName.trim(),
+        location: editFormData.location.trim(),
+        city: editFormData.city.trim(),
+        contactPhone: editFormData.contactPhone.trim(),
+        contactEmail: editFormData.contactEmail.trim(),
+        isActive: editFormData.isActive
       };
+
+      // Only add manager field if a manager is selected
+      if (editFormData.manager && editFormData.manager.trim()) {
+        stationData.manager = editFormData.manager.trim();
+      }
 
       const response = await api.put(`/api/station/${editFormData._id}`, stationData);
       setSuccess('Station updated successfully!');
@@ -328,6 +347,7 @@ const Stations = () => {
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
+      console.error('Edit station error:', err);
       setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to update station');
     } finally {
       setFormLoading(false);
@@ -346,6 +366,7 @@ const Stations = () => {
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
+      console.error('Delete station error:', err);
       setError(err.response?.data?.message || 'Failed to delete station');
     } finally {
       setFormLoading(false);
@@ -364,11 +385,12 @@ const Stations = () => {
       }
       fetchStations();
     } catch (err) {
+      console.error('Toggle status error:', err);
       setError(err.response?.data?.message || 'Failed to update station status');
     }
   };
 
-  // Handle assign/remove manager - UPDATED
+  // Handle assign/remove manager
   const handleAssignManager = async () => {
     if (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager) {
       setError('Please select a manager to assign');
@@ -377,14 +399,22 @@ const Stations = () => {
     
     setManagerAssignmentLoading(true);
     try {
-      const updateData = {
-        manager: managerAssignmentData.action === 'assign' ? managerAssignmentData.manager : ''
-      };
+      // Create update data object
+      const updateData = {};
+      
+      if (managerAssignmentData.action === 'assign') {
+        // When assigning, send the manager ID
+        updateData.manager = managerAssignmentData.manager;
+      } else {
+        // When removing, DO NOT include manager field at all
+        // This will let the backend handle it properly
+        updateData.manager = '';
+      }
 
       console.log('Sending manager update:', {
         stationId: managerAssignmentData.stationId,
         action: managerAssignmentData.action,
-        managerId: updateData.manager
+        updateData: updateData
       });
 
       const response = await api.put(`/api/station/${managerAssignmentData.stationId}`, updateData);
@@ -397,7 +427,17 @@ const Stations = () => {
       fetchStationAdmins();
     } catch (err) {
       console.error('Manager assignment error:', err);
-      setError(err.response?.data?.message || 'Failed to update manager. Please try again.');
+      console.error('Error response:', err.response?.data);
+      
+      // More detailed error logging
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', err.response.data);
+      }
+      
+      setError(err.response?.data?.message || 
+               err.response?.data?.errors?.[0]?.msg || 
+               'Failed to update manager. Please try again.');
     } finally {
       setManagerAssignmentLoading(false);
     }
@@ -432,7 +472,7 @@ const Stations = () => {
     });
   };
 
-  // Reset manager assignment form - ADDED
+  // Reset manager assignment form
   const resetManagerAssignmentForm = () => {
     setManagerAssignmentData({
       stationId: '',
@@ -451,7 +491,7 @@ const Stations = () => {
       city: station.city || '',
       contactPhone: station.contactPhone || '',
       contactEmail: station.contactEmail || '',
-      manager: station.manager?._id || '',
+      manager: station.manager?._id || station.manager || '',
       isActive: station.isActive || true,
       _id: station._id || ''
     });
@@ -475,7 +515,7 @@ const Stations = () => {
     setManagerAssignmentData({
       stationId: station._id || '',
       stationName: station.stationName || '',
-      manager: station.manager?._id || '',
+      manager: station.manager?._id || station.manager || '',
       action: station.manager ? 'remove' : 'assign'
     });
     setOpenAssignManagerDialog(true);
@@ -1115,7 +1155,7 @@ const Stations = () => {
         </Alert>
       </Snackbar>
 
-      {/* Create Station Dialog (keep existing) */}
+      {/* Create Station Dialog */}
       <Dialog 
         open={openCreateDialog} 
         onClose={() => !formLoading && setOpenCreateDialog(false)} 
@@ -1228,43 +1268,30 @@ const Stations = () => {
             {canAssignManagers() && (
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Station Manager</InputLabel>
+                  <InputLabel>Station Manager (Optional)</InputLabel>
                   <Select
                     value={formData.manager || ''}
                     onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                    label="Station Manager"
+                    label="Station Manager (Optional)"
                     disabled={formLoading || managersLoading}
                   >
-                    {managersLoading ? (
-                      <MenuItem value="" disabled>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={16} />
-                          <Typography variant="body2" color="text.secondary">
-                            Loading station admins...
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        No manager assigned
+                      </Typography>
+                    </MenuItem>
+                    {managers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || 'No phone'}
                           </Typography>
                         </Box>
                       </MenuItem>
-                    ) : (
-                      <Box>
-                        <MenuItem value="">
-                          <Typography color="text.secondary" fontStyle="italic">
-                            No manager assigned
-                          </Typography>
-                        </MenuItem>
-                        {managers.map((manager) => (
-                          <MenuItem key={manager._id} value={manager._id}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">
-                                {manager.fullName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {manager.email} • {manager.phoneNumber || 'No phone'}
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Box>
-                    )}
+                    ))}
                   </Select>
                   {!managersLoading && managers.length === 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ ml: 2, mt: 0.5 }}>
@@ -1320,7 +1347,7 @@ const Stations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* View Station Dialog (keep existing) */}
+      {/* View Station Dialog */}
       <Dialog 
         open={openViewDialog} 
         onClose={() => setOpenViewDialog(false)} 
@@ -1551,7 +1578,7 @@ const Stations = () => {
         )}
       </Dialog>
 
-      {/* Edit Station Dialog (keep existing) */}
+      {/* Edit Station Dialog */}
       <Dialog 
         open={openEditDialog} 
         onClose={() => !formLoading && setOpenEditDialog(false)} 
@@ -1651,43 +1678,30 @@ const Stations = () => {
             {canAssignManagers() && (
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Station Manager</InputLabel>
+                  <InputLabel>Station Manager (Optional)</InputLabel>
                   <Select
                     value={editFormData.manager || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value })}
-                    label="Station Manager"
+                    label="Station Manager (Optional)"
                     disabled={formLoading || managersLoading}
                   >
-                    {managersLoading ? (
-                      <MenuItem value="" disabled>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={16} />
-                          <Typography variant="body2" color="text.secondary">
-                            Loading station admins...
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        No manager assigned
+                      </Typography>
+                    </MenuItem>
+                    {managers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || 'No phone'}
                           </Typography>
                         </Box>
                       </MenuItem>
-                    ) : (
-                      <Box>
-                        <MenuItem value="">
-                          <Typography color="text.secondary" fontStyle="italic">
-                            No manager assigned
-                          </Typography>
-                        </MenuItem>
-                        {managers.map((manager) => (
-                          <MenuItem key={manager._id} value={manager._id}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">
-                                {manager.fullName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {manager.email} • {manager.phoneNumber || 'No phone'}
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Box>
-                    )}
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -1731,7 +1745,7 @@ const Stations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Assign/Remove Manager Dialog (NEW) */}
+      {/* Assign/Remove Manager Dialog */}
       <Dialog 
         open={openAssignManagerDialog} 
         onClose={() => !managerAssignmentLoading && setOpenAssignManagerDialog(false)} 
@@ -1765,11 +1779,11 @@ const Stations = () => {
           
           {managerAssignmentData.action === 'assign' ? (
             <FormControl fullWidth size="medium" sx={{ mt: 2 }}>
-              <InputLabel>Select Manager</InputLabel>
+              <InputLabel>Select Manager *</InputLabel>
               <Select
                 value={managerAssignmentData.manager || ''}
                 onChange={(e) => setManagerAssignmentData({ ...managerAssignmentData, manager: e.target.value })}
-                label="Select Manager"
+                label="Select Manager *"
                 disabled={managerAssignmentLoading || managersLoading}
               >
                 {managersLoading ? (
@@ -1857,7 +1871,7 @@ const Stations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog (keep existing) */}
+      {/* Delete Confirmation Dialog */}
       <Dialog 
         open={openDeleteDialog} 
         onClose={() => !formLoading && setOpenDeleteDialog(false)}
