@@ -46,7 +46,9 @@ import StationDashboard from './pages/station/Dashboard';
 import StationUsers from './pages/station/Users';
 import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
-
+import StationSettings from './pages/station/Station';
+import TripManagement from './pages/station/Trips';
+import Vehicle from './pages/station/Vehicles';
 
 // Error Pages
 import NotFound from './pages/errors/NotFound';
@@ -189,6 +191,33 @@ const queryClient = new QueryClient({
               </Layout>
             </ProtectedRoute>
           } />
+
+             <Route path="/station/station" element={
+            <ProtectedRoute allowedRoles={['station_admin']}>
+              <Layout showSidebar>
+                <StationSettings />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+
+
+          <Route path="/station/Trips" element={
+            <ProtectedRoute allowedRoles={['station_admin']}>
+              <Layout showSidebar>
+                <TripManagement/>
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/station/vehicles" element={
+            <ProtectedRoute allowedRoles={['station_admin']}>
+              <Layout showSidebar>
+                <Vehicle />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           
           <Route path="/station/reports" element={
             <ProtectedRoute allowedRoles={['station_admin']}>
