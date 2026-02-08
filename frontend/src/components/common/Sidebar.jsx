@@ -65,9 +65,10 @@ export default function Sidebar({ userRole }) {
        { icon: LayoutDashboard, label: 'Dashboard', path: '/station/dashboard' },
       { icon: Users, label: 'User Management', path: '/station/users' },
       { icon: Car, label: 'Drivers', path: '/station/drivers' },
+      { icon: Car, label: 'Vehicles', path: '/station/vehicles' },
       { icon: Calendar, label: 'Trip Management', path: '/station/trips' },
       { icon: BarChart3, label: 'Station Reports', path: '/station/reports' },
-      { icon: Settings, label: 'Station Settings', path: '/station/settings' },
+      { icon: Settings, label: 'Station Settings', path: '/station/station' },
       
     ];
 
@@ -77,9 +78,9 @@ export default function Sidebar({ userRole }) {
        { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
       { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
       { icon: Calendar, label: 'Schedules', path: '/admin/schedules' },
-      { icon: Car, label: 'All Drivers', path: '/admin/drivers' },
       { icon: Car, label: 'Vehicles', path: '/admin/vehicles' },
       { icon: MapPin, label: 'Stations', path: '/admin/stations' },
+      //
       { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
       { icon: Settings, label: 'System Settings', path: '/admin/settings' },
       { icon: FileText, label: 'Audit Logs', path: '/admin/audit-logs' },
