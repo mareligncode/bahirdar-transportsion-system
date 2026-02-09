@@ -1,108 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import {
-  Box,
   Container,
   Typography,
-  Paper,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Alert,
+  Snackbar,
+  LinearProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
-  Chip,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-  IconButton,
-  Tooltip,
-  Snackbar,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Card,
-  CardContent,
-  Grid,
-  Avatar,
+  Paper,
   Stack,
-  Divider,
-  Modal,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Menu,
-  ToggleButton,
-  ToggleButtonGroup,
-  InputAdornment,
-  Checkbox,
-  ListItemSecondaryAction,
-  LinearProgress
+  Tooltip,
+  CircularProgress,
+  TablePagination
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
+  Visibility as ViewIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterListIcon,
-  Search as SearchIcon,
+  DirectionsBus as BusIcon,
   Schedule as ScheduleIcon,
   LocationOn as LocationIcon,
-  DirectionsCar as CarIcon,
   Person as PersonIcon,
   AttachMoney as MoneyIcon,
-  EventAvailable as AvailableIcon,
-  EventBusy as BusyIcon,
-  CheckCircle as CheckCircleIcon,
+  CheckCircle as CheckIcon,
   Cancel as CancelIcon,
-  MoreVert as MoreVertIcon,
-  AccessTime as TimeIcon,
-  ArrowForward as ArrowForwardIcon,
-  Close as CloseIcon,
-  Business as BusinessIcon,
-  Route as RouteIcon,
-  Code as CodeIcon,
-  LocationCity as CityIcon,
-  TrendingUp as TrendingUpIcon
+  MoreVert as MoreIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon
 } from '@mui/icons-material';
-import api from '../../services/api';
 
 const Trips = () => {
+  const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
-  const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [openCreateDialog, setOpenCreateDialog] = useState(false);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [openDetailModal, setOpenDetailModal] = useState(false);
-  const [openStatusDialog, setOpenStatusDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('list');
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [stations, setStations] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [userRole, setUserRole] = useState('');
-  const [userStationId, setUserStationId] = useState('');
-  const [stationName, setStationName] = useState('');
-
-  // Form state for create/edit
-  const [tripForm, setTripForm] = useState({
+  const [formData, setFormData] = useState({
     origin: '',
     destination: '',
     departureTime: '',
@@ -111,454 +73,689 @@ const Trips = () => {
     driver: '',
     price: '',
     totalSeats: '',
+    availableSeats: '',
     station: '',
+    routePoints: '',
     estimatedDuration: '',
-    notes: '',
-    routePoints: []
+    notes: ''
   });
+  const [newStatus, setNewStatus] = useState('');
+  const [availableVehicles, setAvailableVehicles] = useState([]);
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [stations, setStations] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [userStation, setUserStation] = useState(null);
+  const [loadingStations, setLoadingStations] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalTrips, setTotalTrips] = useState(0);
+  const [sortField, setSortField] = useState('departureTime');
+  const [sortDirection, setSortDirection] = useState('desc');
 
-  const [formLoading, setFormLoading] = useState(false);
-
-  // Trip stats
-  const [stats, setStats] = useState({
-    total: 0,
-    scheduled: 0,
-    boarding: 0,
-    ongoing: 0,
-    completed: 0,
-    cancelled: 0,
-    today: 0,
-    availableSeats: 0
-  });
-
-  // Get user data from token
+  // Fetch user profile and trips on component mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUserRole(payload.role);
-        setUserStationId(payload.stationID || '');
-      } catch (err) {
-        console.error('Error parsing token:', err);
-      }
-    }
+    fetchUserProfile();
+    fetchStations();
   }, []);
 
-  // Fetch trips and related data
-  const fetchTrips = useCallback(async () => {
+  // Auto-set station for station admin when dialog opens
+  useEffect(() => {
+    if (openDialog && userProfile?.role === 'station_admin' && userStation) {
+      setFormData(prev => ({
+        ...prev,
+        origin: userStation._id,
+        station: userStation._id
+      }));
+    }
+  }, [openDialog, userProfile, userStation]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/api/auth/profile');
+      if (response.data.success) {
+        setUserProfile(response.data.data.user);
+        if (response.data.data.user.role === 'station_admin' && response.data.data.user.stationID) {
+          await fetchUserStation(response.data.data.user.stationID);
+        }
+        fetchTrips();
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      setError('Failed to load user profile');
+    }
+  };
+
+  const fetchUserStation = async (stationId) => {
+    try {
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(stationId);
+      
+      if (isValidObjectId) {
+        const response = await api.get(`/api/station/${stationId}`);
+        if (response.data.station) {
+          setUserStation(response.data.station);
+          return;
+        }
+      }
+      
+      const allStations = await fetchStationsForLookup();
+      const foundStation = allStations.find(station => 
+        station.stationCode === stationId || 
+        station._id === stationId
+      );
+      
+      if (foundStation) {
+        setUserStation(foundStation);
+      } else {
+        setUserStation(null);
+      }
+    } catch (err) {
+      console.error('Error fetching user station:', err);
+      setUserStation(null);
+    }
+  };
+
+  const fetchStationsForLookup = async () => {
+    try {
+      const response = await api.get('/api/station/active');
+      return response.data.stations || [];
+    } catch (err) {
+      console.error('Error fetching stations for lookup:', err);
+      return [];
+    }
+  };
+
+  const fetchTrips = async () => {
     try {
       setLoading(true);
       setError('');
-
-      // Fetch trips based on user role
-      let url = '/api/trip';
-      const params = new URLSearchParams();
       
-      // Station admin can only see their station's trips
-      if (userRole === 'station_admin' && userStationId) {
-        params.append('stationID', userStationId);
+      // Build query parameters for pagination and sorting
+      const params = new URLSearchParams({
+        page: (page + 1).toString(),
+        limit: rowsPerPage.toString(),
+        sortBy: sortField,
+        sortOrder: sortDirection
+      });
+      
+      // For station admin, only show trips from their station
+      if (userProfile?.role === 'station_admin' && userStation) {
+        params.append('station', userStation._id);
       }
       
-      const queryString = params.toString();
-      if (queryString) url += `?${queryString}`;
+      const response = await api.get(`/api/trip?${params.toString()}`);
       
-      const response = await api.get(url);
-      const tripsData = response.data?.data || response.data?.trips || [];
-      
-      setTrips(tripsData);
-      setFilteredTrips(tripsData);
-      
-      // Calculate statistics
-      calculateStats(tripsData);
-
-      // Fetch related data for forms
-      await fetchRelatedData();
-
+      if (response.data.success) {
+        setTrips(response.data.data || []);
+        setTotalTrips(response.data.total || response.data.data?.length || 0);
+      } else {
+        setError(response.data.message || 'Failed to fetch trips');
+        setTrips([]);
+      }
     } catch (err) {
       console.error('Error fetching trips:', err);
-      setError(err.response?.data?.message || 'Failed to load trips');
+      setError(err.response?.data?.message || 'Failed to fetch trips. Please try again.');
+      setTrips([]);
     } finally {
       setLoading(false);
     }
-  }, [userRole, userStationId]);
+  };
 
-  const fetchRelatedData = async () => {
+  const fetchStations = async () => {
     try {
-      // Get station admin's station
-      if (userRole === 'station_admin' && userStationId) {
-        const stationResponse = await api.get(`/api/station/${userStationId}`);
-        const stationData = stationResponse.data?.station;
-        if (stationData) {
-          setStations([stationData]);
-          setStationName(stationData.stationName);
-        }
-      } else if (userRole === 'super_admin') {
-        // Super admin can see all active stations
-        const stationsResponse = await api.get('/api/station/active');
-        setStations(stationsResponse.data?.stations || []);
-      }
-
-      // Fetch available vehicles (filter by station for station admin)
-      let vehiclesUrl = '/api/vehicles';
-      if (userRole === 'station_admin' && userStationId) {
-        vehiclesUrl += `?stationID=${userStationId}`;
-      }
-      const vehiclesResponse = await api.get(vehiclesUrl);
-      const vehiclesData = vehiclesResponse.data?.data?.vehicles || [];
-      
-      // Filter vehicles by availability (currentStatus: 'available' or 'active')
-      const availableVehicles = vehiclesData.filter(vehicle => 
-        ['available', 'active'].includes(vehicle.currentStatus)
-      );
-      setVehicles(availableVehicles);
-
-      // Fetch drivers (filter by station for station admin)
-      let driversUrl = '/api/auth/station-users';
-      if (userRole === 'station_admin') {
-        driversUrl = '/api/auth/station-users';
+      setLoadingStations(true);
+      const response = await api.get('/api/station/active');
+      if (response.data.stations) {
+        setStations(response.data.stations || []);
       } else {
-        driversUrl = '/api/auth/all-users';
+        setStations([]);
       }
-      
-      const driversResponse = await api.get(driversUrl);
-      let driversData = [];
-      
-      // Handle different response structures
-      if (driversResponse.data?.success) {
-        driversData = driversResponse.data.data?.users || [];
-      } else if (Array.isArray(driversResponse.data)) {
-        driversData = driversResponse.data;
-      } else if (driversResponse.data?.data?.users) {
-        driversData = driversResponse.data.data.users;
-      } else if (driversResponse.data?.users) {
-        driversData = driversResponse.data.users;
-      }
-      
-      // Filter for active drivers only
-      const activeDrivers = driversData.filter(driver => 
-        driver.role === 'driver' && 
-        driver.isActive === true &&
-        (userRole !== 'station_admin' || driver.stationID === userStationId)
-      );
-      setDrivers(activeDrivers);
-
     } catch (err) {
-      console.error('Error fetching related data:', err);
-      setError('Failed to load related data');
+      console.error('Error fetching stations:', err);
+      setError('Failed to load stations: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoadingStations(false);
     }
   };
 
-  const calculateStats = (tripsData) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const stats = {
-      total: tripsData.length,
-      scheduled: tripsData.filter(t => t.tripStatus === 'scheduled').length,
-      boarding: tripsData.filter(t => t.tripStatus === 'boarding').length,
-      ongoing: tripsData.filter(t => t.tripStatus === 'ongoing').length,
-      completed: tripsData.filter(t => t.tripStatus === 'completed').length,
-      cancelled: tripsData.filter(t => t.tripStatus === 'cancelled').length,
-      today: tripsData.filter(t => {
-        const tripDate = new Date(t.departureTime);
-        return tripDate >= today && tripDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      }).length,
-      availableSeats: tripsData.reduce((sum, trip) => sum + (trip.availableSeats || 0), 0)
-    };
-    setStats(stats);
+  const fetchVehicles = async () => {
+    try {
+      setLoadingVehicles(true);
+      
+      let url = '/api/vehicles';
+      const params = new URLSearchParams();
+      
+      // For station admin, only show vehicles from their station
+      if (userProfile?.role === 'station_admin' && userStation) {
+        const actualStationId = userStation._id;
+        
+        if (actualStationId && /^[0-9a-fA-F]{24}$/.test(actualStationId)) {
+          params.append('stationID', actualStationId); // Vehicle model uses stationID
+        }
+      }
+      
+      params.append('isActive', 'true');
+      params.append('currentStatus', 'available,active');
+      
+      const fullUrl = `${url}?${params.toString()}`;
+      
+      const response = await api.get(fullUrl);
+      
+      if (response.data.success) {
+        const vehicles = response.data.data?.vehicles || [];
+        
+        const filteredVehicles = vehicles.filter(vehicle => 
+          vehicle.isActive && 
+          ['available', 'active'].includes(vehicle.currentStatus) &&
+          vehicle.totalCapacity > 0
+        );
+        
+        setAvailableVehicles(filteredVehicles);
+      } else {
+        setAvailableVehicles([]);
+      }
+    } catch (err) {
+      console.error('Error fetching vehicles:', err);
+      setAvailableVehicles([]);
+    } finally {
+      setLoadingVehicles(false);
+    }
   };
 
-  useEffect(() => {
-    if (userRole) {
-      fetchTrips();
+  const fetchDrivers = async () => {
+    try {
+      setLoadingDrivers(true);
+      
+      let response;
+      if (userProfile?.role === 'station_admin') {
+        response = await api.get('/api/auth/station-users');
+      } else if (userProfile?.role === 'super_admin') {
+        response = await api.get('/api/auth/all-users');
+      } else {
+        setAvailableDrivers([]);
+        return;
+      }
+      
+      if (response.data.success) {
+        const users = response.data.data?.users || response.data.data || [];
+        
+        const drivers = users.filter(
+          user => user.role === 'driver' && user.isActive === true
+        );
+        
+        setAvailableDrivers(drivers);
+      } else {
+        setAvailableDrivers([]);
+      }
+    } catch (err) {
+      console.error('Error fetching drivers:', err);
+      setAvailableDrivers([]);
+    } finally {
+      setLoadingDrivers(false);
     }
-  }, [fetchTrips, userRole]);
+  };
 
-  // Filter trips based on search and filters
-  useEffect(() => {
-    let filtered = trips;
+  const fetchAllResources = async () => {
+    await Promise.all([
+      fetchVehicles(),
+      fetchDrivers()
+    ]);
+  };
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(trip =>
-        trip.tripNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.origin?.stationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.destination?.stationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.driver?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trip.vehicle?.plateNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  const calculateDuration = (departureTime, arrivalTime) => {
+    if (!departureTime || !arrivalTime) return 0;
+    
+    const departure = new Date(departureTime);
+    const arrival = new Date(arrivalTime);
+    
+    if (arrival <= departure) return 0;
+    
+    const diffMs = arrival - departure;
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    
+    return diffMinutes;
+  };
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(trip => trip.tripStatus === statusFilter);
-    }
-
-    // Date filter
-    if (dateFilter === 'today') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(trip => {
-        const tripDate = new Date(trip.departureTime);
-        return tripDate >= today && tripDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      });
-    } else if (dateFilter === 'upcoming') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(trip => {
-        const tripDate = new Date(trip.departureTime);
-        return tripDate >= today && trip.tripStatus === 'scheduled';
-      });
-    } else if (dateFilter === 'past') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(trip => {
-        const tripDate = new Date(trip.departureTime);
-        return tripDate < today;
-      });
-    }
-
-    setFilteredTrips(filtered);
-    setPage(0);
-  }, [trips, searchTerm, statusFilter, dateFilter]);
-
-  // Dialog handlers
-  const handleOpenCreateDialog = () => {
-    // Default form with user's station for station admin
-    const defaultForm = {
-      origin: '',
-      destination: '',
-      departureTime: '',
-      arrivalTime: '',
-      vehicle: '',
-      driver: '',
-      price: '',
-      totalSeats: '',
-      station: userStationId || '',
-      estimatedDuration: '',
-      notes: '',
-      routePoints: []
+  const handleTimeChange = (field, value) => {
+    const updatedData = {
+      ...formData,
+      [field]: value
     };
     
-    // If station admin has only one station, pre-fill origin/destination
-    if (userRole === 'station_admin' && stations.length === 1) {
-      defaultForm.station = stations[0]._id;
+    if (updatedData.departureTime && updatedData.arrivalTime) {
+      const duration = calculateDuration(updatedData.departureTime, updatedData.arrivalTime);
+      updatedData.estimatedDuration = duration > 0 ? duration : '';
+    } else {
+      updatedData.estimatedDuration = '';
     }
     
-    setTripForm(defaultForm);
-    setOpenCreateDialog(true);
+    setFormData(updatedData);
   };
 
-  const handleOpenEditDialog = (trip) => {
-    setSelectedTrip(trip);
-    setTripForm({
-      origin: trip.origin?._id || trip.origin || '',
-      destination: trip.destination?._id || trip.destination || '',
-      departureTime: new Date(trip.departureTime).toISOString().slice(0, 16),
-      arrivalTime: new Date(trip.arrivalTime).toISOString().slice(0, 16),
-      vehicle: trip.vehicle?._id || trip.vehicle || '',
-      driver: trip.driver?._id || trip.driver || '',
-      price: trip.price,
-      totalSeats: trip.totalSeats,
-      station: trip.station?._id || trip.station || userStationId || '',
-      estimatedDuration: trip.estimatedDuration,
-      notes: trip.notes || '',
-      routePoints: trip.routePoints || []
-    });
-    setOpenEditDialog(true);
+  const handleVehicleChange = (vehicleId) => {
+    const selectedVehicle = availableVehicles.find(vehicle => vehicle._id === vehicleId);
+    
+    if (selectedVehicle) {
+      const vehicleCapacity = selectedVehicle.totalCapacity || 0;
+      
+      const updatedData = {
+        ...formData,
+        vehicle: vehicleId,
+        totalSeats: vehicleCapacity,
+        availableSeats: vehicleCapacity
+      };
+
+      const driverId = selectedVehicle.driverID?._id || selectedVehicle.driverID;
+      
+      if (driverId) {
+        const assignedDriver = availableDrivers.find(driver => driver._id === driverId);
+        
+        if (assignedDriver) {
+          updatedData.driver = assignedDriver._id;
+        } else {
+          fetchAssignedDriver(driverId);
+        }
+      } else {
+        updatedData.driver = '';
+      }
+      
+      setFormData(updatedData);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        vehicle: '',
+        totalSeats: '',
+        availableSeats: '',
+        driver: ''
+      }));
+    }
   };
 
-  const handleOpenDetailModal = (trip) => {
-    setSelectedTrip(trip);
-    setOpenDetailModal(true);
+  const handleTotalSeatsChange = (value) => {
+    const total = parseInt(value) || 0;
+    setFormData(prev => ({
+      ...prev,
+      totalSeats: total,
+      availableSeats: total
+    }));
   };
 
-  const handleOpenDeleteDialog = (trip) => {
-    setSelectedTrip(trip);
-    setOpenDeleteDialog(true);
+  const fetchAssignedDriver = async (driverId) => {
+    try {
+      const response = await api.get(`/api/auth/user/${driverId}`);
+      
+      if (response.data.success && response.data.data.user) {
+        const driver = response.data.data.user;
+        
+        if (driver.role === 'driver' && driver.isActive) {
+          setAvailableDrivers(prev => {
+            const exists = prev.some(d => d._id === driver._id);
+            if (!exists) {
+              return [...prev, driver];
+            }
+            return prev;
+          });
+          
+          setFormData(prev => ({
+            ...prev,
+            driver: driver._id
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            driver: ''
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching assigned driver:', err);
+    }
   };
 
-  const handleMenuClick = (event, trip) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedTrip(trip);
+  const handleOpenCreateDialog = async () => {
+    try {
+      let defaultOrigin = '';
+      let defaultStation = '';
+      
+      if (userProfile?.role === 'station_admin' && userStation) {
+        defaultOrigin = userStation._id || '';
+        defaultStation = userStation._id || '';
+      }
+      
+      setFormData({
+        origin: defaultOrigin,
+        destination: '',
+        departureTime: '',
+        arrivalTime: '',
+        vehicle: '',
+        driver: '',
+        price: '',
+        totalSeats: '',
+        availableSeats: '',
+        station: defaultStation,
+        routePoints: '',
+        estimatedDuration: '',
+        notes: ''
+      });
+      
+      setSelectedTrip(null);
+      
+      await fetchAllResources();
+      setOpenDialog(true);
+    } catch (err) {
+      console.error('Error opening create dialog:', err);
+      setError('Failed to load resources: ' + (err.message || 'Unknown error'));
+    }
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleCloseAllDialogs = () => {
-    setOpenCreateDialog(false);
-    setOpenEditDialog(false);
-    setOpenDetailModal(false);
-    setOpenStatusDialog(false);
-    setOpenDeleteDialog(false);
-    setSelectedTrip(null);
-    setAnchorEl(null);
-    setError('');
-    setFormLoading(false);
-  };
-
-  // API Actions
   const handleCreateTrip = async () => {
     try {
-      // Validate required fields
+      setError('');
+      
       const requiredFields = ['origin', 'destination', 'departureTime', 'arrivalTime', 
                              'vehicle', 'driver', 'price', 'totalSeats', 'station'];
-      const missingFields = requiredFields.filter(field => !tripForm[field]);
+      const missingFields = requiredFields.filter(field => !formData[field]);
       
       if (missingFields.length > 0) {
         setError(`Please fill all required fields: ${missingFields.join(', ')}`);
         return;
       }
 
-      // Validate station for station admins
-      if (userRole === 'station_admin' && tripForm.station !== userStationId) {
-        setError('You can only create trips for your assigned station');
+      if (new Date(formData.departureTime) >= new Date(formData.arrivalTime)) {
+        setError('Departure time must be before arrival time');
         return;
       }
 
-      setFormLoading(true);
-      
-      // Prepare payload according to backend (field names must match backend)
-      const payload = {
-        origin: tripForm.origin,
-        destination: tripForm.destination,
-        departureTime: new Date(tripForm.departureTime).toISOString(),
-        arrivalTime: new Date(tripForm.arrivalTime).toISOString(),
-        vehicleID: tripForm.vehicle,  // Backend expects vehicleID
-        driverID: tripForm.driver,    // Backend expects driverID
-        price: parseFloat(tripForm.price),
-        totalSeats: parseInt(tripForm.totalSeats),
-        stationID: tripForm.station,  // Backend expects stationID
-        estimatedDuration: tripForm.estimatedDuration ? parseInt(tripForm.estimatedDuration) : 0,
-        notes: tripForm.notes || '',
-        routePoints: tripForm.routePoints || []
+      if (formData.availableSeats > formData.totalSeats) {
+        setError('Available seats cannot exceed total seats');
+        return;
+      }
+
+      let estimatedDuration = formData.estimatedDuration;
+      if (!estimatedDuration || estimatedDuration <= 0) {
+        estimatedDuration = calculateDuration(formData.departureTime, formData.arrivalTime);
+        if (estimatedDuration <= 0) {
+          setError('Please check departure and arrival times');
+          return;
+        }
+      }
+
+      const tripData = {
+        origin: formData.origin,
+        destination: formData.destination,
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
+        vehicle: formData.vehicle,
+        driver: formData.driver,
+        price: Number(formData.price),
+        totalSeats: Number(formData.totalSeats),
+        availableSeats: Number(formData.availableSeats || formData.totalSeats),
+        station: formData.station,
+        routePoints: formData.routePoints ? formData.routePoints.split(',').map(point => point.trim()) : [],
+        estimatedDuration: Number(estimatedDuration),
+        notes: formData.notes || ''
       };
 
-      const response = await api.post('/api/trip', payload);
-
-      if (response.data?.success || response.data?.trip) {
-        setSuccess('Trip created successfully');
+      const response = await api.post('/api/trip', tripData);
+      
+      if (response.data.success) {
+        setSuccess('Trip created successfully!');
+        setOpenDialog(false);
         fetchTrips();
-        handleCloseAllDialogs();
       } else {
-        throw new Error('Failed to create trip');
+        setError(response.data.message || 'Failed to create trip');
       }
     } catch (err) {
       console.error('Error creating trip:', err);
-      console.error('Error details:', err.response?.data);
-      setError(err.response?.data?.message || 
-               err.response?.data?.error || 
-               err.message || 
-               'Failed to create trip');
-    } finally {
-      setFormLoading(false);
+      setError(err.response?.data?.message || 'Failed to create trip. Please try again.');
     }
   };
 
   const handleUpdateTrip = async () => {
     try {
+      setError('');
+      
       if (!selectedTrip) return;
 
-      setFormLoading(true);
-      
-      // Prepare payload
-      const payload = {
-        origin: tripForm.origin,
-        destination: tripForm.destination,
-        departureTime: new Date(tripForm.departureTime).toISOString(),
-        arrivalTime: new Date(tripForm.arrivalTime).toISOString(),
-        vehicle: tripForm.vehicle,
-        driver: tripForm.driver,
-        price: parseFloat(tripForm.price),
-        totalSeats: parseInt(tripForm.totalSeats),
-        station: tripForm.station,
-        estimatedDuration: tripForm.estimatedDuration ? parseInt(tripForm.estimatedDuration) : 0,
-        notes: tripForm.notes || '',
-        routePoints: tripForm.routePoints || []
+      if (new Date(formData.departureTime) >= new Date(formData.arrivalTime)) {
+        setError('Departure time must be before arrival time');
+        return;
+      }
+
+      if (formData.availableSeats > formData.totalSeats) {
+        setError('Available seats cannot exceed total seats');
+        return;
+      }
+
+      let estimatedDuration = formData.estimatedDuration;
+      if (!estimatedDuration || estimatedDuration <= 0) {
+        estimatedDuration = calculateDuration(formData.departureTime, formData.arrivalTime);
+        if (estimatedDuration <= 0) {
+          setError('Please check departure and arrival times');
+          return;
+        }
+      }
+
+      const updateData = {
+        origin: formData.origin,
+        destination: formData.destination,
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
+        vehicle: formData.vehicle,
+        driver: formData.driver,
+        price: Number(formData.price),
+        totalSeats: Number(formData.totalSeats),
+        availableSeats: Number(formData.availableSeats || formData.totalSeats),
+        station: formData.station,
+        routePoints: formData.routePoints ? formData.routePoints.split(',').map(point => point.trim()) : [],
+        estimatedDuration: Number(estimatedDuration),
+        notes: formData.notes || ''
       };
 
-      const response = await api.put(`/api/trip/${selectedTrip._id}`, payload);
-
-      if (response.data?.success || response.data?.trip) {
-        setSuccess('Trip updated successfully');
+      const response = await api.put(`/api/trip/${selectedTrip._id}`, updateData);
+      
+      if (response.data.success) {
+        setSuccess('Trip updated successfully!');
+        setOpenDialog(false);
         fetchTrips();
-        handleCloseAllDialogs();
       } else {
-        throw new Error('Failed to update trip');
+        setError(response.data.message || 'Failed to update trip');
       }
     } catch (err) {
       console.error('Error updating trip:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update trip');
-    } finally {
-      setFormLoading(false);
+      setError(err.response?.data?.message || 'Failed to update trip. Please try again.');
     }
   };
 
   const handleDeleteTrip = async () => {
     try {
-      setFormLoading(true);
-      const response = await api.delete(`/api/trip/${selectedTrip._id}`);
+      if (!selectedTrip) return;
 
-      if (response.data?.success) {
-        setSuccess('Trip deleted successfully');
+      const response = await api.delete(`/api/trip/${selectedTrip._id}`);
+      
+      if (response.data.success) {
+        setSuccess('Trip deleted successfully!');
+        setOpenDeleteDialog(false);
         fetchTrips();
-        handleCloseAllDialogs();
       } else {
-        throw new Error('Failed to delete trip');
+        setError(response.data.message || 'Failed to delete trip');
       }
     } catch (err) {
       console.error('Error deleting trip:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to delete trip');
-    } finally {
-      setFormLoading(false);
+      setError(err.response?.data?.message || 'Failed to delete trip. Please try again.');
     }
   };
 
-  const handleUpdateStatus = async (newStatus) => {
+  const handleUpdateStatus = async () => {
     try {
-      setFormLoading(true);
+      if (!selectedTrip || !newStatus) return;
+
       const response = await api.patch(`/api/trip/${selectedTrip._id}/status`, {
         status: newStatus
       });
-
-      if (response.data?.success) {
-        setSuccess(`Trip status updated to ${newStatus}`);
+      
+      if (response.data.success) {
+        setSuccess(`Trip status updated to ${newStatus}!`);
+        setOpenStatusDialog(false);
+        setNewStatus('');
         fetchTrips();
-        handleMenuClose();
-        handleCloseAllDialogs();
       } else {
-        throw new Error('Failed to update trip status');
+        setError(response.data.message || 'Failed to update status');
       }
     } catch (err) {
-      console.error('Error updating trip status:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update trip status');
-    } finally {
-      setFormLoading(false);
+      console.error('Error updating status:', err);
+      setError(err.response?.data?.message || 'Failed to update status. Please try again.');
     }
   };
 
-  const handleToggleActive = async () => {
+  const handleToggleActive = async (tripId) => {
     try {
-      setFormLoading(true);
-      const response = await api.patch(`/api/trip/${selectedTrip._id}/toggle-active`);
-
-      if (response.data?.success) {
-        setSuccess(`Trip ${selectedTrip.isActive ? 'deactivated' : 'activated'}`);
+      const response = await api.patch(`/api/trip/${tripId}/toggle-active`);
+      
+      if (response.data.success) {
+        setSuccess(response.data.message || 'Trip status updated successfully!');
         fetchTrips();
-        handleMenuClose();
-        handleCloseAllDialogs();
       } else {
-        throw new Error('Failed to toggle trip status');
+        setError(response.data.message || 'Failed to update trip status');
       }
     } catch (err) {
       console.error('Error toggling trip active status:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to toggle trip status');
-    } finally {
-      setFormLoading(false);
+      
+      if (err.response?.status === 403) {
+        setError('Permission denied. You can only manage trips from your own station.');
+      } else if (err.response?.status === 404) {
+        setError('Trip not found. It may have been deleted.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to update trip status. Please try again.');
+      }
+      
+      fetchTrips();
     }
+  };
+
+  const openEditDialog = async (trip) => {
+    try {
+      setSelectedTrip(trip);
+      
+      await fetchAllResources();
+      
+      const tripOrigin = typeof trip.origin === 'object' ? trip.origin._id : trip.origin;
+      const tripDestination = typeof trip.destination === 'object' ? trip.destination._id : trip.destination;
+      const tripVehicle = typeof trip.vehicle === 'object' ? trip.vehicle._id : trip.vehicle;
+      const tripDriver = typeof trip.driver === 'object' ? trip.driver._id : trip.driver;
+      const tripStation = typeof trip.station === 'object' ? trip.station._id : trip.station;
+      
+      const availableSeats = trip.availableSeats || trip.totalSeats || '';
+      
+      setFormData({
+        origin: tripOrigin || '',
+        destination: tripDestination || '',
+        departureTime: trip.departureTime ? new Date(trip.departureTime).toISOString().slice(0, 16) : '',
+        arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString().slice(0, 16) : '',
+        vehicle: tripVehicle || '',
+        driver: tripDriver || '',
+        price: trip.price || '',
+        totalSeats: trip.totalSeats || '',
+        availableSeats: availableSeats,
+        station: tripStation || '',
+        routePoints: trip.routePoints?.join(', ') || '',
+        estimatedDuration: trip.estimatedDuration || '',
+        notes: trip.notes || ''
+      });
+      
+      setOpenDialog(true);
+    } catch (err) {
+      console.error('Error opening edit dialog:', err);
+      setError('Failed to load trip data: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const openDeleteConfirmation = (trip) => {
+    setSelectedTrip(trip);
+    setOpenDeleteDialog(true);
+  };
+
+  const openStatusUpdate = (trip) => {
+    setSelectedTrip(trip);
+    setNewStatus(trip.tripStatus);
+    setOpenStatusDialog(true);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'scheduled': return 'primary';
+      case 'boarding': return 'warning';
+      case 'ongoing': return 'info';
+      case 'completed': return 'success';
+      case 'cancelled': return 'error';
+      case 'delayed': return 'warning';
+      default: return 'default';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatCompactDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
+           ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDuration = (minutes) => {
+    if (!minutes || isNaN(minutes)) return 'N/A';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const handleCloseSnackbar = () => {
+    setError('');
+    setSuccess('');
+  };
+
+  const getVehicleCapacity = (vehicleId) => {
+    if (!vehicleId) return 0;
+    const vehicle = availableVehicles.find(v => v._id === vehicleId);
+    return vehicle?.totalCapacity || 0;
+  };
+
+  const getStationName = (station) => {
+    if (!station) return 'N/A';
+    if (typeof station === 'object') {
+      return station.stationName || 'Unknown Station';
+    }
+    const foundStation = stations.find(s => s._id === station);
+    return foundStation?.stationName || station;
+  };
+
+  const getDriverName = (driver) => {
+    if (!driver) return 'No driver';
+    if (typeof driver === 'object') {
+      return driver.fullName || 'Unknown Driver';
+    }
+    const foundDriver = availableDrivers.find(d => d._id === driver);
+    return foundDriver?.fullName || driver;
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setPage(0);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -570,516 +767,282 @@ const Trips = () => {
     setPage(0);
   };
 
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('all');
-    setDateFilter('all');
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'scheduled': return 'primary';
-      case 'boarding': return 'info';
-      case 'ongoing': return 'warning';
-      case 'completed': return 'success';
-      case 'cancelled': return 'error';
-      case 'delayed': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getActiveColor = (isActive) => {
-    return isActive ? 'success' : 'error';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Pagination
-  const paginatedTrips = filteredTrips.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+  const SortableHeader = ({ field, label, currentField, currentDirection, children }) => (
+    <TableCell>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={() => handleSort(field)}>
+        {children || label}
+        {currentField === field && (
+          currentDirection === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />
+        )}
+      </Box>
+    </TableCell>
   );
-
-  const canManageTrips = () => {
-    return ['station_admin', 'super_admin'].includes(userRole);
-  };
 
   if (loading && trips.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <Container sx={{ mt: 4 }}>
+        <LinearProgress />
+        <Typography sx={{ mt: 2 }}>Loading trips...</Typography>
+      </Container>
     );
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          mb: 4, 
-          p: 3, 
-          borderRadius: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          boxShadow: 3
-        }}
-      >
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box>
-            <Typography variant="h4" gutterBottom fontWeight="bold">
-              <ScheduleIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-              Trip Management
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Trip Management
+            <IconButton onClick={fetchTrips} sx={{ ml: 2 }}>
+              <RefreshIcon />
+            </IconButton>
+          </Typography>
+          {userStation && (
+            <Typography variant="subtitle1" color="textSecondary">
+              Station: {userStation.stationName} ({userStation.city})
             </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9 }}>
-              {userRole === 'station_admin' 
-                ? `Manage trips for ${stationName || 'your station'}` 
-                : 'Schedule and manage all trips'}
+          )}
+          {userProfile && (
+            <Typography variant="caption" color="textSecondary">
+              Logged in as: {userProfile.role}
             </Typography>
-          </Box>
-          <Stack direction="row" spacing={2}>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(e, newMode) => newMode && setViewMode(newMode)}
-              size="small"
-              sx={{ 
-                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                '& .MuiToggleButton-root': {
-                  color: 'white',
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(255, 255, 255, 0.2)'
-                  }
-                }
-              }}
-            >
-              <ToggleButton value="list">
-                List View
-              </ToggleButton>
-              <ToggleButton value="calendar">
-                Calendar View
-              </ToggleButton>
-            </ToggleButtonGroup>
-            {canManageTrips() && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenCreateDialog}
-                disabled={!userStationId && stations.length === 0}
-                sx={{ 
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  '&:hover': { background: 'rgba(255, 255, 255, 0.3)' }
-                }}
-              >
-                New Trip
-              </Button>
-            )}
-          </Stack>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreateDialog}
+            disabled={loadingStations || loadingVehicles || loadingDrivers}
+          >
+            Create New Trip
+          </Button>
         </Box>
       </Box>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} mb={4}>
-        {[
-          {
-            icon: <ScheduleIcon />,
-            title: 'Total Trips',
-            value: stats.total,
-            color: '#3f51b5',
-            bgColor: '#e8eaf6'
-          },
-          {
-            icon: <TimeIcon />,
-            title: "Today's Trips",
-            value: stats.today,
-            color: '#2196f3',
-            bgColor: '#e3f2fd'
-          },
-          {
-            icon: <CheckCircleIcon />,
-            title: 'Scheduled',
-            value: stats.scheduled,
-            color: '#4caf50',
-            bgColor: '#e8f5e9'
-          },
-          {
-            icon: <ArrowForwardIcon />,
-            title: 'Ongoing',
-            value: stats.ongoing,
-            color: '#ff9800',
-            bgColor: '#fff3e0'
-          },
-          {
-            icon: <TrendingUpIcon />,
-            title: 'Available Seats',
-            value: stats.availableSeats,
-            color: '#9c27b0',
-            bgColor: '#f3e5f5'
-          }
-        ].map((stat, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={index}>
-            <Card sx={{ 
-              borderRadius: 3,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-              borderLeft: `4px solid ${stat.color}`,
-              height: '100%'
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <Avatar sx={{ bgcolor: stat.bgColor, color: stat.color, mr: 2 }}>
-                    {stat.icon}
-                  </Avatar>
-                  <Box>
-                    <Typography color="text.secondary" variant="caption" gutterBottom>
-                      {stat.title}
-                    </Typography>
-                    <Typography variant="h4" fontWeight="bold">
-                      {stat.value}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+      {/* Stats */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Trips
+              </Typography>
+              <Typography variant="h4">
+                {totalTrips}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Active Trips
+              </Typography>
+              <Typography variant="h4">
+                {trips.filter(t => t.isActive).length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Available Seats
+              </Typography>
+              <Typography variant="h4">
+                {trips.reduce((sum, trip) => sum + (trip.availableSeats || 0), 0)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Today's Trips
+              </Typography>
+              <Typography variant="h4">
+                {trips.filter(t => {
+                  if (!t.departureTime) return false;
+                  const today = new Date().toDateString();
+                  const tripDate = new Date(t.departureTime).toDateString();
+                  return today === tripDate;
+                }).length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
-      {/* Search and Filters */}
-      <Paper sx={{ 
-        p: 3, 
-        mb: 3, 
-        borderRadius: 3,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
-      }}>
-        <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 2 }}>
-          <FilterListIcon sx={{ mr: 1, verticalAlign: 'middle', color: 'primary.main' }} />
-          Filter Trips
-        </Typography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              fullWidth
-              placeholder="Search trips by trip number, station, or driver..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                )
-              }}
-              sx={{ 
-                '& .MuiOutlinedInput-root': { borderRadius: 2 }
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="scheduled">Scheduled</MenuItem>
-                <MenuItem value="boarding">Boarding</MenuItem>
-                <MenuItem value="ongoing">Ongoing</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-                <MenuItem value="delayed">Delayed</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Date Filter</InputLabel>
-              <Select
-                value={dateFilter}
-                label="Date Filter"
-                onChange={(e) => setDateFilter(e.target.value)}
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="all">All Dates</MenuItem>
-                <MenuItem value="today">Today</MenuItem>
-                <MenuItem value="upcoming">Upcoming</MenuItem>
-                <MenuItem value="past">Past Trips</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                onClick={handleClearFilters}
-                sx={{ flex: 1, borderRadius: 2 }}
-              >
-                Clear Filters
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<RefreshIcon />}
-                onClick={fetchTrips}
-                sx={{ 
-                  flex: 1, 
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-              >
-                Refresh
-              </Button>
-            </Stack>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Trips Table */}
-      <Paper sx={{ 
-        mb: 3, 
-        borderRadius: 3,
-        overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
-      }}>
-        <Box sx={{ 
-          p: 2, 
-          bgcolor: '#f5f5f5',
-          borderBottom: '1px solid #e0e0e0'
-        }}>
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
-            <ScheduleIcon sx={{ mr: 1, color: 'primary.main' }} />
-            Trips List ({filteredTrips.length})
-          </Typography>
-        </Box>
+      {/* Trips Table - Medium Size */}
+      <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Trip Details</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Route</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Schedule</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Vehicle & Driver</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Seats & Price</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Status</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', py: 2 }}>Actions</TableCell>
+              <TableRow sx={{ backgroundColor: 'grey.50' }}>
+                <SortableHeader field="origin" label="Route" currentField={sortField} currentDirection={sortDirection}>
+                  <Typography variant="subtitle2" fontWeight="600">Route</Typography>
+                </SortableHeader>
+                <SortableHeader field="departureTime" label="Schedule" currentField={sortField} currentDirection={sortDirection}>
+                  <Typography variant="subtitle2" fontWeight="600">Schedule</Typography>
+                </SortableHeader>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight="600">Vehicle & Driver</Typography>
+                </TableCell>
+                <SortableHeader field="tripStatus" label="Status" currentField={sortField} currentDirection={sortDirection}>
+                  <Typography variant="subtitle2" fontWeight="600">Status</Typography>
+                </SortableHeader>
+                <SortableHeader field="availableSeats" label="Seats" currentField={sortField} currentDirection={sortDirection}>
+                  <Typography variant="subtitle2" fontWeight="600">Seats</Typography>
+                </SortableHeader>
+                <SortableHeader field="price" label="Price" currentField={sortField} currentDirection={sortDirection}>
+                  <Typography variant="subtitle2" fontWeight="600">Price</Typography>
+                </SortableHeader>
+                <TableCell align="center">
+                  <Typography variant="subtitle2" fontWeight="600">Actions</Typography>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedTrips.length === 0 ? (
+              {trips.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <ScheduleIcon sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.5, mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No trips found
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {searchTerm 
-                          ? 'Try changing your search term' 
-                          : trips.length === 0 
-                            ? canManageTrips() 
-                              ? 'No trips scheduled yet' 
-                              : 'No trips available'
-                            : 'No trips match the selected filter'
-                        }
-                      </Typography>
-                      {trips.length === 0 && canManageTrips() && (
-                        <Button 
-                          variant="contained"
-                          startIcon={<AddIcon />}
-                          onClick={handleOpenCreateDialog}
-                          sx={{ mt: 2 }}
-                        >
-                          Create Your First Trip
-                        </Button>
-                      )}
-                    </Box>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <Typography color="textSecondary">
+                      No trips found. Create your first trip!
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedTrips.map((trip) => (
-                  <TableRow 
-                    key={trip._id} 
-                    hover 
-                    sx={{ 
-                      '&:hover': { bgcolor: '#f8f9fa' },
-                      '&:last-child td': { borderBottom: 0 }
-                    }}
-                  >
+                trips.map((trip) => (
+                  <TableRow key={trip._id} hover>
                     <TableCell>
-                      <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <CodeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {trip.tripNumber || 'TRIP-' + trip._id.slice(-6).toUpperCase()}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Chip
-                            label={trip.isActive ? 'Active' : 'Inactive'}
-                            color={getActiveColor(trip.isActive)}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <LocationIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationIcon color="primary" fontSize="small" />
                           <Typography variant="body2">
-                            {trip.origin?.stationName || 'Unknown'}
+                            <strong>From:</strong> {getStationName(trip.origin)}
                           </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                          <ArrowForwardIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2" color="text.secondary">
-                            {trip.destination?.stationName || 'Unknown'}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationIcon color="secondary" fontSize="small" />
+                          <Typography variant="body2">
+                            <strong>To:</strong> {getStationName(trip.destination)}
                           </Typography>
                         </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2">
-                          {formatDate(trip.departureTime)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {formatTime(trip.departureTime)} - {formatTime(trip.arrivalTime)}
-                        </Typography>
-                        {trip.estimatedDuration && (
-                          <Typography variant="caption" color="text.secondary">
-                            {trip.estimatedDuration} min
+                        {trip.routePoints && trip.routePoints.length > 0 && (
+                          <Typography variant="caption" color="textSecondary">
+                            Via: {trip.routePoints.slice(0, 2).join(', ')}
+                            {trip.routePoints.length > 2 && '...'}
                           </Typography>
                         )}
-                      </Box>
+                      </Stack>
                     </TableCell>
                     <TableCell>
-                      <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <CarIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <ScheduleIcon fontSize="small" />
+                          <Typography variant="body2">
+                            <strong>Depart:</strong> {formatCompactDate(trip.departureTime)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <ScheduleIcon fontSize="small" />
+                          <Typography variant="body2">
+                            <strong>Arrive:</strong> {formatCompactDate(trip.arrivalTime)}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="textSecondary">
+                          Duration: {formatDuration(trip.estimatedDuration)}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <BusIcon fontSize="small" />
                           <Typography variant="body2">
                             {trip.vehicle?.plateNumber || 'No vehicle'}
                           </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PersonIcon fontSize="small" />
                           <Typography variant="body2">
-                            {trip.driver?.fullName || 'No driver'}
+                            {getDriverName(trip.driver)}
                           </Typography>
                         </Box>
-                      </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack spacing={1}>
+                        <Chip
+                          label={trip.tripStatus}
+                          color={getStatusColor(trip.tripStatus)}
+                          size="medium"
+                          sx={{ fontSize: '0.8rem' }}
+                        />
+                        <Chip
+                          label={trip.isActive ? 'Active' : 'Inactive'}
+                          color={trip.isActive ? 'success' : 'error'}
+                          size="medium"
+                          variant="outlined"
+                          sx={{ fontSize: '0.8rem' }}
+                        />
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                          <AvailableIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2">
-                            {trip.availableSeats}/{trip.totalSeats} seats
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <MoneyIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
-                          <Typography variant="body2" fontWeight="medium">
-                            ETB {trip.price}
-                          </Typography>
-                        </Box>
+                        <Typography variant="body2" gutterBottom>
+                          {trip.availableSeats || 0} / {trip.totalSeats || 0}
+                        </Typography>
+                        {trip.totalSeats > 0 && (
+                          <LinearProgress
+                            variant="determinate"
+                            value={((trip.availableSeats || 0) / trip.totalSeats) * 100}
+                            sx={{ height: 6, borderRadius: 3, mt: 1 }}
+                          />
+                        )}
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={trip.tripStatus?.toUpperCase()}
-                        color={getStatusColor(trip.tripStatus)}
-                        size="small"
-                        sx={{ 
-                          fontWeight: 'bold',
-                          borderRadius: 1
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        <Tooltip title="View Details">
-                          <span>
-                            <IconButton 
-                              size="small" 
-                              onClick={() => handleOpenDetailModal(trip)}
-                              sx={{ 
-                                bgcolor: '#e3f2fd',
-                                '&:hover': { bgcolor: '#bbdefb' }
-                              }}
-                            >
-                              <VisibilityIcon fontSize="small" color="primary" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        
-                        {canManageTrips() && (
-                          <>
-                            <Tooltip title="Edit Trip">
-                              <span>
-                                <IconButton 
-                                  size="small" 
-                                  onClick={() => handleOpenEditDialog(trip)}
-                                  sx={{ 
-                                    bgcolor: '#e8f5e9',
-                                    '&:hover': { bgcolor: '#c8e6c9' }
-                                  }}
-                                >
-                                  <EditIcon fontSize="small" color="success" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            <Tooltip title="More Actions">
-                              <span>
-                                <IconButton 
-                                  size="small" 
-                                  onClick={(e) => handleMenuClick(e, trip)}
-                                  sx={{ 
-                                    bgcolor: '#fff3e0',
-                                    '&:hover': { bgcolor: '#ffe0b2' }
-                                  }}
-                                >
-                                  <MoreVertIcon fontSize="small" color="warning" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          </>
-                        )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <MoneyIcon color="success" />
+                        <Typography variant="body2" fontWeight="medium">
+                          ${trip.price || 0}
+                        </Typography>
                       </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <Tooltip title="View Details">
+                          <IconButton
+                            size="medium"
+                            onClick={() => navigate(`/trips/${trip._id}`)}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Trip">
+                          <IconButton
+                            size="medium"
+                            onClick={() => openEditDialog(trip)}
+                            disabled={!trip.isActive && userProfile?.role === 'station_admin'}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="More Actions">
+                          <IconButton
+                            size="medium"
+                            onClick={() => openStatusUpdate(trip)}
+                          >
+                            <MoreIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))
@@ -1089,458 +1052,426 @@ const Trips = () => {
         </TableContainer>
         
         {/* Pagination */}
-        {paginatedTrips.length > 0 && (
-          <TablePagination
-            component="div"
-            count={filteredTrips.length}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            sx={{
-              borderTop: '1px solid #e0e0e0',
-              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-                fontWeight: 500
-              }
-            }}
-          />
-        )}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={totalTrips}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ borderTop: 1, borderColor: 'divider', py: 1 }}
+        />
       </Paper>
 
-      {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: { borderRadius: 2, minWidth: 180 }
-        }}
-      >
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleOpenEditDialog(selectedTrip);
-        }}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" color="primary" />
-          </ListItemIcon>
-          <ListItemText>Edit Trip</ListItemText>
-        </MenuItem>
-        
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleToggleActive();
-        }}>
-          <ListItemIcon>
-            {selectedTrip?.isActive ? 
-              <CancelIcon fontSize="small" color="warning" /> : 
-              <CheckCircleIcon fontSize="small" color="success" />
-            }
-          </ListItemIcon>
-          <ListItemText>
-            {selectedTrip?.isActive ? 'Deactivate' : 'Activate'}
-          </ListItemText>
-        </MenuItem>
-        
-        <Divider />
-        
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleUpdateStatus('boarding');
-        }}>
-          <ListItemIcon>
-            <ScheduleIcon fontSize="small" color="info" />
-          </ListItemIcon>
-          <ListItemText>Mark as Boarding</ListItemText>
-        </MenuItem>
-        
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleUpdateStatus('ongoing');
-        }}>
-          <ListItemIcon>
-            <ArrowForwardIcon fontSize="small" color="warning" />
-          </ListItemIcon>
-          <ListItemText>Mark as Ongoing</ListItemText>
-        </MenuItem>
-        
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleUpdateStatus('completed');
-        }}>
-          <ListItemIcon>
-            <CheckCircleIcon fontSize="small" color="success" />
-          </ListItemIcon>
-          <ListItemText>Mark as Completed</ListItemText>
-        </MenuItem>
-        
-        <Divider />
-        
-        <MenuItem onClick={() => {
-          handleMenuClose();
-          handleOpenDeleteDialog(selectedTrip);
-        }} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete Trip</ListItemText>
-        </MenuItem>
-      </Menu>
-
-      {/* Create Trip Dialog */}
-      <Dialog 
-        open={openCreateDialog} 
-        onClose={handleCloseAllDialogs} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 }
-        }}
-      >
-        <DialogTitle sx={{ 
-          bgcolor: 'primary.main', 
-          color: 'white',
-          borderTopLeftRadius: 3,
-          borderTopRightRadius: 3
-        }}>
-          <Box display="flex" alignItems="center">
-            <AddIcon sx={{ mr: 1 }} />
-            <Typography fontWeight="bold">Create New Trip</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {formLoading && <LinearProgress sx={{ mb: 2 }} />}
-          
-          {userRole === 'station_admin' && userStationId && (
-            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-              <Typography variant="body2">
-                Trip will be created for your station: <strong>{stationName || 'Your Station'}</strong>
-              </Typography>
-            </Alert>
+      {/* Create/Edit Trip Dialog */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {selectedTrip ? 'Edit Trip' : 'Create New Trip'}
+          {userStation && (
+            <Typography variant="subtitle2" color="textSecondary">
+              Station: {userStation.stationName}
+            </Typography>
           )}
-          
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth margin="normal" required size="small">
-                <InputLabel>Origin Station *</InputLabel>
-                <Select
-                  value={tripForm.origin}
-                  label="Origin Station *"
-                  onChange={(e) => setTripForm({...tripForm, origin: e.target.value})}
-                  disabled={formLoading}
-                >
-                  <MenuItem value="">
-                    <Typography color="text.secondary" fontStyle="italic">
-                      Select origin station
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Grid container spacing={2}>
+              {/* Origin Station */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Origin Station</InputLabel>
+                  {loadingStations ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography>Loading stations...</Typography>
+                    </Box>
+                  ) : (
+                    <Select
+                      value={formData.origin}
+                      label="Origin Station"
+                      onChange={(e) => setFormData({...formData, origin: e.target.value})}
+                      disabled={userProfile?.role === 'station_admin' && userStation}
+                    >
+                      {stations.length > 0 ? (
+                        stations.map((station) => (
+                          <MenuItem key={station._id} value={station._id}>
+                            {station.stationName} ({station.city})
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>No stations available</MenuItem>
+                      )}
+                    </Select>
+                  )}
+                  {userProfile?.role === 'station_admin' && userStation && (
+                    <Typography variant="caption" color="primary" sx={{ mt: 1 }}>
+                      Auto-set to your station
                     </Typography>
-                  </MenuItem>
-                  {stations.map((station) => (
-                    <MenuItem key={station._id} value={station._id}>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {station.stationName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {station.city} • {station.stationCode}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth margin="normal" required size="small">
-                <InputLabel>Destination Station *</InputLabel>
-                <Select
-                  value={tripForm.destination}
-                  label="Destination Station *"
-                  onChange={(e) => setTripForm({...tripForm, destination: e.target.value})}
-                  disabled={formLoading}
-                >
-                  <MenuItem value="">
-                    <Typography color="text.secondary" fontStyle="italic">
-                      Select destination station
-                    </Typography>
-                  </MenuItem>
-                  {stations.map((station) => (
-                    <MenuItem key={station._id} value={station._id}>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {station.stationName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {station.city} • {station.stationCode}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Departure Date & Time *"
-                type="datetime-local"
-                value={tripForm.departureTime}
-                onChange={(e) => setTripForm({...tripForm, departureTime: e.target.value})}
-                margin="normal"
-                required
-                disabled={formLoading}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Arrival Date & Time *"
-                type="datetime-local"
-                value={tripForm.arrivalTime}
-                onChange={(e) => setTripForm({...tripForm, arrivalTime: e.target.value})}
-                margin="normal"
-                required
-                disabled={formLoading}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth margin="normal" required size="small">
-                <InputLabel>Vehicle *</InputLabel>
-                <Select
-                  value={tripForm.vehicle}
-                  label="Vehicle *"
-                  onChange={(e) => setTripForm({...tripForm, vehicle: e.target.value})}
-                  disabled={formLoading}
-                >
-                  <MenuItem value="">
-                    <Typography color="text.secondary" fontStyle="italic">
-                      Select vehicle
-                    </Typography>
-                  </MenuItem>
-                  {vehicles.map((vehicle) => (
-                    <MenuItem key={vehicle._id} value={vehicle._id}>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {vehicle.plateNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {vehicle.carType} • {vehicle.totalCapacity} seats • {vehicle.currentStatus}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth margin="normal" required size="small">
-                <InputLabel>Driver *</InputLabel>
-                <Select
-                  value={tripForm.driver}
-                  label="Driver *"
-                  onChange={(e) => setTripForm({...tripForm, driver: e.target.value})}
-                  disabled={formLoading}
-                >
-                  <MenuItem value="">
-                    <Typography color="text.secondary" fontStyle="italic">
-                      Select driver
-                    </Typography>
-                  </MenuItem>
-                  {drivers.map((driver) => (
-                    <MenuItem key={driver._id} value={driver._id}>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {driver.fullName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {driver.phoneNumber} • {driver.licenseNumber || 'No license'}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Price (ETB) *"
-                type="number"
-                value={tripForm.price}
-                onChange={(e) => setTripForm({...tripForm, price: e.target.value})}
-                margin="normal"
-                required
-                disabled={formLoading}
-                inputProps={{ min: 1 }}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Total Seats *"
-                type="number"
-                value={tripForm.totalSeats}
-                onChange={(e) => setTripForm({...tripForm, totalSeats: e.target.value})}
-                margin="normal"
-                required
-                disabled={formLoading}
-                inputProps={{ min: 1 }}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Estimated Duration (minutes) *"
-                type="number"
-                value={tripForm.estimatedDuration}
-                onChange={(e) => setTripForm({...tripForm, estimatedDuration: e.target.value})}
-                margin="normal"
-                required
-                disabled={formLoading}
-                inputProps={{ min: 15 }}
-                size="small"
-                helperText="Minimum 15 minutes"
-              />
-            </Grid>
-            
-            {userRole === 'super_admin' && stations.length > 0 && (
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth margin="normal" required size="small">
-                  <InputLabel>Station *</InputLabel>
-                  <Select
-                    value={tripForm.station}
-                    label="Station *"
-                    onChange={(e) => setTripForm({...tripForm, station: e.target.value})}
-                    disabled={formLoading}
-                  >
-                    <MenuItem value="">
-                      <Typography color="text.secondary" fontStyle="italic">
-                        Select station
-                      </Typography>
-                    </MenuItem>
-                    {stations.map((station) => (
-                      <MenuItem key={station._id} value={station._id}>
-                        <Box>
-                          <Typography variant="body2" fontWeight="bold">
-                            {station.stationName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {station.city} • {station.stationCode}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  )}
                 </FormControl>
               </Grid>
-            )}
-            
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Route Points (comma separated)"
-                value={tripForm.routePoints.join(', ')}
-                onChange={(e) => setTripForm({...tripForm, routePoints: e.target.value.split(',').map(point => point.trim()).filter(point => point !== '')})}
-                margin="normal"
-                disabled={formLoading}
-                helperText="Optional intermediate stops"
-                size="small"
-              />
+
+              {/* Destination Station */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Destination Station</InputLabel>
+                  {loadingStations ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography>Loading stations...</Typography>
+                    </Box>
+                  ) : (
+                    <Select
+                      value={formData.destination}
+                      label="Destination Station"
+                      onChange={(e) => setFormData({...formData, destination: e.target.value})}
+                    >
+                      {stations.length > 0 ? (
+                        stations
+                          .filter(station => station._id !== formData.origin)
+                          .map((station) => (
+                            <MenuItem key={station._id} value={station._id}>
+                              {station.stationName} ({station.city})
+                            </MenuItem>
+                          ))
+                      ) : (
+                        <MenuItem disabled>No stations available</MenuItem>
+                      )}
+                    </Select>
+                  )}
+                </FormControl>
+              </Grid>
+
+              {/* Departure Time */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Departure Time"
+                  value={formData.departureTime}
+                  onChange={(e) => handleTimeChange('departureTime', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  error={formData.departureTime && formData.arrivalTime && new Date(formData.departureTime) >= new Date(formData.arrivalTime)}
+                  helperText={formData.departureTime && formData.arrivalTime && new Date(formData.departureTime) >= new Date(formData.arrivalTime) ? "Departure must be before arrival" : ""}
+                />
+              </Grid>
+              
+              {/* Arrival Time */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Arrival Time"
+                  value={formData.arrivalTime}
+                  onChange={(e) => handleTimeChange('arrivalTime', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  error={formData.departureTime && formData.arrivalTime && new Date(formData.departureTime) >= new Date(formData.arrivalTime)}
+                  helperText={formData.departureTime && formData.arrivalTime && new Date(formData.departureTime) >= new Date(formData.arrivalTime) ? "Arrival must be after departure" : ""}
+                />
+              </Grid>
+              
+              {/* Vehicle Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Vehicle</InputLabel>
+                  {loadingVehicles ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography>Loading vehicles...</Typography>
+                    </Box>
+                  ) : (
+                    <Select
+                      value={formData.vehicle}
+                      label="Vehicle"
+                      onChange={(e) => handleVehicleChange(e.target.value)}
+                    >
+                      {availableVehicles.length > 0 ? (
+                        availableVehicles.map((vehicle) => (
+                          <MenuItem key={vehicle._id} value={vehicle._id}>
+                            {vehicle.plateNumber} - {vehicle.carType} ({vehicle.totalCapacity} seats)
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>
+                          {userProfile?.role === 'station_admin' 
+                            ? 'No available vehicles at your station' 
+                            : 'No available vehicles'}
+                        </MenuItem>
+                      )}
+                    </Select>
+                  )}
+                  {formData.vehicle && (
+                    <Typography variant="caption" color="primary" sx={{ mt: 1 }}>
+                      Vehicle capacity: {getVehicleCapacity(formData.vehicle)} seats
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Driver Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Driver</InputLabel>
+                  {loadingDrivers ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography>Loading drivers...</Typography>
+                    </Box>
+                  ) : (
+                    <Select
+                      value={formData.driver}
+                      label="Driver"
+                      onChange={(e) => setFormData({...formData, driver: e.target.value})}
+                    >
+                      {availableDrivers.length > 0 ? (
+                        availableDrivers.map((driver) => (
+                          <MenuItem key={driver._id} value={driver._id}>
+                            {driver.fullName} ({driver.licenseNumber || 'No license'})
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>
+                          {userProfile?.role === 'station_admin' 
+                            ? 'No available drivers at your station' 
+                            : 'No available drivers'}
+                        </MenuItem>
+                      )}
+                    </Select>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Price */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Price"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  required
+                  InputProps={{ inputProps: { min: 1 } }}
+                />
+              </Grid>
+              
+              {/* Total Seats */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Total Seats"
+                  value={formData.totalSeats}
+                  onChange={(e) => handleTotalSeatsChange(e.target.value)}
+                  required
+                  InputProps={{ 
+                    inputProps: { 
+                      min: 1, 
+                      max: getVehicleCapacity(formData.vehicle) || 100 
+                    },
+                    readOnly: !!formData.vehicle
+                  }}
+                  helperText={
+                    formData.vehicle 
+                      ? `Based on vehicle capacity: ${getVehicleCapacity(formData.vehicle)} seats`
+                      : "Enter total seats"
+                  }
+                />
+              </Grid>
+
+              {/* Available Seats */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Available Seats"
+                  value={formData.availableSeats}
+                  onChange={(e) => setFormData({...formData, availableSeats: e.target.value})}
+                  InputProps={{ 
+                    inputProps: { 
+                      min: 0, 
+                      max: formData.totalSeats || 0 
+                    } 
+                  }}
+                  helperText={`Max: ${formData.totalSeats || 0} seats`}
+                  error={formData.availableSeats > formData.totalSeats}
+                />
+              </Grid>
+
+              {/* Station field */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Station</InputLabel>
+                  {loadingStations ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography>Loading stations...</Typography>
+                    </Box>
+                  ) : (
+                    <Select
+                      value={formData.station}
+                      label="Station"
+                      onChange={(e) => setFormData({...formData, station: e.target.value})}
+                      disabled={userProfile?.role === 'station_admin' && userStation}
+                    >
+                      {stations.length > 0 ? (
+                        stations.map((station) => (
+                          <MenuItem key={station._id} value={station._id}>
+                            {station.stationName} ({station.city})
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled>No stations available</MenuItem>
+                      )}
+                    </Select>
+                  )}
+                  {userProfile?.role === 'station_admin' && userStation && (
+                    <Typography variant="caption" color="primary" sx={{ mt: 1 }}>
+                      Auto-set to your station
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Estimated Duration */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Estimated Duration (minutes)"
+                  value={formData.estimatedDuration}
+                  onChange={(e) => setFormData({...formData, estimatedDuration: e.target.value})}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  helperText={
+                    formData.departureTime && formData.arrivalTime 
+                      ? `Auto-calculated: ${formatDuration(formData.estimatedDuration)}`
+                      : "Will auto-calculate when both times are set"
+                  }
+                />
+              </Grid>
+              
+              {/* Route Points */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Route Points (comma separated)"
+                  value={formData.routePoints}
+                  onChange={(e) => setFormData({...formData, routePoints: e.target.value})}
+                  placeholder="Stop 1, Stop 2, Stop 3"
+                />
+              </Grid>
+              
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  multiline
+                  rows={2}
+                />
+              </Grid>
             </Grid>
-            
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Notes"
-                value={tripForm.notes}
-                onChange={(e) => setTripForm({...tripForm, notes: e.target.value})}
-                margin="normal"
-                disabled={formLoading}
-                multiline
-                rows={2}
-                size="small"
-              />
-            </Grid>
-          </Grid>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={handleCloseAllDialogs} 
-            disabled={formLoading}
-            sx={{ borderRadius: 2 }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleCreateTrip}
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button
+            onClick={selectedTrip ? handleUpdateTrip : handleCreateTrip}
             variant="contained"
-            color="primary"
-            disabled={formLoading || (!userStationId && stations.length === 0)}
-            startIcon={formLoading ? <CircularProgress size={20} /> : <AddIcon />}
-            sx={{ 
-              borderRadius: 2,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            }}
+            disabled={
+              loadingStations || 
+              loadingVehicles || 
+              loadingDrivers ||
+              !formData.origin || 
+              !formData.destination || 
+              !formData.departureTime || 
+              !formData.arrivalTime || 
+              !formData.vehicle || 
+              !formData.driver || 
+              !formData.price || 
+              !formData.totalSeats ||
+              !formData.station ||
+              (formData.availableSeats > formData.totalSeats) ||
+              (formData.departureTime && formData.arrivalTime && new Date(formData.departureTime) >= new Date(formData.arrivalTime))
+            }
           >
-            {formLoading ? 'Creating...' : 'Create Trip'}
+            {selectedTrip ? 'Update Trip' : 'Create Trip'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Trip Detail Modal - (Keep existing modal code, just fix field names if needed) */}
-      {/* Delete Confirmation Dialog - (Keep existing code) */}
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this trip? This action cannot be undone.
+          </Typography>
+          {selectedTrip && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="body2">
+                <strong>From:</strong> {getStationName(selectedTrip.origin)}
+              </Typography>
+              <Typography variant="body2">
+                <strong>To:</strong> {getStationName(selectedTrip.destination)}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Departure:</strong> {formatDate(selectedTrip.departureTime)}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
+          <Button onClick={handleDeleteTrip} variant="contained" color="error">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Update Status Dialog */}
+      <Dialog open={openStatusDialog} onClose={() => setOpenStatusDialog(false)}>
+        <DialogTitle>Update Trip Status</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Trip Status</InputLabel>
+            <Select
+              value={newStatus}
+              label="Trip Status"
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              <MenuItem value="scheduled">Scheduled</MenuItem>
+              <MenuItem value="boarding">Boarding</MenuItem>
+              <MenuItem value="ongoing">Ongoing</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="cancelled">Cancelled</MenuItem>
+              <MenuItem value="delayed">Delayed</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenStatusDialog(false)}>Cancel</Button>
+          <Button onClick={handleUpdateStatus} variant="contained">
+            Update Status
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbars for notifications */}
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          severity="error" 
-          onClose={() => setError('')}
-          sx={{ 
-            borderRadius: 2,
-            '& .MuiAlert-icon': { fontSize: 26 }
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight="bold">
-            {error}
-          </Typography>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
         </Alert>
       </Snackbar>
-
-      <Snackbar
-        open={!!success}
-        autoHideDuration={4000}
-        onClose={() => setSuccess('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          severity="success" 
-          onClose={() => setSuccess('')}
-          sx={{ 
-            borderRadius: 2,
-            '& .MuiAlert-icon': { fontSize: 26 }
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight="bold">
-            {success}
-          </Typography>
+      <Snackbar open={!!success} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+          {success}
         </Alert>
       </Snackbar>
     </Container>

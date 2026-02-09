@@ -47,7 +47,7 @@ import StationUsers from './pages/station/Users';
 import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
 import StationSettings from './pages/station/Station';
-import TripManagement from './pages/station/Trips';
+import Trips from './pages/station/Trips';
 import Vehicle from './pages/station/Vehicles';
 
 // Error Pages
@@ -205,7 +205,7 @@ const queryClient = new QueryClient({
           <Route path="/station/Trips" element={
             <ProtectedRoute allowedRoles={['station_admin']}>
               <Layout showSidebar>
-                <TripManagement/>
+                <Trips />
               </Layout>
             </ProtectedRoute>
           } />
