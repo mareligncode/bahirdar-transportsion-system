@@ -3,7 +3,7 @@ import { X, Car, Wrench } from 'lucide-react';
 import api from '../../services/api'; 
 import { toast } from 'react-hot-toast';
 
-export default function VehicleModal({ isOpen, onClose, vehicle }) {
+export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: 'coaster',
@@ -22,67 +22,91 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
   const [stations, setStations] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const carTypes = ['coaster', 'bus', 'minibus', 'aba dulla', 'van', 'other'];
   const fuelTypes = ['diesel', 'petrol', 'electric', 'hybrid'];
   const featuresOptions = ['ac', 'wifi', 'entertainment', 'charging_port', 'toilet', 'refreshments'];
 
+  // Initialize modal once when it opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !initialized) {
       fetchStationsAndDrivers();
+      setInitialized(true);
+    }
+    
+    // Reset when modal closes
+    if (!isOpen) {
+      setInitialized(false);
+    }
+  }, [isOpen, initialized]);
+
+  // Set form data when vehicle or stations data is available
+  useEffect(() => {
+    if (isOpen && stations.length > 0) {
       if (vehicle) {
+        const stationID = vehicle.stationID?._id || vehicle.stationID || '';
+        
         setFormData({
           plateNumber: vehicle.plateNumber || '',
           carType: vehicle.carType || 'coaster',
           totalCapacity: vehicle.totalCapacity || '',
-          stationID: vehicle.stationID?._id || '',
+          stationID: stationID,
           make: vehicle.make || '',
           model: vehicle.model || '',
           year: vehicle.year || new Date().getFullYear(),
           color: vehicle.color || 'white',
-          insuranceExpiry: vehicle.insuranceExpiry ? vehicle.insuranceExpiry.split('T')[0] : '',
+          insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
           driverID: vehicle.driverID?._id || '',
           fuelType: vehicle.fuelType || 'diesel',
           features: vehicle.features || [],
         });
       } else {
-        resetForm();
+        // For new vehicle, use the station admin's station (first station in array)
+        const defaultStationID = stations[0]?._id || '';
+        
+        setFormData({
+          plateNumber: '',
+          carType: 'coaster',
+          totalCapacity: '',
+          stationID: defaultStationID,
+          make: '',
+          model: '',
+          year: new Date().getFullYear(),
+          color: 'white',
+          insuranceExpiry: '',
+          driverID: '',
+          fuelType: 'diesel',
+          features: [],
+        });
       }
     }
-  }, [isOpen, vehicle]);
+  }, [isOpen, vehicle, stations]);
+
+  // Format date for input field
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
 
   const fetchStationsAndDrivers = async () => {
     try {
-      // Fetch stations
-      const stationsRes = await api.get('/api/station/active');
-      setStations(stationsRes.data.stations || []);
+      // Fetch stations (for station admin, only their station will be returned)
+      const stationsRes = await api.get('/api/station');
+      const stationsData = stationsRes.data.stations || [];
+      setStations(stationsData);
 
-      // Fetch drivers (users with driver role)
-      const driversRes = await api.get('/api/auth/all-users');
-      const drivers = driversRes.data.data?.users?.filter(user => user.role === 'driver') || [];
-      setDrivers(drivers);
+      // Fetch drivers from station-users endpoint
+      const usersRes = await api.get('/api/auth/station-users');
+      const driversData = (usersRes.data.data?.users || [])
+        .filter(user => user.role === 'driver' && user.isActive);
+      setDrivers(driversData);
 
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load form data');
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      plateNumber: '',
-      carType: 'coaster',
-      totalCapacity: '',
-      stationID: '',
-      make: '',
-      model: '',
-      year: new Date().getFullYear(),
-      color: 'white',
-      insuranceExpiry: '',
-      driverID: '',
-      fuelType: 'diesel',
-      features: [],
-    });
   };
 
   const handleChange = (e) => {
@@ -109,29 +133,74 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.plateNumber || !formData.totalCapacity || !formData.make || !formData.model || !formData.insuranceExpiry) {
+      toast.error('Please fill in all required fields (*)');
+      return;
+    }
+
+    if (!formData.stationID) {
+      toast.error('Station is required');
+      return;
+    }
+
     try {
       setLoading(true);
       
+      // Prepare payload according to backend expectations
       const payload = {
-        ...formData,
+        plateNumber: formData.plateNumber.toUpperCase().trim(),
+        carType: formData.carType,
         totalCapacity: parseInt(formData.totalCapacity),
+        stationID: formData.stationID,
+        make: formData.make.trim(),
+        model: formData.model.trim(),
         year: parseInt(formData.year),
+        color: formData.color.trim(),
+        insuranceExpiry: formData.insuranceExpiry,
+        fuelType: formData.fuelType,
+        features: formData.features,
       };
+
+      // Add driverID only if selected
+      if (formData.driverID) {
+        payload.driverID = formData.driverID;
+      }
 
       if (vehicle) {
         // Update existing vehicle
         await api.put(`/api/vehicles/${vehicle._id}`, payload);
         toast.success('Vehicle updated successfully');
       } else {
-        // Create new vehicle
+        // Create new vehicle - backend will handle stationID based on station admin's station
         await api.post('/api/vehicles/register', payload);
         toast.success('Vehicle created successfully');
+      }
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
       }
       
       onClose();
     } catch (error) {
       console.error('Error saving vehicle:', error);
-      toast.error(error.response?.data?.message || 'Failed to save vehicle');
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to save vehicle';
+      
+      // Handle specific errors
+      if (errorMsg.includes('Plate number') || errorMsg.includes('plateNumber')) {
+        toast.error('Vehicle with this plate number already exists');
+      } else if (errorMsg.includes('Station') || errorMsg.includes('stationID')) {
+        toast.error('Invalid station selected');
+      } else if (errorMsg.includes('driverID') || errorMsg.includes('driver')) {
+        toast.error('Invalid driver selected');
+      } else if (errorMsg.includes('permission') || error.response?.status === 403) {
+        toast.error('You do not have permission to perform this action');
+      } else if (error.response?.status === 401) {
+        toast.error('Session expired. Please login again');
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -154,7 +223,9 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                   {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {vehicle ? 'Update vehicle details' : 'Register a new vehicle to the fleet'}
+                  {stations.length > 0 ? 
+                    `Station: ${stations[0]?.stationName || ''} (${stations[0]?.city || ''})` : 
+                    'Register a new vehicle to your station'}
                 </p>
               </div>
             </div>
@@ -230,6 +301,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                   />
                 </div>
 
+                {/* Station selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Station *
@@ -239,15 +311,23 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                     value={formData.stationID}
                     onChange={handleChange}
                     required
+                    disabled={stations.length <= 1}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
-                    <option value="">Select a station</option>
                     {stations.map(station => (
                       <option key={station._id} value={station._id}>
                         {station.stationName} ({station.city})
                       </option>
                     ))}
+                    {stations.length === 0 && (
+                      <option value="" disabled>Loading stations...</option>
+                    )}
                   </select>
+                  {stations.length <= 1 && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Station admin can only manage vehicles from assigned station
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -360,7 +440,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             {/* Driver Assignment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign Driver *
+                Assign Driver (Optional)
               </label>
               <select
                 name="driverID"
@@ -368,13 +448,19 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                <option value="">Select a driver</option>
+                <option value="">No driver assigned</option>
                 {drivers.map(driver => (
                   <option key={driver._id} value={driver._id}>
-                    {driver.fullName} ({driver.licenseNumber || 'No license'})
+                    {driver.fullName} {driver.licenseNumber ? `(${driver.licenseNumber})` : ''}
                   </option>
                 ))}
+                {drivers.length === 0 && (
+                  <option value="" disabled>No drivers available</option>
+                )}
               </select>
+              <p className="text-xs text-gray-600 mt-1">
+                Only active drivers from your station are shown
+              </p>
             </div>
 
             {/* Features */}
@@ -418,12 +504,17 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !formData.stationID}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : vehicle ? 'Update Vehicle' : 'Create Vehicle'}
             </button>
           </div>
+          {!formData.stationID && (
+            <p className="text-sm text-red-600 mt-2 text-center">
+              Station information is required
+            </p>
+          )}
         </form>
       </div>
     </div>
