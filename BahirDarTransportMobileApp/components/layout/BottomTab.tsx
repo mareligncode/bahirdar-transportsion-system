@@ -1,34 +1,28 @@
-// components/layout/BottomTab.tsx
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { usePathname, router } from 'expo-router';
-import { 
-  Home, 
-  Search, 
-  Ticket, 
-  User 
-} from 'lucide-react-native';
+import { Home, Ticket, Car, User } from 'lucide-react-native';
 
 const tabs = [
   {
     name: 'Home',
     icon: Home,
-    route: '/main/home',
+    route: '/tabs/home',
   },
   {
-    name: 'Search',
-    icon: Search,
-    route: '/main/trips',
+    name: 'Trips',
+    icon: Car,
+    route: '/tabs/trips',
   },
   {
     name: 'Tickets',
     icon: Ticket,
-    route: '/main/tickets',
+    route: '/tabs/tickets',
   },
   {
     name: 'Profile',
     icon: User,
-    route: '/main/profile',
+    route: '/tabs/profile',
   },
 ];
 
@@ -39,13 +33,14 @@ export function BottomTab() {
     <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
       <View className="flex-row justify-between items-center">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.route || pathname.startsWith(`${tab.route}/`);
+          const isActive = pathname === tab.route || 
+                          pathname?.startsWith(`${tab.route}/`);
           
           return (
             <TouchableOpacity
               key={tab.name}
               onPress={() => router.push(tab.route)}
-              className="items-center justify-center"
+              className="items-center justify-center flex-1"
               activeOpacity={0.7}
             >
               <tab.icon

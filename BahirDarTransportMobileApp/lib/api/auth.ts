@@ -1,4 +1,4 @@
-// BahirDarTransportMobileApp\lib\api\auth.ts - FIXED VERSION
+// BahirDarTransportMobileApp\lib\api\auth.ts - REAL API VERSION
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
 import { storage } from '../storage';
 import { 
@@ -11,7 +11,7 @@ import {
 export const authAPI = {
   async register(userData: RegisterFormData): Promise<AuthResponse> {
     try {
-      // ✅ FIXED: Define payload with proper type
+      // Define payload with proper type
       const payload: Record<string, any> = {
         email: userData.email,
         password: userData.password,
@@ -21,9 +21,9 @@ export const authAPI = {
         emergencyContact: userData.emergencyContact,
       };
       
-      console.log('📱 Registering passenger (CORRECT FORMAT):', payload);
+      console.log('📱 Registering passenger:', payload);
 
-      // ✅ FIXED: Define response with proper type
+      // Define response with proper type
       const response: Response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: 'POST',
         headers: API_CONFIG.headers,
@@ -38,7 +38,7 @@ export const authAPI = {
         throw new Error(errorData.message || 'Registration failed');
       }
 
-      // ✅ FIXED: Define data with proper type
+      // Define data with proper type
       const data: any = await response.json();
       console.log('🟢 Registration successful:', data);
       
@@ -46,14 +46,14 @@ export const authAPI = {
       const authResponse: AuthResponse = {
         success: true,
         message: data.message || 'Registration successful',
-        accessToken: data.accessToken || data.token,
-        refreshToken: data.refreshToken,
-        user: data.user || data,
-        token: data.accessToken || data.token,
+        accessToken: data.data?.tokens?.accessToken || data.accessToken || data.token,
+        refreshToken: data.data?.tokens?.refreshToken || data.refreshToken,
+        user: data.data?.user || data.user || data,
+        token: data.data?.tokens?.accessToken || data.accessToken || data.token,
         expiresIn: data.expiresIn,
       };
       
-      // Store tokens
+      // Store tokens using storage utility
       if (authResponse.accessToken) {
         await storage.storeToken(authResponse.accessToken);
       }
@@ -74,54 +74,62 @@ export const authAPI = {
   },
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    try {
-      console.log('📱 Logging in:', credentials.email);
+  try {
+    console.log('📱 Logging in:', credentials.email);
+    console.log('🌐 Endpoint:', API_ENDPOINTS.AUTH.LOGIN);
 
-      const response: Response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password
-        }),
-      });
+    const response: Response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+      method: 'POST',
+      headers: API_CONFIG.headers,
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password
+      }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      const data: any = await response.json();
-      
-      const authResponse: AuthResponse = {
-        success: true,
-        message: data.message || 'Login successful',
-        accessToken: data.accessToken || data.token,
-        refreshToken: data.refreshToken,
-        user: data.user || data,
-        token: data.accessToken || data.token,
-        expiresIn: data.expiresIn,
-      };
-      
-      // Store tokens
-      if (authResponse.accessToken) {
-        await storage.storeToken(authResponse.accessToken);
-      }
-      
-      if (authResponse.refreshToken) {
-        await storage.storeRefreshToken(authResponse.refreshToken);
-      }
-      
-      if (authResponse.user) {
-        await storage.storeUser(authResponse.user);
-      }
-      
-      return authResponse;
-    } catch (error) {
-      console.error('❌ Login error:', error);
-      throw error;
+    console.log('📥 Response status:', response.status);
+    
+    const data: any = await response.json();
+    console.log('📊 Response data:', data);
+    
+    if (!response.ok) {
+      // Ensure error has success: false
+      throw new Error(data.message || data.error || 'Login failed');
     }
-  },
+
+    // Ensure response matches AuthResponse interface
+    const authResponse: AuthResponse = {
+      success: true, // CRITICAL: Must have success property
+      message: data.message || 'Login successful',
+      accessToken: data.data?.tokens?.accessToken || data.accessToken || data.token,
+      refreshToken: data.data?.tokens?.refreshToken || data.refreshToken,
+      user: data.data?.user || data.user || data, // Backend might return user data directly
+      token: data.data?.tokens?.accessToken || data.accessToken || data.token,
+      expiresIn: data.expiresIn,
+    };
+    
+    console.log('🟢 Auth response created:', authResponse);
+    
+    // Store tokens using storage utility
+    if (authResponse.accessToken) {
+      await storage.storeToken(authResponse.accessToken);
+    }
+    
+    if (authResponse.refreshToken) {
+      await storage.storeRefreshToken(authResponse.refreshToken);
+    }
+    
+    if (authResponse.user) {
+      await storage.storeUser(authResponse.user);
+    }
+    
+    return authResponse;
+  } catch (error: any) {
+    console.error('❌ Login error:', error);
+    // Return error with success: false
+    throw new Error(error.message || 'Login failed');
+  }
+},
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
