@@ -4,7 +4,7 @@ export * from './trip';
 export * from './booking';
 export * from './notification';
 export * from './support';
-
+//export * from './payment';
 // Global types
 export interface ApiError {
   message: string;
