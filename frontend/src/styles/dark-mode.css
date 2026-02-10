@@ -1,0 +1,72 @@
+/* Dark Mode Styles */
+.dark-mode {
+  background-color: #111827;
+  color: #f8f9f9;
+}
+
+.dark-mode body {
+  background-color: #111827;
+  color: #f3f4f5;
+}
+
+/* Card backgrounds in dark mode */
+.dark-mode .bg-white {
+  background-color: #1f2937 !important;
+}
+
+.dark-mode .bg-gray-50 {
+  background-color: #374151 !important;
+}
+
+.dark-mode .bg-gray-100 {
+  background-color: #3a567d !important;
+
+}
+
+/* Text colors in dark mode */
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-900 {
+  color: #f7f7f8 !important;
+  background-color: #1f2937;
+}
+
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-600 {
+  color: #090a0a !important;
+
+}
+
+/* Borders in dark mode */
+.dark-mode .border-gray-200,
+.dark-mode .border-gray-300 {
+  border-color: #4b5563 !important;
+}
+
+/* Hover states */
+.dark-mode .hover\:bg-gray-50 {
+  background-color: #374151 !important;
+}
+
+/* Specific sidebar adjustments */
+.dark-mode aside {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+/* Primary colors in dark mode */
+.dark-mode .text-primary-600 {
+  color: #5c91cd !important;
+}
+
+.dark-mode .bg-primary-50 {
+  background-color: #1e3a8a !important;
+}
+
+.dark-mode .border-primary-200 {
+  border-color: #1e40af !important;
+}
+
+.dark-mode .border-primary-600 {
+  border-color: #3b82f6 !important;
+}

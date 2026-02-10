@@ -60,7 +60,6 @@ const Drivers = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Dialog states
-  const [addDriverDialog, setAddDriverDialog] = useState(false);
   const [driverDetailsDialog, setDriverDetailsDialog] = useState(false);
   const [toggleDialogOpen, setToggleDialogOpen] = useState(false);
   
@@ -170,44 +169,7 @@ const Drivers = () => {
   };
 
   // Handle add driver
-  const handleAddDriver = async () => {
-    try {
-      // Validate required fields
-      if (!newDriver.fullName || !newDriver.email || !newDriver.phoneNumber || !newDriver.password || !newDriver.licenseNumber) {
-        setError('All fields are required');
-        return;
-      }
-
-      // First create the user as passenger
-      const userRes = await api.post('/api/auth/register', {
-        fullName: newDriver.fullName,
-        email: newDriver.email,
-        phoneNumber: newDriver.phoneNumber,
-        password: newDriver.password,
-        role: 'passenger'
-      });
-      
-      // Then assign as driver
-      await api.post('/api/auth/assign-driver', {
-        passengerId: userRes.data.data.user._id,
-        licenseNumber: newDriver.licenseNumber
-      });
-      
-      setSuccess('Driver added successfully');
-      setAddDriverDialog(false);
-      setNewDriver({
-        fullName: '',
-        email: '',
-        phoneNumber: '',
-        password: '',
-        licenseNumber: ''
-      });
-      
-      fetchData();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add driver');
-    }
-  };
+  
 
   // Handle toggle driver status
   const handleToggleStatus = async () => {
@@ -326,13 +288,7 @@ const Drivers = () => {
             Drivers Management
           </Typography>
           <Box display="flex" gap={2}>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => setAddDriverDialog(true)}
-            >
-              Add Driver
-            </Button>
+            
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
@@ -620,100 +576,15 @@ const Drivers = () => {
           </>
         )}
       </Paper>
+        
 
-      {/* Add Driver Dialog */}
-      <Dialog
-        open={addDriverDialog}
-        onClose={() => setAddDriverDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add New Driver</DialogTitle>
-        <DialogContent>
-          <Box mt={2}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Full Name *"
-                  value={newDriver.fullName}
-                  onChange={(e) => setNewDriver({...newDriver, fullName: e.target.value})}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email *"
-                  type="email"
-                  value={newDriver.email}
-                  onChange={(e) => setNewDriver({...newDriver, email: e.target.value})}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Phone Number *"
-                  value={newDriver.phoneNumber}
-                  onChange={(e) => setNewDriver({...newDriver, phoneNumber: e.target.value})}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Password *"
-                  type="password"
-                  value={newDriver.password}
-                  onChange={(e) => setNewDriver({...newDriver, password: e.target.value})}
-                  required
-                  helperText="Minimum 8 characters with uppercase, lowercase, number, and special character"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="License Number *"
-                  value={newDriver.licenseNumber}
-                  onChange={(e) => setNewDriver({...newDriver, licenseNumber: e.target.value})}
-                  required
-                />
-              </Grid>
-            </Grid>
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Note:</strong> This will:
-                <ul>
-                  <li>Create the user as a passenger first</li>
-                  <li>Then assign them as a driver with the provided license number</li>
-                  <li>Automatically assign them to your station</li>
-                </ul>
-              </Typography>
-            </Alert>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDriverDialog(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAddDriver}
-            disabled={!newDriver.fullName || !newDriver.email || !newDriver.phoneNumber || !newDriver.password || !newDriver.licenseNumber}
-          >
-            Add Driver
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Driver Details Dialog */}
-      <Dialog
+        {/* Driver Details Dialog */}
+       <Dialog
         open={driverDetailsDialog}
         onClose={() => setDriverDetailsDialog(false)}
         maxWidth="md"
         fullWidth
-      >
+       >
         {selectedDriver ? (
           <>
             <DialogTitle>
@@ -823,15 +694,15 @@ const Drivers = () => {
             <CircularProgress />
           </Box>
         )}
-      </Dialog>
+       </Dialog>
 
-      {/* Toggle Status Dialog */}
-      <Dialog
+       {/* Toggle Status Dialog */}
+       <Dialog
         open={toggleDialogOpen}
         onClose={() => setToggleDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-      >
+       >
         <DialogTitle>
           {selectedDriver?.isActive ? 'Deactivate Driver' : 'Activate Driver'}
         </DialogTitle>
@@ -871,31 +742,31 @@ const Drivers = () => {
             {selectedDriver?.isActive ? 'Deactivate' : 'Activate'}
           </Button>
         </DialogActions>
-      </Dialog>
+       </Dialog>
 
-      {/* Snackbars for feedback */}
-      <Snackbar
+       {/* Snackbars for feedback */}
+       <Snackbar
         open={!!success}
         autoHideDuration={6000}
         onClose={clearSuccess}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
+       >
         <Alert onClose={clearSuccess} severity="success" sx={{ width: '100%' }}>
           {success}
         </Alert>
-      </Snackbar>
+       </Snackbar>
 
-      <Snackbar
+       <Snackbar
         open={!!error}
         autoHideDuration={6000}
         onClose={clearError}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
+       >
         <Alert onClose={clearError} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
-      </Snackbar>
-    </Box>
+       </Snackbar>
+     </Box>
   );
 };
 
