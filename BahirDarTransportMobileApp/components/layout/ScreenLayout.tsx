@@ -1,39 +1,66 @@
-// BahirDarTransportMobileApp/components/layout/ScreenLayout.tsx
 import React, { ReactNode } from 'react';
-import { View, StyleSheet, StatusBar, SafeAreaView, Platform } from 'react-native';
+import { View, SafeAreaView, StatusBar } from 'react-native';
+import { Header } from './Header';
+import { BottomTab } from './BottomTab';
 
 interface ScreenLayoutProps {
   children: ReactNode;
-  style?: any;
+  showHeader?: boolean;
+  headerTitle?: string;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
+  rightAction?: React.ReactNode;
+  showBottomTab?: boolean;
   safeArea?: boolean;
+  className?: string;
+  headerClassName?: string;
 }
 
-export default function ScreenLayout({ children, style, safeArea = true }: ScreenLayoutProps) {
+export function ScreenLayout({
+  children,
+  showHeader = true,
+  headerTitle = '',
+  showBackButton = false,
+  onBackPress,
+  rightAction,
+  showBottomTab = false,
+  safeArea = true,
+  className = '',
+  headerClassName = '',
+}: ScreenLayoutProps) {
   const content = (
-    <View style={[styles.container, style]}>
-      {children}
+    <View className={`flex-1 bg-white ${className}`}>
+      {showHeader && (
+        <Header 
+          title={headerTitle} 
+          showBackButton={showBackButton}
+          onBackPress={onBackPress}
+          rightAction={rightAction}
+          className={headerClassName}
+        />
+      )}
+      
+      <View className={`flex-1 ${showBottomTab ? 'pb-16' : ''}`}>
+        {children}
+      </View>
+      
+      {showBottomTab && <BottomTab />}
     </View>
   );
 
   if (safeArea) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView className="flex-1 bg-white">
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         {content}
       </SafeAreaView>
     );
   }
 
-  return content;
+  return (
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      {content}
+    </>
+  );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-});
