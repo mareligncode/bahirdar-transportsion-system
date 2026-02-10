@@ -35,8 +35,29 @@ import {
   Tooltip,
   LinearProgress,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Avatar,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent
 } from '@mui/material';
+
+// Import Timeline components from @mui/lab
+import {
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineDot,
+  TimelineConnector,
+  TimelineContent,
+  TimelineOppositeContent
+} from '@mui/lab';
+
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -58,9 +79,22 @@ import {
   Download as DownloadIcon,
   Sort as SortIcon,
   GridView as GridViewIcon,
-  ViewList as ViewListIcon
+  ViewList as ViewListIcon,
+  ExpandMore as ExpandMoreIcon,
+  AccountCircle as AccountCircleIcon,
+  Build as BuildIcon,
+  Speed as SpeedIcon,
+  AttachMoney as MoneyIcon,
+  Info as InfoIcon,
+  Map as MapIcon,
+  Route as RouteIcon,
+  Timelapse as TimelapseIcon,
+  People as PeopleIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  DriveEta as DriveEtaIcon
 } from '@mui/icons-material';
-import { format, parseISO, isAfter, isBefore, addDays, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, isAfter, isBefore, addDays, startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -91,6 +125,10 @@ const Schedules = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedTrips, setSelectedTrips] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  
+  // View Details state
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewedTrip, setViewedTrip] = useState(null);
 
   // Trip form state
   const [tripForm, setTripForm] = useState({
@@ -169,7 +207,7 @@ const Schedules = () => {
   const fetchStations = async () => {
     try {
       const response = await api.get('/api/station');
-      console.log('Stations response:', response.data); // Debug log
+      console.log('Stations response:', response.data);
       if (response.data?.stations) {
         setStations(response.data.stations);
       } else if (response.data?.data?.stations) {
@@ -185,24 +223,22 @@ const Schedules = () => {
     }
   };
 
-  // Fetch available vehicles - FIXED
+  // Fetch available vehicles
   const fetchVehicles = async () => {
     try {
       let response;
       
-      // Try the main vehicles endpoint first
       try {
         response = await api.get('/api/vehicles');
-        console.log('Vehicles response:', response.data); // Debug log
+        console.log('Vehicles response:', response.data);
         
         if (response.data.success) {
-          // Filter vehicles that are active and available
           const availableVehicles = response.data.data?.vehicles?.filter(vehicle => 
             vehicle.isActive && 
             (vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active' || !vehicle.currentStatus)
           ) || [];
           
-          console.log('Available vehicles:', availableVehicles); // Debug log
+          console.log('Available vehicles:', availableVehicles);
           setVehicles(availableVehicles);
           return;
         }
@@ -210,7 +246,6 @@ const Schedules = () => {
         console.log('First vehicles endpoint failed:', firstErr.message);
       }
       
-      // Try alternative endpoint structure
       try {
         response = await api.get('/api/vehicles');
         if (response.data && Array.isArray(response.data)) {
@@ -218,7 +253,7 @@ const Schedules = () => {
             vehicle.isActive && 
             (vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active' || !vehicle.currentStatus)
           );
-          console.log('Alternative vehicles data:', availableVehicles); // Debug log
+          console.log('Alternative vehicles data:', availableVehicles);
           setVehicles(availableVehicles);
           return;
         }
@@ -226,7 +261,6 @@ const Schedules = () => {
         console.log('Alternative endpoint failed:', secondErr.message);
       }
       
-      // Show error if all attempts fail
       showSnackbar('Could not load vehicles. Please check console for details.', 'warning');
       setVehicles([]);
       
@@ -237,16 +271,15 @@ const Schedules = () => {
     }
   };
 
-  // Fetch drivers - FIXED
+  // Fetch drivers
   const fetchDrivers = async () => {
     try {
       let response;
       let users = [];
       
       if (user?.role === 'super_admin') {
-        // Super admin can see all drivers
         response = await api.get('/api/auth/all-users');
-        console.log('Super admin drivers response:', response.data); // Debug log
+        console.log('Super admin drivers response:', response.data);
         
         if (response.data.success) {
           users = response.data.data?.users || [];
@@ -254,17 +287,15 @@ const Schedules = () => {
           users = response.data;
         }
       } else if (user?.role === 'station_admin') {
-        // Station admin can see drivers from their station
         response = await api.get('/api/auth/station-users');
-        console.log('Station admin drivers response:', response.data); // Debug log
+        console.log('Station admin drivers response:', response.data);
         
         if (response.data.success) {
           users = response.data.data?.users || response.data.data || [];
         }
       } else {
-        // For other roles, try to get all active drivers
         response = await api.get('/api/auth/all-users');
-        console.log('All users drivers response:', response.data); // Debug log
+        console.log('All users drivers response:', response.data);
         
         if (response.data.success) {
           users = response.data.data?.users || [];
@@ -273,13 +304,12 @@ const Schedules = () => {
         }
       }
       
-      // Filter active drivers
       const driversList = users.filter(u => 
         u.role === 'driver' && 
         (u.isActive === true || u.isActive === undefined)
       ) || [];
       
-      console.log('Filtered drivers:', driversList); // Debug log
+      console.log('Filtered drivers:', driversList);
       setDrivers(driversList);
       
       if (driversList.length === 0) {
@@ -358,6 +388,17 @@ const Schedules = () => {
     setSnackbar({ open: true, message, severity });
   };
 
+  // Handle View Details
+  const handleViewDetails = (trip) => {
+    setViewedTrip(trip);
+    setViewDialogOpen(true);
+  };
+
+  const handleCloseViewDialog = () => {
+    setViewDialogOpen(false);
+    setViewedTrip(null);
+  };
+
   const handleOpenDialog = (trip = null) => {
     if (trip) {
       setSelectedTrip(trip);
@@ -400,17 +441,47 @@ const Schedules = () => {
     setSelectedTrip(null);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setTripForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+const handleInputChange = (e) => {
+  const { name, value } = e.target;
+  
+  // First update the form with the new value
+  const updatedForm = {
+    ...tripForm,
+    [name]: value
   };
+  
+  // Check if vehicle is selected to auto-set driver and total seats
+  if (name === 'vehicle' && value) {
+    const selectedVehicle = vehicles.find(v => v._id === value);
+    if (selectedVehicle) {
+      // Auto-set driver if vehicle has a driver assigned
+      if (selectedVehicle.driverID) {
+        updatedForm.driver = selectedVehicle.driverID._id || selectedVehicle.driverID;
+      }
+      // Always set total seats
+      updatedForm.totalSeats = selectedVehicle.totalCapacity || '';
+    }
+  }
+  
+  // Calculate estimated duration when both departure and arrival times are set
+  // Use the updatedForm values, not tripForm (which hasn't updated yet)
+  if ((name === 'departureTime' || name === 'arrivalTime') && updatedForm.departureTime && updatedForm.arrivalTime) {
+    const departure = new Date(updatedForm.departureTime);
+    const arrival = new Date(updatedForm.arrivalTime);
+    
+    // Only calculate if departure is before arrival
+    if (departure < arrival) {
+      const durationMinutes = differenceInMinutes(arrival, departure);
+      updatedForm.estimatedDuration = durationMinutes > 0 ? durationMinutes : '';
+    }
+  }
+  
+  // Update the state once with all changes
+  setTripForm(updatedForm);
+};
 
   const handleCreateTrip = async () => {
     try {
-      // Validation
       const requiredFields = ['origin', 'destination', 'departureTime', 'arrivalTime', 
                              'vehicle', 'driver', 'price', 'totalSeats'];
       const missingFields = requiredFields.filter(field => !tripForm[field]);
@@ -430,28 +501,25 @@ const Schedules = () => {
         return;
       }
 
-      // Check if vehicle exists locally
       const selectedVehicle = vehicles.find(v => v._id === tripForm.vehicle);
       if (!selectedVehicle) {
         showSnackbar('Selected vehicle not found. Please refresh the list.', 'error');
         return;
       }
 
-      // Check if driver exists locally
       const selectedDriver = drivers.find(d => d._id === tripForm.driver);
       if (!selectedDriver) {
         showSnackbar('Selected driver not found. Please refresh the list.', 'error');
         return;
       }
 
-      // Prepare data for API - use correct field names from your backend
       const tripData = {
         origin: tripForm.origin,
         destination: tripForm.destination,
         departureTime: tripForm.departureTime,
         arrivalTime: tripForm.arrivalTime,
-        vehicleID: tripForm.vehicle,  // Changed from 'vehicle' to 'vehicleID' based on your backend
-        driverID: tripForm.driver,    // Changed from 'driver' to 'driverID' based on your backend
+        vehicleID: tripForm.vehicle,
+        driverID: tripForm.driver,
         price: parseFloat(tripForm.price),
         totalSeats: parseInt(tripForm.totalSeats),
         stationID: tripForm.station || user?.stationID,
@@ -460,10 +528,10 @@ const Schedules = () => {
         notes: tripForm.notes || ''
       };
 
-      console.log('Sending trip data:', tripData); // Debug log
+      console.log('Sending trip data:', tripData);
 
       const response = await api.post('/api/trip', tripData);
-      console.log('Create trip response:', response.data); // Debug log
+      console.log('Create trip response:', response.data);
 
       if (response.data.success) {
         showSnackbar('Trip created successfully!', 'success');
@@ -491,28 +559,25 @@ const Schedules = () => {
 
   const handleUpdateTrip = async () => {
     try {
-      // Check if vehicle exists locally
       const selectedVehicle = vehicles.find(v => v._id === tripForm.vehicle);
       if (!selectedVehicle) {
         showSnackbar('Selected vehicle not found. Please refresh the list.', 'error');
         return;
       }
 
-      // Check if driver exists locally
       const selectedDriver = drivers.find(d => d._id === tripForm.driver);
       if (!selectedDriver) {
         showSnackbar('Selected driver not found. Please refresh the list.', 'error');
         return;
       }
 
-      // Prepare data for API - use correct field names from your backend
       const tripData = {
         origin: tripForm.origin,
         destination: tripForm.destination,
         departureTime: tripForm.departureTime,
         arrivalTime: tripForm.arrivalTime,
-        vehicleID: tripForm.vehicle,  // Changed from 'vehicle' to 'vehicleID'
-        driverID: tripForm.driver,    // Changed from 'driver' to 'driverID'
+        vehicleID: tripForm.vehicle,
+        driverID: tripForm.driver,
         price: parseFloat(tripForm.price),
         totalSeats: parseInt(tripForm.totalSeats),
         stationID: tripForm.station,
@@ -521,7 +586,7 @@ const Schedules = () => {
         notes: tripForm.notes || ''
       };
 
-      console.log('Updating trip data:', tripData); // Debug log
+      console.log('Updating trip data:', tripData);
 
       const response = await api.put(`/api/trip/${selectedTrip._id}`, tripData);
 
@@ -721,6 +786,18 @@ const Schedules = () => {
     return stats;
   };
 
+  const getStatusStep = (status) => {
+    switch(status) {
+      case 'scheduled': return 0;
+      case 'boarding': return 1;
+      case 'ongoing': return 2;
+      case 'completed': return 3;
+      case 'cancelled': return 4;
+      case 'delayed': return 5;
+      default: return 0;
+    }
+  };
+
   const stats = getStats();
 
   if (loading && trips.length === 0) {
@@ -736,7 +813,7 @@ const Schedules = () => {
       {/* Header */}
       <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Grid container alignItems="center" justifyContent="space-between">
-          <Grid item>
+          <Grid>
             <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
               <ScheduleIcon sx={{ mr: 2, color: 'primary.main' }} />
               Trip Schedules
@@ -748,7 +825,7 @@ const Schedules = () => {
               Manage and monitor all trip schedules
             </Typography>
           </Grid>
-          <Grid item sx={{ display: 'flex', gap: 2 }}>
+          <Grid sx={{ display: 'flex', gap: 2 }}>
             <ToggleButtonGroup
               value={viewMode}
               exclusive
@@ -812,9 +889,9 @@ const Schedules = () => {
         </Box>
       </Paper>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - UPDATED Grid v2 syntax */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -826,7 +903,7 @@ const Schedules = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -838,7 +915,7 @@ const Schedules = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -850,7 +927,7 @@ const Schedules = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -862,7 +939,7 @@ const Schedules = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -874,7 +951,7 @@ const Schedules = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -892,12 +969,12 @@ const Schedules = () => {
       {selectedTrips.length > 0 && (
         <Paper sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: 'action.selected' }}>
           <Grid container alignItems="center" justifyContent="space-between">
-            <Grid item>
+            <Grid>
               <Typography variant="subtitle1">
                 <strong>{selectedTrips.length}</strong> trips selected
               </Typography>
             </Grid>
-            <Grid item>
+            <Grid>
               <Button
                 size="small"
                 startIcon={<EventIcon />}
@@ -928,17 +1005,17 @@ const Schedules = () => {
         </Paper>
       )}
 
-      {/* Filters */}
+      {/* Filters - UPDATED Grid v2 syntax */}
       <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
               <FilterIcon sx={{ mr: 1 }} />
               Filters & Search
             </Typography>
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Date Range</InputLabel>
               <Select
@@ -957,7 +1034,7 @@ const Schedules = () => {
 
           {filters.dateRange === 'custom' && (
             <>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -968,7 +1045,7 @@ const Schedules = () => {
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -982,8 +1059,8 @@ const Schedules = () => {
             </>
           )}
 
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth size="small">
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+            <FormControl fullWidth size="small" sx={{ minWidth: 100, width: '100%' }}>
               <InputLabel>Status</InputLabel>
               <Select
                 value={filters.status}
@@ -1001,8 +1078,8 @@ const Schedules = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth size="small">
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <FormControl fullWidth size="small" sx={{ minWidth: 150, width: '100%' }}>
               <InputLabel>Origin Station</InputLabel>
               <Select
                 value={filters.origin}
@@ -1019,8 +1096,8 @@ const Schedules = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth size="small">
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+            <FormControl fullWidth size="small" sx={{ minWidth: 150, width: '100%' }}>
               <InputLabel>Destination</InputLabel>
               <Select
                 value={filters.destination}
@@ -1037,7 +1114,7 @@ const Schedules = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+          <Grid size={12} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
             <Box>
               <Button
                 onClick={clearFilters}
@@ -1074,13 +1151,13 @@ const Schedules = () => {
       {/* Sort Controls */}
       <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
         <Grid container alignItems="center" spacing={2}>
-          <Grid item>
+          <Grid>
             <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center' }}>
               <SortIcon sx={{ mr: 1 }} />
               Sort by:
             </Typography>
           </Grid>
-          <Grid item>
+          <Grid>
             <Button
               size="small"
               onClick={() => handleSort('departureTime')}
@@ -1090,7 +1167,7 @@ const Schedules = () => {
               Departure Time
             </Button>
           </Grid>
-          <Grid item>
+          <Grid>
             <Button
               size="small"
               onClick={() => handleSort('price')}
@@ -1100,7 +1177,7 @@ const Schedules = () => {
               Price
             </Button>
           </Grid>
-          <Grid item>
+          <Grid>
             <Button
               size="small"
               onClick={() => handleSort('availableSeats')}
@@ -1247,7 +1324,10 @@ const Schedules = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <Tooltip title="View Details">
-                            <IconButton size="small">
+                            <IconButton 
+                              size="small"
+                              onClick={() => handleViewDetails(trip)}
+                            >
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -1318,10 +1398,10 @@ const Schedules = () => {
           />
         </Paper>
       ) : (
-        // Grid View
+        // Grid View - UPDATED Grid v2 syntax
         <Grid container spacing={3}>
           {trips.map((trip) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={trip._id}>
+            <Grid key={trip._id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <Card sx={{ height: '100%', borderRadius: 2, position: 'relative' }}>
                 {selectedTrips.includes(trip._id) && (
                   <Box
@@ -1369,7 +1449,7 @@ const Schedules = () => {
                   </Box>
 
                   <Grid container spacing={1} sx={{ mb: 2 }}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="textSecondary">
                         Departure
                       </Typography>
@@ -1377,7 +1457,7 @@ const Schedules = () => {
                         {format(new Date(trip.departureTime), 'PPp')}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="textSecondary">
                         Arrival
                       </Typography>
@@ -1390,7 +1470,7 @@ const Schedules = () => {
                   <Divider sx={{ my: 2 }} />
 
                   <Grid container spacing={1} sx={{ mb: 2 }}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="textSecondary">
                         Vehicle
                       </Typography>
@@ -1398,7 +1478,7 @@ const Schedules = () => {
                         {trip.vehicle?.plateNumber || 'N/A'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="textSecondary">
                         Driver
                       </Typography>
@@ -1442,7 +1522,10 @@ const Schedules = () => {
                 
                 <CardActions sx={{ justifyContent: 'space-between', pt: 0 }}>
                   <Tooltip title="View Details">
-                    <IconButton size="small">
+                    <IconButton 
+                      size="small"
+                      onClick={() => handleViewDetails(trip)}
+                    >
                       <VisibilityIcon />
                     </IconButton>
                   </Tooltip>
@@ -1477,7 +1560,7 @@ const Schedules = () => {
         </Grid>
       )}
 
-      {/* Create/Edit Trip Dialog */}
+      {/* Create/Edit Trip Dialog - UPDATED Grid v2 syntax */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
           {selectedTrip ? 'Edit Trip' : 'Create New Trip'}
@@ -1492,8 +1575,8 @@ const Schedules = () => {
             </Box>
           ) : (
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required size="small">
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth required size="small" sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Origin Station</InputLabel>
                   <Select
                     name="origin"
@@ -1518,8 +1601,8 @@ const Schedules = () => {
                   )}
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required size="small">
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth required size="small" sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Destination Station</InputLabel>
                   <Select
                     name="destination"
@@ -1539,7 +1622,7 @@ const Schedules = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   required
@@ -1552,7 +1635,7 @@ const Schedules = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   required
@@ -1565,8 +1648,8 @@ const Schedules = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required size="small">
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth required size="small" sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Vehicle</InputLabel>
                   <Select
                     name="vehicle"
@@ -1581,6 +1664,7 @@ const Schedules = () => {
                     {vehicles.map(vehicle => (
                       <MenuItem key={vehicle._id} value={vehicle._id}>
                         {vehicle.plateNumber} - {vehicle.carType} ({vehicle.totalCapacity} seats)
+                        {vehicle.driverID && ` - Assigned: ${vehicle.driverID.fullName || 'Driver'}`}
                         {vehicle.currentStatus && ` - ${vehicle.currentStatus}`}
                       </MenuItem>
                     ))}
@@ -1592,8 +1676,8 @@ const Schedules = () => {
                   )}
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required size="small">
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth required size="small" sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Driver</InputLabel>
                   <Select
                     name="driver"
@@ -1618,7 +1702,7 @@ const Schedules = () => {
                   )}
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   required
@@ -1631,10 +1715,11 @@ const Schedules = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  fullWidth
+                  fullWidth 
                   required
+                  sx={{ minWidth: 200, width: '100%' }}
                   type="number"
                   name="totalSeats"
                   label="Total Seats"
@@ -1649,7 +1734,7 @@ const Schedules = () => {
                     `Vehicle capacity: ${vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity} seats`}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   required
@@ -1660,10 +1745,11 @@ const Schedules = () => {
                   onChange={handleInputChange}
                   InputProps={{ inputProps: { min: 15 } }}
                   size="small"
+                  helperText="Automatically calculated from departure and arrival times"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth required size="small" sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Station</InputLabel>
                   <Select
                     name="station"
@@ -1683,7 +1769,7 @@ const Schedules = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   multiline
@@ -1713,6 +1799,355 @@ const Schedules = () => {
             {(vehicles.length === 0 || drivers.length === 0 || stations.length === 0) && ' (Missing Data)'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* View Trip Details Dialog */}
+      <Dialog 
+        open={viewDialogOpen} 
+        onClose={handleCloseViewDialog} 
+        maxWidth="md" 
+        fullWidth
+        scroll="paper"
+      >
+        {viewedTrip && (
+          <>
+            <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5">
+                  Trip Details: {viewedTrip.tripNumber || 'N/A'}
+                </Typography>
+                <Chip 
+                  label={viewedTrip.tripStatus || 'N/A'}
+                  color={statusColors[viewedTrip.tripStatus] || 'default'}
+                  sx={{ color: 'white', fontWeight: 'bold' }}
+                />
+              </Box>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                {viewedTrip.origin?.stationName || 'N/A'} → {viewedTrip.destination?.stationName || 'N/A'}
+              </Typography>
+            </DialogTitle>
+            
+            <DialogContent dividers sx={{ p: 0 }}>
+              {/* Quick Stats Bar */}
+              <Box sx={{ 
+                display: 'flex', 
+                bgcolor: 'grey.50', 
+                p: 2, 
+                borderBottom: 1, 
+                borderColor: 'divider' 
+              }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="caption" color="textSecondary">Price</Typography>
+                      <Typography variant="h6" color="primary">
+                        ETB {viewedTrip.price || 0}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="caption" color="textSecondary">Seats</Typography>
+                      <Typography variant="h6" color={getSeatColor(getAvailableSeatsPercentage(viewedTrip))}>
+                        {viewedTrip.availableSeats || 0}/{viewedTrip.totalSeats || 0}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="caption" color="textSecondary">Duration</Typography>
+                      <Typography variant="h6">
+                        {Math.floor((viewedTrip.estimatedDuration || 0) / 60)}h {(viewedTrip.estimatedDuration || 0) % 60}m
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 3 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="caption" color="textSecondary">Status</Typography>
+                      <Chip
+                        label={viewedTrip.isActive ? 'Active' : 'Inactive'}
+                        color={viewedTrip.isActive ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Main Content */}
+              <Box sx={{ p: 3 }}>
+                <Grid container spacing={3}>
+                  {/* Left Column - Trip Information */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Route Information */}
+                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <RouteIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        Route Information
+                      </Typography>
+                      
+                      <Timeline position="alternate">
+                        <TimelineItem>
+                          <TimelineOppositeContent color="textSecondary">
+                            {format(new Date(viewedTrip.departureTime), 'PPp')}
+                          </TimelineOppositeContent>
+                          <TimelineSeparator>
+                            <TimelineDot color="primary">
+                              <LocationIcon />
+                            </TimelineDot>
+                            <TimelineConnector />
+                          </TimelineSeparator>
+                          <TimelineContent>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              Origin
+                            </Typography>
+                            <Typography>
+                              {viewedTrip.origin?.stationName || 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {viewedTrip.origin?.city || ''}
+                            </Typography>
+                          </TimelineContent>
+                        </TimelineItem>
+                        
+                        <TimelineItem>
+                          <TimelineOppositeContent color="textSecondary">
+                            {format(new Date(viewedTrip.arrivalTime), 'PPp')}
+                          </TimelineOppositeContent>
+                          <TimelineSeparator>
+                            <TimelineDot color="success">
+                              <LocationIcon />
+                            </TimelineDot>
+                          </TimelineSeparator>
+                          <TimelineContent>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              Destination
+                            </Typography>
+                            <Typography>
+                              {viewedTrip.destination?.stationName || 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {viewedTrip.destination?.city || ''}
+                            </Typography>
+                          </TimelineContent>
+                        </TimelineItem>
+                      </Timeline>
+                    </Paper>
+
+                    {/* Vehicle Information */}
+                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <DriveEtaIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        Vehicle Details
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemIcon>
+                                <BusIcon color="primary" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary="Plate Number" 
+                                secondary={viewedTrip.vehicle?.plateNumber || 'N/A'} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemIcon>
+                                <InfoIcon color="primary" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary="Type" 
+                                secondary={viewedTrip.vehicle?.carType || 'N/A'} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemIcon>
+                                <SpeedIcon color="primary" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary="Capacity" 
+                                secondary={`${viewedTrip.totalSeats || 0} seats`} 
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          {viewedTrip.vehicle?.images && viewedTrip.vehicle.images.length > 0 && (
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Avatar
+                                src={viewedTrip.vehicle.images.find(img => img.isPrimary)?.url || viewedTrip.vehicle.images[0]?.url}
+                                variant="rounded"
+                                sx={{ width: 120, height: 80, margin: '0 auto', mb: 1 }}
+                              />
+                              <Typography variant="caption" color="textSecondary">
+                                Vehicle Image
+                              </Typography>
+                            </Box>
+                          )}
+                        </Grid>
+                      </Grid>
+                    </Paper>
+
+                    {/* Notes */}
+                    {viewedTrip.notes && (
+                      <Paper sx={{ p: 2, borderRadius: 2 }}>
+                        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                          <InfoIcon sx={{ mr: 1, color: 'primary.main' }} />
+                          Additional Notes
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                          {viewedTrip.notes}
+                        </Typography>
+                      </Paper>
+                    )}
+                  </Grid>
+
+                  {/* Right Column - Driver & Additional Info */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Driver Information */}
+                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        Driver Information
+                      </Typography>
+                      
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid size={{ xs: 12, sm: 4 }}>
+                          <Avatar
+                            src={viewedTrip.driver?.profileImage}
+                            sx={{ width: 80, height: 80, margin: '0 auto' }}
+                          >
+                            {viewedTrip.driver?.fullName?.charAt(0) || 'D'}
+                          </Avatar>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 8 }}>
+                          <List dense>
+                            <ListItem>
+                              <ListItemText 
+                                primary="Full Name" 
+                                secondary={viewedTrip.driver?.fullName || 'N/A'} 
+                                primaryTypographyProps={{ fontWeight: 'bold' }}
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemIcon>
+                                <PhoneIcon color="primary" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary="Phone" 
+                                secondary={viewedTrip.driver?.phoneNumber || 'N/A'} 
+                              />
+                            </ListItem>
+                            <ListItem>
+                              <ListItemIcon>
+                                <AccountCircleIcon color="primary" />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary="License" 
+                                secondary={viewedTrip.driver?.licenseNumber || 'No license'} 
+                              />
+                            </ListItem>
+                          </List>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+
+                    {/* Station Information */}
+                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <LocationIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        Station Information
+                      </Typography>
+                      
+                      <List dense>
+                        <ListItem>
+                          <ListItemText 
+                            primary="Station Name" 
+                            secondary={viewedTrip.station?.stationName || 'N/A'} 
+                          />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemText 
+                            primary="Station Code" 
+                            secondary={viewedTrip.station?.stationCode || 'N/A'} 
+                          />
+                        </ListItem>
+                        <ListItem>
+                          <ListItemText 
+                            primary="Created By" 
+                            secondary={viewedTrip.createdBy?.fullName || 'N/A'} 
+                          />
+                        </ListItem>
+                      </List>
+                    </Paper>
+
+                    {/* Status Timeline */}
+                    <Paper sx={{ p: 2, borderRadius: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TimelapseIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        Trip Status Timeline
+                      </Typography>
+                      
+                      <Stepper orientation="vertical" activeStep={getStatusStep(viewedTrip.tripStatus)}>
+                        <Step>
+                          <StepLabel>Scheduled</StepLabel>
+                          <StepContent>
+                            <Typography variant="caption">
+                              Trip is scheduled and awaiting boarding
+                            </Typography>
+                          </StepContent>
+                        </Step>
+                        <Step>
+                          <StepLabel>Boarding</StepLabel>
+                          <StepContent>
+                            <Typography variant="caption">
+                              Passengers are boarding the vehicle
+                            </Typography>
+                          </StepContent>
+                        </Step>
+                        <Step>
+                          <StepLabel>Ongoing</StepLabel>
+                          <StepContent>
+                            <Typography variant="caption">
+                              Trip is in progress
+                            </Typography>
+                          </StepContent>
+                        </Step>
+                        <Step>
+                          <StepLabel>Completed</StepLabel>
+                          <StepContent>
+                            <Typography variant="caption">
+                              Trip has been completed successfully
+                            </Typography>
+                          </StepContent>
+                        </Step>
+                      </Stepper>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={handleCloseViewDialog} color="inherit">
+                Close
+              </Button>
+              {(user?.role === 'station_admin' || user?.role === 'super_admin') && canEditDelete(viewedTrip) && (
+                <Button
+                  variant="contained"
+                  startIcon={<EditIcon />}
+                  onClick={() => {
+                    handleCloseViewDialog();
+                    handleOpenDialog(viewedTrip);
+                  }}
+                >
+                  Edit Trip
+                </Button>
+              )}
+            </DialogActions>
+          </>
+        )}
       </Dialog>
 
       {/* Snackbar */}

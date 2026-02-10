@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
+import { SettingsProvider } from './contexts/SettingsContext';
+import './styles/dark-mode.css';
+import SettingsPage from './pages/SettingsPage';
 // Layout
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -76,6 +78,7 @@ const queryClient = new QueryClient({
 
   function App() {
   return (
+    <SettingsProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
@@ -85,6 +88,15 @@ const queryClient = new QueryClient({
           <Route path="/about" element={<Layout><About /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
           <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+
+
+       <Route path="/settings" element={
+  <ProtectedRoute>
+    <Layout showSidebar>
+    <SettingsPage />
+    </Layout>
+  </ProtectedRoute>
+} />
           
           {/* ===== AUTHENTICATION ROUTES ===== */}
           <Route path="/login" element={<Layout><Login /></Layout>} />
@@ -328,6 +340,8 @@ const queryClient = new QueryClient({
         />
       </BrowserRouter>
     </QueryClientProvider>
+
+    </SettingsProvider>
   );
 }
 

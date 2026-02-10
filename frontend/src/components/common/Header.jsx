@@ -130,17 +130,24 @@ export default function Header() {
                       {getRoleDisplay()}
                     </p>
                   </div>
+                  
                   <div className="relative group">
                     <div className="w-12 h-12 bg-gradient-to-br from-cyan-300 to-blue-400 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30 ring-offset-2 ring-offset-blue-900 group-hover:ring-cyan-400 transition-all duration-300">
-                      {user.profileImage ? (
-                        <img 
-                          src={user.profileImage} 
-                          alt={user.fullName}
-                          className="w-full h-full rounded-full object-cover"
-                        />
+                   <Link to="/profile">   {user.profileImage ? (
+                        
+                          <img 
+                            src={user.profileImage} 
+                            alt={user.fullName}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                          
+                         
+                        
+                        
                       ) : (
                         <User className="w-6 h-6 text-white" />
                       )}
+                       </Link>
                     </div>
                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-cyan-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>

@@ -1079,7 +1079,7 @@ const Trips = () => {
             <Grid container spacing={2}>
               {/* Origin Station */}
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Origin Station</InputLabel>
                   {loadingStations ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
@@ -1114,7 +1114,7 @@ const Trips = () => {
 
               {/* Destination Station */}
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Destination Station</InputLabel>
                   {loadingStations ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
@@ -1175,7 +1175,7 @@ const Trips = () => {
               
               {/* Vehicle Selection */}
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Vehicle</InputLabel>
                   {loadingVehicles ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
@@ -1213,7 +1213,7 @@ const Trips = () => {
               
               {/* Driver Selection */}
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Driver</InputLabel>
                   {loadingDrivers ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
@@ -1261,6 +1261,7 @@ const Trips = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  sx={{ minWidth: 200, width: '100%' }}
                   type="number"
                   label="Total Seats"
                   value={formData.totalSeats}
@@ -1285,6 +1286,7 @@ const Trips = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  sx={{ minWidth: 200, width: '100%' }}
                   type="number"
                   label="Available Seats"
                   value={formData.availableSeats}
@@ -1302,7 +1304,7 @@ const Trips = () => {
 
               {/* Station field */}
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+                <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Station</InputLabel>
                   {loadingStations ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
