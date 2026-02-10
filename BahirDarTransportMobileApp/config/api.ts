@@ -1,6 +1,5 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.137.1:5000/api';
 
-// All authentication endpoints
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
@@ -57,54 +56,11 @@ export const API_CONFIG = {
   retryDelay: 1000,
 };
 
-// Helper functions for API calls
-export const apiHelpers = {
-  // Build query string from object
-  buildQueryString: (params: Record<string, any>): string => {
-    const queryParams = new URLSearchParams();
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value));
-      }
-    });
-    
-    const queryString = queryParams.toString();
-    return queryString ? `?${queryString}` : '';
-  },
-  
-  // Handle API errors
-  handleError: async (response: Response): Promise<Error> => {
-    let errorMessage = `HTTP ${response.status}`;
-    
-    try {
-      const errorData = await response.json();
-      if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch {
-      // If response is not JSON, use status text
-      errorMessage = response.statusText || errorMessage;
-    }
-    
-    return new Error(errorMessage);
-  },
-  
-  // Get auth headers
-  getAuthHeaders: async (): Promise<Record<string, string>> => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-    
-    // You might want to get token from storage here
-    // const token = await storage.getToken();
-    // if (token) {
-    //   headers['Authorization'] = `Bearer ${token}`;
-    // }
-    
-    return headers;
-  },
+// Simple function to get base URL (for axios config)
+export const getPlatformBaseUrl = (): string => {
+  return API_BASE_URL;
 };
+
+// Export constants for axios
+export const TIMEOUT = API_CONFIG.timeout;
+export const HEADERS = API_CONFIG.headers;

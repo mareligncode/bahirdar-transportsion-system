@@ -1,4 +1,4 @@
-// components/common/Button.tsx
+// components/common/Button.tsx - FIXED VERSION
 import React from 'react';
 import { 
   TouchableOpacity, 
@@ -24,6 +24,7 @@ export function Button({
   size = 'medium',
   fullWidth = false,
   className = '',
+  onPress,
   ...props
 }: ButtonProps) {
   const getVariantClasses = () => {
@@ -68,6 +69,13 @@ export function Button({
     }
   };
 
+  // FIX: Handle press properly
+  const handlePress = (e: any) => {
+    if (!disabled && !loading && onPress) {
+      onPress(e);
+    }
+  };
+
   return (
     <TouchableOpacity
       className={`
@@ -75,11 +83,11 @@ export function Button({
         ${getVariantClasses()}
         ${getSizeClasses()}
         ${fullWidth ? 'w-full' : ''}
-        ${disabled || loading ? 'opacity-60' : ''}
+        ${disabled || loading ? 'opacity-50' : 'opacity-100'}
         ${className}
       `}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
+      onPress={handlePress} // Use our custom handler
+      activeOpacity={disabled || loading ? 1 : 0.7} // Disable opacity effect when disabled
       {...props}
     >
       {loading ? (

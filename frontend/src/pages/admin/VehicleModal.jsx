@@ -360,7 +360,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             {/* Driver Assignment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign Driver (Optional)
+                Assign Driver *
               </label>
               <select
                 name="driverID"
