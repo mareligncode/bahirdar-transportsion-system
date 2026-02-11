@@ -473,36 +473,6 @@ const Schedules = () => {
     
     setTripForm(updatedForm);
   };
-  
-  // Check if vehicle is selected to auto-set driver and total seats
-  if (name === 'vehicle' && value) {
-    const selectedVehicle = vehicles.find(v => v._id === value);
-    if (selectedVehicle) {
-      // Auto-set driver if vehicle has a driver assigned
-      if (selectedVehicle.driverID) {
-        updatedForm.driver = selectedVehicle.driverID._id || selectedVehicle.driverID;
-      }
-      // Always set total seats
-      updatedForm.totalSeats = selectedVehicle.totalCapacity || '';
-    }
-  }
-  
-  // Calculate estimated duration when both departure and arrival times are set
-  // Use the updatedForm values, not tripForm (which hasn't updated yet)
-  if ((name === 'departureTime' || name === 'arrivalTime') && updatedForm.departureTime && updatedForm.arrivalTime) {
-    const departure = new Date(updatedForm.departureTime);
-    const arrival = new Date(updatedForm.arrivalTime);
-    
-    // Only calculate if departure is before arrival
-    if (departure < arrival) {
-      const durationMinutes = differenceInMinutes(arrival, departure);
-      updatedForm.estimatedDuration = durationMinutes > 0 ? durationMinutes : '';
-    }
-  }
-  
-  // Update the state once with all changes
-  setTripForm(updatedForm);
-};
 
   const handleCreateTrip = async () => {
     try {
@@ -919,7 +889,7 @@ const Schedules = () => {
         </Box>
       </Paper>
 
-      {/* Stats Cards - UPDATED Grid v2 syntax */}
+      {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, sm: 4, md: 2 }}>
           <Card sx={{ height: '100%', borderRadius: 2 }}>
@@ -1035,7 +1005,7 @@ const Schedules = () => {
         </Paper>
       )}
 
-      {/* Filters - UPDATED Grid v2 syntax */}
+      {/* Filters */}
       <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid size={12}>
@@ -1428,7 +1398,7 @@ const Schedules = () => {
           />
         </Paper>
       ) : (
-        // Grid View - UPDATED Grid v2 syntax
+        // Grid View
         <Grid container spacing={3}>
           {trips.map((trip) => (
             <Grid key={trip._id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
@@ -1590,7 +1560,7 @@ const Schedules = () => {
         </Grid>
       )}
 
-      {/* Create/Edit Trip Dialog - UPDATED Grid v2 syntax */}
+      {/* Create/Edit Trip Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
           {selectedTrip ? t('edit_trip') : t('create_new_trip')}
@@ -1751,7 +1721,6 @@ const Schedules = () => {
                 <TextField
                   fullWidth 
                   required
-                  sx={{ minWidth: 200, width: '100%' }}
                   type="number"
                   name="totalSeats"
                   label={t('total_seats')}
