@@ -25,13 +25,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../contexts/SettingsContext';
-import { useTranslation } from '../../hooks/useTranslation'; // Add this import
+import { useTranslation } from '../../hooks/useTranslation';
 import { useState } from 'react';
 
 export default function Sidebar({ userRole }) {
   const { user, logout } = useAuth();
   const { settings, toggleTheme, changeLanguage, updateSetting } = useSettings();
-  const { t } = useTranslation(); // Add this hook
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
@@ -41,7 +41,7 @@ export default function Sidebar({ userRole }) {
     navigate('/login');
   };
 
-  // Get menu items based on user role - NOW USING TRANSLATIONS
+  // Get menu items based on user role - FULLY TRANSLATED
   const getMenuItems = () => {
     const commonItems = [
       { icon: Bell, label: t('notifications'), path: '/notifications' },
@@ -51,41 +51,41 @@ export default function Sidebar({ userRole }) {
 
     const passengerItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/dashboard' },
-      { icon: Ticket, label: 'Book Trip', path: '/passenger/book-trip' },
-      { icon: Calendar, label: 'My Booking', path: '/passenger/my-booking' },
-      { icon: CreditCard, label: 'Payment Methods', path: '/passenger/payments' },
-      { icon: MessageSquare, label: 'Support', path: '/passenger/support' },
+      { icon: Ticket, label: t('book_trip'), path: '/passenger/book-trip' },
+      { icon: Calendar, label: t('my_booking'), path: '/passenger/my-booking' },
+      { icon: CreditCard, label: t('payment_methods'), path: '/passenger/payments' },
+      { icon: MessageSquare, label: t('support'), path: '/passenger/support' },
     ];
 
     const driverItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/driver/dashboard' },
-      { icon: Car, label: 'Assigned Trips', path: '/driver/trips' },
-      { icon: MapPin, label: 'Trip Tracking', path: '/driver/tracking' },
-      { icon: BarChart3, label: 'Earnings', path: '/driver/earnings' },
-      { icon: Calendar, label: 'Availability', path: '/driver/availability' },
-      { icon: FileText, label: 'Documents', path: '/driver/documents' },
+      { icon: Car, label: t('assigned_trips'), path: '/driver/trips' },
+      { icon: MapPin, label: t('trip_tracking'), path: '/driver/tracking' },
+      { icon: BarChart3, label: t('earnings'), path: '/driver/earnings' },
+      { icon: Calendar, label: t('availability'), path: '/driver/availability' },
+      { icon: FileText, label: t('documents'), path: '/driver/documents' },
     ];
 
     const stationAdminItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/station/dashboard' },
-      { icon: Users, label: 'User Management', path: '/station/users' },
-      { icon: Car, label: 'Drivers', path: '/station/drivers' },
-      { icon: Car, label: 'Vehicles', path: '/station/vehicles' },
-      { icon: Calendar, label: 'Trip Management', path: '/station/trips' },
-      { icon: BarChart3, label: 'Station Reports', path: '/station/reports' },
-      { icon: Settings, label: 'Station Settings', path: '/station/station' },
+      { icon: Users, label: t('user_management'), path: '/station/users' },
+      { icon: Car, label: t('drivers'), path: '/station/drivers' },
+      { icon: Car, label: t('vehicles'), path: '/station/vehicles' },
+      { icon: Calendar, label: t('trip_management'), path: '/station/trips' },
+      { icon: BarChart3, label: t('station_reports'), path: '/station/reports' },
+      { icon: Settings, label: t('station_settings'), path: '/station/station' },
     ];
 
     const superAdminItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/admin/dashboard' },     
-      { icon: Shield, label: 'Role Management', path: '/admin/role-management' },
-      { icon: Users, label: 'All Users', path: '/admin/AllUsers' },
-      { icon: Calendar, label: 'Schedules', path: '/admin/schedules' },
-      { icon: Car, label: 'Vehicles', path: '/admin/vehicles' },
-      { icon: MapPin, label: 'Stations', path: '/admin/stations' },
-      { icon: BarChart3, label: 'System Reports', path: '/admin/reports' },
-      { icon: Settings, label: 'System Settings', path: '/admin/settings' },
-      { icon: FileText, label: 'Audit Logs', path: '/admin/audit-logs' },
+      { icon: Shield, label: t('role_management'), path: '/admin/role-management' },
+      { icon: Users, label: t('all_users'), path: '/admin/AllUsers' },
+      { icon: Calendar, label: t('schedules'), path: '/admin/schedules' },
+      { icon: Car, label: t('vehicles'), path: '/admin/vehicles' },
+      { icon: MapPin, label: t('stations'), path: '/admin/stations' },
+      { icon: BarChart3, label: t('system_reports'), path: '/admin/reports' },
+      { icon: Settings, label: t('system_settings'), path: '/admin/settings' },
+      { icon: FileText, label: t('audit_logs'), path: '/admin/audit-logs' },
     ];
 
     switch(userRole) {
@@ -104,13 +104,13 @@ export default function Sidebar({ userRole }) {
 
   const menuItems = getMenuItems();
 
-  // Get panel title based on role - USING TRANSLATIONS
+  // Get panel title based on role - FULLY TRANSLATED
   const getPanelTitle = () => {
     switch(userRole) {
-      case 'passenger': return t('passenger') + ' ' + t('dashboard');
-      case 'driver': return t('driver') + ' ' + t('dashboard');
-      case 'station_admin': return t('station_admin') + ' Panel';
-      case 'super_admin': return t('super_admin') + ' Panel';
+      case 'passenger': return t('passenger_dashboard');
+      case 'driver': return t('driver_dashboard');
+      case 'station_admin': return t('station_admin_panel');
+      case 'super_admin': return t('super_admin_panel');
       default: return t('dashboard');
     }
   };
@@ -157,7 +157,7 @@ export default function Sidebar({ userRole }) {
                 </p>
                 {user.stationID && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Station: {user.stationID}
+                    {t('station')}: {user.stationID}
                   </p>
                 )}
               </div>
@@ -274,9 +274,9 @@ export default function Sidebar({ userRole }) {
                   onChange={(e) => updateSetting('fontSize', e.target.value)}
                   className="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
                 >
-                  <option value="small">Small</option>
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
+                  <option value="small">{t('small')}</option>
+                  <option value="medium">{t('medium')}</option>
+                  <option value="large">{t('large')}</option>
                 </select>
               </div>
 
@@ -365,9 +365,9 @@ export default function Sidebar({ userRole }) {
               )}
             </div>
             <span>•</span>
-            <span>{t('font_size')}: {settings.fontSize}</span>
+            <span>{t('font_size')}: {t(settings.fontSize)}</span>
             <span>•</span>
-            <span>{settings.autoRefresh ? t('auto_refresh') + ' ON' : t('auto_refresh') + ' OFF'}</span>
+            <span>{settings.autoRefresh ? t('auto_refresh_on') : t('auto_refresh_off')}</span>
           </div>
         </div>
 

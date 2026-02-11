@@ -27,6 +27,7 @@ import {
   Search
 } from '@mui/icons-material';
 import TripCard from './TripCard';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 const TripResults = ({
   trips,
@@ -37,6 +38,7 @@ const TripResults = ({
   onBack,
   viewMode: initialViewMode = 'grid'
 }) => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -127,15 +129,15 @@ const TripResults = ({
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Route</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Date & Time</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Duration</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Vehicle</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Driver</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Price</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Seats</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>Action</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('route')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('date_and_time')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('duration')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('vehicle')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('driver')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('price')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('seats')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('status')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('action')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -154,7 +156,7 @@ const TripResults = ({
                       {trip.origin?.stationName} → {trip.destination?.stationName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {trip.origin?.city} to {trip.destination?.city}
+                      {trip.origin?.city} {t('to')} {trip.destination?.city}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -172,15 +174,15 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {trip.vehicle?.carType || 'N/A'}
+                      {trip.vehicle?.carType || t('na')}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {trip.vehicle?.plateNumber || 'N/A'}
+                      {trip.vehicle?.plateNumber || t('na')}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {trip.driver?.fullName?.split(' ')[0] || 'N/A'}
+                      {trip.driver?.fullName?.split(' ')[0] || t('na')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -188,7 +190,7 @@ const TripResults = ({
                       ${trip.price || '0'}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      per seat
+                      {t('per_seat')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -202,7 +204,7 @@ const TripResults = ({
                   <TableCell>
                     {trip.availableSeats > 0 ? (
                       <Chip 
-                        label="Available" 
+                        label={t('available')} 
                         size="small" 
                         color="success" 
                         variant="filled"
@@ -210,7 +212,7 @@ const TripResults = ({
                       />
                     ) : (
                       <Chip 
-                        label="Sold Out" 
+                        label={t('sold_out')} 
                         size="small" 
                         color="error" 
                         variant="filled"
@@ -230,7 +232,7 @@ const TripResults = ({
                         minWidth: '80px'
                       }}
                     >
-                      {trip.availableSeats === 0 ? 'Sold Out' : 'Book'}
+                      {trip.availableSeats === 0 ? t('sold_out') : t('book')}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -264,7 +266,7 @@ const TripResults = ({
         gap: '20px'
       }}>
         <CircularProgress />
-        <Typography>Loading trips...</Typography>
+        <Typography>{t('loading_trips')}</Typography>
       </Box>
     );
   }
@@ -279,17 +281,17 @@ const TripResults = ({
         border: '1px solid #e2e8f0'
       }}>
         <Typography variant="h6" color="text.secondary">
-          No trips found
+          {t('no_trips_found')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Try adjusting your search criteria
+          {t('try_adjusting_search_criteria')}
         </Typography>
         <Button 
           variant="outlined" 
           onClick={onBack}
           sx={{ marginTop: 2 }}
         >
-          Back to Search
+          {t('back_to_search')}
         </Button>
       </Paper>
     );
@@ -314,19 +316,22 @@ const TripResults = ({
             marginBottom: '8px', 
             color: '#1e293b'
           }} gutterBottom>
-            Search Results
+            {t('search_results')}
           </Typography>
           <Typography variant="body1" sx={{ 
             color: '#64748b',
             fontSize: '1rem'
           }}>
-            Trips from {stations.find(s => s._id === searchData.origin)?.stationName} to {stations.find(s => s._id === searchData.destination)?.stationName} • {searchData.date?.toLocaleDateString()}
+            {t('trips_from_to', { 
+              from: stations.find(s => s._id === searchData.origin)?.stationName,
+              to: stations.find(s => s._id === searchData.destination)?.stationName
+            })} • {searchData.date?.toLocaleDateString()}
           </Typography>
         </Box>
         
         <Box sx={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <TextField
-            placeholder="Filter results..."
+            placeholder={t('filter_results_placeholder')}
             variant="outlined"
             size="small"
             value={searchTerm}
@@ -343,8 +348,8 @@ const TripResults = ({
           <IconButton onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
             {viewMode === 'grid' ? <ViewList /> : <GridView />}
           </IconButton>
-          <Button startIcon={<FilterList />}>Filter</Button>
-          <Button startIcon={<Sort />}>Sort</Button>
+          <Button startIcon={<FilterList />}>{t('filter')}</Button>
+          <Button startIcon={<Sort />}>{t('sort')}</Button>
         </Box>
       </Box>
 

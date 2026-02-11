@@ -60,6 +60,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 // Styled components
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -99,6 +100,7 @@ const RoleChip = styled(Chip)(({ theme, role }) => {
 });
 
 const AllUsers = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -148,7 +150,7 @@ const AllUsers = () => {
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err.response?.data?.message || 'Failed to load users');
+      setError(err.response?.data?.message || t('failed_to_load_users'));
     } finally {
       setLoading(false);
     }
@@ -169,12 +171,12 @@ const AllUsers = () => {
             : user
         ));
         
-        setSuccess(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+        setSuccess(t(currentStatus ? 'user_deactivated' : 'user_activated'));
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
       console.error('Error toggling user status:', err);
-      setError(err.response?.data?.message || 'Failed to update user status');
+      setError(err.response?.data?.message || t('failed_to_update_user_status'));
     }
   };
 
@@ -193,7 +195,7 @@ const AllUsers = () => {
       // Add additional data for specific roles
       if (newRole === 'driver') {
         if (!licenseNumber) {
-          setError('License number is required for driver role');
+          setError(t('license_number_required'));
           return;
         }
         requestData.licenseNumber = licenseNumber;
@@ -201,7 +203,7 @@ const AllUsers = () => {
       
       if (newRole === 'station_admin') {
         if (!stationID) {
-          setError('Station ID is required for station admin role');
+          setError(t('station_id_required'));
           return;
         }
         requestData.stationID = stationID;
@@ -218,7 +220,7 @@ const AllUsers = () => {
         ));
         
         setOpenChangeRoleDialog(false);
-        setSuccess(`User role changed to ${newRole} successfully`);
+        setSuccess(t('user_role_changed', { role: t(newRole) }));
         setTimeout(() => setSuccess(''), 3000);
         
         // Reset form
@@ -228,7 +230,7 @@ const AllUsers = () => {
       }
     } catch (err) {
       console.error('Error changing user role:', err);
-      setError(err.response?.data?.message || 'Failed to change user role');
+      setError(err.response?.data?.message || t('failed_to_change_user_role'));
     }
   };
 
@@ -262,7 +264,7 @@ const AllUsers = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('na');
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -273,10 +275,10 @@ const AllUsers = () => {
   // Get role display name
   const getRoleDisplayName = (role) => {
     switch (role) {
-      case 'super_admin': return 'Super Admin';
-      case 'station_admin': return 'Station Admin';
-      case 'driver': return 'Driver';
-      case 'passenger': return 'Passenger';
+      case 'super_admin': return t('super_admin');
+      case 'station_admin': return t('station_admin');
+      case 'driver': return t('driver');
+      case 'passenger': return t('passenger');
       default: return role;
     }
   };
@@ -355,10 +357,10 @@ const AllUsers = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
           <Typography variant="h4" component="h1" fontWeight="bold">
-            User Management
+            {t('user_management')}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Manage all system users
+            {t('manage_all_system_users')}
           </Typography>
         </Box>
         <Button
@@ -366,7 +368,7 @@ const AllUsers = () => {
           startIcon={<RefreshIcon />}
           onClick={fetchUsers}
         >
-          Refresh
+          {t('refresh')}
         </Button>
       </Box>
 
@@ -376,7 +378,7 @@ const AllUsers = () => {
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Total Users
+                {t('total_users')}
               </Typography>
               <Typography variant="h4">
                 {stats.total}
@@ -388,7 +390,7 @@ const AllUsers = () => {
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Active Users
+                {t('active_users')}
               </Typography>
               <Typography variant="h4" color="success.main">
                 {stats.active}
@@ -400,7 +402,7 @@ const AllUsers = () => {
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Super Admins
+                {t('super_admins')}
               </Typography>
               <Typography variant="h4" color="error.main">
                 {stats.superAdmin}
@@ -412,7 +414,7 @@ const AllUsers = () => {
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Drivers
+                {t('drivers')}
               </Typography>
               <Typography variant="h4" color="info.main">
                 {stats.drivers}
@@ -424,7 +426,7 @@ const AllUsers = () => {
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
-                Passengers
+                {t('passengers')}
               </Typography>
               <Typography variant="h4" color="success.main">
                 {stats.passengers}
@@ -440,7 +442,7 @@ const AllUsers = () => {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Search users..."
+              placeholder={t('search_users_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -454,31 +456,31 @@ const AllUsers = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Role</InputLabel>
+              <InputLabel>{t('role')}</InputLabel>
               <Select
                 value={roleFilter}
-                label="Role"
+                label={t('role')}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >
-                <MenuItem value="all">All Roles</MenuItem>
-                <MenuItem value="super_admin">Super Admin</MenuItem>
-                <MenuItem value="station_admin">Station Admin</MenuItem>
-                <MenuItem value="driver">Driver</MenuItem>
-                <MenuItem value="passenger">Passenger</MenuItem>
+                <MenuItem value="all">{t('all_roles')}</MenuItem>
+                <MenuItem value="super_admin">{t('super_admin')}</MenuItem>
+                <MenuItem value="station_admin">{t('station_admin')}</MenuItem>
+                <MenuItem value="driver">{t('driver')}</MenuItem>
+                <MenuItem value="passenger">{t('passenger')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('status')}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="all">{t('all_status')}</MenuItem>
+                <MenuItem value="active">{t('active')}</MenuItem>
+                <MenuItem value="inactive">{t('inactive')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -493,7 +495,7 @@ const AllUsers = () => {
                 setStatusFilter('all');
               }}
             >
-              Clear Filters
+              {t('clear_filters')}
             </Button>
           </Grid>
         </Grid>
@@ -504,12 +506,12 @@ const AllUsers = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'action.hover' }}>
-              <TableCell><strong>User</strong></TableCell>
-              <TableCell><strong>Role</strong></TableCell>
-              <TableCell><strong>Contact</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell><strong>Joined</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('user')}</strong></TableCell>
+              <TableCell><strong>{t('role')}</strong></TableCell>
+              <TableCell><strong>{t('contact')}</strong></TableCell>
+              <TableCell><strong>{t('status')}</strong></TableCell>
+              <TableCell><strong>{t('joined')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -518,8 +520,8 @@ const AllUsers = () => {
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography color="textSecondary">
                     {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
-                      ? 'No users match your filters' 
-                      : 'No users found'}
+                      ? t('no_users_match_filters') 
+                      : t('no_users_found')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -534,10 +536,10 @@ const AllUsers = () => {
                       />
                       <Box>
                         <Typography fontWeight="medium">
-                          {user.fullName || 'No Name'}
+                          {user.fullName || t('no_name')}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          ID: {user._id.substring(0, 8)}...
+                          {t('id')}: {user._id.substring(0, 8)}...
                         </Typography>
                       </Box>
                     </Box>
@@ -550,7 +552,7 @@ const AllUsers = () => {
                     />
                     {user.licenseNumber && (
                       <Typography variant="caption" display="block" color="textSecondary">
-                        License: {user.licenseNumber}
+                        {t('license')}: {user.licenseNumber}
                       </Typography>
                     )}
                   </TableCell>
@@ -570,7 +572,7 @@ const AllUsers = () => {
                   </TableCell>
                   <TableCell>
                     <StatusChip
-                      label={user.isActive ? 'Active' : 'Inactive'}
+                      label={user.isActive ? t('active') : t('inactive')}
                       status={user.isActive ? 'active' : 'inactive'}
                       size="small"
                     />
@@ -580,7 +582,7 @@ const AllUsers = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Box display="flex" justifyContent="center" gap={1}>
-                      <Tooltip title="View Details">
+                      <Tooltip title={t('view_details')}>
                         <IconButton
                           size="small"
                           color="info"
@@ -590,7 +592,7 @@ const AllUsers = () => {
                         </IconButton>
                       </Tooltip>
                       
-                      <Tooltip title="Change Role">
+                      <Tooltip title={t('change_role')}>
                         <IconButton
                           size="small"
                           color="warning"
@@ -600,7 +602,7 @@ const AllUsers = () => {
                         </IconButton>
                       </Tooltip>
                       
-                      <Tooltip title={user.isActive ? 'Deactivate' : 'Activate'}>
+                      <Tooltip title={user.isActive ? t('deactivate') : t('activate')}>
                         <IconButton
                           size="small"
                           color={user.isActive ? 'error' : 'success'}
@@ -659,41 +661,41 @@ const AllUsers = () => {
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Personal Information
+                    {t('personal_information')}
                   </Typography>
                   <Box mb={2}>
                     <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                       <EmailIcon fontSize="small" />
-                      <strong>Email:</strong> {selectedUser.email}
+                      <strong>{t('email')}:</strong> {selectedUser.email}
                     </Typography>
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                       <PhoneIcon fontSize="small" />
-                      <strong>Phone:</strong> {selectedUser.phoneNumber || 'Not provided'}
+                      <strong>{t('phone')}:</strong> {selectedUser.phoneNumber || t('not_provided')}
                     </Typography>
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>Emergency Contact:</strong> {selectedUser.emergencyContact || 'Not provided'}
+                      <strong>{t('emergency_contact')}:</strong> {selectedUser.emergencyContact || t('not_provided')}
                     </Typography>
                   </Box>
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Account Information
+                    {t('account_information')}
                   </Typography>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>User ID:</strong> {selectedUser._id}
+                      <strong>{t('user_id')}:</strong> {selectedUser._id}
                     </Typography>
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>Status:</strong> 
+                      <strong>{t('status')}:</strong> 
                       <StatusChip
-                        label={selectedUser.isActive ? 'Active' : 'Inactive'}
+                        label={selectedUser.isActive ? t('active') : t('inactive')}
                         status={selectedUser.isActive ? 'active' : 'inactive'}
                         size="small"
                         sx={{ ml: 1 }}
@@ -702,12 +704,12 @@ const AllUsers = () => {
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>Member Since:</strong> {formatDate(selectedUser.createdAt)}
+                      <strong>{t('member_since')}:</strong> {formatDate(selectedUser.createdAt)}
                     </Typography>
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>Last Login:</strong> {selectedUser.lastLogin ? formatDate(selectedUser.lastLogin) : 'Never'}
+                      <strong>{t('last_login')}:</strong> {selectedUser.lastLogin ? formatDate(selectedUser.lastLogin) : t('never')}
                     </Typography>
                   </Box>
                 </Grid>
@@ -717,19 +719,19 @@ const AllUsers = () => {
                   <Grid item xs={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      Driver Information
+                      {t('driver_information')}
                     </Typography>
                     <Box mb={2}>
                       <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                         <DriveEtaIcon fontSize="small" />
-                        <strong>License Number:</strong> {selectedUser.licenseNumber}
+                        <strong>{t('license_number')}:</strong> {selectedUser.licenseNumber}
                       </Typography>
                     </Box>
                     {selectedUser.stationID && (
                       <Box mb={2}>
                         <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                           <LocationIcon fontSize="small" />
-                          <strong>Assigned Station:</strong> {selectedUser.stationID}
+                          <strong>{t('assigned_station')}:</strong> {selectedUser.stationID}
                         </Typography>
                       </Box>
                     )}
@@ -740,12 +742,12 @@ const AllUsers = () => {
                   <Grid item xs={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      Station Administrator
+                      {t('station_administrator')}
                     </Typography>
                     <Box mb={2}>
                       <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                         <LocationIcon fontSize="small" />
-                        <strong>Managed Station:</strong> {selectedUser.stationID}
+                        <strong>{t('managed_station')}:</strong> {selectedUser.stationID}
                       </Typography>
                     </Box>
                   </Grid>
@@ -753,7 +755,7 @@ const AllUsers = () => {
               </Grid>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenViewDialog(false)}>Close</Button>
+              <Button onClick={() => setOpenViewDialog(false)}>{t('close')}</Button>
               <Button 
                 variant="contained" 
                 onClick={() => {
@@ -761,7 +763,7 @@ const AllUsers = () => {
                   handleOpenChangeRoleDialog(selectedUser);
                 }}
               >
-                Change Role
+                {t('change_role')}
               </Button>
             </DialogActions>
           </>
@@ -778,31 +780,31 @@ const AllUsers = () => {
         {selectedUser && (
           <>
             <DialogTitle>
-              Change User Role: {selectedUser.fullName}
+              {t('change_user_role')}: {selectedUser.fullName}
             </DialogTitle>
             <DialogContent dividers>
               <Box py={2}>
                 <FormControl fullWidth sx={{ mb: 3 }}>
-                  <InputLabel>New Role</InputLabel>
+                  <InputLabel>{t('new_role')}</InputLabel>
                   <Select
                     value={newRole}
-                    label="New Role"
+                    label={t('new_role')}
                     onChange={(e) => setNewRole(e.target.value)}
                   >
-                    <MenuItem value="passenger">Passenger</MenuItem>
-                    <MenuItem value="driver">Driver</MenuItem>
-                    <MenuItem value="station_admin">Station Administrator</MenuItem>
-                    <MenuItem value="super_admin">Super Administrator</MenuItem>
+                    <MenuItem value="passenger">{t('passenger')}</MenuItem>
+                    <MenuItem value="driver">{t('driver')}</MenuItem>
+                    <MenuItem value="station_admin">{t('station_administrator')}</MenuItem>
+                    <MenuItem value="super_admin">{t('super_administrator')}</MenuItem>
                   </Select>
                 </FormControl>
 
                 {newRole === 'driver' && (
                   <TextField
                     fullWidth
-                    label="License Number"
+                    label={t('license_number')}
                     value={licenseNumber}
                     onChange={(e) => setLicenseNumber(e.target.value)}
-                    placeholder="Enter license number"
+                    placeholder={t('enter_license_number')}
                     sx={{ mb: 2 }}
                     required
                   />
@@ -811,10 +813,10 @@ const AllUsers = () => {
                 {newRole === 'station_admin' && (
                   <TextField
                     fullWidth
-                    label="Station ID"
+                    label={t('station_id')}
                     value={stationID}
                     onChange={(e) => setStationID(e.target.value)}
-                    placeholder="Enter station ID"
+                    placeholder={t('enter_station_id')}
                     sx={{ mb: 2 }}
                     required
                   />
@@ -822,21 +824,21 @@ const AllUsers = () => {
 
                 <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>Note:</strong> Changing user role may affect their access permissions and features.
-                    {newRole === 'driver' && ' Driver role requires a valid license number.'}
-                    {newRole === 'station_admin' && ' Station admin must be assigned to a specific station.'}
+                    <strong>{t('note')}:</strong> {t('changing_role_warning')}
+                    {newRole === 'driver' && ` ${t('driver_role_requires_license')}`}
+                    {newRole === 'station_admin' && ` ${t('station_admin_requires_station')}`}
                   </Typography>
                 </Alert>
               </Box>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenChangeRoleDialog(false)}>Cancel</Button>
+              <Button onClick={() => setOpenChangeRoleDialog(false)}>{t('cancel')}</Button>
               <Button 
                 variant="contained" 
                 onClick={handleChangeRole}
                 disabled={!newRole || (newRole === 'driver' && !licenseNumber) || (newRole === 'station_admin' && !stationID)}
               >
-                Update Role
+                {t('update_role')}
               </Button>
             </DialogActions>
           </>
@@ -846,4 +848,4 @@ const AllUsers = () => {
   );
 };
 
-    export default AllUsers;
+export default AllUsers;

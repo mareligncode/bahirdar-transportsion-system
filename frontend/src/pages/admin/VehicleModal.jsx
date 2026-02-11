@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { X, Car, Wrench } from 'lucide-react';
 import api from '../../services/api'; 
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function VehicleModal({ isOpen, onClose, vehicle }) {
+  const { t } = useTranslation();
+  
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: 'coaster',
@@ -63,8 +66,8 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
       setDrivers(drivers);
 
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load form data');
+      console.error(t('errors.fetchData'), error);
+      toast.error(t('messages.failedToLoadFormData'));
     }
   };
 
@@ -121,17 +124,17 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
       if (vehicle) {
         // Update existing vehicle
         await api.put(`/api/vehicles/${vehicle._id}`, payload);
-        toast.success('Vehicle updated successfully');
+        toast.success(t('messages.vehicleUpdated'));
       } else {
         // Create new vehicle
         await api.post('/api/vehicles/register', payload);
-        toast.success('Vehicle created successfully');
+        toast.success(t('messages.vehicleCreated'));
       }
       
       onClose();
     } catch (error) {
-      console.error('Error saving vehicle:', error);
-      toast.error(error.response?.data?.message || 'Failed to save vehicle');
+      console.error(t('errors.saveVehicle'), error);
+      toast.error(error.response?.data?.message || t('errors.failedToSaveVehicle'));
     } finally {
       setLoading(false);
     }
@@ -151,17 +154,17 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
+                  {vehicle ? t('vehicles.editVehicle') : t('vehicles.addNewVehicle')}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {vehicle ? 'Update vehicle details' : 'Register a new vehicle to the fleet'}
+                  {vehicle ? t('vehicles.updateVehicleDetails') : t('vehicles.registerNewVehicle')}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
-              title="Close modal"
+              title={t('common.closeModal')}
             >
               <X className="w-6 h-6" />
             </button>
@@ -176,12 +179,12 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
                   <Car className="w-5 h-5" />
-                  Basic Information
+                  {t('vehicles.basicInformation')}
                 </h3>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plate Number *
+                    {t('vehicles.plateNumber')} *
                   </label>
                   <input
                     type="text"
@@ -190,13 +193,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                     onChange={handleChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="ET-1234"
+                    placeholder={t('vehicles.plateNumberPlaceholder')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle Type *
+                    {t('vehicles.vehicleType')} *
                   </label>
                   <select
                     name="carType"
@@ -207,7 +210,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                   >
                     {carTypes.map(type => (
                       <option key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                        {t(`vehicles.types.${type}`)}
                       </option>
                     ))}
                   </select>
@@ -215,7 +218,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total Capacity *
+                    {t('vehicles.totalCapacity')} *
                   </label>
                   <input
                     type="number"
@@ -226,13 +229,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                     min="1"
                     max="100"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="45"
+                    placeholder={t('vehicles.capacityPlaceholder')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Station *
+                    {t('vehicles.station')} *
                   </label>
                   <select
                     name="stationID"
@@ -241,7 +244,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
-                    <option value="">Select a station</option>
+                    <option value="">{t('vehicles.selectStation')}</option>
                     {stations.map(station => (
                       <option key={station._id} value={station._id}>
                         {station.stationName} ({station.city})
@@ -255,13 +258,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
                   <Wrench className="w-5 h-5" />
-                  Specifications
+                  {t('vehicles.specifications')}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Make *
+                      {t('vehicles.make')} *
                     </label>
                     <input
                       type="text"
@@ -270,13 +273,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                       onChange={handleChange}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Toyota"
+                      placeholder={t('vehicles.makePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Model *
+                      {t('vehicles.model')} *
                     </label>
                     <input
                       type="text"
@@ -285,7 +288,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                       onChange={handleChange}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Coaster"
+                      placeholder={t('vehicles.modelPlaceholder')}
                     />
                   </div>
                 </div>
@@ -293,7 +296,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year *
+                      {t('vehicles.year')} *
                     </label>
                     <input
                       type="number"
@@ -309,7 +312,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Color
+                      {t('vehicles.color')}
                     </label>
                     <input
                       type="text"
@@ -317,14 +320,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                       value={formData.color}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="White"
+                      placeholder={t('vehicles.colorPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fuel Type *
+                    {t('vehicles.fuelType')} *
                   </label>
                   <select
                     name="fuelType"
@@ -335,7 +338,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                   >
                     {fuelTypes.map(type => (
                       <option key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                        {t(`vehicles.fuelTypes.${type}`)}
                       </option>
                     ))}
                   </select>
@@ -343,7 +346,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Insurance Expiry *
+                    {t('vehicles.insuranceExpiry')} *
                   </label>
                   <input
                     type="date"
@@ -360,7 +363,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             {/* Driver Assignment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign Driver *
+                {t('vehicles.assignDriver')} *
               </label>
               <select
                 name="driverID"
@@ -368,10 +371,10 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                <option value="">Select a driver</option>
+                <option value="">{t('vehicles.selectDriver')}</option>
                 {drivers.map(driver => (
                   <option key={driver._id} value={driver._id}>
-                    {driver.fullName} ({driver.licenseNumber || 'No license'})
+                    {driver.fullName} ({driver.licenseNumber || t('vehicles.noLicense')})
                   </option>
                 ))}
               </select>
@@ -380,7 +383,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             {/* Features */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vehicle Features
+                {t('vehicles.vehicleFeatures')}
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {featuresOptions.map(feature => (
@@ -393,9 +396,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                       className="rounded text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700">
-                      {feature.split('_').map(word => 
-                        word.charAt(0).toUpperCase() + word.slice(1)
-                      ).join(' ')}
+                      {t(`vehicles.features.${feature}`)}
                     </span>
                   </label>
                 ))}
@@ -413,7 +414,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               disabled={loading}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             
             <button
@@ -421,7 +422,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : vehicle ? 'Update Vehicle' : 'Create Vehicle'}
+              {loading ? t('common.saving') : vehicle ? t('vehicles.updateVehicle') : t('vehicles.createVehicle')}
             </button>
           </div>
         </form>
