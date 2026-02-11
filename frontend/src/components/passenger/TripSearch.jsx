@@ -1,126 +1,125 @@
-import { useState } from 'react';
-import { Search, Calendar, Users, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Paper,
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Button,
+  CircularProgress
+} from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const CITIES = [
-  'Bahir Dar',
-  'Addis Ababa', 
-  'Gondar',
-  'Dessie',
-  'Debre Markos',
-  'Mekele',
-  'Hawassa',
-  'Jimma'
-];
-
-export default function TripSearch({ onSearch }) {
-  const [searchData, setSearchData] = useState({
-    from: 'Bahir Dar',
-    to: 'Gondar',
-    date: new Date().toISOString().split('T')[0],
-    passengers: 1,
+const TripSearch = ({ stations, initialData, onSearch }) => {
+  const [formData, setFormData] = useState({
+    origin: initialData?.origin || '',
+    destination: initialData?.destination || '',
+    date: initialData?.date || null,
   });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSearch(searchData);
+    setLoading(true);
+    try {
+      await onSearch(formData);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const swapLocations = () => {
-    setSearchData(prev => ({
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
       ...prev,
-      from: prev.to,
-      to: prev.from,
+      [field]: value
     }));
   };
 
   return (
-    <div className="card p-6">
-      <h2 className="text-2xl font-bold mb-6">Find Your Trip</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              From
-            </label>
-            <div className="relative">
-              <select
-                value={searchData.from}
-                onChange={(e) => setSearchData({ ...searchData, from: e.target.value })}
-                className="input-field"
-              >
-                {CITIES.map(city => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              To
-            </label>
-            <div className="relative">
-              <select
-                value={searchData.to}
-                onChange={(e) => setSearchData({ ...searchData, to: e.target.value })}
-                className="input-field"
-              >
-                {CITIES.map(city => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={swapLocations}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
-                title="Swap locations"
-              >
-                <ArrowRight className="w-5 h-5 rotate-90" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Travel Date
-            </label>
-            <input
-              type="date"
-              value={searchData.date}
-              onChange={(e) => setSearchData({ ...searchData, date: e.target.value })}
-              min={new Date().toISOString().split('T')[0]}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Users className="w-4 h-4 inline mr-1" />
-              Passengers
-            </label>
-            <select
-              value={searchData.passengers}
-              onChange={(e) => setSearchData({ ...searchData, passengers: parseInt(e.target.value) })}
-              className="input-field"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                <option key={num} value={num}>{num} Passenger{num > 1 ? 's' : ''}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary-700 flex items-center justify-center gap-2"
-        >
-          <Search className="w-5 h-5" />
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper elevation={2} sx={{ p: 3, borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+        <Typography variant="h6" gutterBottom>
+          <SearchIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
           Search Trips
-        </button>
-      </form>
-    </div>
+        </Typography>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth sx={{ minWidth: 200, width: '100%' }}>
+                <InputLabel>From Station</InputLabel>
+                <Select
+                  value={formData.origin}
+                  label="From Station"
+                  onChange={(e) => handleChange('origin', e.target.value)}
+                  required
+                >
+                  <MenuItem value="">
+                    <em>Select station</em>
+                  </MenuItem>
+                  {stations.map((station) => (
+                    <MenuItem key={station._id} value={station._id}>
+                      {station.stationName} ({station.city})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth sx={{ minWidth: 200, width: '100%' }}>
+                <InputLabel>To Station</InputLabel>
+                <Select
+                  value={formData.destination}
+                  label="To Station"
+                  onChange={(e) => handleChange('destination', e.target.value)}
+                  required
+                >
+                  <MenuItem value="">
+                    <em>Select station</em>
+                  </MenuItem>
+                  {stations.map((station) => (
+                    <MenuItem key={station._id} value={station._id}>
+                      {station.stationName} ({station.city})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <DatePicker
+                label="Travel Date"
+                value={formData.date}
+                onChange={(date) => handleChange('date', date)}
+                renderInput={(params) => <TextField {...params} fullWidth required />}
+                minDate={new Date()}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={1} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                disabled={loading || !formData.origin || !formData.destination || !formData.date}
+                startIcon={loading ? <CircularProgress size={20} /> : <SearchIcon />}
+                sx={{ height: '56px', borderRadius: '8px' }}
+              >
+                {loading ? '...' : 'Search'}
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
+    </LocalizationProvider>
   );
-}
+};
+
+export default TripSearch;

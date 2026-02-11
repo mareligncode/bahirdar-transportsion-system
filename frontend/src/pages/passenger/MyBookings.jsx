@@ -1,245 +1,832 @@
-import { Calendar, MapPin, Users, CreditCard, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  Chip,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Divider,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Avatar,
+  LinearProgress,
+  Fade,
+  Zoom,
+  Tooltip,
+  Badge,
+  TextField
+} from '@mui/material';
+import {
+  DirectionsBus,
+  Person,
+  Schedule,
+  LocationOn,
+  AttachMoney,
+  EventSeat,
+  Cancel,
+  Receipt,
+  History,
+  ArrowBack,
+  Refresh,
+  CheckCircle,
+  Pending,
+  Error as ErrorIcon,
+  Info,
+  ConfirmationNumber,
+  AccessTime
+} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import api from '../../services/api';
 
-// Mock bookings data
-const mockBookings = [
-  {
-    id: 'BK-001',
-    tripId: 'BD-GD-001',
-    from: 'Bahir Dar',
-    to: 'Gondar',
-    departureTime: '2024-10-28T06:00:00',
-    seats: ['A1', 'A2'],
-    totalPrice: 575,
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    bookingDate: '2024-10-25',
-    passengerCount: 2,
-  },
-  {
-    id: 'BK-002',
-    tripId: 'BD-AA-002',
-    from: 'Bahir Dar',
-    to: 'Addis Ababa',
-    departureTime: '2024-11-01T08:00:00',
-    seats: ['B3'],
-    totalPrice: 1200,
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    bookingDate: '2024-10-26',
-    passengerCount: 1,
-  },
-  {
-    id: 'BK-003',
-    tripId: 'BD-DS-003',
-    from: 'Bahir Dar',
-    to: 'Dessie',
-    departureTime: '2024-10-20T07:30:00',
-    seats: ['C1', 'C2', 'C3'],
-    totalPrice: 1050,
-    status: 'cancelled',
-    paymentStatus: 'refunded',
-    bookingDate: '2024-10-18',
-    passengerCount: 3,
-  },
-];
+const MyBookings = () => {
+  const navigate = useNavigate();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchDate, setSearchDate] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
-const statusColors = {
-  confirmed: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
-const paymentStatusColors = {
-  paid: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  refunded: 'bg-blue-100 text-blue-800',
-  failed: 'bg-red-100 text-red-800',
-};
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user._id) {
+        showNotification('Please login to view your bookings', 'error');
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
 
-export default function MyBookings() {
-  const formatCurrency = (amount) => {
-    return `ETB ${amount.toLocaleString('en-ET')}`;
+      const response = await api.get('/api/booking/my-bookings', {
+        params: {
+          passengerId: user._id
+        }
+      });
+
+      console.log('Bookings response:', response.data);
+
+      let fetchedBookings = [];
+      if (response.data.success && Array.isArray(response.data.data)) {
+        fetchedBookings = response.data.data;
+      } else if (Array.isArray(response.data.data)) {
+        fetchedBookings = response.data.data;
+      } else if (Array.isArray(response.data.bookings)) {
+        fetchedBookings = response.data.bookings;
+      } else if (Array.isArray(response.data)) {
+        fetchedBookings = response.data;
+      }
+
+      // Sort bookings by date (most recent first)
+      const sortedBookings = fetchedBookings.sort((a, b) => 
+        new Date(b.bookingDate || b.createdAt) - new Date(a.bookingDate || a.createdAt)
+      );
+
+      setBookings(sortedBookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to load your bookings';
+      showNotification(errorMessage, 'error');
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+
+    setCancelling(true);
+    try {
+      const response = await api.put(`/api/booking/${selectedBooking._id}/cancel`);
+
+      if (response.data.success) {
+        showNotification('Booking cancelled successfully', 'success');
+        // Update the booking in the list
+        setBookings(prev => prev.map(booking => 
+          booking._id === selectedBooking._id 
+            ? { ...booking, status: 'cancelled' }
+            : booking
+        ));
+        setCancelDialogOpen(false);
+        setSelectedBooking(null);
+      } else {
+        showNotification(response.data.message || 'Failed to cancel booking', 'error');
+      }
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to cancel booking';
+      showNotification(errorMessage, 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const openCancelDialog = (booking) => {
+    setSelectedBooking(booking);
+    setCancelDialogOpen(true);
+  };
+
+  const closeCancelDialog = () => {
+    setCancelDialogOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const showNotification = (message, severity = 'success') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseNotification = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setNotification(prev => ({ ...prev, open: false }));
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString([], {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
-        <p className="text-gray-600">View and manage all your trip bookings</p>
-      </div>
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Bookings</p>
-              <p className="text-2xl font-bold">{mockBookings.length}</p>
-            </div>
-            <Calendar className="w-8 h-8 text-primary-500" />
-          </div>
-        </div>
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Trips</p>
-              <p className="text-2xl font-bold">
-                {mockBookings.filter(b => b.status === 'confirmed').length}
-              </p>
-            </div>
-            <MapPin className="w-8 h-8 text-green-500" />
-          </div>
-        </div>
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Spent</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(mockBookings.reduce((sum, b) => sum + b.totalPrice, 0))}
-              </p>
-            </div>
-            <CreditCard className="w-8 h-8 text-blue-500" />
-          </div>
-        </div>
-      </div>
+  const getStatusColor = (status) => {
+    switch(status?.toLowerCase()) {
+      case 'confirmed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
+        return 'error';
+      case 'completed':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
 
-      {/* Bookings Table */}
-      <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold">Booking History</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Booking ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Trip Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Passengers
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mockBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {booking.id}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {formatDate(booking.bookingDate)}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">
-                          {booking.from} → {booking.to}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        <Calendar className="w-3 h-3 inline mr-1" />
-                        {formatDate(booking.departureTime)} at {formatTime(booking.departureTime)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Seats: {booking.seats.join(', ')}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      <span>{booking.passengerCount}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold">
-                      {formatCurrency(booking.totalPrice)}
-                    </div>
-                    <div className="text-xs">
-                      <span className={`px-2 py-1 rounded-full ${paymentStatusColors[booking.paymentStatus]}`}>
-                        {booking.paymentStatus}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[booking.status]}`}>
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                        View Details
-                      </button>
-                      {booking.status === 'confirmed' && (
-                        <>
-                          <button className="text-gray-600 hover:text-gray-700 text-sm">
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button className="text-red-600 hover:text-red-700 text-sm font-medium">
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  const getStatusIcon = (status) => {
+    switch(status?.toLowerCase()) {
+      case 'confirmed':
+        return <CheckCircle />;
+      case 'pending':
+        return <Pending />;
+      case 'cancelled':
+        return <Cancel />;
+      case 'completed':
+        return <CheckCircle />;
+      default:
+        return <Info />;
+    }
+  };
 
-      {/* Filter Options */}
-      <div className="flex flex-wrap gap-4">
-        <button className="px-4 py-2 bg-primary-600 text-white rounded-lg">
-          All Bookings
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-          Upcoming
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-          Past Trips
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-          Cancelled
-        </button>
-      </div>
-    </div>
+  const getStatusLabel = (status) => {
+    if (!status) return 'Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const calculateDuration = (departure, arrival) => {
+    if (!departure || !arrival) return 'N/A';
+    const dep = new Date(departure);
+    const arr = new Date(arrival);
+    const hours = Math.floor((arr - dep) / (1000 * 60 * 60));
+    const minutes = Math.floor(((arr - dep) % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getFilteredBookings = () => {
+    let filtered = [...bookings];
+
+    // Filter by status
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(booking => 
+        booking.status?.toLowerCase() === filterStatus.toLowerCase()
+      );
+    }
+
+    // Filter by date
+    if (searchDate) {
+      filtered = filtered.filter(booking => {
+        const bookingDate = new Date(booking.bookingDate || booking.createdAt);
+        return bookingDate.toDateString() === searchDate.toDateString();
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredBookings = getFilteredBookings();
+
+  const renderBookingCard = (booking) => {
+    const isCancellable = booking.status?.toLowerCase() === 'confirmed' || 
+                          booking.status?.toLowerCase() === 'pending';
+    const trip = booking.tripID || booking.trip || {};
+    const vehicle = trip.vehicle || {};
+    const origin = trip.origin || {};
+    const destination = trip.destination || {};
+
+    return (
+      <Zoom in={true} style={{ transitionDelay: '50ms' }}>
+        <Card sx={{ 
+          mb: 3, 
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          overflow: 'visible',
+          position: 'relative',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
+            transform: 'translateY(-4px)',
+            borderColor: '#3b82f6'
+          }
+        }}>
+          <Box sx={{ 
+            position: 'absolute', 
+            top: '20px', 
+            right: '20px',
+            zIndex: 1
+          }}>
+            <Chip
+              icon={getStatusIcon(booking.status)}
+              label={getStatusLabel(booking.status)}
+              color={getStatusColor(booking.status)}
+              sx={{ 
+                fontWeight: 600,
+                px: 1,
+                '& .MuiChip-icon': { 
+                  fontSize: '18px',
+                  ml: 0.5
+                }
+              }}
+            />
+          </Box>
+
+          <CardContent sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              {/* Left Section - Route Info */}
+              <Grid item xs={12} md={8}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar sx={{ 
+                    bgcolor: '#3b82f6',
+                    width: 40,
+                    height: 40,
+                    mr: 2
+                  }}>
+                    <DirectionsBus />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                      {origin.stationName || 'Unknown'} → {destination.stationName || 'Unknown'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Booking #{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Schedule fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Departure:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {formatDate(trip.departureTime)} at {formatTime(trip.departureTime)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <AccessTime fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Duration:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {calculateDuration(trip.departureTime, trip.arrivalTime)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <EventSeat fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Seats:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {booking.seatNumbers?.map((seat, index) => (
+                          <Chip
+                            key={index}
+                            label={seat}
+                            size="small"
+                            sx={{ 
+                              bgcolor: '#e2e8f0',
+                              fontWeight: 600,
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <DirectionsBus fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Vehicle:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {vehicle.carType || 'N/A'} • {vehicle.plateNumber || 'N/A'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Person fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Driver:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {trip.driver?.fullName || 'N/A'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Receipt fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Booked on:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {formatDate(booking.bookingDate || booking.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* Right Section - Price & Actions */}
+              <Grid item xs={12} md={4}>
+                <Box sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  borderLeft: { md: '1px solid #e2e8f0' },
+                  pl: { md: 3 },
+                  pt: { xs: 2, md: 0 },
+                  mt: { xs: 2, md: 0 }
+                }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Total Amount
+                    </Typography>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 800, 
+                      color: '#1e40af',
+                      mb: 1
+                    }}>
+                      ${booking.totalPrice || booking.price || 0}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <AttachMoney fontSize="small" sx={{ color: '#64748b', fontSize: '16px' }} />
+                      <Typography variant="caption" color="text.secondary">
+                        {booking.seatNumbers?.length || 0} seat(s) × ${booking.pricePerSeat || trip.price || 0}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    mt: 3,
+                    flexDirection: { xs: 'row', sm: 'row' }
+                  }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Receipt />}
+                      onClick={() => {/* Handle view ticket */}}
+                      fullWidth
+                      sx={{ borderRadius: '8px' }}
+                    >
+                      Ticket
+                    </Button>
+                    
+                    {isCancellable && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={<Cancel />}
+                        onClick={() => openCancelDialog(booking)}
+                        disabled={cancelling}
+                        fullWidth
+                        sx={{ borderRadius: '8px' }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Zoom>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <Paper sx={{ 
+      p: 6, 
+      textAlign: 'center',
+      borderRadius: '16px',
+      background: 'white',
+      border: '1px solid #e2e8f0'
+    }}>
+      <Avatar sx={{ 
+        width: 80, 
+        height: 80, 
+        bgcolor: '#e2e8f0',
+        color: '#64748b',
+        margin: '0 auto 20px'
+      }}>
+        <History sx={{ fontSize: 40 }} />
+      </Avatar>
+      <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', mb: 1 }}>
+        No Bookings Found
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+        {filterStatus !== 'all' || searchDate 
+          ? 'No bookings match your current filters. Try adjusting your search criteria.'
+          : "You haven't made any bookings yet. Start your journey by booking a trip!"}
+      </Typography>
+      {filterStatus !== 'all' || searchDate ? (
+        <Button 
+          variant="outlined" 
+          onClick={() => {
+            setFilterStatus('all');
+            setSearchDate(null);
+          }}
+          sx={{ borderRadius: '8px' }}
+        >
+          Clear Filters
+        </Button>
+      ) : (
+        <Button 
+          variant="contained" 
+          startIcon={<DirectionsBus />}
+          onClick={() => navigate('/passenger/book-trip')}
+          sx={{ 
+            borderRadius: '8px',
+            background: '#3b82f6',
+            '&:hover': { background: '#2563eb' }
+          }}
+        >
+          Book a Trip
+        </Button>
+      )}
+    </Paper>
   );
-}
+
+  const renderLoadingState = () => (
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '100px',
+      gap: '20px'
+    }}>
+      <CircularProgress size={60} />
+      <Typography variant="h6" sx={{ color: '#1e293b' }}>
+        Loading your bookings...
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Please wait while we fetch your booking history
+      </Typography>
+    </Box>
+  );
+
+  return (
+    <Container maxWidth="lg" sx={{ 
+      py: 4,
+      minHeight: '100vh',
+      background: '#f8fafc'
+    }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 4,
+        flexWrap: 'wrap',
+        gap: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/passenger')}
+            sx={{ 
+              bgcolor: 'white',
+              border: '1px solid #e2e8f0',
+              '&:hover': { bgcolor: '#f8fafc' }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <Box>
+            <Typography variant="h4" sx={{ 
+              fontWeight: 700, 
+              color: '#1e293b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <ConfirmationNumber sx={{ fontSize: 32, color: '#3b82f6' }} />
+              My Bookings
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              View and manage your trip bookings
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Tooltip title="Refresh">
+            <IconButton 
+              onClick={fetchBookings}
+              disabled={loading}
+              sx={{ 
+                bgcolor: 'white',
+                border: '1px solid #e2e8f0',
+                '&:hover': { bgcolor: '#f8fafc' }
+              }}
+            >
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+          
+          <Button
+            variant="contained"
+            startIcon={<DirectionsBus />}
+            onClick={() => navigate('/passenger/book-trip')}
+            sx={{ 
+              borderRadius: '8px',
+              background: '#3b82f6',
+              '&:hover': { background: '#2563eb' },
+              px: 3
+            }}
+          >
+            Book New Trip
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filters */}
+      <Paper sx={{ 
+        p: 3, 
+        mb: 4, 
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        background: 'white'
+      }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Filter by Status
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {['all', 'confirmed', 'pending', 'completed', 'cancelled'].map((status) => (
+                <Chip
+                  key={status}
+                  label={status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                  onClick={() => setFilterStatus(status)}
+                  color={filterStatus === status ? 'primary' : 'default'}
+                  variant={filterStatus === status ? 'filled' : 'outlined'}
+                  sx={{ 
+                    fontWeight: 500,
+                    textTransform: 'capitalize'
+                  }}
+                />
+              ))}
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Filter by Date
+            </Typography>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Booking Date"
+                value={searchDate}
+                onChange={setSearchDate}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    size="small" 
+                    fullWidth 
+                    placeholder="Select date"
+                  />
+                )}
+              />
+            </LocalizationProvider>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Summary
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Badge badgeContent={bookings.length} color="primary">
+                  <ConfirmationNumber color="action" />
+                </Badge>
+                <Typography variant="body2">Total</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Badge badgeContent={bookings.filter(b => b.status === 'confirmed').length} color="success">
+                  <CheckCircle color="action" />
+                </Badge>
+                <Typography variant="body2">Confirmed</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Badge badgeContent={bookings.filter(b => b.status === 'pending').length} color="warning">
+                  <Pending color="action" />
+                </Badge>
+                <Typography variant="body2">Pending</Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Bookings List */}
+      <Fade in={true} timeout={500}>
+        <Box>
+          {loading ? (
+            renderLoadingState()
+          ) : filteredBookings.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {filteredBookings.length} of {bookings.length} booking(s)
+                </Typography>
+                {(filterStatus !== 'all' || searchDate) && (
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      setFilterStatus('all');
+                      setSearchDate(null);
+                    }}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </Box>
+              {filteredBookings.map((booking, index) => (
+                <Box key={booking._id}>
+                  {renderBookingCard(booking)}
+                </Box>
+              ))}
+            </>
+          )}
+        </Box>
+      </Fade>
+
+      {/* Cancel Booking Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={closeCancelDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            p: 1,
+            maxWidth: 400
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar sx={{ bgcolor: '#fee2e2', color: '#ef4444' }}>
+              <Cancel />
+            </Avatar>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Cancel Booking
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: '#64748b' }}>
+            Are you sure you want to cancel this booking?
+            {selectedBooking && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: '8px' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {selectedBooking.tripID?.origin?.stationName} → {selectedBooking.tripID?.destination?.stationName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {formatDateTime(selectedBooking.tripID?.departureTime)}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: '#1e40af' }}>
+                  Refund Amount: ${selectedBooking.totalPrice || selectedBooking.price || 0}
+                </Typography>
+              </Box>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={closeCancelDialog}
+            variant="outlined"
+            sx={{ borderRadius: '8px' }}
+          >
+            Keep Booking
+          </Button>
+          <Button 
+            onClick={handleCancelBooking}
+            variant="contained"
+            color="error"
+            disabled={cancelling}
+            sx={{ 
+              borderRadius: '8px',
+              px: 3
+            }}
+          >
+            {cancelling ? <CircularProgress size={24} /> : 'Yes, Cancel'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity}
+          sx={{ 
+            borderRadius: '8px', 
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+          }}
+          elevation={6}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+};
+
+export default MyBookings;
