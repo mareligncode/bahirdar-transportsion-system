@@ -3,6 +3,7 @@ import Trip from '../models/Trip.js';
 import Vehicle from '../models/Vehicle.js';
 import User from '../models/Users.js';
 import Station from '../models/Station.js';
+import NotificationService from '../services/notificationService.js';
 
 export const createBooking = async (req, res) => {
     try {
@@ -10,8 +11,6 @@ export const createBooking = async (req, res) => {
             tripID, seatNumber, specialRequests,
             passengerDetails, boardingPass
         } = req.body;
-
-        // Check trip exists and is available
         const trip = await Trip.findById(tripID);
         if (!trip) {
             return res.status(404).json({
@@ -19,8 +18,6 @@ export const createBooking = async (req, res) => {
                 message: 'Trip not found'
             });
         }
-
-        // Check trip status and availability
         if (trip.tripStatus !== 'scheduled' && trip.tripStatus !== 'boarding') {
             return res.status(400).json({
                 success: false,
@@ -34,16 +31,12 @@ export const createBooking = async (req, res) => {
                 message: 'No available seats for this trip'
             });
         }
-
-        // Check if seat number is valid
         if (seatNumber < 1 || seatNumber > trip.totalSeats) {
             return res.status(400).json({
                 success: false,
                 message: `Seat number must be between 1 and ${trip.totalSeats}`
             });
         }
-
-        // Check if seat is already booked
         const existingBooking = await Booking.findOne({
             tripID,
             seatNumber,
@@ -56,8 +49,6 @@ export const createBooking = async (req, res) => {
                 message: `Seat ${seatNumber} is already booked`
             });
         }
-
-        // Check if passenger is trying to book multiple seats for same trip
         const existingPassengerBooking = await Booking.findOne({
             tripID,
             passengerID: req.user.id,
@@ -71,7 +62,6 @@ export const createBooking = async (req, res) => {
             });
         }
 
-        // Create booking
         const booking = new Booking({
             passengerID: req.user.id,
             tripID: trip._id,
@@ -88,13 +78,47 @@ export const createBooking = async (req, res) => {
             createdBy: req.user.id
         });
 
-        // Update trip available seats
         trip.availableSeats -= 1;
         await trip.save();
 
         await booking.save();
+        // Send booking confirmation notification
+        try {
+            const notificationData = {
+                userID: req.user.id,
+                title: 'Booking Confirmed - Your Trip is Ready!',
+                message: `Your booking ${booking.bookingNumber} has been created successfully. Please proceed to payment to confirm your reservation.`,
+                type: 'booking_confirmation',
+                channel: 'all', // Send both email and in-app notification
+                priority: 'medium',
+                metadata: {
+                    userName: req.user.fullName,
+                    booking: {
+                        bookingNumber: booking.bookingNumber,
+                        ticketNumber: booking.ticketNumber,
+                        seatNumber: booking.seatNumber
+                    },
+                    trip: {
+                        tripNumber: trip.tripNumber,
+                        origin: trip.origin?.stationName,
+                        destination: trip.destination?.stationName,
+                        departureTime: trip.departureTime,
+                        arrivalTime: trip.arrivalTime
+                    },
+                    vehicle: {
+                        plateNumber: trip.vehicle?.plateNumber,
+                        carType: trip.vehicle?.carType
+                    },
+                    actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}/pay`,
+                    actionText: 'Complete Payment'
+                }
+            };
 
-        // Populate and return
+            await NotificationService.createNotification(notificationData);
+        } catch (notificationError) {
+            console.error('Failed to send booking confirmation notification:', notificationError);
+        }
+//upto this point
         const populatedBooking = await Booking.findById(booking._id)
             .populate('passengerID', 'fullName phoneNumber email')
             .populate('tripID', 'tripNumber origin destination departureTime arrivalTime price')
@@ -328,6 +352,43 @@ export const updateBooking = async (req, res) => {
 
         await booking.save();
 
+        // Send booking modification notification
+        try {
+            const notificationData = {
+                userID: booking.passengerID,
+                title: 'Booking Updated Successfully',
+                message: `Your booking ${booking.bookingNumber} has been updated. Please review the changes in your booking details.`,
+                type: 'booking_modification',
+                channel: 'all',
+                priority: 'medium',
+                metadata: {
+                    userName: booking.passengerDetails?.fullName || 'Valued Customer',
+                    booking: {
+                        bookingNumber: booking.bookingNumber,
+                        ticketNumber: booking.ticketNumber,
+                        seatNumber: booking.seatNumber
+                    },
+                    trip: {
+                        tripNumber: booking.tripID?.tripNumber,
+                        origin: booking.tripID?.origin?.stationName,
+                        destination: booking.tripID?.destination?.stationName,
+                        departureTime: booking.tripID?.departureTime,
+                        arrivalTime: booking.tripID?.arrivalTime
+                    },
+                    changes: Object.keys(updates).map(key => ({
+                        field: key,
+                        value: updates[key]
+                    })),
+                    actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}`,
+                    actionText: 'View Updated Booking'
+                }
+            };
+
+            await NotificationService.createNotification(notificationData);
+        } catch (notificationError) {
+            console.error('Failed to send booking modification notification:', notificationError);
+        }
+//end of notfication changes
         // Get updated booking with populated data
         const updatedBooking = await Booking.findById(booking._id)
             .populate('passengerID', 'fullName phoneNumber email')
@@ -361,8 +422,6 @@ export const deleteBooking = async (req, res) => {
                 message: 'Booking not found'
             });
         }
-
-        // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (station && !booking.tripID.station.equals(station._id)) {
@@ -495,6 +554,47 @@ export const updateBookingStatus = async (req, res) => {
         if (refundAmount) booking.refundAmount = refundAmount;
 
         await booking.save();
+
+        // Send booking cancellation notification if booking was cancelled
+        if (status === 'cancelled') {
+            try {
+                const notificationData = {
+                    userID: booking.passengerID,
+                    title: 'Booking Cancelled - Refund Information',
+                    message: `Your booking ${booking.bookingNumber} has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : 'Please contact support for more information.'}`,
+                    type: 'booking_cancellation',
+                    channel: 'all',
+                    priority: 'high',
+                    metadata: {
+                        userName: booking.passengerDetails?.fullName || 'Valued Customer',
+                        booking: {
+                            bookingNumber: booking.bookingNumber,
+                            ticketNumber: booking.ticketNumber,
+                            seatNumber: booking.seatNumber
+                        },
+                        trip: {
+                            tripNumber: booking.tripID?.tripNumber,
+                            origin: booking.tripID?.origin?.stationName,
+                            destination: booking.tripID?.destination?.stationName,
+                            departureTime: booking.tripID?.departureTime,
+                            arrivalTime: booking.tripID?.arrivalTime
+                        },
+                        cancellation: {
+                            reason: cancellationReason,
+                            refundAmount: refundAmount || 0,
+                            cancelledAt: new Date()
+                        },
+                        actionURL: `${process.env.CLIENT_URL}/dashboard/bookings`,
+                        actionText: 'View Booking History'
+                    }
+                };
+
+                await NotificationService.createNotification(notificationData);
+            } catch (notificationError) {
+                console.error('Failed to send booking cancellation notification:', notificationError);
+            }
+        }
+        //end of notfication changes
 
         res.status(200).json({
             success: true,

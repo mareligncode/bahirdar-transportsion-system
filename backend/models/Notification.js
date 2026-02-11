@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 const notificationSchema = new mongoose.Schema({
     notificationID: {
         type: String,
-        unique: true,
+    //    unique: true,
         trim: true
     },
     userID: {
@@ -34,12 +34,10 @@ const notificationSchema = new mongoose.Schema({
             'refund_processed',
             'driver_assignment',
             'driver_update',
+            'station_update',
             'station_announcement',
             'system_alert',
-            'promotional',
-            'welcome',
-            'password_reset',
-            'email_verification'
+            'promotional'
         ],
         required: true
     },

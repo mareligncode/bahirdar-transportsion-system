@@ -1,31 +1,79 @@
 import express from 'express'
 import cors from 'cors'
+import http from 'http'
+import { Server } from 'socket.io'
 import initSuperAdmin from './config/initSuperAdmin.js'
 import authRoutes from './routes/authRoutes.js'
 import stationRoutes from './routes/stationRoutes.js'
 import vehicleRoutes from './routes/vehicleRoutes.js'
 import connectDB from './config/database.js'
 import tripRoutes from './routes/tripRoutes.js'
-import bookingRpoutes from './routes/bookingRoutes.js'
-connectDB()
-initSuperAdmin()
-const PORT = 5000
+import bookingRoutes from './routes/bookingRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
+   connectDB()
+   initSuperAdmin()
+
+const PORT = process.env.PORT || 5000
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    // Join user to their notification room
+    socket.on('join-user-room', (userID) => {
+        socket.join(`user-${userID}`);
+        console.log(`User ${userID} joined room user-${userID}`);
+    });
+
+    // Join admin to admin room
+    socket.on('join-admin-room', (userID) => {
+        socket.join('admin-room');
+        console.log(`Admin ${userID} joined admin room`);
+    });
+
+    // Leave room
+    socket.on('leave-room', (room) => {
+        socket.leave(room);
+        console.log(`User left room: ${room}`);
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/station', stationRoutes)
-app.use('/api/vehicles', vehicleRoutes)
-app.use('/api/trip', tripRoutes)
-app.use('/api/booking',bookingRpoutes)
+app.use('/api/station', stationRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/trip', tripRoutes);
+app.use('/api/booking', bookingRoutes);
+app.use('/api/payment',paymentRoutes)
 
+// Socket.io instance for use in controllers
+app.set('io', io);
 
 app.get("/", (req, res) => {
-    res.send("server runinig ...")
-})
-app.listen(PORT, () => {
-    console.log(`server runing http://localhost:${PORT}`)
-})
+    res.send("Bahir Dar Transport System API is running ...")
+});
+
+server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+    console.log(`Socket.io enabled for real-time notifications`)
+});
 
