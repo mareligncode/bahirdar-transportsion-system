@@ -15,6 +15,7 @@ import {
   DirectionsBus,
   Chair as SeatIcon
 } from '@mui/icons-material';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 const SeatSelection = ({ 
   trip, 
@@ -22,6 +23,7 @@ const SeatSelection = ({
   onSeatsSelected, 
   onProceedToPayment 
 }) => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [seats, setSeats] = useState([]);
   const [localSelectedSeats, setLocalSelectedSeats] = useState(selectedSeats || []);
 
@@ -88,11 +90,11 @@ const SeatSelection = ({
         mb: 2,
         fontSize: '1.35rem'
       }}>
-        Select Your Seats
+        {t('select_your_seats')} {/* ✅ TRANSLATED */}
       </Typography>
       
-      <Grid container spacing={10}> {/* Increased from 6 to 10 for EVEN MORE space */}
-        {/* Left Side: Seat Selection - 6 columns (reduced from 7 to give more breathing room) */}
+      <Grid container spacing={10}>
+        {/* Left Side: Seat Selection */}
         <Grid item xs={12} md={6}>
           <Card variant="outlined" sx={{ 
             borderRadius: '12px',
@@ -109,10 +111,10 @@ const SeatSelection = ({
                 mb: 2
               }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  🪑 Available seats: <Box component="span" sx={{ color: '#3b82f6', fontWeight: 700 }}>{trip.availableSeats}</Box>
+                  🪑 {t('available_seats_count', { count: trip.availableSeats })} 
                 </Typography>
                 <Chip 
-                  label={`${trip.totalSeats} total seats`}
+                  label={t('total_seats_count', { count: trip.totalSeats })} 
                   size="small"
                   sx={{ 
                     bgcolor: '#f1f5f9', 
@@ -123,7 +125,7 @@ const SeatSelection = ({
                 />
               </Box>
 
-              {/* Seat Grid - Smaller and more compact */}
+              {/* Seat Grid */}
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(4, 1fr)', 
@@ -167,7 +169,7 @@ const SeatSelection = ({
                 ))}
               </Box>
 
-              {/* Seat Legend - Compact */}
+              {/* Seat Legend */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'center', 
@@ -179,29 +181,29 @@ const SeatSelection = ({
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'success.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>Available</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_available')}</Typography> {/* ✅ TRANSLATED */}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'primary.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>Selected</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_selected')}</Typography> {/* ✅ TRANSLATED */}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'error.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>Booked</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_booked')}</Typography> {/* ✅ TRANSLATED */}
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Right Side: Booking Summary - 5 columns */}
+        {/* Right Side: Booking Summary */}
         <Grid item xs={12} md={5}>
           <Card variant="outlined" sx={{ 
             borderRadius: '12px',
             border: '1px solid #3b82f6',
             height: '100%',
             boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08)',
-            ml: { md: 6 } // Increased from 3 to 6 for MUCH MORE space
+            ml: { md: 6 }
           }}>
             <CardContent sx={{ p: 2.5 }}>
               {/* Header */}
@@ -228,13 +230,13 @@ const SeatSelection = ({
                   color: '#1e40af',
                   fontSize: '1rem'
                 }}>
-                  Booking Summary
+                  {t('booking_summary')} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
               
               <Divider sx={{ mb: 2, borderColor: '#e2e8f0' }} />
               
-              {/* Trip Details - Compact */}
+              {/* Trip Details */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
@@ -242,7 +244,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  Trip Details
+                  {t('trip_details')} {/* ✅ TRANSLATED */}
                 </Typography>
                 <Paper variant="outlined" sx={{ 
                   p: 1.5, 
@@ -266,7 +268,7 @@ const SeatSelection = ({
                 </Paper>
               </Box>
 
-              {/* Selected Seats - Compact */}
+              {/* Selected Seats */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
@@ -274,7 +276,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  Selected Seats
+                  {t('selected_seats')} {/* ✅ TRANSLATED */}
                 </Typography>
                 <Box sx={{ 
                   p: 1.5, 
@@ -308,13 +310,13 @@ const SeatSelection = ({
                       color: '#64748b',
                       fontSize: '0.75rem'
                     }}>
-                      No seats selected yet
+                      {t('no_seats_selected_yet')} {/* ✅ TRANSLATED */}
                     </Typography>
                   )}
                 </Box>
               </Box>
 
-              {/* Price Breakdown - Compact */}
+              {/* Price Breakdown */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
@@ -322,7 +324,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  Price Breakdown
+                  {t('price_breakdown')} {/* ✅ TRANSLATED */}
                 </Typography>
                 <Box sx={{ 
                   p: 1.5, 
@@ -332,16 +334,16 @@ const SeatSelection = ({
                   border: '1px solid #e2e8f0'
                 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">Price per seat:</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('price_per_seat')}:</Typography> {/* ✅ TRANSLATED */}
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>${trip.price}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">Number of seats:</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('number_of_seats')}:</Typography> {/* ✅ TRANSLATED */}
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>{localSelectedSeats.length}</Typography>
                   </Box>
                   <Divider sx={{ my: 0.75, borderColor: '#e2e8f0' }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">Subtotal:</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('subtotal')}:</Typography> {/* ✅ TRANSLATED */}
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>${trip.price * localSelectedSeats.length}</Typography>
                   </Box>
                 </Box>
@@ -349,7 +351,7 @@ const SeatSelection = ({
 
               <Divider sx={{ my: 1.5, borderColor: '#e2e8f0' }} />
 
-              {/* Total Price - Compact */}
+              {/* Total Price */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -361,7 +363,7 @@ const SeatSelection = ({
                 border: '1px solid #3b82f6'
               }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                  Total Amount
+                  {t('total_amount')} {/* ✅ TRANSLATED */}
                 </Typography>
                 <Typography variant="h6" color="primary" sx={{ 
                   fontWeight: 700,
@@ -371,7 +373,7 @@ const SeatSelection = ({
                 </Typography>
               </Box>
 
-              {/* Proceed to Payment Button - Compact */}
+              {/* Proceed to Payment Button */}
               <Button
                 variant="contained"
                 color="primary"
@@ -397,8 +399,8 @@ const SeatSelection = ({
                 }}
               >
                 {localSelectedSeats.length === 0 
-                  ? 'Select Seats to Continue' 
-                  : `Proceed to Payment - $${totalPrice}`
+                  ? t('select_seats_to_continue') 
+                  : `${t('proceed_to_payment')} - $${totalPrice}`
                 }
               </Button>
 
@@ -409,7 +411,7 @@ const SeatSelection = ({
                   py: 0,
                   '& .MuiAlert-message': { fontSize: '0.75rem', p: 1 }
                 }}>
-                  Please select at least one seat
+                  {t('please_select_at_least_one_seat')} {/* ✅ TRANSLATED */}
                 </Alert>
               )}
             </CardContent>

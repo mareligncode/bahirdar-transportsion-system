@@ -16,8 +16,10 @@ import {
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 const Dashboard = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState(null);
@@ -80,10 +82,10 @@ const Dashboard = () => {
       };
       
       setUserRoles([
-        { name: 'Passengers', value: roleCounts.passenger, color: '#8884d8' },
-        { name: 'Drivers', value: roleCounts.driver, color: '#82ca9d' },
-        { name: 'Station Admins', value: roleCounts.station_admin, color: '#ffc658' },
-        { name: 'Super Admins', value: roleCounts.super_admin, color: '#ff8042' }
+        { name: t('passengers'), value: roleCounts.passenger, color: '#8884d8' },
+        { name: t('drivers'), value: roleCounts.driver, color: '#82ca9d' },
+        { name: t('station_admins'), value: roleCounts.station_admin, color: '#ffc658' },
+        { name: t('super_admins'), value: roleCounts.super_admin, color: '#ff8042' }
       ]);
       
       // Calculate vehicle status distribution
@@ -96,22 +98,22 @@ const Dashboard = () => {
       };
       
       setVehicleStatus([
-        { name: 'Available', value: vehicleStatusCounts.available, color: '#4caf50' },
-        { name: 'Active', value: vehicleStatusCounts.active, color: '#2196f3' },
-        { name: 'On Trip', value: vehicleStatusCounts.on_trip, color: '#ff9800' },
-        { name: 'Maintenance', value: vehicleStatusCounts.maintenance, color: '#f44336' },
-        { name: 'Inactive', value: vehicleStatusCounts.inactive, color: '#9e9e9e' }
+        { name: t('available'), value: vehicleStatusCounts.available, color: '#4caf50' },
+        { name: t('active'), value: vehicleStatusCounts.active, color: '#2196f3' },
+        { name: t('on_trip'), value: vehicleStatusCounts.on_trip, color: '#ff9800' },
+        { name: t('maintenance'), value: vehicleStatusCounts.maintenance, color: '#f44336' },
+        { name: t('inactive'), value: vehicleStatusCounts.inactive, color: '#9e9e9e' }
       ]);
       
       // Prepare activity data (last 7 days - mock for now)
       const activity = [
-        { day: 'Mon', users: 12, trips: 8, bookings: 15 },
-        { day: 'Tue', users: 19, trips: 12, bookings: 21 },
-        { day: 'Wed', users: 15, trips: 9, bookings: 18 },
-        { day: 'Thu', users: 25, trips: 16, bookings: 30 },
-        { day: 'Fri', users: 22, trips: 14, bookings: 25 },
-        { day: 'Sat', users: 18, trips: 10, bookings: 20 },
-        { day: 'Sun', users: 10, trips: 5, bookings: 12 }
+        { day: t('mon'), users: 12, trips: 8, bookings: 15 },
+        { day: t('tue'), users: 19, trips: 12, bookings: 21 },
+        { day: t('wed'), users: 15, trips: 9, bookings: 18 },
+        { day: t('thu'), users: 25, trips: 16, bookings: 30 },
+        { day: t('fri'), users: 22, trips: 14, bookings: 25 },
+        { day: t('sat'), users: 18, trips: 10, bookings: 20 },
+        { day: t('sun'), users: 10, trips: 5, bookings: 12 }
       ];
       setActivityData(activity);
       
@@ -131,7 +133,7 @@ const Dashboard = () => {
       
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      setError(err.response?.data?.message || t('failed_to_load_dashboard_data'));
     } finally {
       setLoading(false);
     }
@@ -163,10 +165,10 @@ const Dashboard = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" component="h1" fontWeight="bold">
-            Welcome, {userData?.fullName || 'Super Admin'}
+            {t('welcome')}, {userData?.fullName || t('super_admin')}
           </Typography>
           <Typography variant="subtitle1" color="textSecondary">
-            Super Admin Dashboard
+            {t('super_admin_dashboard')}
           </Typography>
         </Box>
         <Button
@@ -175,7 +177,7 @@ const Dashboard = () => {
           variant="outlined"
           size="small"
         >
-          Refresh
+          {t('refresh')}
         </Button>
       </Box>
 
@@ -195,7 +197,7 @@ const Dashboard = () => {
                   <PeopleIcon />
                 </Avatar>
                 <Typography variant="h6" color="textSecondary">
-                  Total Users
+                  {t('total_users')}
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
@@ -203,7 +205,7 @@ const Dashboard = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Chip
-                  label={`${stats.activeUsers} active`}
+                  label={t('active_count', { count: stats.activeUsers })}
                   size="small"
                   color="success"
                   variant="outlined"
@@ -224,7 +226,7 @@ const Dashboard = () => {
                   <BusIcon />
                 </Avatar>
                 <Typography variant="h6" color="textSecondary">
-                  Total Vehicles
+                  {t('total_vehicles')}
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
@@ -232,7 +234,7 @@ const Dashboard = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Chip
-                  label={`${stats.availableVehicles} available`}
+                  label={t('available_count', { count: stats.availableVehicles })}
                   size="small"
                   color="success"
                   variant="outlined"
@@ -250,7 +252,7 @@ const Dashboard = () => {
                   <StationIcon />
                 </Avatar>
                 <Typography variant="h6" color="textSecondary">
-                  Total Stations
+                  {t('total_stations')}
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
@@ -258,7 +260,7 @@ const Dashboard = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Chip
-                  label={`${stats.activeStations} active`}
+                  label={t('active_count', { count: stats.activeStations })}
                   size="small"
                   color="success"
                   variant="outlined"
@@ -276,7 +278,7 @@ const Dashboard = () => {
                   <TripIcon />
                 </Avatar>
                 <Typography variant="h6" color="textSecondary">
-                  Total Trips
+                  {t('total_trips')}
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight="bold">
@@ -284,7 +286,7 @@ const Dashboard = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Chip
-                  label={`${stats.activeTrips} active`}
+                  label={t('active_count', { count: stats.activeTrips })}
                   size="small"
                   color="success"
                   variant="outlined"
@@ -301,8 +303,8 @@ const Dashboard = () => {
         {/* User Roles Distribution */}
         <Card elevation={3}>
           <CardHeader
-            title="User Roles Distribution"
-            subheader="Breakdown of user roles across the system"
+            title={t('user_roles_distribution')}
+            subheader={t('breakdown_of_user_roles')}
           />
           <Divider />
           <CardContent sx={{ height: 400 }}>
@@ -322,7 +324,7 @@ const Dashboard = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value} users`, 'Count']} />
+                <Tooltip formatter={(value) => [`${value} ${t('users')}`, t('count')]} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -332,8 +334,8 @@ const Dashboard = () => {
         {/* Vehicle Status Distribution */}
         <Card elevation={3}>
           <CardHeader
-            title="Vehicle Status Distribution"
-            subheader="Current status of all vehicles in the system"
+            title={t('vehicle_status_distribution')}
+            subheader={t('current_status_of_vehicles')}
           />
           <Divider />
           <CardContent sx={{ height: 400 }}>
@@ -353,7 +355,7 @@ const Dashboard = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value} vehicles`, 'Count']} />
+                <Tooltip formatter={(value) => [`${value} ${t('vehicles')}`, t('count')]} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -363,8 +365,8 @@ const Dashboard = () => {
         {/* Weekly Activity */}
         <Card elevation={3}>
           <CardHeader
-            title="Weekly Activity"
-            subheader="Last 7 days overview of system activity"
+            title={t('weekly_activity')}
+            subheader={t('last_7_days_overview')}
           />
           <Divider />
           <CardContent sx={{ height: 400 }}>
@@ -375,9 +377,9 @@ const Dashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="users" fill="#8884d8" name="New Users" />
-                <Bar dataKey="trips" fill="#82ca9d" name="New Trips" />
-                <Bar dataKey="bookings" fill="#ffc658" name="Bookings" />
+                <Bar dataKey="users" fill="#8884d8" name={t('new_users')} />
+                <Bar dataKey="trips" fill="#82ca9d" name={t('new_trips')} />
+                <Bar dataKey="bookings" fill="#ffc658" name={t('bookings')} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -387,7 +389,7 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <Card elevation={3} sx={{ mt: 3 }}>
         <CardHeader
-          title="Quick Actions"
+          title={t('quick_actions')}
           avatar={<SecurityIcon color="primary" />}
         />
         <Divider />
@@ -401,7 +403,7 @@ const Dashboard = () => {
                 href="/admin/users"
                 startIcon={<PeopleIcon />}
               >
-                Manage Users
+                {t('manage_users')}
               </Button>
             </Grid>
             <Grid item xs={6} sm={3}>
@@ -412,7 +414,7 @@ const Dashboard = () => {
                 href="/admin/vehicles"
                 startIcon={<BusIcon />}
               >
-                Manage Vehicles
+                {t('manage_vehicles')}
               </Button>
             </Grid>
             <Grid item xs={6} sm={3}>
@@ -423,7 +425,7 @@ const Dashboard = () => {
                 href="/admin/stations"
                 startIcon={<StationIcon />}
               >
-                Manage Stations
+                {t('manage_stations')}
               </Button>
             </Grid>
             <Grid item xs={6} sm={3}>
@@ -434,7 +436,7 @@ const Dashboard = () => {
                 href="/admin/Schedules"
                 startIcon={<TripIcon />}
               >
-                Manage Trips
+                {t('manage_trips')}
               </Button>
             </Grid>
           </Grid>

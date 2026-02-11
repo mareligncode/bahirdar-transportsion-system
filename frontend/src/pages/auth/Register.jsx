@@ -3,20 +3,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Mail, Lock, User, Phone, AlertCircle, CheckCircle, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Register() {
+  const { t } = useTranslation();
+  
   const countryCodes = [
-    { code: '+251', flag: '🇪🇹', name: 'Ethiopia' },
-    { code: '+1', flag: '🇺🇸', name: 'USA' },
-    { code: '+44', flag: '🇬🇧', name: 'UK' },
-    { code: '+91', flag: '🇮🇳', name: 'India' },
-    { code: '+86', flag: '🇨🇳', name: 'China' },
-    { code: '+254', flag: '🇰🇪', name: 'Kenya' },
-    { code: '+255', flag: '🇹🇿', name: 'Tanzania' },
-    { code: '+256', flag: '🇺🇬', name: 'Uganda' },
-    { code: '+27', flag: '🇿🇦', name: 'South Africa' },
-    { code: '+234', flag: '🇳🇬', name: 'Nigeria' },
-    { code: '+20', flag: '🇪🇬', name: 'Egypt' },
+    { code: '+251', flag: '🇪🇹', name: t('ethiopia') },
+    { code: '+1', flag: '🇺🇸', name: t('usa') },
+    { code: '+44', flag: '🇬🇧', name: t('uk') },
+    { code: '+91', flag: '🇮🇳', name: t('india') },
+    { code: '+86', flag: '🇨🇳', name: t('china') },
+    { code: '+254', flag: '🇰🇪', name: t('kenya') },
+    { code: '+255', flag: '🇹🇿', name: t('tanzania') },
+    { code: '+256', flag: '🇺🇬', name: t('uganda') },
+    { code: '+27', flag: '🇿🇦', name: t('southAfrica') },
+    { code: '+234', flag: '🇳🇬', name: t('nigeria') },
+    { code: '+20', flag: '🇪🇬', name: t('egypt') },
   ];
 
   const [formData, setFormData] = useState({
@@ -47,14 +50,14 @@ export default function Register() {
 
     // Basic required field validation only
     if (!formData.fullName || !formData.email || !formData.phoneNumber || !formData.password) {
-      setError('All required fields must be filled');
+      setError(t('allRequiredFields'));
       setIsLoading(false);
       return;
     }
 
     // Only check if passwords match (backend handles password complexity)
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwordsDoNotMatch'));
       setIsLoading(false);
       return;
     }
@@ -87,7 +90,7 @@ export default function Register() {
       console.log('Registration response:', response.data);
 
       if (response.data.success) {
-        setSuccess('Account created successfully!');
+        setSuccess(t('accountCreated'));
         
         // Automatically log in the user after successful registration
         try {
@@ -140,14 +143,14 @@ export default function Register() {
         } catch (loginError) {
           console.error('Auto-login failed:', loginError);
           // Registration was successful, but login failed
-          setSuccess('Account created! Please login with your credentials.');
+          setSuccess(t('accountCreatedPleaseLogin'));
           setTimeout(() => {
             navigate('/login');
           }, 3000);
         }
       } else {
         // Handle backend validation errors
-        const errorMessage = response.data.message || 'Registration failed. Please try again.';
+        const errorMessage = response.data.message || t('registrationFailed');
         throw new Error(errorMessage);
       }
     } catch (err) {
@@ -159,23 +162,23 @@ export default function Register() {
         const backendError = err.response.data;
         
         if (backendError.message?.includes('email')) {
-          setError('Email already exists. Please use a different email or try logging in.');
+          setError(t('emailExists'));
         } else if (backendError.message?.includes('phone')) {
-          setError('Phone number already exists. Please use a different phone number.');
+          setError(t('phoneExists'));
         } else if (backendError.message?.includes('password')) {
           setError(backendError.message);
         } else if (backendError.errors) {
           // Handle validation errors from express-validator
           const validationError = Object.values(backendError.errors)[0]?.msg || 
                                 Object.values(backendError.errors)[0]?.message;
-          setError(validationError || 'Please check your input values.');
+          setError(validationError || t('checkInputValues'));
         } else {
-          setError(backendError.message || 'Registration failed. Please try again.');
+          setError(backendError.message || t('registrationFailed'));
         }
       } else if (err.message) {
         setError(err.message);
       } else {
-        setError('Registration failed. Please check your connection and try again.');
+        setError(t('registrationConnectionError'));
       }
     } finally {
       setIsLoading(false);
@@ -239,8 +242,8 @@ export default function Register() {
               B
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h1>
-          <p className="text-gray-600">Join Bahir Dar Transportation System</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('createAccount')}</h1>
+          <p className="text-gray-600">{t('joinSystem')}</p>
         </div>
       </div>
 
@@ -258,7 +261,7 @@ export default function Register() {
           <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Registration Error</p>
+              <p className="font-medium">{t('registrationError')}</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -266,11 +269,11 @@ export default function Register() {
 
         {/* Personal Information */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Personal Information</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('personalInformation')}</h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
+                {t('fullName')} *
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -280,7 +283,7 @@ export default function Register() {
                   value={formData.fullName}
                   onChange={handleChange}
                   className="input-field pl-10"
-                  placeholder="Enter your full name"
+                  placeholder={t('fullNamePlaceholder')}
                   required
                   disabled={isLoading}
                   minLength="2"
@@ -290,7 +293,7 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
+                {t('emailAddress')} *
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -300,7 +303,7 @@ export default function Register() {
                   value={formData.email}
                   onChange={handleChange}
                   className="input-field pl-10"
-                  placeholder="name@example.com"
+                  placeholder={t('emailPlaceholder')}
                   required
                   disabled={isLoading}
                 />
@@ -309,7 +312,7 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number *
+                {t('phoneNumber')} *
               </label>
               <div className="flex gap-2">
                 {/* Country Code Dropdown */}
@@ -370,13 +373,13 @@ export default function Register() {
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Example: {selectedCountry.code}912345678
+                {t('phoneExample')}: {selectedCountry.code}912345678
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Emergency Contact (Optional)
+                {t('emergencyContact')}
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -391,7 +394,7 @@ export default function Register() {
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Contact person in case of emergency
+                {t('emergencyContactInfo')}
               </p>
             </div>
           </div>
@@ -399,11 +402,11 @@ export default function Register() {
 
         {/* Password */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Security *</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('security')} *</h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
+                {t('password')} *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -413,7 +416,7 @@ export default function Register() {
                   value={formData.password}
                   onChange={handleChange}
                   className="input-field pl-10 pr-10"
-                  placeholder="Create a strong password"
+                  placeholder={t('passwordPlaceholder')}
                   required
                   disabled={isLoading}
                 />
@@ -422,7 +425,7 @@ export default function Register() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                   disabled={isLoading}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -432,27 +435,27 @@ export default function Register() {
                 </button>
               </div>
               <div className="mt-2 text-xs space-y-1 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                <p className="font-medium text-blue-700">Password Requirements:</p>
+                <p className="font-medium text-blue-700">{t('passwordRequirements')}:</p>
                 <ul className="text-blue-600 space-y-1">
                   <li className="flex items-center gap-1">
                     <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
-                    At least 8 characters long
+                    {t('passwordLength')}
                   </li>
                   <li className="flex items-center gap-1">
                     <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
-                    At least one uppercase letter (A-Z)
+                    {t('passwordUppercase')}
                   </li>
                   <li className="flex items-center gap-1">
                     <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
-                    At least one lowercase letter (a-z)
+                    {t('passwordLowercase')}
                   </li>
                   <li className="flex items-center gap-1">
                     <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
-                    At least one number (0-9)
+                    {t('passwordNumber')}
                   </li>
                   <li className="flex items-center gap-1">
                     <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
-                    At least one special character (@$!%*?&)
+                    {t('passwordSpecial')}
                   </li>
                 </ul>
               </div>
@@ -460,7 +463,7 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password *
+                {t('confirmPassword')} *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -475,7 +478,7 @@ export default function Register() {
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
                       : ''
                   }`}
-                  placeholder="Confirm your password"
+                  placeholder={t('confirmPasswordPlaceholder')}
                   required
                   disabled={isLoading}
                 />
@@ -484,7 +487,7 @@ export default function Register() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                   disabled={isLoading}
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showConfirmPassword ? t('hidePassword') : t('showPassword')}
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -494,7 +497,7 @@ export default function Register() {
                 </button>
               </div>
               {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+                <p className="text-xs text-red-600 mt-1">{t('passwordsDoNotMatch')}</p>
               )}
             </div>
           </div>
@@ -510,13 +513,13 @@ export default function Register() {
             disabled={isLoading}
           />
           <label htmlFor="terms" className="ml-3 text-sm text-gray-700">
-            I agree to the{' '}
+            {t('agreeTo')}{' '}
             <Link to="/terms" className="text-primary-600 hover:text-primary-700 hover:underline">
-              Terms of Service
+              {t('termsOfService')}
             </Link>{' '}
-            and{' '}
+            {t('and')}{' '}
             <Link to="/privacy" className="text-primary-600 hover:text-primary-700 hover:underline">
-              Privacy Policy
+              {t('privacyPolicy')}
             </Link>
             . *
           </label>
@@ -531,10 +534,10 @@ export default function Register() {
           {isLoading ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Creating Account...
+              {t('creatingAccount')}
             </>
           ) : (
-            'Create Account'
+            t('createAccount')
           )}
         </button>
       </form>
@@ -542,12 +545,12 @@ export default function Register() {
       {/* Login Link */}
       <div className="mt-8 text-center">
         <p className="text-gray-600">
-          Already have an account?{' '}
+          {t('alreadyHaveAccount')}{' '}
           <Link 
             to="/login" 
             className="text-primary-600 hover:text-primary-700 font-medium hover:underline"
           >
-            Sign in here
+            {t('signInHere')}
           </Link>
         </p>
       </div>

@@ -17,8 +17,11 @@ import {
   Schedule,
   ArrowForward
 } from '@mui/icons-material';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
+  const { t } = useTranslation(); // ✅ ADD THIS
+
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
@@ -124,7 +127,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   ${trip.price}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  per seat
+                  {t('per_seat')} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
             </Grid>
@@ -139,7 +142,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   fullWidth
                   sx={{ borderRadius: '8px' }}
                 >
-                  {trip.availableSeats === 0 ? 'Sold Out' : 'Select'}
+                  {trip.availableSeats === 0 ? t('sold_out') : t('select')} {/* ✅ TRANSLATED */}
                 </Button>
               </CardActions>
             </Grid>
@@ -148,7 +151,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
           <Box sx={{ display: 'flex', gap: '8px', marginTop: '20px', flexWrap: 'wrap' }}>
             <Chip 
               icon={<Schedule />}
-              label={`${trip.availableSeats} seats left`}
+              label={t('seats_left', { count: trip.availableSeats })} 
               size="small"
               color={getSeatAvailabilityColor(trip.availableSeats, trip.totalSeats)}
               variant="outlined"
@@ -208,7 +211,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         </Box>
         {trip.availableSeats < 5 && trip.availableSeats > 0 && (
           <Chip 
-            label="Almost Full"
+            label={t('almost_full')} // ✅ TRANSLATED
             size="small"
             color="warning"
             sx={{ fontWeight: 500, fontSize: '0.75rem' }}
@@ -216,7 +219,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         )}
         {trip.availableSeats === 0 && (
           <Chip 
-            label="Sold Out"
+            label={t('sold_out')} // ✅ TRANSLATED
             size="small"
             color="error"
             sx={{ fontWeight: 500, fontSize: '0.75rem' }}
@@ -228,7 +231,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         <Grid container spacing={2}>
           <Grid item xs={8}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1e293b' }}>
-              {trip.origin?.stationName} to {trip.destination?.stationName}
+              {trip.origin?.stationName} {t('to')} {trip.destination?.stationName} {/* ✅ TRANSLATED */}
             </Typography>
             
             <Box sx={{ 
@@ -243,7 +246,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {formatTime(trip.departureTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Departure
+                  {t('departure')} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
               
@@ -276,7 +279,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {formatTime(trip.arrivalTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Arrival
+                  {t('arrival')} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
             </Box>
@@ -302,7 +305,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {trip.vehicle?.carType} • {trip.vehicle?.plateNumber}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Driver: {trip.driver?.fullName}
+                  {t('driver')}: {trip.driver?.fullName} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
             </Box>
@@ -314,7 +317,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                 ${trip.price}
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block">
-                per seat
+                {t('per_seat')} {/* ✅ TRANSLATED */}
               </Typography>
               
               <Box sx={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', marginTop: '16px' }}>
@@ -325,7 +328,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   sx={{ marginBottom: '8px' }}
                 />
                 <Typography variant="caption">
-                  {trip.availableSeats} of {trip.totalSeats} seats available
+                  {t('seats_available', { 
+                    available: trip.availableSeats, 
+                    total: trip.totalSeats 
+                  })} {/* ✅ TRANSLATED */}
                 </Typography>
               </Box>
             </Box>
@@ -355,7 +361,9 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
             }
           }}
         >
-          {trip.availableSeats === 0 ? 'Sold Out' : `Select Trip • $${trip.price}`}
+          {trip.availableSeats === 0 
+            ? t('sold_out') 
+            : `${t('select_trip')} • $${trip.price}`} {/* ✅ TRANSLATED */}
         </Button>
       </CardActions>
     </Card>

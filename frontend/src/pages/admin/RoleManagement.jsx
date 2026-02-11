@@ -23,9 +23,11 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 export default function RoleManagement() {
   const { user, authService } = useAuth();
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +54,7 @@ export default function RoleManagement() {
       setMessage({ type: '', text: '' });
       
       if (user?.role !== 'super_admin') {
-        setMessage({ type: 'error', text: 'Unauthorized access' });
+        setMessage({ type: 'error', text: t('unauthorized_access') });
         return;
       }
 
@@ -60,10 +62,10 @@ export default function RoleManagement() {
       if (response.success) {
         setUsers(response.data.users || []);
       } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to fetch users' });
+        setMessage({ type: 'error', text: response.message || t('failed_to_fetch_users') });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load users' });
+      setMessage({ type: 'error', text: t('failed_to_load_users') });
     } finally {
       setLoading(false);
     }
@@ -118,10 +120,10 @@ export default function RoleManagement() {
 
   const getRoleDisplay = (role) => {
     const roleMap = {
-      'super_admin': 'Super Admin',
-      'station_admin': 'Station Admin',
-      'driver': 'Driver',
-      'passenger': 'Passenger'
+      'super_admin': t('super_admin'),
+      'station_admin': t('station_admin'),
+      'driver': t('driver'),
+      'passenger': t('passenger')
     };
     return roleMap[role] || role;
   };
@@ -138,7 +140,7 @@ export default function RoleManagement() {
 
       if (newRole === 'driver') {
         if (!licenseNumber.trim()) {
-          setMessage({ type: 'error', text: 'License number is required for driver role' });
+          setMessage({ type: 'error', text: t('license_number_required') });
           setChangingRole(false);
           return;
         }
@@ -147,7 +149,7 @@ export default function RoleManagement() {
 
       if (newRole === 'station_admin') {
         if (!stationID.trim()) {
-          setMessage({ type: 'error', text: 'Station ID is required for station admin role' });
+          setMessage({ type: 'error', text: t('station_id_required') });
           setChangingRole(false);
           return;
         }
@@ -164,7 +166,7 @@ export default function RoleManagement() {
       if (response.success) {
         setMessage({ 
           type: 'success', 
-          text: `Role changed to ${getRoleDisplay(newRole)} successfully!` 
+          text: t('role_changed_successfully', { role: getRoleDisplay(newRole) })
         });
         
         setUsers(prevUsers => 
@@ -198,7 +200,7 @@ export default function RoleManagement() {
         setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to change role' });
+      setMessage({ type: 'error', text: t('failed_to_change_role') });
     } finally {
       setChangingRole(false);
     }
@@ -217,7 +219,7 @@ export default function RoleManagement() {
         
         setMessage({ 
           type: 'success', 
-          text: `User ${newStatus ? 'activated' : 'deactivated'} successfully!` 
+          text: newStatus ? t('user_activated') : t('user_deactivated')
         });
         
         setUsers(prevUsers => 
@@ -231,7 +233,7 @@ export default function RoleManagement() {
         setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update user status' });
+      setMessage({ type: 'error', text: t('failed_to_update_user_status') });
     }
   };
 
@@ -260,13 +262,13 @@ export default function RoleManagement() {
 
   const exportToCSV = () => {
     const csvContent = [
-      ['Name', 'Email', 'Phone', 'Role', 'Status', 'Created At'],
+      [t('name'), t('email'), t('phone'), t('role'), t('status'), t('created_at')],
       ...users.map(u => [
         u.fullName,
         u.email,
         u.phoneNumber,
         getRoleDisplay(u.role),
-        u.isActive ? 'Active' : 'Inactive',
+        u.isActive ? t('active') : t('inactive'),
         new Date(u.createdAt).toLocaleDateString()
       ])
     ].map(row => row.join(',')).join('\n');
@@ -291,8 +293,8 @@ export default function RoleManagement() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to access role management.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">{t('access_denied')}</h2>
+          <p className="text-gray-600">{t('no_permission_role_management')}</p>
         </div>
       </div>
     );
@@ -302,15 +304,15 @@ export default function RoleManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
-          <p className="text-gray-600">Manage user roles, permissions, and status</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('role_management')}</h1>
+          <p className="text-gray-600">{t('manage_roles_permissions')}</p>
         </div>
         <button 
           onClick={exportToCSV}
           className="btn-secondary flex items-center gap-2"
         >
           <Download className="w-4 h-4" />
-          Export CSV
+          {t('export_csv')}
         </button>
       </div>
 
@@ -327,7 +329,7 @@ export default function RoleManagement() {
           )}
           <div className="flex-1">
             <p className="font-medium">
-              {message.type === 'error' ? 'Error' : 'Success'}
+              {message.type === 'error' ? t('error') : t('success')}
             </p>
             <p className="text-sm mt-1">{message.text}</p>
           </div>
@@ -340,7 +342,7 @@ export default function RoleManagement() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search users..."
+              placeholder={t('search_users_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-field pl-10"
@@ -354,11 +356,11 @@ export default function RoleManagement() {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="input-field pl-10 appearance-none"
             >
-              <option value="all">All Roles</option>
-              <option value="super_admin">Super Admin</option>
-              <option value="station_admin">Station Admin</option>
-              <option value="driver">Driver</option>
-              <option value="passenger">Passenger</option>
+              <option value="all">{t('all_roles')}</option>
+              <option value="super_admin">{t('super_admin')}</option>
+              <option value="station_admin">{t('station_admin')}</option>
+              <option value="driver">{t('driver')}</option>
+              <option value="passenger">{t('passenger')}</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
@@ -370,9 +372,9 @@ export default function RoleManagement() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="input-field pl-10 appearance-none"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('all_status')}</option>
+              <option value="active">{t('active')}</option>
+              <option value="inactive">{t('inactive')}</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
@@ -385,12 +387,12 @@ export default function RoleManagement() {
             {loading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Loading...
+                {t('loading')}...
               </>
             ) : (
               <>
                 <RefreshCw className="w-4 h-4" />
-                Refresh
+                {t('refresh')}
               </>
             )}
           </button>
@@ -402,14 +404,14 @@ export default function RoleManagement() {
           <div className="flex items-center justify-center min-h-[300px]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading users...</p>
+              <p className="mt-4 text-gray-600">{t('loading_users')}...</p>
             </div>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[300px]">
             <UserX className="w-16 h-16 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">No users found</h3>
-            <p className="text-gray-600">Try adjusting your filters</p>
+            <h3 className="text-lg font-medium text-gray-900">{t('no_users_found')}</h3>
+            <p className="text-gray-600">{t('try_adjusting_filters')}</p>
           </div>
         ) : (
           <>
@@ -417,12 +419,12 @@ export default function RoleManagement() {
               <table className="min-w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">User</th>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Contact</th>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Role</th>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Status</th>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Joined</th>
-                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('user')}</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('contact')}</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('role')}</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('status')}</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('joined')}</th>
+                    <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -437,13 +439,13 @@ export default function RoleManagement() {
                           </div>
                           <div>
                             <p className="font-medium">{userItem.fullName}</p>
-                            <p className="text-sm text-gray-500">ID: {userItem._id.substring(0, 8)}...</p>
+                            <p className="text-sm text-gray-500">{t('id')}: {userItem._id.substring(0, 8)}...</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <p className="font-medium">{userItem.email}</p>
-                        <p className="text-sm text-gray-500">{userItem.phoneNumber}</p>
+                        <p className="text-sm text-gray-500">{userItem.phoneNumber || t('na')}</p>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
@@ -453,10 +455,10 @@ export default function RoleManagement() {
                           <span className="font-medium">{getRoleDisplay(userItem.role)}</span>
                         </div>
                         {userItem.licenseNumber && (
-                          <p className="text-xs text-gray-500 mt-1">License: {userItem.licenseNumber}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('license')}: {userItem.licenseNumber}</p>
                         )}
                         {userItem.stationID && (
-                          <p className="text-xs text-gray-500 mt-1">Station: {userItem.stationID}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('station')}: {userItem.stationID}</p>
                         )}
                       </td>
                       <td className="py-4 px-4">
@@ -465,7 +467,7 @@ export default function RoleManagement() {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {userItem.isActive ? 'Active' : 'Inactive'}
+                          {userItem.isActive ? t('active') : t('inactive')}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">
@@ -476,14 +478,14 @@ export default function RoleManagement() {
                           <button
                             onClick={() => setShowUserDetails(true) || setSelectedUser(userItem)}
                             className="p-2 hover:bg-gray-100 rounded"
-                            title="View Details"
+                            title={t('view_details')}
                           >
                             <Eye className="w-4 h-4 text-gray-600" />
                           </button>
                           <button
                             onClick={() => openChangeRoleModal(userItem)}
                             className="p-2 hover:bg-blue-50 rounded"
-                            title="Change Role"
+                            title={t('change_role')}
                           >
                             <Edit className="w-4 h-4 text-blue-600" />
                           </button>
@@ -493,7 +495,7 @@ export default function RoleManagement() {
                               userItem.isActive ? 'deactivate' : 'activate'
                             )}
                             className="p-2 hover:bg-yellow-50 rounded"
-                            title={userItem.isActive ? 'Deactivate' : 'Activate'}
+                            title={userItem.isActive ? t('deactivate') : t('activate')}
                           >
                             {userItem.isActive ? (
                               <UserX className="w-4 h-4 text-yellow-600" />
@@ -512,7 +514,7 @@ export default function RoleManagement() {
             {/* Pagination Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-gray-200">
               <div className="flex items-center gap-2 mb-4 sm:mb-0">
-                <span className="text-sm text-gray-700">Rows per page:</span>
+                <span className="text-sm text-gray-700">{t('rows_per_page')}:</span>
                 <select
                   value={rowsPerPage}
                   onChange={(e) => setRowsPerPage(Number(e.target.value))}
@@ -525,7 +527,7 @@ export default function RoleManagement() {
                   <option value="100">100</option>
                 </select>
                 <span className="text-sm text-gray-600 ml-4">
-                  Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
+                  {t('showing')} {indexOfFirstUser + 1} {t('to')} {Math.min(indexOfLastUser, filteredUsers.length)} {t('of')} {filteredUsers.length} {t('users')}
                 </span>
               </div>
 
@@ -534,7 +536,7 @@ export default function RoleManagement() {
                   onClick={() => goToPage(1)}
                   disabled={currentPage === 1}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="First Page"
+                  title={t('first_page')}
                 >
                   <ChevronsLeft className="w-5 h-5 text-gray-600" />
                 </button>
@@ -542,7 +544,7 @@ export default function RoleManagement() {
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Previous Page"
+                  title={t('previous_page')}
                 >
                   <ChevronLeft className="w-5 h-5 text-gray-600" />
                 </button>
@@ -580,7 +582,7 @@ export default function RoleManagement() {
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Next Page"
+                  title={t('next_page')}
                 >
                   <ChevronRight className="w-5 h-5 text-gray-600" />
                 </button>
@@ -588,7 +590,7 @@ export default function RoleManagement() {
                   onClick={() => goToPage(totalPages)}
                   disabled={currentPage === totalPages}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Last Page"
+                  title={t('last_page')}
                 >
                   <ChevronsRight className="w-5 h-5 text-gray-600" />
                 </button>
@@ -611,7 +613,7 @@ export default function RoleManagement() {
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Change User Role</h3>
+                <h3 className="text-lg font-semibold">{t('change_user_role')}</h3>
                 <button
                   onClick={() => {
                     setShowChangeRoleModal(false);
@@ -625,40 +627,40 @@ export default function RoleManagement() {
               
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600">User:</p>
+                  <p className="text-sm text-gray-600">{t('user')}:</p>
                   <p className="font-medium">{selectedUser.fullName}</p>
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>
-                  <p className="text-xs text-gray-400">Current role: {getRoleDisplay(selectedUser.role)}</p>
+                  <p className="text-xs text-gray-400">{t('current_role')}: {getRoleDisplay(selectedUser.role)}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Role
+                    {t('new_role')}
                   </label>
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
                     className="input-field w-full"
                   >
-                    <option value="">Select Role</option>
-                    <option value="passenger">Passenger</option>
-                    <option value="driver">Driver</option>
-                    <option value="station_admin">Station Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="">{t('select_role')}</option>
+                    <option value="passenger">{t('passenger')}</option>
+                    <option value="driver">{t('driver')}</option>
+                    <option value="station_admin">{t('station_admin')}</option>
+                    <option value="super_admin">{t('super_admin')}</option>
                   </select>
                 </div>
 
                 {newRole === 'driver' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      License Number *
+                      {t('license_number')} *
                     </label>
                     <input
                       type="text"
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
                       className="input-field w-full"
-                      placeholder="Enter license number"
+                      placeholder={t('enter_license_number')}
                       required
                     />
                   </div>
@@ -667,14 +669,14 @@ export default function RoleManagement() {
                 {newRole === 'station_admin' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Station ID *
+                      {t('station_id')} *
                     </label>
                     <input
                       type="text"
                       value={stationID}
                       onChange={(e) => setStationID(e.target.value)}
                       className="input-field w-full"
-                      placeholder="Enter station ID"
+                      placeholder={t('enter_station_id')}
                       required
                     />
                   </div>
@@ -690,7 +692,7 @@ export default function RoleManagement() {
                   className="btn-secondary"
                   disabled={changingRole}
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleChangeRole}
@@ -700,10 +702,10 @@ export default function RoleManagement() {
                   {changingRole ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Saving...
+                      {t('saving')}...
                     </>
                   ) : (
-                    'Save Changes'
+                    t('save_changes')
                   )}
                 </button>
               </div>
@@ -734,14 +736,14 @@ export default function RoleManagement() {
                   )}
                 </div>
                 <h3 className="text-lg font-semibold">
-                  {actionType === 'deactivate' ? 'Deactivate User' : 'Activate User'}
+                  {actionType === 'deactivate' ? t('deactivate_user') : t('activate_user')}
                 </h3>
               </div>
 
               <p className="text-gray-600 mb-6">
                 {actionType === 'deactivate' 
-                  ? `Are you sure you want to deactivate ${selectedUser.fullName}? They will no longer be able to access the system.`
-                  : `Are you sure you want to activate ${selectedUser.fullName}? They will regain access to the system.`
+                  ? t('deactivate_confirmation', { name: selectedUser.fullName })
+                  : t('activate_confirmation', { name: selectedUser.fullName })
                 }
               </p>
 
@@ -750,7 +752,7 @@ export default function RoleManagement() {
                   onClick={() => setShowConfirmDialog(false)}
                   className="btn-secondary"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleToggleStatus}
@@ -760,7 +762,7 @@ export default function RoleManagement() {
                       : 'bg-green-600 hover:bg-green-700'
                   } text-white`}
                 >
-                  {actionType === 'deactivate' ? 'Deactivate' : 'Activate'}
+                  {actionType === 'deactivate' ? t('deactivate') : t('activate')}
                 </button>
               </div>
             </div>

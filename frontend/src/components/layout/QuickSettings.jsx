@@ -23,9 +23,11 @@ import {
 } from '@mui/icons-material';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 const QuickSettings = () => {
   const { settings, toggleTheme, updateSetting } = useSettings();
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
 
@@ -43,8 +45,8 @@ const QuickSettings = () => {
   };
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'am', name: 'Amharic', flag: '🇪🇹' }
+    { code: 'en', name: t('english'), flag: '🇺🇸' },
+    { code: 'am', name: t('amharic'), flag: '🇪🇹' }
   ];
 
   return (
@@ -57,6 +59,7 @@ const QuickSettings = () => {
           borderColor: 'divider',
           bgcolor: 'background.paper'
         }}
+        aria-label={t('quick_settings')} // ✅ TRANSLATED
       >
         <SettingsIcon />
       </IconButton>
@@ -71,10 +74,10 @@ const QuickSettings = () => {
       >
         <Box sx={{ p: 2 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Quick Settings
+            {t('quick_settings')} {/* ✅ TRANSLATED */}
           </Typography>
           <Typography variant="caption" color="textSecondary">
-            Adjust your preferences quickly
+            {t('adjust_your_preferences_quickly')} {/* ✅ TRANSLATED */}
           </Typography>
         </Box>
         
@@ -86,11 +89,11 @@ const QuickSettings = () => {
             {settings.themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
           </ListItemIcon>
           <ListItemText 
-            primary="Theme" 
-            secondary={settings.themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            primary={t('theme')} // ✅ TRANSLATED
+            secondary={settings.themeMode === 'dark' ? t('dark_mode') : t('light_mode')} // ✅ TRANSLATED
           />
           <Chip 
-            label={settings.themeMode === 'dark' ? 'Dark' : 'Light'} 
+            label={settings.themeMode === 'dark' ? t('dark') : t('light')} // ✅ TRANSLATED
             size="small" 
             color="primary"
             variant="outlined"
@@ -103,7 +106,7 @@ const QuickSettings = () => {
             <TranslateIcon />
           </ListItemIcon>
           <ListItemText 
-            primary="Language" 
+            primary={t('language')} // ✅ TRANSLATED
             secondary={languages.find(l => l.code === settings.language)?.name}
           />
           <Chip 
@@ -118,8 +121,8 @@ const QuickSettings = () => {
             <NotificationsIcon />
           </ListItemIcon>
           <ListItemText 
-            primary="Notifications" 
-            secondary={settings.pushNotifications ? 'Enabled' : 'Disabled'}
+            primary={t('notifications')} // ✅ TRANSLATED
+            secondary={settings.pushNotifications ? t('enabled') : t('disabled')} // ✅ TRANSLATED
           />
           <Switch
             size="small"
@@ -135,8 +138,8 @@ const QuickSettings = () => {
             <RefreshIcon />
           </ListItemIcon>
           <ListItemText 
-            primary="Auto-refresh" 
-            secondary={settings.autoRefresh ? 'Enabled' : 'Disabled'}
+            primary={t('auto_refresh')} // ✅ TRANSLATED
+            secondary={settings.autoRefresh ? t('enabled') : t('disabled')} // ✅ TRANSLATED
           />
           <Switch
             size="small"
@@ -154,8 +157,8 @@ const QuickSettings = () => {
             <PaletteIcon />
           </ListItemIcon>
           <ListItemText 
-            primary="All Settings" 
-            secondary="View all settings and preferences"
+            primary={t('all_settings')} // ✅ TRANSLATED
+            secondary={t('view_all_settings_and_preferences')} // ✅ TRANSLATED
           />
         </MenuItem>
       </Menu>
