@@ -145,4 +145,21 @@ export const sendPasswordChangedEmail = async (email, userName) => {
     }
 };
 
+// General email sending function for notifications
+export const sendEmail = async (options) => {
+    try {
+        const mailOptions = {
+            from: `"Bahir Dar Transport System" <${process.env.EMAIL_USER}>`,
+            ...options
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending email:', error);
+        throw new Error('Failed to send email');
+    }
+};
+
 export default transporter;
