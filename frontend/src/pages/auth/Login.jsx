@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,21 +69,6 @@ export default function Login() {
     }
   };
 
-
-  const handleDemoLogin = async (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      if (form) {
-        form.dispatchEvent(
-          new Event('submit', { cancelable: true, bubbles: true })
-        );
-      }
-    }, 100);
-  };
-
   return (
     <div className="max-w-md mx-auto">
       <div className="text-center mb-8">
@@ -140,31 +126,41 @@ export default function Login() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setError('');
               }}
-              className="input-field pl-10"
+              className="input-field pl-10 pr-10"
               placeholder="Enter your password"
               required
               disabled={isLoading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              disabled={isLoading}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
 
-
-<div className="text-right">
-  <Link 
-    to="/forgot-password" 
-    className="text-sm text-primary-600 hover:text-primary-800 font-medium"
-  >
-    Forgot password?
-  </Link>
-</div>
-
-
+        <div className="text-right">
+          <Link 
+            to="/forgot-password" 
+            className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+          >
+            Forgot password?
+          </Link>
+        </div>
 
         <button
           type="submit"
@@ -174,22 +170,6 @@ export default function Login() {
           {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
-
-      {/* Debug info (development only)
-      {import.meta.env.DEV && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 font-medium mb-2">
-            Debug Info:
-          </p>
-          <p className="text-xs text-gray-500">
-            Redirect to: {redirectTo}
-          </p>
-          <p className="text-xs text-gray-500">
-            API URL:{' '}
-            {import.meta.env.VITE_API_URL || 'http://localhost:5000'}
-          </p>
-        </div>
-      )} */}
     </div>
   );
 }

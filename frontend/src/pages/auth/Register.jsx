@@ -1,26 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Mail, Lock, User, Phone, AlertCircle, CheckCircle ,ChevronDown } from 'lucide-react';
+import { Mail, Lock, User, Phone, AlertCircle, CheckCircle, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import api from '../../services/api';
 
 export default function Register() {
-
-// Add this country codes array at the top of your component (after imports)
-const countryCodes = [
-  { code: '+251', flag: '🇪🇹', name: 'Ethiopia' },
-  { code: '+1', flag: '🇺🇸', name: 'USA' },
-  { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+91', flag: '🇮🇳', name: 'India' },
-  { code: '+86', flag: '🇨🇳', name: 'China' },
-  { code: '+254', flag: '🇰🇪', name: 'Kenya' },
-  { code: '+255', flag: '🇹🇿', name: 'Tanzania' },
-  { code: '+256', flag: '🇺🇬', name: 'Uganda' },
-  { code: '+27', flag: '🇿🇦', name: 'South Africa' },
-  { code: '+234', flag: '🇳🇬', name: 'Nigeria' },
-  { code: '+20', flag: '🇪🇬', name: 'Egypt' },
-  // Add more as needed
-];
-
+  const countryCodes = [
+    { code: '+251', flag: '🇪🇹', name: 'Ethiopia' },
+    { code: '+1', flag: '🇺🇸', name: 'USA' },
+    { code: '+44', flag: '🇬🇧', name: 'UK' },
+    { code: '+91', flag: '🇮🇳', name: 'India' },
+    { code: '+86', flag: '🇨🇳', name: 'China' },
+    { code: '+254', flag: '🇰🇪', name: 'Kenya' },
+    { code: '+255', flag: '🇹🇿', name: 'Tanzania' },
+    { code: '+256', flag: '🇺🇬', name: 'Uganda' },
+    { code: '+27', flag: '🇿🇦', name: 'South Africa' },
+    { code: '+234', flag: '🇳🇬', name: 'Nigeria' },
+    { code: '+20', flag: '🇪🇬', name: 'Egypt' },
+  ];
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -31,97 +28,154 @@ const countryCodes = [
     emergencyContact: '',
   });
   
-  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]); // Ethiopia by default
-
-const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
+  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Reset messages
     setError('');
     setSuccess('');
     setIsLoading(true);
 
-    // Validate passwords match
+    // Basic required field validation only
+    if (!formData.fullName || !formData.email || !formData.phoneNumber || !formData.password) {
+      setError('All required fields must be filled');
+      setIsLoading(false);
+      return;
+    }
+
+    // Only check if passwords match (backend handles password complexity)
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
-    // Validate password strength
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      setIsLoading(false);
-      return;
-    }
-
-    // Validate phone number (basic Ethiopian format)
-    const phoneRegex = /^\+251[1-9][0-9]{8}$/;
-    if (!phoneRegex.test(formData.phoneNumber)) {
-      setError('Please enter a valid Ethiopian phone number (+251XXXXXXXXX)');
-      setIsLoading(false);
-      return;
-    }
-
-
     try {
-      // Prepare registration data for backend
+      // Remove all non-digit characters except plus sign for phone number
+      let phoneNumber = formData.phoneNumber.replace(/[^\d+]/g, '');
+      
+      // Ensure phone number starts with country code
+      if (!phoneNumber.startsWith('+')) {
+        phoneNumber = selectedCountry.code + phoneNumber.replace(/\D/g, '');
+      }
+
+      // Prepare registration data matching your backend schema
       const registrationData = {
-        fullName: formData.fullName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        password: formData.password,
-  
-        ...(formData.emergencyContact && { emergencyContact: formData.emergencyContact }),
+        fullName: formData.fullName.trim(),
+        email: formData.email.toLowerCase().trim(),
+        phoneNumber: phoneNumber.trim(),
+        password: formData.password, // Backend will validate complexity
+        ...(formData.emergencyContact.trim() && { 
+          emergencyContact: formData.emergencyContact.trim() 
+        }),
       };
 
-      // Call real register function from useAuth hook
-      const result = await register(registrationData);
+      console.log('Sending registration data:', registrationData);
+
+      // Call the backend API directly
+      const response = await api.post('/api/auth/register', registrationData);
       
-      if (result.success) {
-        setSuccess('Account created successfully! Redirecting to dashboard...');
+      console.log('Registration response:', response.data);
+
+      if (response.data.success) {
+        setSuccess('Account created successfully!');
         
-        // Show success message for 2 seconds then redirect
-       setTimeout(() => {
-  const userRole = result.user?.role;
-  
-  switch(userRole) {
-    case 'driver':
-      navigate('/driver/dashboard');
-      break;
-    case 'station_admin':
-      navigate('/station/dashboard');
-      break;
-    case 'super_admin':
-      navigate('/admin/dashboard');
-      break;
-    case 'passenger':
-    default:
-      navigate('/passenger/dashboard'); // Use specific route
-  }
-}, 2000);
+        // Automatically log in the user after successful registration
+        try {
+          // Use the same credentials to log in
+          const loginResponse = await api.post('/api/auth/login', {
+            email: registrationData.email,
+            password: registrationData.password
+          });
+
+          console.log('Auto-login response:', loginResponse.data);
+
+          if (loginResponse.data.success && loginResponse.data.data?.tokens) {
+            // Store tokens in localStorage
+            localStorage.setItem('accessToken', loginResponse.data.data.tokens.accessToken);
+            localStorage.setItem('refreshToken', loginResponse.data.data.tokens.refreshToken);
+            
+            // Store user data
+            localStorage.setItem('user', JSON.stringify(loginResponse.data.data.user));
+            
+            // Call login function from auth context if needed
+            if (login) {
+              login(loginResponse.data.data);
+            }
+
+            // Show success message then redirect based on role
+            setTimeout(() => {
+              const userRole = loginResponse.data.data.user?.role || 'passenger';
+              
+              switch(userRole.toLowerCase()) {
+                case 'driver':
+                  navigate('/driver/dashboard');
+                  break;
+                case 'station_admin':
+                  navigate('/station/dashboard');
+                  break;
+                case 'super_admin':
+                  navigate('/admin/dashboard');
+                  break;
+                case 'passenger':
+                default:
+                  navigate('/passenger/dashboard');
+              }
+            }, 2000);
+          } else {
+            // If auto-login fails, redirect to login page
+            setTimeout(() => {
+              navigate('/login');
+            }, 2000);
+          }
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError);
+          // Registration was successful, but login failed
+          setSuccess('Account created! Please login with your credentials.');
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
+        }
       } else {
-        throw new Error(result.message || 'Registration failed');
+        // Handle backend validation errors
+        const errorMessage = response.data.message || 'Registration failed. Please try again.';
+        throw new Error(errorMessage);
       }
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error('Registration error details:', err);
+      console.error('Error response:', err.response?.data);
       
-      // Handle specific backend errors
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (err.message.includes('email')) {
-        setError('Email already exists. Please use a different email or login.');
-      } else if (err.message.includes('phone')) {
-        setError('Phone number already exists. Please use a different phone number.');
+      if (err.response?.data) {
+        // Backend returned an error response
+        const backendError = err.response.data;
+        
+        if (backendError.message?.includes('email')) {
+          setError('Email already exists. Please use a different email or try logging in.');
+        } else if (backendError.message?.includes('phone')) {
+          setError('Phone number already exists. Please use a different phone number.');
+        } else if (backendError.message?.includes('password')) {
+          setError(backendError.message);
+        } else if (backendError.errors) {
+          // Handle validation errors from express-validator
+          const validationError = Object.values(backendError.errors)[0]?.msg || 
+                                Object.values(backendError.errors)[0]?.message;
+          setError(validationError || 'Please check your input values.');
+        } else {
+          setError(backendError.message || 'Registration failed. Please try again.');
+        }
+      } else if (err.message) {
+        setError(err.message);
       } else {
-        setError('Registration failed. Please try again.');
+        setError('Registration failed. Please check your connection and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -130,18 +184,55 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value
-    });
-    // Clear error when user starts typing
+    }));
     if (error) setError('');
   };
 
+  const handlePhoneChange = (e) => {
+    let value = e.target.value;
+    
+    // Remove all non-digit characters except plus sign
+    value = value.replace(/[^\d+]/g, '');
+    
+    // Ensure only one plus sign at the beginning
+    if (value.startsWith('++')) {
+      value = '+' + value.slice(2);
+    }
+    
+    // If it doesn't start with a country code, add the selected one
+    if (!value.startsWith('+') && selectedCountry) {
+      // Check if the number already has the country code
+      if (!value.startsWith(selectedCountry.code.replace('+', ''))) {
+        value = selectedCountry.code + value;
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      phoneNumber: value
+    }));
+    
+    if (error) setError('');
+  };
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    setIsCountryOpen(false);
+    
+    // Update phone number with new country code
+    const currentNumber = formData.phoneNumber.replace(/^\+\d+/, '');
+    setFormData(prev => ({
+      ...prev,
+      phoneNumber: country.code + currentNumber
+    }));
+  };
 
   return (
-       <div className="max-w-lg mx-auto">
-       <div className="text-center mb-8">
+    <div className="max-w-lg mx-auto">
+      <div className="text-center mb-8">
         <div className="mb-4">
           <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-2">
             <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -149,25 +240,25 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h1>
-          <p className="text-gray-600">Join Bahir Dar Meneharia Transportation System</p>
+          <p className="text-gray-600">Join Bahir Dar Transportation System</p>
         </div>
-       </div>
+      </div>
 
-       {success && (
+      {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-6 flex items-start gap-3">
           <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-medium">{success}</p>
           </div>
         </div>
-       )}
+      )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Registration failed</p>
+              <p className="font-medium">Registration Error</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -192,36 +283,35 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
                   placeholder="Enter your full name"
                   required
                   disabled={isLoading}
+                  minLength="2"
                 />
               </div>
             </div>
 
-           
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="input-field pl-10"
-                    placeholder="name@example.com"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="input-field pl-10"
+                  placeholder="name@example.com"
+                  required
+                  disabled={isLoading}
+                />
               </div>
-            
-       
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number *
-                </label>
-               <div className="flex gap-2">
+              </label>
+              <div className="flex gap-2">
                 {/* Country Code Dropdown */}
                 <div className="relative flex-1 max-w-[140px]">
                   <div className="relative">
@@ -240,64 +330,51 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
                     
                     {/* Dropdown Menu */}
                     {isCountryOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {countryCodes.map((country) => (
-                          <button
-                            key={country.code}
-                            type="button"
-                            onClick={() => {
-                              setSelectedCountry(country);
-                              setIsCountryOpen(false);
-                              // Update phone number with new country code
-                              const currentNumber = formData.phoneNumber.replace(/^\+\d+/, '');
-                              setFormData({
-                                ...formData,
-                                phoneNumber: country.code + currentNumber
-                              });
-                            }}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
-                          >
-                            <span className="text-lg">{country.flag}</span>
-                            <span className="font-medium">{country.code}</span>
-                            <span className="text-gray-600 text-sm">{country.name}</span>
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={() => setIsCountryOpen(false)}
+                        />
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {countryCodes.map((country) => (
+                            <button
+                              key={country.code}
+                              type="button"
+                              onClick={() => handleCountrySelect(country)}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <span className="text-lg">{country.flag}</span>
+                              <span className="font-medium">{country.code}</span>
+                              <span className="text-gray-600 text-sm">{country.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
 
-                  {/* Phone Number Input */}
-                  <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={(e) => {
-                        // Auto-add country code if not present
-                        let value = e.target.value;
-                        if (!value.startsWith('+') && !value.startsWith(selectedCountry.code)) {
-                          value = selectedCountry.code + value.replace(/[^\d]/g, '');
-                        }
-                        setFormData({
-                          ...formData,
-                          phoneNumber: value
-                        });
-                      }}
-                      className="input-field pl-10"
-                      placeholder="912345678"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
+                {/* Phone Number Input */}
+                <div className="relative flex-1">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handlePhoneChange}
+                    className="input-field pl-10"
+                    placeholder={`${selectedCountry.code}912345678`}
+                    required
+                    disabled={isLoading}
+                  />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Format: {selectedCountry.code}XXXXXXXXX
-                </p>
-              </div>  
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Example: {selectedCountry.code}912345678
+              </p>
+            </div>
 
-      <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Emergency Contact (Optional)
               </label>
@@ -313,17 +390,17 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
                   disabled={isLoading}
                 />
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Contact person in case of emergency
+              </p>
             </div>
           </div>
         </div>
 
-
-        {/* Role-specific fields */}
-
         {/* Password */}
         <div className="card p-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Security *</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password *
@@ -331,17 +408,54 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="input-field pl-10"
-                  placeholder="Minimum 6 characters"
+                  className="input-field pl-10 pr-10"
+                  placeholder="Create a strong password"
                   required
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  disabled={isLoading}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
+              <div className="mt-2 text-xs space-y-1 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <p className="font-medium text-blue-700">Password Requirements:</p>
+                <ul className="text-blue-600 space-y-1">
+                  <li className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                    At least 8 characters long
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                    At least one uppercase letter (A-Z)
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                    At least one lowercase letter (a-z)
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                    At least one number (0-9)
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-blue-600 rounded-full"></span>
+                    At least one special character (@$!%*?&)
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <div>
@@ -351,16 +465,37 @@ const [isCountryOpen, setIsCountryOpen] = useState(false);
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="input-field pl-10"
+                  className={`input-field pl-10 pr-10 ${
+                    formData.confirmPassword && 
+                    formData.password !== formData.confirmPassword 
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                      : ''
+                  }`}
                   placeholder="Confirm your password"
                   required
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  disabled={isLoading}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+              )}
             </div>
           </div>
         </div>

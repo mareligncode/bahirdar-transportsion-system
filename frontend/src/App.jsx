@@ -158,7 +158,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-          <Route path="/passenger/my-bookings" element={
+          <Route path="/passenger/my-booking" element={
             <ProtectedRoute allowedRoles={['passenger']}>
               <Layout showSidebar>
                 <MyBookings />
