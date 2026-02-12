@@ -36,7 +36,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
-  const { login, loading: authLoading } = useAuth();
+  const { login, isLoading: authLoading } = useAuth();
 
   const {
     control,
@@ -80,7 +80,7 @@ export default function Login() {
       setSuccess('Login successful! Redirecting...');
       
       setTimeout(() => {
-        router.replace('/main');
+        router.replace('/main/home');
       }, 1000);
     } else {
       throw new Error(result.message || 'Login failed');
@@ -125,7 +125,6 @@ export default function Login() {
             <View className="px-6 pt-4">
               {/* Header */}
               <View className="mb-8">
-               // FIND this back button (around line 80-90):
 
 <TouchableOpacity 
   onPress={() => {

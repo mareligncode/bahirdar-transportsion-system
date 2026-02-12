@@ -13,8 +13,10 @@ import {
   Instagram,
   Linkedin
 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 export default function Footer() {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const currentYear = new Date().getFullYear();
 
   return (
@@ -34,14 +36,13 @@ export default function Footer() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-primary-400 bg-clip-text text-transparent">
-                  Bahir Dar Meneharia
+                  {t('bahir_dar_meneharia')}
                 </h2>
-                <p className="text-sm text-gray-400">Smart Transportation System</p>
+                <p className="text-sm text-gray-400">{t('smart_transportation_system')}</p>
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Revolutionizing urban mobility in Bahir Dar with smart, reliable, 
-              and eco-friendly transportation solutions. Connecting people and places seamlessly.
+              {t('revolutionizing_urban_mobility')}
             </p>
             
             {/* App Badges */}
@@ -50,8 +51,8 @@ export default function Footer() {
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5 text-primary-400" />
                   <div>
-                    <p className="text-xs text-gray-400">Download on</p>
-                    <p className="font-semibold">Google Play</p>
+                    <p className="text-xs text-gray-400">{t('download_on')}</p>
+                    <p className="font-semibold">{t('google_play')}</p>
                   </div>
                 </div>
               </div>
@@ -59,8 +60,8 @@ export default function Footer() {
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5 text-primary-400" />
                   <div>
-                    <p className="text-xs text-gray-400">Download on</p>
-                    <p className="font-semibold">App Store</p>
+                    <p className="text-xs text-gray-400">{t('download_on')}</p>
+                    <p className="font-semibold">{t('app_store')}</p>
                   </div>
                 </div>
               </div>
@@ -73,16 +74,16 @@ export default function Footer() {
             <div>
               <h4 className="font-bold text-lg mb-6 flex items-center gap-2">
                 <Navigation className="w-5 h-5 text-primary-400" />
-                Quick Links
+                {t('quick_links')}
               </h4>
               <ul className="space-y-3">
                 {[
-                  { name: 'Home', path: '/' },
-                  { name: 'Book a Ride', path: '/book' },
-                  { name: 'Track Bus', path: '/track' },
-                  { name: 'Routes', path: '/routes' },
-                  { name: 'Fare Calculator', path: '/fare' },
-                  { name: 'Live Schedule', path: '/schedule' },
+                  { name: t('home'), path: '/' },
+                  { name: t('book_a_ride'), path: '/book' },
+                  { name: t('track_bus'), path: '/track' },
+                  { name: t('routes'), path: '/routes' },
+                  { name: t('fare_calculator'), path: '/fare' },
+                  { name: t('live_schedule'), path: '/schedule' },
                 ].map((link) => (
                   <li key={link.name}>
                     <Link 
@@ -101,14 +102,14 @@ export default function Footer() {
             <div>
               <h4 className="font-bold text-lg mb-6 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary-400" />
-                Our Services
+                {t('our_services')}
               </h4>
               <ul className="space-y-3">
                 {[
-                  'City Bus Service',
-                  'Express Routes',
-                  'Monthly Subscription',
-                  'Accessible Transport'
+                  t('city_bus_service'),
+                  t('express_routes'),
+                  t('monthly_subscription'),
+                  t('accessible_transport')
                 ].map((service) => (
                   <li key={service}>
                     <span className="text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center gap-2">
@@ -125,14 +126,14 @@ export default function Footer() {
               <div>
                 <h4 className="font-bold text-lg mb-6 flex items-center gap-2">
                   <Clock className="w-5 h-5 text-primary-400" />
-                  Contact Info
+                  {t('contact_info')}
                 </h4>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0 mt-1" />
                     <span className="text-gray-300">
-                      123 Transportation Hub,<br />
-                      Bahir Dar, Ethiopia
+                      123 {t('transportation_hub')},<br />
+                      {t('bahir_dar')}, {t('ethiopia')}
                     </span>
                   </li>
                   <li className="flex items-center gap-3">
@@ -148,7 +149,7 @@ export default function Footer() {
 
               {/* Social Media */}
               <div>
-                <h4 className="font-bold text-lg mb-4">Follow Us</h4>
+                <h4 className="font-bold text-lg mb-4">{t('follow_us')}</h4>
                 <div className="flex gap-3">
                   {[
                     { icon: Facebook, color: 'hover:bg-blue-600', label: 'Facebook' },
@@ -175,24 +176,24 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">
-              &copy; {currentYear} Bahir Dar Meneharia Transportation System. All rights reserved.
+              &copy; {currentYear} {t('bahir_dar_meneharia_transportation_system')}. {t('all_rights_reserved')}.
             </p>
             
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <Link to="/terms" className="text-gray-400 hover:text-white transition-colors">
-                Terms of Service
+                {t('terms_of_service')}
               </Link>
               <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                Privacy Policy
+                {t('privacy_policy')}
               </Link>
               <Link to="/cookies" className="text-gray-400 hover:text-white transition-colors">
-                Cookie Policy
+                {t('cookie_policy')}
               </Link>
               <Link to="/accessibility" className="text-gray-400 hover:text-white transition-colors">
-                Accessibility
+                {t('accessibility')}
               </Link>
               <Link to="/sitemap" className="text-gray-400 hover:text-white transition-colors">
-                Sitemap
+                {t('sitemap')}
               </Link>
             </div>
           </div>
@@ -201,14 +202,14 @@ export default function Footer() {
           <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs text-gray-500">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Live Tracking Active</span>
+              <span>{t('live_tracking_active')}</span>
             </div>
             <div>•</div>
-            <div>24/7 Customer Support</div>
+            <div>{t('247_customer_support')}</div>
             <div>•</div>
-            <div>500+ Active Vehicles</div>
+            <div>{t('active_vehicles_count', { count: '500+' })}</div>
             <div>•</div>
-            <div>ISO 9001:2022 Certified</div>
+            <div>{t('iso_certified')}</div>
           </div>
         </div>
       </div>

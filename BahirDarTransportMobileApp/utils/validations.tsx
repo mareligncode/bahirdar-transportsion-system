@@ -1,3 +1,4 @@
+// utils/validations.tsx - FIXED VERSION
 import { 
   LoginFormData, 
   RegisterFormData, 
@@ -28,7 +29,7 @@ export const validateLoginForm = (data: LoginFormData): ValidationErrors => {
 export const validateRegisterForm = (data: RegisterFormData): ValidationErrors => {
   const errors: ValidationErrors = {};
 
-  // Full name validation
+  // Full name validation - FIXED FIELD NAME
   if (!data.fullName || data.fullName.trim() === '') {
     errors.name = 'Full name is required';
   } else if (data.fullName.trim().length < 2) {
@@ -44,11 +45,20 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
     errors.email = 'Please enter a valid email address';
   }
 
-  // Phone validation
+  // Phone validation - FIXED FIELD NAME
   if (!data.phoneNumber || data.phoneNumber.trim() === '') {
     errors.phone = 'Phone number is required';
-  } else if (data.phoneNumber.replace(/\D/g, '').length < 9) {
-    errors.phone = 'Please enter a valid phone number';
+  } else {
+    // Remove country code and check digits
+    const phoneDigits = data.phoneNumber.replace(/\D/g, '');
+    const countryCode = data.phoneNumber.includes('+251') ? '251' : '';
+    const numberWithoutCode = phoneDigits.replace(countryCode, '');
+    
+    if (numberWithoutCode.length < 9) {
+      errors.phone = 'Phone number must be at least 9 digits';
+    } else if (!/^[79]/.test(numberWithoutCode)) {
+      errors.phone = 'Ethiopian numbers must start with 7 or 9';
+    }
   }
 
   // Password validation
@@ -67,13 +77,23 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
   }
 
   // Confirm password
-  if (data.password !== data.confirmPassword) {
+  if (!data.confirmPassword || data.confirmPassword.trim() === '') {
+    errors.confirmPassword = 'Please confirm your password';
+  } else if (data.password !== data.confirmPassword) {
     errors.confirmPassword = 'Passwords do not match';
   }
 
   // Terms and conditions
   if (!data.termsAccepted) {
     errors.termsAccepted = 'You must accept the terms and conditions';
+  }
+
+  // Emergency contact (optional)
+  if (data.emergencyContact && data.emergencyContact.trim() !== '') {
+    const emergencyDigits = data.emergencyContact.replace(/\D/g, '');
+    if (emergencyDigits.length < 9) {
+      errors.emergencyContact = 'Please enter a valid emergency contact number';
+    }
   }
 
   return errors;
@@ -135,16 +155,32 @@ export const getPasswordStrength = (password: string) => {
   };
 };
 
-// Helper function to extract phone number without country code
 export const extractPhoneNumber = (phoneWithCode: string, countryCode: string): string => {
   return phoneWithCode.replace(countryCode, '');
 };
 
-// Helper function to validate phone number with country code
 export const validatePhoneWithCountryCode = (phone: string, countryCode: string): boolean => {
   const numberWithoutCode = extractPhoneNumber(phone, countryCode);
   const digitsOnly = numberWithoutCode.replace(/\D/g, '');
   
-  // Basic validation - adjust based on country requirements
   return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+};
+
+export const formatCurrency = (amount: number, currency: string = 'ETB'): string => {
+  return new Intl.NumberFormat('en-ET', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-ET', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 };

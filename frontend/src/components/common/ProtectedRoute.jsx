@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
 export default function ProtectedRoute({ 
   children, 
@@ -7,6 +8,7 @@ export default function ProtectedRoute({
   allowedRoles = [] 
 }) {
   const { isAuthenticated, user, loading } = useAuth();
+  const { t } = useTranslation(); // ✅ ADD THIS
   const location = useLocation();
 
   // Show loading spinner
@@ -14,7 +16,7 @@ export default function ProtectedRoute({
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-14 w-14 border-4 border-primary-200 border-t-primary-600"></div>
-        <p className="mt-4 text-gray-600">Checking authentication...</p>
+        <p className="mt-4 text-gray-600">{t('checking_authentication')}</p> {/* ✅ TRANSLATED */}
       </div>
     );
   }
@@ -40,14 +42,12 @@ export default function ProtectedRoute({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.928-.833-2.698 0L4.398 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Account Deactivated</h2>
-          <p className="text-gray-600 mb-4">Your account has been deactivated by an administrator.</p>
-          <p className="text-sm text-gray-500">Redirecting to login page...</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('account_deactivated')}</h2> {/* ✅ TRANSLATED */}
+          <p className="text-gray-600 mb-4">{t('account_deactivated_message')}</p> {/* ✅ TRANSLATED */}
+          <p className="text-sm text-gray-500">{t('redirecting_to_login')}</p> {/* ✅ TRANSLATED */}
         </div>
       </div>
     );
- 
-
   }
 
   // Role-based access control
@@ -55,8 +55,7 @@ export default function ProtectedRoute({
     const userRole = user?.role;
     let hasAccess = false;
 
-
- console.log('ROLE DEBUG - User role:', userRole, 'Required:', requiredRole, 'Allowed:', allowedRoles);
+    console.log('ROLE DEBUG - User role:', userRole, 'Required:', requiredRole, 'Allowed:', allowedRoles);
 
     // Check specific required role
     if (requiredRole) {

@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
+import { SettingsProvider } from './contexts/SettingsContext';
+import './styles/dark-mode.css';
+import SettingsPage from './pages/SettingsPage';
 // Layout
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -46,7 +48,8 @@ import StationDashboard from './pages/station/Dashboard';
 import StationUsers from './pages/station/Users';
 import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
-
+import Trips from './pages/station/Trips';
+import Vehicle from './pages/station/Vehicles';
 
 // Error Pages
 import NotFound from './pages/errors/NotFound';
@@ -74,6 +77,7 @@ const queryClient = new QueryClient({
 
   function App() {
   return (
+    <SettingsProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
@@ -83,6 +87,15 @@ const queryClient = new QueryClient({
           <Route path="/about" element={<Layout><About /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
           <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+
+
+       <Route path="/settings" element={
+  <ProtectedRoute>
+    <Layout showSidebar>
+    <SettingsPage />
+    </Layout>
+  </ProtectedRoute>
+} />
           
           {/* ===== AUTHENTICATION ROUTES ===== */}
           <Route path="/login" element={<Layout><Login /></Layout>} />
@@ -144,7 +157,7 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-          <Route path="/passenger/my-bookings" element={
+          <Route path="/passenger/my-booking" element={
             <ProtectedRoute allowedRoles={['passenger']}>
               <Layout showSidebar>
                 <MyBookings />
@@ -189,6 +202,25 @@ const queryClient = new QueryClient({
               </Layout>
             </ProtectedRoute>
           } />
+
+
+
+          <Route path="/station/Trips" element={
+            <ProtectedRoute allowedRoles={['station_admin']}>
+              <Layout showSidebar>
+                <Trips />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/station/vehicles" element={
+            <ProtectedRoute allowedRoles={['station_admin']}>
+              <Layout showSidebar>
+                <Vehicle />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           
           <Route path="/station/reports" element={
             <ProtectedRoute allowedRoles={['station_admin']}>
@@ -225,8 +257,6 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
-
-
 
 
           <Route path="/admin/vehicles" element={
@@ -301,6 +331,8 @@ const queryClient = new QueryClient({
         />
       </BrowserRouter>
     </QueryClientProvider>
+
+    </SettingsProvider>
   );
 }
 

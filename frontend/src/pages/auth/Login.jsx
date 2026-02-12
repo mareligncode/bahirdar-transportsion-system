@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Login() {
+  const { t } = useTranslation();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,7 +28,7 @@ export default function Login() {
 
     try {
       if (!email || !password) {
-        throw new Error('Please enter both email and password');
+        throw new Error(t('enterBothEmailAndPassword'));
       }
 
       const result = await login(email, password);
@@ -54,11 +58,11 @@ export default function Login() {
           }
         }
       } else {
-        throw new Error(result.message || 'Login failed');
+        throw new Error(result.message || t('loginFailed'));
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Invalid email or password. Please try again.');
+      console.error(t('loginError'), err);
+      setError(err.message || t('invalidCredentials'));
 
       if (err.response?.data?.message) {
         setError(err.response.data.message);
@@ -66,21 +70,6 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-
-  const handleDemoLogin = async (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      if (form) {
-        form.dispatchEvent(
-          new Event('submit', { cancelable: true, bubbles: true })
-        );
-      }
-    }, 100);
   };
 
   return (
@@ -93,10 +82,10 @@ export default function Login() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome Back
+            {t('welcomeBack')}
           </h1>
           <p className="text-gray-600">
-            Sign in to Bahir Dar Meneharia
+            {t('signInToSystem')}
           </p>
         </div>
       </div>
@@ -106,7 +95,7 @@ export default function Login() {
           <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Login failed</p>
+              <p className="font-medium">{t('loginFailed')}</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -114,7 +103,7 @@ export default function Login() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
+            {t('emailAddress')}
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -126,7 +115,7 @@ export default function Login() {
                 setError('');
               }}
               className="input-field pl-10"
-              placeholder="Enter your email"
+              placeholder={t('emailPlaceholder')}
               required
               disabled={isLoading}
             />
@@ -135,61 +124,55 @@ export default function Login() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Password
+            {t('password')}
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setError('');
               }}
-              className="input-field pl-10"
-              placeholder="Enter your password"
+              className="input-field pl-10 pr-10"
+              placeholder={t('passwordPlaceholder')}
               required
               disabled={isLoading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              disabled={isLoading}
+              aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+            >
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
 
-
-<div className="text-right">
-  <Link 
-    to="/forgot-password" 
-    className="text-sm text-primary-600 hover:text-primary-800 font-medium"
-  >
-    Forgot password?
-  </Link>
-</div>
-
-
+        <div className="text-right">
+          <Link 
+            to="/forgot-password" 
+            className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+          >
+            {t('forgotPassword')}
+          </Link>
+        </div>
 
         <button
           type="submit"
           disabled={isLoading}
           className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50"
         >
-          {isLoading ? 'Signing in...' : 'Sign In'}
+          {isLoading ? t('signingIn') : t('signIn')}
         </button>
       </form>
-
-      {/* Debug info (development only)
-      {import.meta.env.DEV && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 font-medium mb-2">
-            Debug Info:
-          </p>
-          <p className="text-xs text-gray-500">
-            Redirect to: {redirectTo}
-          </p>
-          <p className="text-xs text-gray-500">
-            API URL:{' '}
-            {import.meta.env.VITE_API_URL || 'http://localhost:5000'}
-          </p>
-        </div>
-      )} */}
     </div>
   );
 }

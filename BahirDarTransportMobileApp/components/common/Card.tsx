@@ -1,4 +1,4 @@
-// components/common/Card.tsx
+// components/common/Card.tsx - SIMPLIFIED VERSION
 import React, { ReactNode } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 
@@ -6,24 +6,29 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   onPress?: () => void;
-  elevated?: boolean;
 }
 
-export function Card({ children, className = '', onPress, elevated = true }: CardProps) {
-  const cardClasses = `bg-white rounded-xl p-4 ${
-    elevated ? 'shadow-sm shadow-black/5' : ''
-  } ${className}`;
-
+export function Card({ 
+  children, 
+  className = '', 
+  onPress,
+}: CardProps) {
+  const baseClasses = 'bg-white rounded-xl p-4 border border-gray-200';
+  
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} className={cardClasses}>
+      <TouchableOpacity
+        className={`${baseClasses} ${className}`}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
         {children}
       </TouchableOpacity>
     );
   }
 
   return (
-    <View className={cardClasses}>
+    <View className={`${baseClasses} ${className}`}>
       {children}
     </View>
   );

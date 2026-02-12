@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp\app\auth\Register.tsx - FIXED VERSION
 import React, { useState, useMemo, useRef, useEffect } from 'react'; 
 import {
   View,
@@ -71,7 +70,7 @@ const confirmPasswordInputRef = useRef<TextInput>(null!);
   
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const { register: registerUser, loading: authLoading } = useAuth();
+  const { register: registerUser, isLoading: authLoading } = useAuth();
 
   const {
     control,
@@ -124,14 +123,24 @@ const confirmPasswordInputRef = useRef<TextInput>(null!);
   }, [password]);
 
   // Check if password meets all criteria
-  const passwordMeetsAllCriteria = useMemo(() => {
-    if (!password) return false;
-    
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    const hasMinLength = password.length >= 8;
+const passwordMeetsAllCriteria = useMemo(() => {
+  if (!password) return false;
+  
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasMinLength = password.length >= 8;
+
+   console.log('Password criteria check:', {
+    password,
+    hasUpperCase,
+    hasLowerCase,
+    hasNumbers,
+    hasSpecialChar,
+    hasMinLength,
+    meetsAll: hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && hasMinLength
+  });
     
     return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && hasMinLength;
   }, [password]);
@@ -179,7 +188,7 @@ const confirmPasswordInputRef = useRef<TextInput>(null!);
         setSuccess('Account created successfully! Redirecting...');
         
         setTimeout(() => {
-          router.replace('/main');
+          router.replace('/main/home');
         }, 2000);
       } else {
         throw new Error(result.message || 'Registration failed');
@@ -216,21 +225,10 @@ const confirmPasswordInputRef = useRef<TextInput>(null!);
   };
 
 const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
-  // Simple approach - just ensure the form is visible
   if (scrollViewRef.current) {
     scrollViewRef.current.scrollToEnd({ animated: true });
   }
 };
-<Input
-  // ... other props
-  onFocus={() => {
-    // Simple scroll to show the input
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 300);
-  }}
-/>
-  // Handle keyboard next navigation
   const handleNextField = (currentRef: React.RefObject<TextInput>, nextRef: React.RefObject<TextInput>) => {
     if (nextRef.current) {
       nextRef.current.focus();
@@ -772,7 +770,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                 )}
               />
 
-              {/* Submit Button */}
               <Button
                 title="Create Account"
                 onPress={handleSubmit(handleRegister)}
@@ -782,7 +779,7 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                 size="large"
                 className="mb-6"
                 fullWidth
-              />
+                    />
 
               {/* Login Link */}
               <View className="pt-6 border-t border-gray-200">

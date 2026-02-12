@@ -1,300 +1,379 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Image,
+  Dimensions,
+  Animated,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader } from '@/components/common/Loader';
 import { 
-  Search, 
-  MapPin, 
-  Clock, 
-  Shield, 
-  DollarSign, 
-  Ticket, 
-  Users, 
-  Star, 
-  Phone, 
-  Headphones,
-  UserCircle,
-  Settings,
-  Bell
+  Bus,
+  Shield,
+  Clock,
+  Ticket,
+  CreditCard,
+  Users,
+  Star,
+  ArrowRight,
+  Sparkles,
+  CheckCircle,
+  ChevronRight,
+  PlayCircle,
+  PhoneCall,
+  Mail,
+  Map
 } from 'lucide-react-native';
 
+const { width } = Dimensions.get('window');
+
+// Use your existing images
+const HERO_IMAGES = [
+  require('@/assets/images/image1.png'),
+  require('@/assets/images/image2.png'),
+  require('@/assets/images/image3.png'),
+];
+
+// Fallback color if image fails to load
+const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
+
 export default function LandingPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [fadeAnim] = useState(new Animated.Value(1));
+  const [imageError, setImageError] = useState(false);
+
+  // If already authenticated, redirect to home
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/tabs/home');
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+        setImageError(false);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  if (isLoading) {
+    return <Loader message="Loading..." />;
+  }
+
+  const features = [
+    {
+      icon: Bus,
+      title: '100+ Buses',
+      description: 'Modern fleet across city',
+      color: 'bg-blue-500',
+    },
+    {
+      icon: Clock,
+      title: 'On Time',
+      description: '95% punctuality rate',
+      color: 'bg-green-500',
+    },
+    {
+      icon: Shield,
+      title: 'Safe Travel',
+      description: 'Verified drivers & routes',
+      color: 'bg-purple-500',
+    },
+    {
+      icon: CreditCard,
+      title: 'Easy Payment',
+      description: 'Multiple payment options',
+      color: 'bg-orange-500',
+    },
+  ];
+
+  const steps = [
+    {
+      number: '01',
+      title: 'Search & Select',
+      description: 'Find your route and choose preferred time',
+      icon: Bus,
+    },
+    {
+      number: '02',
+      title: 'Book & Pay',
+      description: 'Secure payment with multiple options',
+      icon: CreditCard,
+    },
+    {
+      number: '03',
+      title: 'Get Ticket',
+      description: 'Receive digital QR ticket instantly',
+      icon: Ticket,
+    },
+    {
+      number: '04',
+      title: 'Travel',
+      description: 'Board your bus and enjoy the journey',
+      icon: Users,
+    },
+  ];
+
+  const testimonials = [
+    {
+      id: 1,
+      name: 'Alem Gebre',
+      role: 'Daily Commuter',
+      text: 'Saves me 2 hours every day! Very reliable service.',
+      rating: 5,
+    },
+    {
+      id: 2,
+      name: 'Mikias Hailu',
+      role: 'Student',
+      text: 'Affordable and reliable. Perfect for campus travel.',
+      rating: 5,
+    },
+    {
+      id: 3,
+      name: 'Selamawit Tadele',
+      role: 'Tourist Guide',
+      text: 'Makes showing tourists around Bahir Dar so easy.',
+      rating: 4,
+    },
+  ];
+
+  const quickDemos = [
+    {
+      id: 1,
+      title: 'Booking Demo',
+      icon: Ticket,
+      time: '1 min',
+      route: '/tabs/trips/search',
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      id: 2,
+      title: 'View Tickets',
+      icon: CheckCircle,
+      time: 'QR Code',
+      route: '/tabs/tickets',
+      color: 'from-green-500 to-emerald-500',
+    },
+    {
+      id: 3,
+      title: 'Payment',
+      icon: CreditCard,
+      time: 'Secure',
+      route: '/(screens)/payment/checkout',
+      color: 'from-purple-500 to-pink-500',
+    },
+    {
+      id: 4,
+      title: 'My Profile',
+      icon: Users,
+      time: 'Account',
+      route: '/tabs/profile',
+      color: 'from-orange-500 to-red-500',
+    },
+  ];
+
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
       
       <ScrollView 
-        className="flex-1" 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        className="flex-1"
       >
-        {/* Hero Section */}
-        <View className="relative">
-          <Image
-            source={require('@/assets/images/Screenshot 2026-02-04 000534.png')}
-            className="w-full h-72"
-            resizeMode="cover"
-          />
-          {/* Gradient Overlay */}
-          <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-transparent" />
+        {/* Hero Section with Auto-sliding Images */}
+        <View className="relative h-80">
+          {imageError ? (
+            <View 
+              className="absolute w-full h-full"
+              style={{ backgroundColor: FALLBACK_COLORS[currentSlide] }}
+            />
+          ) : (
+            <Animated.Image
+              source={HERO_IMAGES[currentSlide]}
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                opacity: fadeAnim 
+              }}
+              className="absolute"
+              resizeMode="cover"
+              onError={handleImageError}
+            />
+          )}
           
-          {/* Content Overlay */}
-          <View className="absolute inset-0 px-6 justify-center">
-            <Text className="text-3xl font-bold text-white mb-4 leading-tight">
-              Bahir Dar Transport
+          {/* Overlay gradient */}
+          <View className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+          
+          <View className="absolute top-6 left-4 right-4">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <Sparkles size={28} color="#FFFFFF" />
+                <Text className="text-2xl font-bold text-white ml-2">
+                  BahirDar Transport
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/Login')}
+                className="border border-white/30 px-4 py-2 rounded-full"
+                activeOpacity={0.7}
+              >
+                <Text className="text-white font-medium">Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View className="absolute bottom-6 left-4 right-4">
+            <Text className="text-3xl font-bold text-white mb-2 leading-tight">
+              Smart Travel in{' '}
+              <Text className="text-yellow-300">Bahir Dar</Text>
             </Text>
-            <Text className="text-lg text-white/90 mb-8 leading-relaxed">
-              Your trusted companion for hassle-free city transportation
+            <Text className="text-lg text-white/90 mb-6">
+              Book buses, travel safely and conveniently
             </Text>
             
             <TouchableOpacity
-              onPress={() => router.push('/auth/Login')}
-              className="bg-white py-4 rounded-xl active:opacity-90"
+              onPress={() => router.push('/auth/Register')}
+              className="bg-white py-4 px-6 rounded-full flex-row items-center justify-center active:opacity-90 shadow-lg"
               activeOpacity={0.8}
             >
-              <Text className="text-blue-600 text-center font-semibold text-lg">
-                Start Your Journey
+              <Text className="text-blue-600 font-bold text-lg">
+                Get Started
               </Text>
+              <ArrowRight size={20} color="#3B82F6" className="ml-2" />
             </TouchableOpacity>
+          </View>
+
+          {/* Dots indicator */}
+          <View className="absolute bottom-32 left-0 right-0 flex-row justify-center">
+            {HERO_IMAGES.map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setCurrentSlide(index)}
+                className="mx-1"
+              >
+                <View
+                  className={`w-2 h-2 rounded-full ${
+                    currentSlide === index ? 'bg-white w-4' : 'bg-white/50'
+                  }`}
+                />
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        {/* Quick Access - Matches your folder structure */}
-        <View className="px-6 py-8 bg-blue-50">
-          <Text className="text-xl font-bold text-gray-800 mb-6 text-center">
-            Quick Access
+        {/* Quick Stats */}
+        <View className="px-4 py-6 -mt-4">
+          <View className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+            <View className="flex-row flex-wrap -mx-2">
+              {features.map((feature, index) => (
+                <View key={index} className="w-1/2 px-2 mb-4">
+                  <View className="flex-row items-center">
+                    <View className={`${feature.color} w-10 h-10 rounded-lg items-center justify-center mr-3`}>
+                      <feature.icon size={20} color="white" />
+                    </View>
+                    <View>
+                      <Text className="font-bold text-gray-900">
+                        {feature.title}
+                      </Text>
+                      <Text className="text-gray-600 text-xs">
+                        {feature.description}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* How It Works - Horizontal Scroll for Mobile */}
+        <View className="px-4 py-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-xl font-bold text-gray-900">
+              How It Works
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/auth/Register')}>
+              <Text className="text-blue-600 font-semibold">Try Now →</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {steps.map((step, index) => (
+              <View key={index} className="w-64 mr-4">
+                <View className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">
+                      <Text className="text-blue-600 font-bold">
+                        {step.number}
+                      </Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-semibold text-gray-800">
+                        {step.title}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-gray-600 text-sm mb-4">
+                    {step.description}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <step.icon size={16} color="#3B82F6" />
+                    <Text className="text-blue-600 text-sm ml-2">
+                      Learn more
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Interactive Demos */}
+        <View className="px-4 py-6 bg-gray-50">
+          <Text className="text-xl font-bold text-center text-gray-900 mb-6">
+            Try Interactive Features
           </Text>
           
           <View className="flex-row flex-wrap -mx-2">
-            {[
-              { 
-                icon: Search, 
-                title: 'Find Trips', 
-                route: '/main/trips/search',
-                color: 'bg-blue-100'
-              },
-              { 
-                icon: MapPin, 
-                title: 'Live Tracking', 
-                route: '/main/tracking/live-tracking',
-                color: 'bg-green-100'
-              },
-              { 
-                icon: Ticket, 
-                title: 'My Tickets', 
-                route: '/main/tickets/index',
-                color: 'bg-purple-100'
-              },
-              { 
-                icon: Clock, 
-                title: 'Bookings', 
-                route: '/profile/bookings',
-                color: 'bg-orange-100'
-              },
-              { 
-                icon: DollarSign, 
-                title: 'Payments', 
-                route: '/main/payment/history',
-                color: 'bg-red-100'
-              },
-              { 
-                icon: Bell, 
-                title: 'Notifications', 
-                route: '/main/home/notification',
-                color: 'bg-indigo-100'
-              },
-              { 
-                icon: UserCircle, 
-                title: 'Profile', 
-                route: '/profile/index',
-                color: 'bg-teal-100'
-              },
-              { 
-                icon: Settings, 
-                title: 'Settings', 
-                route: '/settings/index',
-                color: 'bg-gray-100'
-              },
-            ].map((action, index) => (
+            {quickDemos.map((demo) => (
               <TouchableOpacity
-                key={index}
-                onPress={() => router.push(action.route)}
+                key={demo.id}
+                onPress={() => router.push(demo.route)}
                 className="w-1/2 px-2 mb-4"
                 activeOpacity={0.8}
               >
-                <View className={`${action.color} p-5 rounded-xl items-center`}>
-                  <action.icon size={24} color="#3B82F6" />
-                  <Text className="text-gray-800 font-medium mt-2 text-center text-sm">
-                    {action.title}
+                <View className={`bg-gradient-to-br ${demo.color} p-5 rounded-xl shadow-sm`}>
+                  <demo.icon size={28} color="white" />
+                  <Text className="text-white font-bold mt-3 mb-1">
+                    {demo.title}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* How It Works - Updated to match your screens */}
-        <View className="px-6 py-12 bg-white">
-          <Text className="text-2xl font-bold text-center text-gray-800 mb-8">
-            Travel in 4 Easy Steps
-          </Text>
-          
-          <View className="space-y-4">
-            {[
-              { 
-                icon: Search, 
-                title: 'Search Trips', 
-                desc: 'Browse available trips from your location',
-                screen: '/main/trips/index'
-              },
-              { 
-                icon: Users, 
-                title: 'Book Seats', 
-                desc: 'Select seats and confirm your booking',
-                screen: '/main/trips/seat-selection'
-              },
-              { 
-                icon: MapPin, 
-                title: 'Track & Travel', 
-                desc: 'Live tracking and digital ticket access',
-                screen: '/main/tracking/live-tracking'
-              },
-              { 
-                icon: DollarSign, 
-                title: 'Easy Payment', 
-                desc: 'Secure payment with multiple options',
-                screen: '/main/payment/checkout'
-              },
-            ].map((step, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => router.push(step.screen)}
-                activeOpacity={0.8}
-              >
-                <View className="flex-row items-center bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-4">
-                    <step.icon size={20} color="#3B82F6" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-800">{step.title}</Text>
-                    <Text className="text-gray-600 text-sm">{step.desc}</Text>
-                  </View>
-                  <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
-                    <Text className="text-white font-bold text-sm">{index + 1}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Features - Matches your app sections */}
-        <View className="px-6 py-12 bg-gray-50">
-          <Text className="text-2xl font-bold text-center text-gray-800 mb-8">
-            Complete Travel Solution
-          </Text>
-          
-          <View className="space-y-6">
-            {[
-              {
-                icon: Ticket,
-                title: 'Digital Tickets',
-                desc: 'Access all your tickets in one place, generate QR codes',
-                screen: '/main/tickets/index'
-              },
-              {
-                icon: Shield,
-                title: 'Safe Travel',
-                desc: 'Verified drivers, emergency contacts, trip sharing',
-                screen: '/main/support/help'
-              },
-              {
-                icon: DollarSign,
-                title: 'Payment History',
-                desc: 'Track all your transactions and download receipts',
-                screen: '/main/payment/history'
-              },
-              {
-                icon: Users,
-                title: 'Booking Management',
-                desc: 'View, cancel or reschedule your bookings easily',
-                screen: '/main/booking/index'
-              },
-            ].map((feature, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => router.push(feature.screen)}
-                activeOpacity={0.8}
-              >
-                <View className="flex-row items-start bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-                  <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4 flex-shrink-0">
-                    <feature.icon size={24} color="#3B82F6" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-800 mb-1">
-                      {feature.title}
-                    </Text>
-                    <Text className="text-gray-600 leading-relaxed">
-                      {feature.desc}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Support Section - Direct links to your support screens */}
-        <View className="px-6 py-12 bg-white">
-          <Text className="text-2xl font-bold text-center text-gray-800 mb-6">
-            Need Assistance?
-          </Text>
-          
-          <View className="flex-row flex-wrap -mx-2 mb-6">
-            {[
-              {
-                icon: Phone,
-                title: 'Contact Us',
-                route: '/main/support/contact',
-                color: 'bg-blue-100'
-              },
-              {
-                icon: Headphones,
-                title: 'Help Center',
-                route: '/main/support/help',
-                color: 'bg-green-100'
-              },
-              {
-                icon: Star,
-                title: 'Feedback',
-                route: '/main/support/feedback',
-                color: 'bg-purple-100'
-              },
-              {
-                icon: Shield,
-                title: 'Safety',
-                route: '/main/support/help',
-                color: 'bg-orange-100'
-              },
-            ].map((support, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => router.push(support.route)}
-                className="w-1/2 px-2 mb-4"
-                activeOpacity={0.8}
-              >
-                <View className={`${support.color} p-5 rounded-xl items-center`}>
-                  <support.icon size={24} color="#3B82F6" />
-                  <Text className="text-gray-800 font-medium mt-2 text-center text-sm">
-                    {support.title}
+                  <Text className="text-white/80 text-sm">
+                    {demo.time}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -302,78 +381,164 @@ export default function LandingPage() {
           </View>
           
           <TouchableOpacity
-            onPress={() => router.push('/auth/Register')}
-            className="bg-blue-600 py-4 rounded-xl active:opacity-90"
-            activeOpacity={0.8}
+            onPress={() => router.push('/tabs/trips/search')}
+            className="mt-6 bg-white py-4 rounded-xl border border-gray-200 flex-row items-center justify-center"
+            activeOpacity={0.7}
           >
-            <Text className="text-white text-center font-semibold text-lg">
-              Create Free Account
+            <PlayCircle size={20} color="#3B82F6" />
+            <Text className="text-blue-600 font-semibold ml-2">
+              Start Full Demo (3 min)
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* App Sections Preview */}
-        <View className="px-6 py-12 bg-blue-50">
-          <Text className="text-2xl font-bold text-center text-gray-800 mb-6">
-            Everything You Need
+        {/* Testimonials */}
+        <View className="px-4 py-6">
+          <Text className="text-xl font-bold text-center text-gray-900 mb-6">
+            Loved by Passengers
           </Text>
           
-          <View className="space-y-4">
-            {[
-              'Trips & Booking Management',
-              'Live Vehicle Tracking',
-              'Digital Ticket System',
-              'Secure Payment Gateway',
-              'Booking History & Receipts',
-              'Profile & Settings',
-              '24/7 Customer Support',
-              'Safety & Emergency Features',
-            ].map((feature, index) => (
-              <View key={index} className="flex-row items-center">
-                <View className="w-6 h-6 bg-blue-600 rounded-full items-center justify-center mr-3">
-                  <Text className="text-white text-xs">✓</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {testimonials.map((testimonial) => (
+              <View
+                key={testimonial.id}
+                className="bg-white mr-4 p-5 rounded-xl shadow-sm border border-gray-100 w-72"
+              >
+                <View className="flex-row items-center mb-4">
+                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
+                    <Users size={20} color="#3B82F6" />
+                  </View>
+                  <View className="ml-3">
+                    <Text className="font-bold text-gray-900">
+                      {testimonial.name}
+                    </Text>
+                    <Text className="text-gray-600 text-xs">
+                      {testimonial.role}
+                    </Text>
+                  </View>
                 </View>
-                <Text className="text-gray-700 flex-1">{feature}</Text>
+                
+                <Text className="text-gray-700 text-sm mb-4 leading-relaxed">
+                  "{testimonial.text}"
+                </Text>
+                
+                <View className="flex-row">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      size={14}
+                      fill={i < testimonial.rating ? "#F59E0B" : "none"}
+                      color="#F59E0B"
+                    />
+                  ))}
+                </View>
               </View>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Final CTA */}
-        <View className="px-6 py-12 bg-blue-600">
-          <View className="items-center">
-            <MapPin size={48} color="white" />
-            <Text className="text-2xl font-bold text-white text-center mt-4 mb-3">
-              Ready to Explore Bahir Dar?
+        <View className="px-4 py-8">
+          <View className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6">
+            <Text className="text-2xl font-bold text-white text-center mb-4">
+              Ready to Travel Smarter?
             </Text>
-            <Text className="text-white/90 text-center mb-8">
-              Join thousands of satisfied passengers
+            <Text className="text-white/90 text-center mb-6">
+              Join thousands of happy passengers
             </Text>
             
-            <View className="flex-row space-x-4 w-full max-w-xs">
+            <View className="space-y-3">
               <TouchableOpacity
-                onPress={() => router.push('/auth/Login')}
-                className="bg-white py-3 px-6 rounded-xl flex-1 active:opacity-90"
+                onPress={() => router.push('/auth/Register')}
+                className="bg-white py-4 rounded-xl active:opacity-90"
                 activeOpacity={0.8}
               >
-                <Text className="text-blue-600 font-bold text-center">
-                  Sign In
+                <Text className="text-blue-600 font-bold text-center text-lg">
+                  Create Account
                 </Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                onPress={() => router.push('/auth/Register')}
-                className="bg-transparent border-2 border-white py-3 px-6 rounded-xl flex-1 active:opacity-90"
+                onPress={() => router.push('/auth/Login')}
+                className="bg-transparent border-2 border-white py-4 rounded-xl active:opacity-90"
                 activeOpacity={0.8}
               >
-                <Text className="text-white font-bold text-center">
-                  Sign Up
+                <Text className="text-white font-bold text-center text-lg">
+                  Sign In to Your Account
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => router.replace('/tabs/home')}
+                className="py-3"
+              >
+                <Text className="text-white/70 text-center">
+                  Or explore features as guest →
                 </Text>
               </TouchableOpacity>
             </View>
             
-            <Text className="text-white/70 text-center mt-6 text-sm">
-              Free to use • No hidden charges
+            <View className="flex-row justify-center space-x-4 mt-6">
+              <View className="flex-row items-center">
+                <CheckCircle size={14} color="#86EFAC" />
+                <Text className="text-white/80 text-xs ml-1">No card needed</Text>
+              </View>
+              <View className="flex-row items-center">
+                <CheckCircle size={14} color="#86EFAC" />
+                <Text className="text-white/80 text-xs ml-1">Free to use</Text>
+              </View>
+              <View className="flex-row items-center">
+                <CheckCircle size={14} color="#86EFAC" />
+                <Text className="text-white/80 text-xs ml-1">1-min setup</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Contact & Support */}
+        <View className="px-4 py-6 bg-gray-900">
+          <View className="items-center">
+            <Text className="text-white text-xl font-bold mb-6">
+              Need Help Getting Started?
+            </Text>
+            
+            <View className="flex-row space-x-6 mb-6">
+              <TouchableOpacity 
+                className="flex-1 bg-white/10 p-4 rounded-xl items-center"
+                activeOpacity={0.7}
+              >
+                <PhoneCall size={20} color="white" />
+                <Text className="text-white text-sm mt-2">Call Support</Text>
+                <Text className="text-white/60 text-xs">+251 123 456 789</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                className="flex-1 bg-white/10 p-4 rounded-xl items-center"
+                activeOpacity={0.7}
+              >
+                <Mail size={20} color="white" />
+                <Text className="text-white text-sm mt-2">Email Us</Text>
+                <Text className="text-white/60 text-xs">help@bahirdartransport.et</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="flex-row space-x-6 mb-8">
+              <TouchableOpacity onPress={() => router.push('/privacy')}>
+                <Text className="text-gray-400">Privacy Policy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/terms')}>
+                <Text className="text-gray-400">Terms of Service</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(screens)/support/help')}>
+                <Text className="text-gray-400">FAQs</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Text className="text-gray-500 text-center text-sm mb-2">
+              © 2024 BahirDar Transport. Making city travel better.
+            </Text>
+            <Text className="text-gray-600 text-xs">
+              Available on Web, iOS & Android
             </Text>
           </View>
         </View>

@@ -53,12 +53,16 @@ import {
   Visibility as ViewIcon,
   LocationCity as CityIcon,
   Code as CodeIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { format } from 'date-fns';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const Stations = () => {
+  const { t } = useTranslation();
+  
   // State variables
   const [stations, setStations] = useState([]);
   const [filteredStations, setFilteredStations] = useState([]);
@@ -79,8 +83,9 @@ const Stations = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openAssignManagerDialog, setOpenAssignManagerDialog] = useState(false);
   
-  // Form states
+  // Form states with proper initialization
   const [formData, setFormData] = useState({
     stationCode: '',
     stationName: '',
@@ -92,13 +97,34 @@ const Stations = () => {
     isActive: true
   });
   
-  const [editFormData, setEditFormData] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    stationCode: '',
+    stationName: '',
+    location: '',
+    city: '',
+    contactPhone: '',
+    contactEmail: '',
+    manager: '',
+    isActive: true,
+    _id: ''
+  });
+
+  // Manager assignment form state
+  const [managerAssignmentData, setManagerAssignmentData] = useState({
+    stationId: '',
+    stationName: '',
+    manager: '',
+    action: 'assign'
+  });
+  
   const [selectedStation, setSelectedStation] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [managerAssignmentLoading, setManagerAssignmentLoading] = useState(false);
   
   // Data for dropdowns
   const [cities, setCities] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [availableManagers, setAvailableManagers] = useState([]);
   const [managersLoading, setManagersLoading] = useState(false);
   const [userRole, setUserRole] = useState('');
 
@@ -116,10 +142,10 @@ const Stations = () => {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUserRole(payload.role);
       } catch (err) {
-        console.error('Error parsing token:', err);
+        console.error(t('errors.tokenParse'), err);
       }
     }
-  }, []);
+  }, [t]);
 
   // Fetch stations
   const fetchStations = useCallback(async () => {
@@ -148,14 +174,14 @@ const Stations = () => {
       setTotalStations(paginationData.totalStations || stationsData.length);
       setError('');
     } catch (err) {
-      console.error('Error fetching stations:', err);
-      setError(err.response?.data?.message || 'Failed to load stations');
+      console.error(t('errors.fetchStations'), err);
+      setError(err.response?.data?.message || t('errors.failedToLoadStations'));
       setStations([]);
       setFilteredStations([]);
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm, cityFilter, statusFilter]);
+  }, [page, rowsPerPage, searchTerm, cityFilter, statusFilter, t]);
 
   // Fetch active stations for cities dropdown
   const fetchActiveStations = useCallback(async () => {
@@ -166,38 +192,49 @@ const Stations = () => {
       const uniqueCities = [...new Set(activeStations.map(station => station.city).filter(Boolean))];
       setCities(uniqueCities);
     } catch (err) {
-      console.error('Error fetching active stations:', err);
+      console.error(t('errors.fetchActiveStations'), err);
     }
-  }, []);
+  }, [t]);
 
   // Fetch station admins for manager dropdown (only for super_admin)
   const fetchStationAdmins = useCallback(async () => {
     if (userRole !== 'super_admin') {
       setManagers([]);
+      setAvailableManagers([]);
       return;
     }
 
     setManagersLoading(true);
     try {
-      // Fetch all users - FIXED: Your backend returns { success: true, data: { users: [] } }
       const usersRes = await api.get('/api/auth/all-users');
       
-      // CORRECTED: Access the correct data structure
-      const allUsers = usersRes.data?.data?.users || usersRes.data?.users || [];
+      let allUsers = [];
       
-      // Filter for active station admins
-      const stationAdmins = allUsers.filter(user => 
-        user.role === 'station_admin' && user.isActive
-      );
+      if (usersRes.data?.success && usersRes.data?.data?.users) {
+        allUsers = usersRes.data.data.users;
+      } else if (usersRes.data?.data?.users) {
+        allUsers = usersRes.data.data.users;
+      } else if (usersRes.data?.users) {
+        allUsers = usersRes.data.users;
+      } else if (Array.isArray(usersRes.data)) {
+        allUsers = usersRes.data;
+      }
+      
+      const stationAdmins = allUsers.filter(user => {
+        return user.role === 'station_admin' && user.isActive === true;
+      });
       
       setManagers(stationAdmins);
+      setAvailableManagers(stationAdmins);
+      
     } catch (userErr) {
-      console.error('Error fetching station admins:', userErr);
+      console.error(t('errors.fetchStationAdmins'), userErr);
       setManagers([]);
+      setAvailableManagers([]);
     } finally {
       setManagersLoading(false);
     }
-  }, [userRole]);
+  }, [userRole, t]);
 
   useEffect(() => {
     fetchStations();
@@ -226,15 +263,15 @@ const Stations = () => {
   const validateForm = (data) => {
     const errors = [];
     
-    if (!data.stationCode?.trim()) errors.push('Station code is required');
-    if (!data.stationName?.trim()) errors.push('Station name is required');
-    if (!data.location?.trim()) errors.push('Location is required');
-    if (!data.city?.trim()) errors.push('City is required');
-    if (!data.contactPhone?.trim()) errors.push('Contact phone is required');
-    if (!data.contactEmail?.trim()) errors.push('Contact email is required');
+    if (!data.stationCode?.trim()) errors.push(t('validation.stationCodeRequired'));
+    if (!data.stationName?.trim()) errors.push(t('validation.stationNameRequired'));
+    if (!data.location?.trim()) errors.push(t('validation.locationRequired'));
+    if (!data.city?.trim()) errors.push(t('validation.cityRequired'));
+    if (!data.contactPhone?.trim()) errors.push(t('validation.contactPhoneRequired'));
+    if (!data.contactEmail?.trim()) errors.push(t('validation.contactEmailRequired'));
     
     if (data.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contactEmail)) {
-      errors.push('Invalid email format');
+      errors.push(t('validation.invalidEmailFormat'));
     }
     
     return errors;
@@ -251,19 +288,30 @@ const Stations = () => {
     setFormLoading(true);
     try {
       const stationData = {
-        ...formData,
-        stationCode: formData.stationCode.toUpperCase().trim()
+        stationCode: formData.stationCode.toUpperCase().trim(),
+        stationName: formData.stationName.trim(),
+        location: formData.location.trim(),
+        city: formData.city.trim(),
+        contactPhone: formData.contactPhone.trim(),
+        contactEmail: formData.contactEmail.trim(),
+        isActive: formData.isActive
       };
 
+      // Only add manager field if a manager is selected
+      if (formData.manager && formData.manager.trim()) {
+        stationData.manager = formData.manager.trim();
+      }
+
       const response = await api.post('/api/station/register', stationData);
-      setSuccess('Station created successfully!');
+      setSuccess(t('messages.stationCreated'));
       setOpenCreateDialog(false);
       resetForm();
       fetchStations();
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to create station');
+      console.error(t('errors.createStation'), err);
+      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || t('errors.failedToCreateStation'));
     } finally {
       setFormLoading(false);
     }
@@ -280,19 +328,30 @@ const Stations = () => {
     setFormLoading(true);
     try {
       const stationData = {
-        ...editFormData,
-        stationCode: editFormData.stationCode.toUpperCase().trim()
+        stationCode: editFormData.stationCode.toUpperCase().trim(),
+        stationName: editFormData.stationName.trim(),
+        location: editFormData.location.trim(),
+        city: editFormData.city.trim(),
+        contactPhone: editFormData.contactPhone.trim(),
+        contactEmail: editFormData.contactEmail.trim(),
+        isActive: editFormData.isActive
       };
 
+      // Only add manager field if a manager is selected
+      if (editFormData.manager && editFormData.manager.trim()) {
+        stationData.manager = editFormData.manager.trim();
+      }
+
       const response = await api.put(`/api/station/${editFormData._id}`, stationData);
-      setSuccess('Station updated successfully!');
+      setSuccess(t('messages.stationUpdated'));
       setOpenEditDialog(false);
-      setEditFormData(null);
+      resetEditForm();
       fetchStations();
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to update station');
+      console.error(t('errors.editStation'), err);
+      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || t('errors.failedToUpdateStation'));
     } finally {
       setFormLoading(false);
     }
@@ -303,14 +362,15 @@ const Stations = () => {
     setFormLoading(true);
     try {
       await api.delete(`/api/station/${selectedStation._id}`);
-      setSuccess('Station deleted successfully!');
+      setSuccess(t('messages.stationDeleted'));
       setOpenDeleteDialog(false);
       setSelectedStation(null);
       fetchStations();
       fetchActiveStations();
       fetchStationAdmins();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete station');
+      console.error(t('errors.deleteStation'), err);
+      setError(err.response?.data?.message || t('errors.failedToDeleteStation'));
     } finally {
       setFormLoading(false);
     }
@@ -321,14 +381,68 @@ const Stations = () => {
     try {
       if (station.isActive) {
         const response = await api.patch(`/api/station/${station._id}/deactivate`);
-        setSuccess('Station deactivated successfully!');
+        setSuccess(t('messages.stationDeactivated'));
       } else {
         const response = await api.patch(`/api/station/${station._id}/activate`);
-        setSuccess('Station activated successfully!');
+        setSuccess(t('messages.stationActivated'));
       }
       fetchStations();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update station status');
+      console.error(t('errors.toggleStatus'), err);
+      setError(err.response?.data?.message || t('errors.failedToUpdateStationStatus'));
+    }
+  };
+
+  // Handle assign/remove manager
+  const handleAssignManager = async () => {
+    if (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager) {
+      setError(t('validation.selectManager'));
+      return;
+    }
+    
+    setManagerAssignmentLoading(true);
+    try {
+      // Create update data object
+      const updateData = {};
+      
+      if (managerAssignmentData.action === 'assign') {
+        // When assigning, send the manager ID
+        updateData.manager = managerAssignmentData.manager;
+      } else {
+        // When removing, DO NOT include manager field at all
+        // This will let the backend handle it properly
+        updateData.manager = '';
+      }
+
+      console.log('Sending manager update:', {
+        stationId: managerAssignmentData.stationId,
+        action: managerAssignmentData.action,
+        updateData: updateData
+      });
+
+      const response = await api.put(`/api/station/${managerAssignmentData.stationId}`, updateData);
+      
+      const actionText = managerAssignmentData.action === 'assign' ? t('common.assigned') : t('common.removed');
+      setSuccess(`${t('common.manager')} ${actionText} ${t('common.successfully')}!`);
+      setOpenAssignManagerDialog(false);
+      resetManagerAssignmentForm();
+      fetchStations();
+      fetchStationAdmins();
+    } catch (err) {
+      console.error(t('errors.managerAssignment'), err);
+      console.error('Error response:', err.response?.data);
+      
+      // More detailed error logging
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', err.response.data);
+      }
+      
+      setError(err.response?.data?.message || 
+               err.response?.data?.errors?.[0]?.msg || 
+               t('errors.failedToUpdateManager'));
+    } finally {
+      setManagerAssignmentLoading(false);
     }
   };
 
@@ -346,11 +460,43 @@ const Stations = () => {
     });
   };
 
+  // Reset edit form
+  const resetEditForm = () => {
+    setEditFormData({
+      stationCode: '',
+      stationName: '',
+      location: '',
+      city: '',
+      contactPhone: '',
+      contactEmail: '',
+      manager: '',
+      isActive: true,
+      _id: ''
+    });
+  };
+
+  // Reset manager assignment form
+  const resetManagerAssignmentForm = () => {
+    setManagerAssignmentData({
+      stationId: '',
+      stationName: '',
+      manager: '',
+      action: 'assign'
+    });
+  };
+
   // Open edit dialog
   const openEdit = (station) => {
     setEditFormData({
-      ...station,
-      manager: station.manager?._id || ''
+      stationCode: station.stationCode || '',
+      stationName: station.stationName || '',
+      location: station.location || '',
+      city: station.city || '',
+      contactPhone: station.contactPhone || '',
+      contactEmail: station.contactEmail || '',
+      manager: station.manager?._id || station.manager || '',
+      isActive: station.isActive || true,
+      _id: station._id || ''
     });
     setOpenEditDialog(true);
   };
@@ -367,9 +513,20 @@ const Stations = () => {
     setOpenDeleteDialog(true);
   };
 
+  // Open assign manager dialog
+  const openAssignManager = (station) => {
+    setManagerAssignmentData({
+      stationId: station._id || '',
+      stationName: station.stationName || '',
+      manager: station.manager?._id || station.manager || '',
+      action: station.manager ? 'remove' : 'assign'
+    });
+    setOpenAssignManagerDialog(true);
+  };
+
   // Format phone number
   const formatPhoneNumber = (phone) => {
-    if (!phone) return 'N/A';
+    if (!phone) return t('common.na');
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 12 && cleaned.startsWith('251')) {
       return `+${cleaned.slice(0,3)} ${cleaned.slice(3,5)} ${cleaned.slice(5,8)} ${cleaned.slice(8)}`;
@@ -415,10 +572,10 @@ const Stations = () => {
       >
         <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
           <BusinessIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-          Stations Management
+          {t('stations.title')}
         </Typography>
         <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-          Manage bus stations across the transportation network
+          {t('stations.description')}
         </Typography>
       </Box>
 
@@ -441,7 +598,7 @@ const Stations = () => {
                     {stats.total}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Stations
+                    {t('stations.totalStations')}
                   </Typography>
                 </Box>
               </Box>
@@ -470,13 +627,13 @@ const Stations = () => {
                     {stats.active}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Active Stations
+                    {t('stations.activeStations')}
                   </Typography>
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-                  {stats.activePercentage}% Active
+                  {stats.activePercentage}% {t('stations.active')}
                 </Typography>
                 <LinearProgress 
                   variant="determinate" 
@@ -512,7 +669,7 @@ const Stations = () => {
                     {stats.inactive}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Inactive Stations
+                    {t('stations.inactiveStations')}
                   </Typography>
                 </Box>
               </Box>
@@ -548,12 +705,12 @@ const Stations = () => {
                     {stats.withManager}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    With Manager
+                    {t('stations.withManager')}
                   </Typography>
                 </Box>
               </Box>
               <Typography variant="caption" color="text.secondary">
-                {stats.total > 0 ? Math.round((stats.withManager / stats.total) * 100) : 0}% Managed
+                {stats.total > 0 ? Math.round((stats.withManager / stats.total) * 100) : 0}% {t('stations.managed')}
               </Typography>
             </CardContent>
           </Card>
@@ -570,16 +727,16 @@ const Stations = () => {
       }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
           <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
-          Filter Stations
+          {t('stations.filterStations')}
         </Typography>
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
-              label="Search Stations"
+              label={t('stations.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, code, or city"
+              placeholder={t('stations.searchPlaceholder')}
               variant="outlined"
               size="small"
               InputProps={{
@@ -589,13 +746,13 @@ const Stations = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth size="small">
-              <InputLabel>City</InputLabel>
+              <InputLabel>{t('stations.city')}</InputLabel>
               <Select
-                value={cityFilter}
+                value={cityFilter || ''}
                 onChange={(e) => setCityFilter(e.target.value)}
-                label="City"
+                label={t('stations.city')}
               >
-                <MenuItem value="">All Cities</MenuItem>
+                <MenuItem value="">{t('stations.allCities')}</MenuItem>
                 {cities.map((city) => (
                   <MenuItem key={city} value={city}>
                     {city}
@@ -606,15 +763,15 @@ const Stations = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('stations.status')}</InputLabel>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                label="Status"
+                label={t('stations.status')}
               >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="all">{t('stations.allStatus')}</MenuItem>
+                <MenuItem value="active">{t('stations.active')}</MenuItem>
+                <MenuItem value="inactive">{t('stations.inactive')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -631,7 +788,7 @@ const Stations = () => {
                 onClick={handleResetFilters}
                 sx={{ borderRadius: 2 }}
               >
-                Reset
+                {t('common.reset')}
               </Button>
               <Button
                 variant="contained"
@@ -642,7 +799,7 @@ const Stations = () => {
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 }}
               >
-                Search
+                {t('common.search')}
               </Button>
               {canManageStations() && (
                 <Button
@@ -652,7 +809,7 @@ const Stations = () => {
                   onClick={() => setOpenCreateDialog(true)}
                   sx={{ borderRadius: 2 }}
                 >
-                  Add Station
+                  {t('stations.addStation')}
                 </Button>
               )}
             </Box>
@@ -671,7 +828,7 @@ const Stations = () => {
         }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 3, color: 'text.secondary' }}>
-            Loading stations...
+            {t('common.loading')}
           </Typography>
         </Box>
       ) : error ? (
@@ -684,12 +841,12 @@ const Stations = () => {
           }}
           action={
             <Button color="inherit" size="small" onClick={fetchStations}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
           <Typography variant="subtitle1" fontWeight="bold">
-            Error Loading Stations
+            {t('errors.errorLoadingStations')}
           </Typography>
           {error}
         </Alert>
@@ -709,19 +866,19 @@ const Stations = () => {
             }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
                 <BusinessIcon sx={{ mr: 1, color: 'primary.main' }} />
-                Stations List ({totalStations})
+                {t('stations.stationsList')} ({totalStations})
               </Typography>
             </Box>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Station Details</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Location</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Contact Info</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Manager</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', py: 2 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.stationDetails')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.location')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.contactInfo')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.manager')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.status')}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', py: 2 }}>{t('stations.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -731,12 +888,12 @@ const Stations = () => {
                         <Box sx={{ textAlign: 'center' }}>
                           <LocationIcon sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.5, mb: 2 }} />
                           <Typography variant="h6" color="text.secondary" gutterBottom>
-                            No stations found
+                            {t('stations.noStationsFound')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {canManageStations() 
-                              ? 'Try adding a new station or adjust your search filters.' 
-                              : 'No stations match your search criteria.'}
+                              ? t('stations.noStationsAdd')
+                              : t('stations.noStationsMatch')}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -762,7 +919,7 @@ const Stations = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <CodeIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                               <Typography variant="body2" color="text.secondary">
-                                Code: {station.stationCode}
+                                {t('stations.code')}: {station.stationCode}
                               </Typography>
                             </Box>
                           </Box>
@@ -805,35 +962,18 @@ const Stations = () => {
                               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'primary.main' }} />
                                 <Typography variant="body2" fontWeight="medium">
-                                  {station.manager.fullName || 'N/A'}
+                                  {station.manager.fullName || t('common.na')}
                                 </Typography>
                               </Box>
                               <Typography variant="caption" color="text.secondary" sx={{ ml: 2.5 }}>
-                                {station.manager.email || 'No email'}
+                                {station.manager.email || t('common.noEmail')}
                               </Typography>
                             </Box>
-                          ) : canAssignManagers() ? (
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              startIcon={<PersonIcon />}
-                              onClick={() => {
-                                setSelectedStation(station);
-                                setEditFormData({
-                                  ...station,
-                                  manager: station.manager?._id || ''
-                                });
-                                setOpenEditDialog(true);
-                              }}
-                              sx={{ borderRadius: 1 }}
-                            >
-                              Assign Manager
-                            </Button>
                           ) : (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary', opacity: 0.5 }} />
                               <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                                No manager
+                                {t('stations.noManager')}
                               </Typography>
                             </Box>
                           )}
@@ -841,7 +981,7 @@ const Stations = () => {
                         <TableCell>
                           <Chip
                             icon={statusColors[station.isActive ? 'active' : 'inactive'].icon}
-                            label={station.isActive ? 'ACTIVE' : 'INACTIVE'}
+                            label={station.isActive ? t('stations.active') : t('stations.inactive')}
                             sx={{
                               backgroundColor: statusColors[station.isActive ? 'active' : 'inactive'].bg,
                               color: statusColors[station.isActive ? 'active' : 'inactive'].text,
@@ -854,63 +994,89 @@ const Stations = () => {
                         </TableCell>
                         <TableCell align="right">
                           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                            <Tooltip title="View Details">
-                              <IconButton 
-                                size="small" 
-                                onClick={() => openView(station)}
-                                sx={{ 
-                                  bgcolor: '#e3f2fd',
-                                  '&:hover': { bgcolor: '#bbdefb' }
-                                }}
-                              >
-                                <ViewIcon fontSize="small" color="primary" />
-                              </IconButton>
+                            <Tooltip title={t('common.viewDetails')}>
+                              <span>
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => openView(station)}
+                                  sx={{ 
+                                    bgcolor: '#e3f2fd',
+                                    '&:hover': { bgcolor: '#bbdefb' }
+                                  }}
+                                >
+                                  <ViewIcon fontSize="small" color="primary" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                             
                             {canManageStations() && (
                               <>
-                                <Tooltip title="Edit">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => openEdit(station)}
-                                    sx={{ 
-                                      bgcolor: '#e8f5e9',
-                                      '&:hover': { bgcolor: '#c8e6c9' }
-                                    }}
-                                  >
-                                    <EditIcon fontSize="small" color="success" />
-                                  </IconButton>
+                                <Tooltip title={t('stations.editStation')}>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => openEdit(station)}
+                                      sx={{ 
+                                        bgcolor: '#e8f5e9',
+                                        '&:hover': { bgcolor: '#c8e6c9' }
+                                      }}
+                                    >
+                                      <EditIcon fontSize="small" color="success" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
-                                <Tooltip title={`${station.isActive ? 'Deactivate' : 'Activate'}`}>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleToggleStatus(station)}
-                                    sx={{ 
-                                      bgcolor: station.isActive ? '#fff3e0' : '#e8f5e9',
-                                      '&:hover': { bgcolor: station.isActive ? '#ffe0b2' : '#c8e6c9' }
-                                    }}
-                                  >
-                                    {station.isActive ? (
-                                      <CancelIcon fontSize="small" color="warning" />
-                                    ) : (
-                                      <CheckIcon fontSize="small" color="success" />
-                                    )}
-                                  </IconButton>
+                                <Tooltip title={station.manager ? t('stations.removeManager') : t('stations.assignManager')}>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => openAssignManager(station)}
+                                      sx={{ 
+                                        bgcolor: station.manager ? '#fff3e0' : '#e3f2fd',
+                                        '&:hover': { bgcolor: station.manager ? '#ffe0b2' : '#bbdefb' }
+                                      }}
+                                    >
+                                      {station.manager ? (
+                                        <PersonIcon fontSize="small" color="warning" />
+                                      ) : (
+                                        <AssignmentIcon fontSize="small" color="info" />
+                                      )}
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton 
-                                    size="small" 
-                                    color="error" 
-                                    onClick={() => openDelete(station)}
-                                    disabled={station.isActive}
-                                    sx={{ 
-                                      bgcolor: '#ffebee',
-                                      '&:hover': { bgcolor: '#ffcdd2' },
-                                      '&.Mui-disabled': { opacity: 0.3 }
-                                    }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                <Tooltip title={station.isActive ? t('stations.deactivate') : t('stations.activate')}>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleToggleStatus(station)}
+                                      sx={{ 
+                                        bgcolor: station.isActive ? '#fff3e0' : '#e8f5e9',
+                                        '&:hover': { bgcolor: station.isActive ? '#ffe0b2' : '#c8e6c9' }
+                                      }}
+                                    >
+                                      {station.isActive ? (
+                                        <CancelIcon fontSize="small" color="warning" />
+                                      ) : (
+                                        <CheckIcon fontSize="small" color="success" />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title={t('common.delete')}>
+                                  <span>
+                                    <IconButton 
+                                      size="small" 
+                                      color="error" 
+                                      onClick={() => openDelete(station)}
+                                      disabled={station.isActive}
+                                      sx={{ 
+                                        bgcolor: '#ffebee',
+                                        '&:hover': { bgcolor: '#ffcdd2' },
+                                        '&.Mui-disabled': { opacity: 0.3 }
+                                      }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                               </>
                             )}
@@ -1010,7 +1176,7 @@ const Stations = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <AddIcon sx={{ mr: 2 }} />
-            Create New Station
+            {t('stations.createNewStation')}
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
@@ -1019,11 +1185,11 @@ const Stations = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Station Code *"
+                label={`${t('stations.stationCode')} *`}
                 value={formData.stationCode}
                 onChange={(e) => setFormData({ ...formData, stationCode: e.target.value })}
-                placeholder="e.g., BDR-01"
-                helperText="Unique code for the station"
+                placeholder={t('stations.stationCodePlaceholder')}
+                helperText={t('stations.stationCodeHelper')}
                 required
                 variant="outlined"
                 size="small"
@@ -1034,10 +1200,10 @@ const Stations = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Station Name *"
+                label={`${t('stations.stationName')} *`}
                 value={formData.stationName}
                 onChange={(e) => setFormData({ ...formData, stationName: e.target.value })}
-                placeholder="e.g., Bahir Dar Main Station"
+                placeholder={t('stations.stationNamePlaceholder')}
                 required
                 variant="outlined"
                 size="small"
@@ -1048,10 +1214,10 @@ const Stations = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Location *"
+                label={`${t('stations.location')} *`}
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g., Near City Center, Main Road"
+                placeholder={t('stations.locationPlaceholder')}
                 required
                 variant="outlined"
                 size="small"
@@ -1062,10 +1228,10 @@ const Stations = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="City *"
+                label={`${t('stations.city')} *`}
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="e.g., Bahir Dar"
+                placeholder={t('stations.cityPlaceholder')}
                 required
                 variant="outlined"
                 size="small"
@@ -1076,10 +1242,10 @@ const Stations = () => {
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
-                label="Contact Phone *"
+                label={`${t('stations.contactPhone')} *`}
                 value={formData.contactPhone}
                 onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                placeholder="e.g., +251900000000"
+                placeholder={t('stations.contactPhonePlaceholder')}
                 required
                 variant="outlined"
                 size="small"
@@ -1091,10 +1257,10 @@ const Stations = () => {
               <TextField
                 fullWidth
                 type="email"
-                label="Contact Email *"
+                label={`${t('stations.contactEmail')} *`}
                 value={formData.contactEmail}
                 onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                placeholder="e.g., station@bahirdar-transport.com"
+                placeholder={t('stations.contactEmailPlaceholder')}
                 required
                 variant="outlined"
                 size="small"
@@ -1105,47 +1271,34 @@ const Stations = () => {
             {canAssignManagers() && (
               <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Station Manager</InputLabel>
+                  <InputLabel>{t('stations.stationManagerOptional')}</InputLabel>
                   <Select
-                    value={formData.manager}
+                    value={formData.manager || ''}
                     onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                    label="Station Manager"
+                    label={t('stations.stationManagerOptional')}
                     disabled={formLoading || managersLoading}
                   >
-                    {managersLoading ? (
-                      <MenuItem value="" disabled>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={16} />
-                          <Typography variant="body2" color="text.secondary">
-                            Loading station admins...
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        {t('stations.noManagerAssigned')}
+                      </Typography>
+                    </MenuItem>
+                    {managers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || t('common.noPhone')}
                           </Typography>
                         </Box>
                       </MenuItem>
-                    ) : (
-                      <Box>
-                        <MenuItem value="">
-                          <Typography color="text.secondary" fontStyle="italic">
-                            No manager assigned
-                          </Typography>
-                        </MenuItem>
-                        {managers.map((manager) => (
-                          <MenuItem key={manager._id} value={manager._id}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">
-                                {manager.fullName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {manager.email} • {manager.phoneNumber || 'No phone'}
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Box>
-                    )}
+                    ))}
                   </Select>
                   {!managersLoading && managers.length === 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ ml: 2, mt: 0.5 }}>
-                      No active station admins found
+                      {t('stations.noActiveStationAdmins')}
                     </Typography>
                   )}
                 </FormControl>
@@ -1163,9 +1316,9 @@ const Stations = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body2">Active Station</Typography>
+                    <Typography variant="body2">{t('stations.activeStation')}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Inactive stations won't appear in trip creation
+                      {t('stations.inactiveStationHelper')}
                     </Typography>
                   </Box>
                 }
@@ -1179,7 +1332,7 @@ const Stations = () => {
             disabled={formLoading}
             sx={{ borderRadius: 2 }}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleCreateStation} 
@@ -1192,7 +1345,7 @@ const Stations = () => {
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
           >
-            {formLoading ? 'Creating...' : 'Create Station'}
+            {formLoading ? t('common.creating') : t('stations.createStation')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1221,7 +1374,7 @@ const Stations = () => {
                   {selectedStation.stationName}
                 </Box>
                 <Chip
-                  label={selectedStation.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  label={selectedStation.isActive ? t('stations.active') : t('stations.inactive')}
                   sx={{
                     backgroundColor: selectedStation.isActive ? '#4caf50' : '#f44336',
                     color: 'white',
@@ -1241,7 +1394,7 @@ const Stations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <CodeIcon sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="subtitle2" color="text.secondary">
-                        Station Code
+                        {t('stations.stationCode')}
                       </Typography>
                     </Box>
                     <Typography variant="h6" fontWeight="bold">
@@ -1254,7 +1407,7 @@ const Stations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <CityIcon sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="subtitle2" color="text.secondary">
-                        City
+                        {t('stations.city')}
                       </Typography>
                     </Box>
                     <Typography variant="h6" fontWeight="bold">
@@ -1267,7 +1420,7 @@ const Stations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <LocationIcon sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="subtitle2" color="text.secondary">
-                        Location
+                        {t('stations.location')}
                       </Typography>
                     </Box>
                     <Typography variant="body1">
@@ -1280,7 +1433,7 @@ const Stations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <PhoneIcon sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="subtitle2" color="text.secondary">
-                        Contact Phone
+                        {t('stations.contactPhone')}
                       </Typography>
                     </Box>
                     <Typography variant="body1" fontWeight="medium">
@@ -1293,7 +1446,7 @@ const Stations = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <EmailIcon sx={{ mr: 1, color: 'primary.main' }} />
                       <Typography variant="subtitle2" color="text.secondary">
-                        Contact Email
+                        {t('stations.contactEmail')}
                       </Typography>
                     </Box>
                     <Typography variant="body1" fontWeight="medium">
@@ -1307,41 +1460,56 @@ const Stations = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
                         <Typography variant="subtitle1" fontWeight="bold">
-                          Station Manager
+                          {t('stations.stationManager')}
                         </Typography>
                       </Box>
                       {selectedStation.manager ? (
                         <Box sx={{ pl: 3 }}>
                           <Typography variant="h6" fontWeight="bold" gutterBottom>
-                            {selectedStation.manager.fullName || 'N/A'}
+                            {selectedStation.manager.fullName || t('common.na')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" gutterBottom>
                             <EmailIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                            {selectedStation.manager.email || 'No email'}
+                            {selectedStation.manager.email || t('common.noEmail')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             <PhoneIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
                             {formatPhoneNumber(selectedStation.manager.phoneNumber)}
                           </Typography>
+                          {canAssignManagers() && (
+                            <Box sx={{ mt: 2 }}>
+                              <Button 
+                                variant="outlined" 
+                                size="small" 
+                                startIcon={<PersonIcon />}
+                                onClick={() => {
+                                  setOpenViewDialog(false);
+                                  openAssignManager(selectedStation);
+                                }}
+                              >
+                                {t('stations.changeManager')}
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
                       ) : (
                         <Box sx={{ textAlign: 'center', py: 2 }}>
                           <PersonIcon sx={{ fontSize: 40, color: 'text.secondary', opacity: 0.5, mb: 1 }} />
                           <Typography variant="body1" color="text.secondary" fontStyle="italic">
-                            No manager assigned
+                            {t('stations.noManagerAssigned')}
                           </Typography>
                           {canAssignManagers() && (
                             <Button 
                               variant="outlined" 
                               size="small" 
-                              startIcon={<PersonIcon />}
+                              startIcon={<AssignmentIcon />}
                               onClick={() => {
                                 setOpenViewDialog(false);
-                                openEdit(selectedStation);
+                                openAssignManager(selectedStation);
                               }}
                               sx={{ mt: 2 }}
                             >
-                              Assign Manager
+                              {t('stations.assignManager')}
                             </Button>
                           )}
                         </Box>
@@ -1352,26 +1520,26 @@ const Stations = () => {
                 <Grid size={{ xs: 12 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     <TimeIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Additional Information
+                    {t('stations.additionalInfo')}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
                         <Typography variant="caption" color="text.secondary" display="block">
-                          Created
+                          {t('stations.created')}
                         </Typography>
                         <Typography variant="body2" fontWeight="medium">
-                          {selectedStation.createdAt ? format(new Date(selectedStation.createdAt), 'PP') : 'N/A'}
+                          {selectedStation.createdAt ? format(new Date(selectedStation.createdAt), 'PP') : t('common.na')}
                         </Typography>
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
                         <Typography variant="caption" color="text-secondary" display="block">
-                          Last Updated
+                          {t('stations.lastUpdated')}
                         </Typography>
                         <Typography variant="body2" fontWeight="medium">
-                          {selectedStation.updatedAt ? format(new Date(selectedStation.updatedAt), 'PP') : 'N/A'}
+                          {selectedStation.updatedAt ? format(new Date(selectedStation.updatedAt), 'PP') : t('common.na')}
                         </Typography>
                       </Card>
                     </Grid>
@@ -1384,7 +1552,7 @@ const Stations = () => {
                 onClick={() => setOpenViewDialog(false)} 
                 sx={{ borderRadius: 2 }}
               >
-                Close
+                {t('common.close')}
               </Button>
               {canManageStations() && (
                 <>
@@ -1396,7 +1564,7 @@ const Stations = () => {
                     variant="outlined"
                     sx={{ borderRadius: 2 }}
                   >
-                    Edit
+                    {t('common.edit')}
                   </Button>
                   <Button 
                     onClick={() => handleToggleStatus(selectedStation)}
@@ -1404,7 +1572,7 @@ const Stations = () => {
                     color={selectedStation.isActive ? "warning" : "success"}
                     sx={{ borderRadius: 2 }}
                   >
-                    {selectedStation.isActive ? "Deactivate" : "Activate"}
+                    {selectedStation.isActive ? t('stations.deactivate') : t('stations.activate')}
                   </Button>
                 </>
               )}
@@ -1423,178 +1591,287 @@ const Stations = () => {
           sx: { borderRadius: 3 }
         }}
       >
-        {editFormData && (
-          <>
-            <DialogTitle sx={{ 
-              bgcolor: 'primary.main', 
-              color: 'white',
-              borderTopLeftRadius: 3,
-              borderTopRightRadius: 3
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <EditIcon sx={{ mr: 2 }} />
-                Edit Station
-              </Box>
-            </DialogTitle>
-            <DialogContent sx={{ pt: 3 }}>
-              {formLoading && <LinearProgress sx={{ mb: 2 }} />}
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Station Code *"
-                    value={editFormData.stationCode}
-                    onChange={(e) => setEditFormData({ ...editFormData, stationCode: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Station Name *"
-                    value={editFormData.stationName}
-                    onChange={(e) => setEditFormData({ ...editFormData, stationName: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Location *"
-                    value={editFormData.location}
-                    onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="City *"
-                    value={editFormData.city}
-                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Contact Phone *"
-                    value={editFormData.contactPhone}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    type="email"
-                    label="Contact Email *"
-                    value={editFormData.contactEmail}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
-                    required
-                    variant="outlined"
-                    size="small"
-                    disabled={formLoading}
-                  />
-                </Grid>
-                {canAssignManagers() && (
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Station Manager</InputLabel>
-                      <Select
-                        value={editFormData.manager || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value })}
-                        label="Station Manager"
-                        disabled={formLoading || managersLoading}
-                      >
-                        {managersLoading ? (
-                          <MenuItem value="" disabled>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <CircularProgress size={16} />
-                              <Typography variant="body2" color="text.secondary">
-                                Loading station admins...
-                              </Typography>
-                            </Box>
-                          </MenuItem>
-                        ) : (
-                          <Box>
-                            <MenuItem value="">
-                              <Typography color="text.secondary" fontStyle="italic">
-                                No manager assigned
-                              </Typography>
-                            </MenuItem>
-                            {managers.map((manager) => (
-                              <MenuItem key={manager._id} value={manager._id}>
-                                <Box>
-                                  <Typography variant="body2" fontWeight="bold">
-                                    {manager.fullName}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {manager.email} • {manager.phoneNumber || 'No phone'}
-                                  </Typography>
-                                </Box>
-                              </MenuItem>
-                            ))}
-                          </Box>
-                        )}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                )}
-                <Grid size={{ xs: 12, md: canAssignManagers() ? 6 : 12 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={editFormData.isActive}
-                        onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
-                        color="primary"
-                        disabled={formLoading}
-                      />
-                    }
-                    label="Active Station"
-                  />
-                </Grid>
+        <DialogTitle sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EditIcon sx={{ mr: 2 }} />
+            {t('stations.editStation')}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {formLoading && <LinearProgress sx={{ mb: 2 }} />}
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={`${t('stations.stationCode')} *`}
+                value={editFormData.stationCode || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, stationCode: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={`${t('stations.stationName')} *`}
+                value={editFormData.stationName || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, stationName: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={`${t('stations.location')} *`}
+                value={editFormData.location || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={`${t('stations.city')} *`}
+                value={editFormData.city || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={`${t('stations.contactPhone')} *`}
+                value={editFormData.contactPhone || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                type="email"
+                label={`${t('stations.contactEmail')} *`}
+                value={editFormData.contactEmail || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                required
+                variant="outlined"
+                size="small"
+                disabled={formLoading}
+              />
+            </Grid>
+            {canAssignManagers() && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('stations.stationManagerOptional')}</InputLabel>
+                  <Select
+                    value={editFormData.manager || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, manager: e.target.value })}
+                    label={t('stations.stationManagerOptional')}
+                    disabled={formLoading || managersLoading}
+                  >
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        {t('stations.noManagerAssigned')}
+                      </Typography>
+                    </MenuItem>
+                    {managers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || t('common.noPhone')}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button 
-                onClick={() => setOpenEditDialog(false)} 
-                disabled={formLoading}
-                sx={{ borderRadius: 2 }}
+            )}
+            <Grid size={{ xs: 12, md: canAssignManagers() ? 6 : 12 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={editFormData.isActive || false}
+                    onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                    color="primary"
+                    disabled={formLoading}
+                  />
+                }
+                label={t('stations.activeStation')}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setOpenEditDialog(false)} 
+            disabled={formLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleEditStation} 
+            variant="contained" 
+            color="primary"
+            disabled={formLoading}
+            startIcon={formLoading ? <CircularProgress size={20} /> : <EditIcon />}
+            sx={{ 
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            }}
+          >
+            {formLoading ? t('common.saving') : t('common.saveChanges')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign/Remove Manager Dialog */}
+      <Dialog 
+        open={openAssignManagerDialog} 
+        onClose={() => !managerAssignmentLoading && setOpenAssignManagerDialog(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: managerAssignmentData.action === 'assign' ? '#2196f3' : '#ff9800', 
+          color: 'white',
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {managerAssignmentData.action === 'assign' ? (
+              <AssignmentIcon sx={{ mr: 2 }} />
+            ) : (
+              <PersonIcon sx={{ mr: 2 }} />
+            )}
+            {managerAssignmentData.action === 'assign' ? t('stations.assignManager') : t('stations.removeManager')}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {managerAssignmentLoading && <LinearProgress sx={{ mb: 2 }} />}
+          
+          <Typography variant="h6" gutterBottom>
+            {t('stations.station')}: {managerAssignmentData.stationName}
+          </Typography>
+          
+          {managerAssignmentData.action === 'assign' ? (
+            <FormControl fullWidth size="medium" sx={{ mt: 2 }}>
+              <InputLabel>{t('stations.selectManager')} *</InputLabel>
+              <Select
+                value={managerAssignmentData.manager || ''}
+                onChange={(e) => setManagerAssignmentData({ ...managerAssignmentData, manager: e.target.value })}
+                label={`${t('stations.selectManager')} *`}
+                disabled={managerAssignmentLoading || managersLoading}
               >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditStation} 
-                variant="contained" 
-                color="primary"
-                disabled={formLoading}
-                startIcon={formLoading ? <CircularProgress size={20} /> : <EditIcon />}
-                sx={{ 
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}
-              >
-                {formLoading ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </DialogActions>
-          </>
-        )}
+                {managersLoading ? (
+                  <MenuItem value="" disabled>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2" color="text.secondary">
+                        {t('stations.loadingStationAdmins')}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ) : (
+                  <Box>
+                    <MenuItem value="">
+                      <Typography color="text.secondary" fontStyle="italic">
+                        {t('stations.selectAManager')}
+                      </Typography>
+                    </MenuItem>
+                    {availableManagers.map((manager) => (
+                      <MenuItem key={manager._id} value={manager._id}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            {manager.fullName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {manager.email} • {manager.phoneNumber || t('common.noPhone')}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Box>
+                )}
+              </Select>
+              {!managersLoading && availableManagers.length === 0 && (
+                <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    {t('stations.noStationAdminsAvailable')}
+                  </Typography>
+                </Alert>
+              )}
+            </FormControl>
+          ) : (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mt: 2, 
+                borderRadius: 2,
+                '& .MuiAlert-icon': { alignItems: 'center' }
+              }}
+            >
+              <Typography variant="body2" fontWeight="bold">
+                {t('stations.confirmRemoveManager')}
+              </Typography>
+              <Typography variant="body2">
+                {t('stations.removeManagerWarning')}
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setOpenAssignManagerDialog(false)} 
+            disabled={managerAssignmentLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleAssignManager} 
+            variant="contained" 
+            color={managerAssignmentData.action === 'assign' ? "primary" : "warning"}
+            disabled={managerAssignmentLoading || (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager)}
+            startIcon={managerAssignmentLoading ? <CircularProgress size={20} /> : 
+              (managerAssignmentData.action === 'assign' ? <AssignmentIcon /> : <PersonIcon />)}
+            sx={{ 
+              borderRadius: 2,
+              background: managerAssignmentData.action === 'assign' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)'
+            }}
+          >
+            {managerAssignmentLoading ? t('common.processing') : 
+              (managerAssignmentData.action === 'assign' ? t('stations.assignManager') : t('stations.removeManager'))}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
@@ -1613,13 +1890,13 @@ const Stations = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <DeleteIcon sx={{ mr: 2 }} />
-            Confirm Delete
+            {t('stations.confirmDelete')}
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           {formLoading && <LinearProgress sx={{ mb: 2 }} />}
           <Typography variant="h6" gutterBottom>
-            Delete "{selectedStation?.stationName}"?
+            {t('stations.deleteConfirmation', { stationName: selectedStation?.stationName })}
           </Typography>
           {selectedStation?.isActive && (
             <Alert 
@@ -1631,10 +1908,10 @@ const Stations = () => {
               }}
             >
               <Typography variant="body2" fontWeight="bold">
-                This station is currently active!
+                {t('stations.stationActiveWarning')}
               </Typography>
               <Typography variant="body2">
-                Please deactivate it first before deletion.
+                {t('stations.deactivateBeforeDelete')}
               </Typography>
             </Alert>
           )}
@@ -1646,10 +1923,10 @@ const Stations = () => {
             }}
           >
             <Typography variant="body2" fontWeight="bold">
-              This action cannot be undone!
+              {t('stations.actionCannotBeUndone')}
             </Typography>
             <Typography variant="body2">
-              All associated data may be affected.
+              {t('stations.deleteDataWarning')}
             </Typography>
           </Alert>
         </DialogContent>
@@ -1659,7 +1936,7 @@ const Stations = () => {
             disabled={formLoading}
             sx={{ borderRadius: 2 }}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleDeleteStation} 
@@ -1669,7 +1946,7 @@ const Stations = () => {
             startIcon={formLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
             sx={{ borderRadius: 2 }}
           >
-            {formLoading ? 'Deleting...' : 'Delete Station'}
+            {formLoading ? t('common.deleting') : t('stations.deleteStation')}
           </Button>
         </DialogActions>
       </Dialog>

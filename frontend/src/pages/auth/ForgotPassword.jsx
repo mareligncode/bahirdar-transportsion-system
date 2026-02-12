@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -18,23 +20,23 @@ export default function ForgotPassword() {
 
     try {
       if (!email) {
-        throw new Error('Please enter your email address');
+        throw new Error(t('validation.emailRequired'));
       }
 
       // Use your centralized API instance
       const response = await api.post('/api/auth/forgot-password', { email });
 
-      setSuccess(response.data.message || 'Password reset link has been sent to your email');
+      setSuccess(response.data.message || t('auth.resetLinkSent'));
       setEmail(''); // Clear email after successful submission
       
     } catch (err) {
-      console.error('Forgot password error:', err);
+      console.error(t('errors.forgotPassword'), err);
       
       // Handle different error formats
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error || 
                           err.message || 
-                          'Something went wrong. Please try again.';
+                          t('errors.somethingWentWrong');
       
       setError(errorMessage);
     } finally {
@@ -52,10 +54,10 @@ export default function ForgotPassword() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Forgot Password
+            {t('auth.forgotPassword')}
           </h1>
           <p className="text-gray-600">
-            Enter your email to receive a password reset link
+            {t('auth.forgotPasswordDescription')}
           </p>
         </div>
       </div>
@@ -65,7 +67,7 @@ export default function ForgotPassword() {
           <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Error</p>
+              <p className="font-medium">{t('common.error')}</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -75,7 +77,7 @@ export default function ForgotPassword() {
           <div className="bg-green-50 border border-green-200 text-green-600 p-3 rounded-lg flex items-start gap-3">
             <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Success</p>
+              <p className="font-medium">{t('common.success')}</p>
               <p className="text-sm mt-1">{success}</p>
             </div>
           </div>
@@ -83,7 +85,7 @@ export default function ForgotPassword() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
+            {t('auth.emailAddress')}
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -96,13 +98,13 @@ export default function ForgotPassword() {
                 setSuccess('');
               }}
               className="input-field pl-10"
-              placeholder="Enter your email"
+              placeholder={t('auth.emailPlaceholder')}
               required
               disabled={isLoading}
             />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            We'll send a password reset link to this email
+            {t('auth.resetLinkInfo')}
           </p>
         </div>
 
@@ -111,7 +113,7 @@ export default function ForgotPassword() {
           disabled={isLoading}
           className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50"
         >
-          {isLoading ? 'Sending...' : 'Send Reset Link'}
+          {isLoading ? t('auth.sending') : t('auth.sendResetLink')}
         </button>
 
         <div className="text-center">
@@ -119,7 +121,7 @@ export default function ForgotPassword() {
             to="/login" 
             className="text-sm text-primary-600 hover:text-primary-800 font-medium"
           >
-            Back to Login
+            {t('auth.backToLogin')}
           </Link>
         </div>
       </form>

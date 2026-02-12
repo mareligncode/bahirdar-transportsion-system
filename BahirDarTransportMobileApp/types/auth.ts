@@ -1,12 +1,12 @@
 // ==================== USER TYPES ====================
 export interface User {
-  id: string;
+  _id: string;
+  id?: string;
   email: string;
   firstName: string;
   lastName: string;
   fullName?: string; // Added for compatibility
   phoneNumber: string;
-  role: 'passenger'; // Fixed to passenger only
   stationId?: string;
   isActive: boolean;
   profileImage?: string;

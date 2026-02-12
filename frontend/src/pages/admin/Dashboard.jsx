@@ -1,373 +1,449 @@
-import { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  Users, 
-  Car, 
-  DollarSign, 
-  Calendar,
-  UserPlus,
-  Settings,
-  BarChart3,
-  RefreshCw
-} from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import authService from '../../services/auth.service';
+import React, { useState, useEffect } from 'react';
+import {
+  Grid, Paper, Typography, Box, Card, CardContent,
+  Button, Chip, IconButton, CircularProgress, Alert,
+  Avatar, Divider, CardHeader
+} from '@mui/material';
+import {
+  People as PeopleIcon,
+  DirectionsBus as BusIcon,
+  LocationOn as StationIcon,
+  CalendarToday as TripIcon,
+  Refresh as RefreshIcon,
+  Security as SecurityIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon
+} from '@mui/icons-material';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
 
-export default function AdminDashboard() {
-  const { user } = useAuth();
+const Dashboard = () => {
+  const { t } = useTranslation(); // ✅ ADD THIS
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
-    activeDrivers: 0,
-    totalRevenue: 0,
-    todayBookings: 0
+    activeUsers: 0,
+    totalTrips: 0,
+    activeTrips: 0,
+    totalVehicles: 0,
+    availableVehicles: 0,
+    totalStations: 0,
+    activeStations: 0,
+    totalBookings: 0,
+    revenue: 0
   });
-  const [recentUsers, setRecentUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  
+  const [userRoles, setUserRoles] = useState([]);
+  const [activityData, setActivityData] = useState([]);
+  const [vehicleStatus, setVehicleStatus] = useState([]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError('');
       
-      // Fetch users data based on admin role
-      let usersData;
-      if (user?.role === 'super_admin') {
-        const response = await authService.getAllUsers();
-        usersData = response.users || [];
-      } else if (user?.role === 'station_admin') {
-        const response = await authService.getStationUsers();
-        usersData = response.users || [];
-      } else {
-        usersData = [];
-      }
-
+      // Fetch current user profile
+      const profileResponse = await api.get('/api/auth/profile');
+      setUserData(profileResponse.data.data?.user);
+      
+      // Fetch all users
+      const usersResponse = await api.get('/api/auth/all-users');
+      const users = usersResponse.data.data?.users || [];
+      
+      // Fetch stations
+      const stationsResponse = await api.get('/api/station');
+      const stations = stationsResponse.data.stations || [];
+      
+      // Fetch vehicles
+      const vehiclesResponse = await api.get('/api/vehicles');
+      const vehicles = vehiclesResponse.data.data?.vehicles || [];
+      
+      // Fetch trips
+      const tripsResponse = await api.get('/api/trip');
+      const trips = tripsResponse.data.data || [];
+      
       // Calculate statistics
-      const totalUsers = usersData.length;
-      const activeDrivers = usersData.filter(u => 
-        u.role === 'driver' && u.isActive
+      const activeUsers = users.filter(user => user.isActive).length;
+      const activeStations = stations.filter(station => station.isActive).length;
+      const activeTrips = trips.filter(trip => trip.isActive).length;
+      const availableVehicles = vehicles.filter(vehicle => 
+        vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active'
       ).length;
       
-      // For now, use mock data for revenue and bookings
-      // TODO: Replace with actual APIs when available
-      const totalRevenue = 85000; // ETB
-      const todayBookings = 1284;
-
-      // Get recent users (last 5)
-      const recentUsersList = usersData
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-        .map(user => ({
-          id: user._id,
-          name: user.fullName,
-          email: user.email,
-          role: user.role,
-          status: user.isActive ? 'Active' : 'Inactive',
-          statusColor: user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
-          createdAt: new Date(user.createdAt).toLocaleDateString()
-        }));
-
-      setStats({
-        totalUsers,
-        activeDrivers,
-        totalRevenue,
-        todayBookings
-      });
-
-      setRecentUsers(recentUsersList);
-      setLastUpdated(new Date());
+      // Calculate user role distribution
+      const roleCounts = {
+        passenger: users.filter(u => u.role === 'passenger').length,
+        driver: users.filter(u => u.role === 'driver').length,
+        station_admin: users.filter(u => u.role === 'station_admin').length,
+        super_admin: users.filter(u => u.role === 'super_admin').length
+      };
       
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      setUserRoles([
+        { name: t('passengers'), value: roleCounts.passenger, color: '#8884d8' },
+        { name: t('drivers'), value: roleCounts.driver, color: '#82ca9d' },
+        { name: t('station_admins'), value: roleCounts.station_admin, color: '#ffc658' },
+        { name: t('super_admins'), value: roleCounts.super_admin, color: '#ff8042' }
+      ]);
+      
+      // Calculate vehicle status distribution
+      const vehicleStatusCounts = {
+        available: vehicles.filter(v => v.currentStatus === 'available').length,
+        active: vehicles.filter(v => v.currentStatus === 'active').length,
+        on_trip: vehicles.filter(v => v.currentStatus === 'on_trip').length,
+        maintenance: vehicles.filter(v => v.currentStatus === 'maintenance').length,
+        inactive: vehicles.filter(v => v.currentStatus === 'inactive').length
+      };
+      
+      setVehicleStatus([
+        { name: t('available'), value: vehicleStatusCounts.available, color: '#4caf50' },
+        { name: t('active'), value: vehicleStatusCounts.active, color: '#2196f3' },
+        { name: t('on_trip'), value: vehicleStatusCounts.on_trip, color: '#ff9800' },
+        { name: t('maintenance'), value: vehicleStatusCounts.maintenance, color: '#f44336' },
+        { name: t('inactive'), value: vehicleStatusCounts.inactive, color: '#9e9e9e' }
+      ]);
+      
+      // Prepare activity data (last 7 days - mock for now)
+      const activity = [
+        { day: t('mon'), users: 12, trips: 8, bookings: 15 },
+        { day: t('tue'), users: 19, trips: 12, bookings: 21 },
+        { day: t('wed'), users: 15, trips: 9, bookings: 18 },
+        { day: t('thu'), users: 25, trips: 16, bookings: 30 },
+        { day: t('fri'), users: 22, trips: 14, bookings: 25 },
+        { day: t('sat'), users: 18, trips: 10, bookings: 20 },
+        { day: t('sun'), users: 10, trips: 5, bookings: 12 }
+      ];
+      setActivityData(activity);
+      
+      // Set overall stats
+      setStats({
+        totalUsers: users.length,
+        activeUsers,
+        totalTrips: trips.length,
+        activeTrips,
+        totalVehicles: vehicles.length,
+        availableVehicles,
+        totalStations: stations.length,
+        activeStations,
+        totalBookings: 0,
+        revenue: 0
+      });
+      
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.response?.data?.message || t('failed_to_load_dashboard_data'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user]);
-
-  const getRoleDisplay = (role) => {
-    const roleMap = {
-      'passenger': 'Passenger',
-      'driver': 'Driver',
-      'station_admin': 'Station Admin',
-      'super_admin': 'Super Admin'
-    };
-    return roleMap[role] || role;
-  };
-
-  const formatCurrency = (amount) => {
-    return `ETB ${amount.toLocaleString('en-ET')}`;
-  };
-
-  const getDashboardTitle = () => {
-    if (!user) return 'Dashboard';
+    fetchDashboardData();
     
-    switch(user.role) {
-      case 'super_admin': return 'Super Admin Dashboard';
-      case 'station_admin': return 'Station Admin Dashboard';
-      case 'driver': return 'Driver Dashboard';
-      case 'passenger': return 'Passenger Dashboard';
-      default: return 'Dashboard';
-    }
-  };
+    // Refresh data every 5 minutes
+    const interval = setInterval(fetchDashboardData, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const getWelcomeMessage = () => {
-    if (!user) return 'Welcome back!';
-    
-    const time = new Date().getHours();
-    let greeting = 'Good ';
-    
-    if (time < 12) greeting += 'Morning';
-    else if (time < 18) greeting += 'Afternoon';
-    else greeting += 'Evening';
-    
-    return `${greeting}, ${user.fullName?.split(' ')[0] || 'Admin'}! Here's what's happening today.`;
-  };
-
-  const getStatsCards = () => {
-    if (user?.role === 'passenger' || user?.role === 'driver') {
-      return [
-        { 
-          icon: Calendar, 
-          label: 'My Trips', 
-          value: '0',
-          change: 'No trips yet',
-          color: 'bg-blue-50',
-          iconColor: 'text-blue-600'
-        },
-        { 
-          icon: Users, 
-          label: 'Notifications', 
-          value: '0',
-          change: 'All caught up',
-          color: 'bg-green-50',
-          iconColor: 'text-green-600'
-        },
-        { 
-          icon: DollarSign, 
-          label: 'Account Balance', 
-          value: 'ETB 0',
-          change: '+0 this month',
-          color: 'bg-purple-50',
-          iconColor: 'text-purple-600'
-        },
-        { 
-          icon: Settings, 
-          label: 'Pending Actions', 
-          value: '0',
-          change: 'All done',
-          color: 'bg-orange-50',
-          iconColor: 'text-orange-600'
-        }
-      ];
-    }
-
-    return [
-      { 
-        icon: Users, 
-        label: 'Total Users', 
-        value: stats.totalUsers,
-        change: '+0 today',
-        color: 'bg-blue-50',
-        iconColor: 'text-blue-600'
-      },
-      { 
-        icon: Car, 
-        label: 'Active Drivers', 
-        value: stats.activeDrivers,
-        change: stats.activeDrivers > 0 ? '+0 on duty' : 'No drivers',
-        color: 'bg-green-50',
-        iconColor: 'text-green-600'
-      },
-      { 
-        icon: DollarSign, 
-        label: 'Total Revenue', 
-        value: formatCurrency(stats.totalRevenue),
-        change: '+8.5% from yesterday',
-        color: 'bg-purple-50',
-        iconColor: 'text-purple-600'
-      },
-      { 
-        icon: Calendar, 
-        label: 'Today\'s Bookings', 
-        value: stats.todayBookings,
-        change: '+12% from yesterday',
-        color: 'bg-orange-50',
-        iconColor: 'text-orange-600'
-      }
-    ];
+  const handleRefresh = () => {
+    fetchDashboardData();
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <CircularProgress />
+      </Box>
     );
   }
 
-  const statsCards = getStatsCards();
-
   return (
-    <div className="space-y-8">
+    <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{getDashboardTitle()}</h1>
-          <p className="text-gray-600">{getWelcomeMessage()}</p>
-        </div>
-        
-        {lastUpdated && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <RefreshCw className="w-4 h-4" />
-            <span>Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            <button 
-              onClick={fetchDashboardData}
-              className="ml-2 p-1 hover:bg-gray-100 rounded"
-              title="Refresh data"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            {t('welcome')}, {userData?.fullName || t('super_admin')}
+          </Typography>
+          <Typography variant="subtitle1" color="textSecondary">
+            {t('super_admin_dashboard')}
+          </Typography>
+        </Box>
+        <Button
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+          variant="outlined"
+          size="small"
+        >
+          {t('refresh')}
+        </Button>
+      </Box>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((stat, index) => (
-          <div key={index} className="card p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">{stat.change}</span>
-                </div>
-              </div>
-              <div className={`p-3 rounded-lg ${stat.color}`}>
-                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Users/Activity */}
-      {(user?.role === 'super_admin' || user?.role === 'station_admin') && recentUsers.length > 0 && (
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Recent Users</h2>
-            <span className="text-sm text-gray-500">
-              Showing {recentUsers.length} of {stats.totalUsers} users
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 text-sm font-medium text-gray-600">Name</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-600">Email</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-600">Role</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-600">Joined</th>
-                  <th className="text-left py-3 text-sm font-medium text-gray-600">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
-                    <td className="py-4">
-                      <div className="font-medium">{user.name}</div>
-                    </td>
-                    <td className="py-4 text-sm text-gray-600">{user.email}</td>
-                    <td className="py-4">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                        {getRoleDisplay(user.role)}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm text-gray-600">{user.createdAt}</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${user.statusColor}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
       )}
 
-      {/* Quick Actions based on role */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {user?.role === 'super_admin' && (
-            <>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <UserPlus className="w-4 h-4" />
-                Add User
-              </button>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <Settings className="w-4 h-4" />
-                Manage Roles
-              </button>
-            </>
-          )}
-          
-          {user?.role === 'station_admin' && (
-            <>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <Car className="w-4 h-4" />
-                Assign Driver
-              </button>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <Users className="w-4 h-4" />
-                View Passengers
-              </button>
-            </>
-          )}
-          
-          {(user?.role === 'super_admin' || user?.role === 'station_admin') && (
-            <>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                View Reports
-              </button>
-              <button className="btn-primary py-3 flex items-center justify-center gap-2">
-                <Settings className="w-4 h-4" />
-                Settings
-              </button>
-            </>
-          )}
-          
-          {user?.role === 'driver' && (
-            <>
-              <button className="btn-primary py-3">Start Trip</button>
-              <button className="btn-primary py-3">View Schedule</button>
-              <button className="btn-primary py-3">My Earnings</button>
-              <button className="btn-primary py-3">Update Status</button>
-            </>
-          )}
-          
-          {user?.role === 'passenger' && (
-            <>
-              <button className="btn-primary py-3">Book Trip</button>
-              <button className="btn-primary py-3">My Bookings</button>
-              <button className="btn-primary py-3">Payment Methods</button>
-              <button className="btn-primary py-3">Help Center</button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={3}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                  <PeopleIcon />
+                </Avatar>
+                <Typography variant="h6" color="textSecondary">
+                  {t('total_users')}
+                </Typography>
+              </Box>
+              <Typography variant="h4" fontWeight="bold">
+                {stats.totalUsers}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Chip
+                  label={t('active_count', { count: stats.activeUsers })}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+                <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                  {Math.round((stats.activeUsers / stats.totalUsers) * 100) || 0}%
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={3}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                  <BusIcon />
+                </Avatar>
+                <Typography variant="h6" color="textSecondary">
+                  {t('total_vehicles')}
+                </Typography>
+              </Box>
+              <Typography variant="h4" fontWeight="bold">
+                {stats.totalVehicles}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Chip
+                  label={t('available_count', { count: stats.availableVehicles })}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={3}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                  <StationIcon />
+                </Avatar>
+                <Typography variant="h6" color="textSecondary">
+                  {t('total_stations')}
+                </Typography>
+              </Box>
+              <Typography variant="h4" fontWeight="bold">
+                {stats.totalStations}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Chip
+                  label={t('active_count', { count: stats.activeStations })}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={3}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
+                  <TripIcon />
+                </Avatar>
+                <Typography variant="h6" color="textSecondary">
+                  {t('total_trips')}
+                </Typography>
+              </Box>
+              <Typography variant="h4" fontWeight="bold">
+                {stats.totalTrips}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Chip
+                  label={t('active_count', { count: stats.activeTrips })}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Charts Section - Full Width Vertical Layout */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        
+        {/* User Roles Distribution */}
+        <Card elevation={3}>
+          <CardHeader
+            title={t('user_roles_distribution')}
+            subheader={t('breakdown_of_user_roles')}
+          />
+          <Divider />
+          <CardContent sx={{ height: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={userRoles}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {userRoles.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} ${t('users')}`, t('count')]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Vehicle Status Distribution */}
+        <Card elevation={3}>
+          <CardHeader
+            title={t('vehicle_status_distribution')}
+            subheader={t('current_status_of_vehicles')}
+          />
+          <Divider />
+          <CardContent sx={{ height: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={vehicleStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {vehicleStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} ${t('vehicles')}`, t('count')]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Weekly Activity */}
+        <Card elevation={3}>
+          <CardHeader
+            title={t('weekly_activity')}
+            subheader={t('last_7_days_overview')}
+          />
+          <Divider />
+          <CardContent sx={{ height: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activityData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="users" fill="#8884d8" name={t('new_users')} />
+                <Bar dataKey="trips" fill="#82ca9d" name={t('new_trips')} />
+                <Bar dataKey="bookings" fill="#ffc658" name={t('bookings')} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Quick Actions */}
+      <Card elevation={3} sx={{ mt: 3 }}>
+        <CardHeader
+          title={t('quick_actions')}
+          avatar={<SecurityIcon color="primary" />}
+        />
+        <Divider />
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                href="/admin/users"
+                startIcon={<PeopleIcon />}
+              >
+                {t('manage_users')}
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="success"
+                href="/admin/vehicles"
+                startIcon={<BusIcon />}
+              >
+                {t('manage_vehicles')}
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="warning"
+                href="/admin/stations"
+                startIcon={<StationIcon />}
+              >
+                {t('manage_stations')}
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="info"
+                href="/admin/Schedules"
+                startIcon={<TripIcon />}
+              >
+                {t('manage_trips')}
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    </Box>
   );
-}
+};
+
+export default Dashboard;

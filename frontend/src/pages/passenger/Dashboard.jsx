@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   Ticket, 
@@ -12,82 +12,154 @@ import {
   PlusCircle,
   History,
   CreditCard,
-  HelpCircle
+  HelpCircle,
+  DollarSign,
+  Users,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function PassengerDashboard() {
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
   const [passengerStats, setPassengerStats] = useState({
     upcomingTrips: 0,
     totalSpent: 0,
     completedTrips: 0,
-    nextTripDate: null
+    nextTripDate: null,
+    favoriteRoutes: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // This is temporary - replace with real API when you add trip booking
-  const mockTrips = [
-    {
-      id: '1',
-      from: 'Bahir Dar',
-      to: 'Addis Ababa',
-      departureTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      price: 1200,
-      status: 'confirmed',
-      seats: ['A1', 'A2'],
-      vehicleType: 'luxury_bus'
-    },
-    {
-      id: '2',
-      from: 'Bahir Dar',
-      to: 'Gondar',
-      departureTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      price: 350,
-      status: 'confirmed',
-      seats: ['B3'],
-      vehicleType: 'minibus'
-    },
-  ];
 
   useEffect(() => {
     const fetchPassengerData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Check if user is actually a passenger
         if (user?.role !== 'passenger') {
-          setError('This dashboard is only available for passengers');
+          setError(t('This dashboard is only available for passengers'));
           return;
         }
 
-        // TODO: Replace with real API calls when trip booking is added
-        // For now, use mock data
-        setUpcomingTrips(mockTrips);
+        // Get current date for trip search
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+
+        // Get active stations first to use as origin/destination
+        const stationsResponse = await api.get('/api/station/active');
+        const stations = stationsResponse.data?.stations || [];
         
-        // Calculate mock statistics
-        const totalSpent = mockTrips.reduce((sum, trip) => 
-          sum + (trip.price * trip.seats.length), 0
+        if (stations.length === 0) {
+          setError(t('No stations available. Please try again later.'));
+          return;
+        }
+
+        // Use first station as default origin for search
+        const defaultStationId = stations[0]?._id;
+
+        // Fetch upcoming trips with correct parameters
+        const tripsResponse = await api.get('/api/trip', {
+          params: {
+            status: 'scheduled,boarding',
+            isActive: true,
+            page: 1,
+            limit: 10
+          }
+        });
+
+        // Process upcoming trips - filter for available seats and future dates
+        const allTrips = tripsResponse.data?.data || [];
+        const currentDateTime = new Date();
+        
+        const availableTrips = allTrips.filter(trip => {
+          const departureTime = new Date(trip.departureTime);
+          return trip.availableSeats > 0 && 
+                 departureTime > currentDateTime &&
+                 ['scheduled', 'boarding'].includes(trip.tripStatus);
+        });
+
+        setUpcomingTrips(availableTrips.slice(0, 3));
+        
+        // For demonstration, use same trips as recent bookings
+        setRecentBookings(allTrips.slice(0, 3).map(trip => ({
+          ...trip,
+          status: trip.tripStatus
+        })));
+
+        // Calculate statistics
+        const completedTrips = allTrips.filter(trip => 
+          trip.tripStatus === 'completed'
+        ).length;
+        
+        const totalSpent = allTrips.reduce((sum, trip) => 
+          sum + (trip.price || 0), 0
         );
         
-        const nextTrip = mockTrips.length > 0 
-          ? new Date(mockTrips[0].departureTime)
+        const nextTrip = availableTrips.length > 0 
+          ? availableTrips[0].departureTime
           : null;
         
-        const stats = {
-          upcomingTrips: mockTrips.length,
-          totalSpent: totalSpent,
-          completedTrips: 5, // Mock data
-          nextTripDate: nextTrip
-        };
+        // Find favorite routes from all trips
+        const routeCounts = {};
+        allTrips.forEach(trip => {
+          if (trip.origin && trip.destination) {
+            const routeKey = `${trip.origin.stationName || t('Unknown')} → ${trip.destination.stationName || t('Unknown')}`;
+            routeCounts[routeKey] = (routeCounts[routeKey] || 0) + 1;
+          }
+        });
         
-        setPassengerStats(stats);
+        const favoriteRoutes = Object.entries(routeCounts)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 2)
+          .map(([route]) => route);
+        
+        setPassengerStats({
+          upcomingTrips: availableTrips.length,
+          totalSpent,
+          completedTrips,
+          nextTripDate: nextTrip,
+          favoriteRoutes
+        });
 
       } catch (error) {
         console.error('Failed to fetch passenger data:', error);
-        setError('Failed to load dashboard data. Please try again.');
+        console.error('Error details:', error.response?.data);
+        
+        if (error.response?.status === 401) {
+          logout();
+          navigate('/login');
+          return;
+        }
+        
+        if (error.response?.status === 403) {
+          setError(t('Access denied. This dashboard is for passengers only.'));
+          return;
+        }
+        
+        // Handle 400 errors gracefully
+        if (error.response?.status === 400) {
+          console.warn('API returned 400, using fallback data');
+          setUpcomingTrips([]);
+          setRecentBookings([]);
+          setPassengerStats({
+            upcomingTrips: 0,
+            totalSpent: 0,
+            completedTrips: 0,
+            nextTripDate: null,
+            favoriteRoutes: []
+          });
+        } else {
+          setError(error.response?.data?.message || t('Failed to load dashboard data. Please try again.'));
+        }
       } finally {
         setLoading(false);
       }
@@ -96,24 +168,33 @@ export default function PassengerDashboard() {
     if (user) {
       fetchPassengerData();
     }
-  }, [user]);
+  }, [user, logout, navigate]); // ⚠️ NO 't' here - this prevents blinking!
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return t('Good Morning');
+    if (hour < 18) return t('Good Afternoon');
+    return t('Good Evening');
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'No upcoming trips';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return t('No upcoming trips');
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) return t('Today');
+    if (date.toDateString() === tomorrow.toDateString()) return t('Tomorrow');
+    
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -121,26 +202,39 @@ export default function PassengerDashboard() {
   };
 
   const formatCurrency = (amount) => {
-    return `ETB ${amount.toLocaleString('en-ET')}`;
+    if (!amount) return t('ETB 0');
+    return `${t('ETB')} ${amount.toLocaleString('en-ET')}`;
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      confirmed: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      cancelled: 'bg-red-100 text-red-800',
-      completed: 'bg-blue-100 text-blue-800'
+      scheduled: 'bg-blue-100 text-blue-800',
+      boarding: 'bg-yellow-100 text-yellow-800',
+      ongoing: 'bg-purple-100 text-purple-800',
+      completed: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getVehicleIcon = (vehicleType) => {
+  const getVehicleIcon = (carType) => {
     const icons = {
-      luxury_bus: '🚌',
-      coaster: '🚎',
-      minibus: '🚐'
+      coaster: '🚌',
+      bus: '🚎',
+      minibus: '🚐',
+      van: '🚗',
+      'aba dulla': '🚙',
+      other: '🚙'
     };
-    return icons[vehicleType] || '🚗';
+    return icons[carType] || '🚗';
+  };
+
+  const handleBookTrip = () => {
+    navigate('/passenger/book-trip');
+  };
+
+  const handleViewTripDetails = (tripId) => {
+    navigate(`/passenger/trips/${tripId}`);
   };
 
   if (loading) {
@@ -148,7 +242,7 @@ export default function PassengerDashboard() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading passenger dashboard...</p>
+          <p className="mt-4 text-gray-600">{t('Loading passenger dashboard...')}</p>
         </div>
       </div>
     );
@@ -160,9 +254,14 @@ export default function PassengerDashboard() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="w-8 h-8 text-red-600" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Dashboard</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('Error Loading Dashboard')}</h3>
         <p className="text-gray-600 mb-4">{error}</p>
-        <p className="text-sm text-gray-500">Only passengers can access this dashboard.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="btn-primary"
+        >
+          {t('Retry')}
+        </button>
       </div>
     );
   }
@@ -174,10 +273,10 @@ export default function PassengerDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Passenger'}
+              {getGreeting()}, {user?.fullName?.split(' ')[0] || t('Passenger')}
             </h1>
             <p className="text-gray-600">
-              Here's what's happening with your trips today
+              {t('Manage your trips and bookings with Bahir Dar Transport System')}
             </p>
           </div>
           
@@ -185,7 +284,7 @@ export default function PassengerDashboard() {
           <div className="flex items-center gap-2 bg-primary-50 text-primary-700 px-4 py-2 rounded-lg">
             <User className="w-4 h-4" />
             <span className="text-sm font-medium">
-              Passenger ID: {user?._id?.slice(-8) || 'N/A'}
+              {t('Passenger ID')}: {user?._id?.slice(-8) || t('N/A')}
             </span>
           </div>
         </div>
@@ -195,11 +294,13 @@ export default function PassengerDashboard() {
           <div className="card p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Upcoming Trips</p>
+                <p className="text-sm text-gray-600">{t('Upcoming Trips')}</p>
                 <p className="text-2xl font-bold">{passengerStats.upcomingTrips}</p>
                 <div className="flex items-center mt-1">
                   <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+{passengerStats.upcomingTrips} this month</span>
+                  <span className="text-sm text-green-600">
+                    {passengerStats.upcomingTrips > 0 ? t('Booked') : t('No trips')}
+                  </span>
                 </div>
               </div>
               <Calendar className="w-8 h-8 text-primary-500" />
@@ -209,11 +310,11 @@ export default function PassengerDashboard() {
           <div className="card p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Spent</p>
+                <p className="text-sm text-gray-600">{t('Total Spent')}</p>
                 <p className="text-2xl font-bold">{formatCurrency(passengerStats.totalSpent)}</p>
                 <div className="flex items-center mt-1">
-                  <Ticket className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">All time</span>
+                  <DollarSign className="w-4 h-4 text-green-500 mr-1" />
+                  <span className="text-sm text-green-600">{t('All bookings')}</span>
                 </div>
               </div>
               <Ticket className="w-8 h-8 text-green-500" />
@@ -223,11 +324,13 @@ export default function PassengerDashboard() {
           <div className="card p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed Trips</p>
+                <p className="text-sm text-gray-600">{t('Completed Trips')}</p>
                 <p className="text-2xl font-bold">{passengerStats.completedTrips}</p>
                 <div className="flex items-center mt-1">
-                  <Car className="w-4 h-4 text-blue-500 mr-1" />
-                  <span className="text-sm text-blue-600">Loyal customer</span>
+                  <CheckCircle className="w-4 h-4 text-blue-500 mr-1" />
+                  <span className="text-sm text-blue-600">
+                    {passengerStats.completedTrips > 5 ? t('Frequent traveler') : t('Getting started')}
+                  </span>
                 </div>
               </div>
               <Car className="w-8 h-8 text-blue-500" />
@@ -237,12 +340,12 @@ export default function PassengerDashboard() {
           <div className="card p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Next Trip</p>
+                <p className="text-sm text-gray-600">{t('Next Trip')}</p>
                 <p className="text-2xl font-bold">{formatDate(passengerStats.nextTripDate)}</p>
                 <div className="flex items-center mt-1">
                   <Clock className="w-4 h-4 text-purple-500 mr-1" />
                   <span className="text-sm text-purple-600">
-                    {passengerStats.nextTripDate ? 'Coming up' : 'No trips'}
+                    {passengerStats.nextTripDate ? formatTime(passengerStats.nextTripDate) : t('No trips')}
                   </span>
                 </div>
               </div>
@@ -255,77 +358,78 @@ export default function PassengerDashboard() {
       {/* Upcoming Trips */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Upcoming Trips</h2>
-          <span className="text-sm text-gray-600">
-            {upcomingTrips.length} trip{upcomingTrips.length !== 1 ? 's' : ''} scheduled
-          </span>
+          <h2 className="text-xl font-semibold">{t('Available Trips')}</h2>
+          <Link 
+            to="/passenger/search-trips" 
+            className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
+          >
+            {t('Search All Trips')}
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
         
         {upcomingTrips.length === 0 ? (
           <div className="card p-12 text-center">
             <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Upcoming Trips</h3>
-            <p className="text-gray-600 mb-6">You don't have any trips scheduled yet.</p>
-            <Link to="/passenger/book-trip" className="btn-primary inline-flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('No Available Trips')}</h3>
+            <p className="text-gray-600 mb-6">{t('There are no available trips at the moment.')}</p>
+            <button 
+              onClick={handleBookTrip}
+              className="btn-primary inline-flex items-center gap-2"
+            >
               <PlusCircle className="w-4 h-4" />
-              Book Your First Trip
-            </Link>
+              {t('Search for Trips')}
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingTrips.map((trip) => (
-              <div key={trip.id} className="card p-6 hover:shadow-md transition-shadow">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              <div key={trip._id} className="card p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="text-2xl">
+                    {getVehicleIcon(trip.vehicle?.carType)}
+                  </div>
                   <div className="flex-1">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="text-2xl mt-1">{getVehicleIcon(trip.vehicleType)}</div>
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {trip.from} → {trip.to}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(trip.departureTime).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{formatTime(trip.departureTime)}</span>
-                          </div>
-                        </div>
+                    <h3 className="font-semibold text-lg mb-1">
+                      {trip.origin?.stationName || t('Unknown')} → {trip.destination?.stationName || t('Unknown')}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(trip.departureTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatTime(trip.departureTime)}</span>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-wrap items-center gap-3 mt-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(trip.status)}`}>
-                        {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        Seats: {trip.seats.join(', ')}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        Vehicle: {trip.vehicleType?.replace('_', ' ')}
-                      </span>
-                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(trip.tripStatus)}`}>
+                      {trip.tripStatus?.toUpperCase() || t('UNKNOWN')}
+                    </span>
+                    <span className="text-lg font-bold">
+                      {formatCurrency(trip.price || 0)}
+                    </span>
                   </div>
                   
-                  <div className="flex flex-col items-end">
-                    <p className="text-2xl font-bold">{formatCurrency(trip.price * trip.seats.length)}</p>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {trip.seats.length} seat{trip.seats.length !== 1 ? 's' : ''} × {formatCurrency(trip.price)}
-                    </p>
-                    <div className="flex gap-2">
-                      <Link 
-                        to={`/passenger/book-trip/${trip.id}`}
-                        className="btn-secondary text-sm"
-                      >
-                        View Details
-                      </Link>
-                      <button className="btn-primary text-sm">
-                        Check In
-                      </button>
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>{t('Available')}: {trip.availableSeats || 0}/{trip.totalSeats || 0}</span>
                     </div>
+                    <span>{t('Vehicle')}: {trip.vehicle?.carType || t('N/A')}</span>
                   </div>
+                  
+                  <button
+                    onClick={() => handleViewTripDetails(trip._id)}
+                    className="btn-primary w-full mt-4"
+                  >
+                    {t('View Details & Book')}
+                  </button>
                 </div>
               </div>
             ))}
@@ -333,71 +437,118 @@ export default function PassengerDashboard() {
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link 
-            to="/passenger/book-trip"
-            className="card p-6 text-left hover:bg-primary-50 hover:border-primary-200 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200">
-                <PlusCircle className="w-5 h-5 text-primary-600" />
+      {/* Recent Activity & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Bookings */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">{t('Recent Activity')}</h2>
+          <div className="card p-6">
+            {recentBookings.length === 0 ? (
+              <div className="text-center py-8">
+                <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600">{t('No recent bookings')}</p>
               </div>
-              <h3 className="font-semibold text-gray-900">Book New Trip</h3>
-            </div>
-            <p className="text-sm text-gray-600">Find and book your next journey</p>
-          </Link>
-          
-          <Link 
-            to="/passenger/my-bookings"
-            className="card p-6 text-left hover:bg-blue-50 hover:border-blue-200 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200">
-                <History className="w-5 h-5 text-blue-600" />
+            ) : (
+              <div className="space-y-4">
+                {recentBookings.map((booking) => (
+                  <div key={booking._id} className="flex items-center justify-between pb-4 border-b last:border-0 last:pb-0">
+                    <div>
+                      <p className="font-medium">
+                        {booking.origin?.stationName || t('Unknown')} → {booking.destination?.stationName || t('Unknown')}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(booking.departureTime)} • {formatCurrency(booking.price || 0)}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(booking.tripStatus)}`}>
+                      {booking.tripStatus}
+                    </span>
+                  </div>
+                ))}
+                <Link 
+                  to="/passenger/booking-history"
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-center gap-1 pt-2"
+                >
+                  {t('View Complete History')}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-              <h3 className="font-semibold text-gray-900">Booking History</h3>
-            </div>
-            <p className="text-sm text-gray-600">See all your past trips</p>
-          </Link>
-          
-          <Link 
-            to="/passenger/payments"
-            className="card p-6 text-left hover:bg-green-50 hover:border-green-200 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200">
-                <CreditCard className="w-5 h-5 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900">Payment Methods</h3>
-            </div>
-            <p className="text-sm text-gray-600">Manage your payment options</p>
-          </Link>
-          
-          <Link 
-            to="/help"
-            className="card p-6 text-left hover:bg-purple-50 hover:border-purple-200 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200">
-                <HelpCircle className="w-5 h-5 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900">Help Center</h3>
-            </div>
-            <p className="text-sm text-gray-600">Get assistance and support</p>
-          </Link>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Development Note */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Trip booking APIs are not yet implemented. 
-          This dashboard currently shows mock data. 
-          Contact the development team when booking features are added to the backend.
-        </p>
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">{t('Quick Actions')}</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={handleBookTrip}
+              className="card p-6 text-left hover:bg-primary-50 hover:border-primary-200 transition-colors group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-primary-200">
+                  <PlusCircle className="w-6 h-6 text-primary-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('Book Trip')}</h3>
+                <p className="text-xs text-gray-600">{t('Find and book')}</p>
+              </div>
+            </button>
+            
+            <Link 
+              to="/passenger/my-bookings"
+              className="card p-6 text-left hover:bg-blue-50 hover:border-blue-200 transition-colors group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-200">
+                  <History className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('My Bookings')}</h3>
+                <p className="text-xs text-gray-600">{t('View all bookings')}</p>
+              </div>
+            </Link>
+            
+            <Link 
+              to="/passenger/payments"
+              className="card p-6 text-left hover:bg-green-50 hover:border-green-200 transition-colors group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-200">
+                  <CreditCard className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('Payments')}</h3>
+                <p className="text-xs text-gray-600">{t('Manage payments')}</p>
+              </div>
+            </Link>
+            
+            <Link 
+              to="/help"
+              className="card p-6 text-left hover:bg-purple-50 hover:border-purple-200 transition-colors group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-200">
+                  <HelpCircle className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('Help')}</h3>
+                <p className="text-xs text-gray-600">{t('Get support')}</p>
+              </div>
+            </Link>
+          </div>
+
+          {/* Favorite Routes */}
+          {passengerStats.favoriteRoutes.length > 0 && (
+            <div className="mt-6 card p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">{t('Popular Routes')}</h3>
+              <div className="space-y-2">
+                {passengerStats.favoriteRoutes.map((route, index) => (
+                  <div key={index} className="flex items-center text-sm text-gray-600">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    <span>{route}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
