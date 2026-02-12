@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp\components\common\Input.tsx - UPDATED
 import React, { forwardRef } from 'react';
 import {
   View,
@@ -18,7 +17,7 @@ interface InputProps extends RNTextInputProps {
   fullWidth?: boolean;
 }
 
-const Input = forwardRef<RNTextInput, InputProps>(({
+export const Input = forwardRef<RNTextInput, InputProps>(({
   label,
   error,
   leftIcon,
@@ -46,7 +45,7 @@ const Input = forwardRef<RNTextInput, InputProps>(({
         )}
         
         <RNTextInput
-          ref={ref} // Forward ref here
+          ref={ref}
           className={`flex-1 text-base text-gray-900 ${
             props.editable === false ? 'opacity-50' : ''
           }`}
@@ -74,7 +73,3 @@ const Input = forwardRef<RNTextInput, InputProps>(({
     </View>
   );
 });
-
-Input.displayName = 'Input';
-
-export { Input };

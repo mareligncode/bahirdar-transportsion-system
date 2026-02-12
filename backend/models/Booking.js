@@ -51,6 +51,17 @@ const bookingSchema = new mongoose.Schema({
         email: String,
         emergencyContact: String
     },
+    //new
+    paymentID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Payment'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'cancelled', 'refunded'],
+        default: 'pending'
+    },
+    //new
     checkedIn: {
         type: Boolean,
         default: false
