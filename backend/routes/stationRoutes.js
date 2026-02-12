@@ -8,7 +8,11 @@ import {
     deleteStation,
     deactivateStation,
     activateStation,
-    getActiveStations
+    getActiveStations,
+    createStationAnnouncement,
+    getStationAnnouncements,
+    deleteStationAnnouncement
+
 } from '../controllers/stationController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -42,6 +46,9 @@ router.delete( '/:id', authorize(['super_admin']), deleteStation);
 
 router.patch( '/:id/deactivate',  authorize(['super_admin']),  deactivateStation);
 
-router.patch( '/:id/activate',  authorize(['super_admin']),   activateStation);
+router.patch('/:id/activate', authorize(['super_admin']), activateStation);
+router.post('/:id/announcements', authorize(['super_admin', 'station_admin']), createStationAnnouncement);
+router.get('/:id/announcements', getStationAnnouncements);
+router.delete('/:id/announcements/:announcementId', authorize(['super_admin', 'station_admin']), deleteStationAnnouncement);
 
 export default router;

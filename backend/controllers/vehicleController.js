@@ -4,6 +4,7 @@ import Station from '../models/Station.js'
 import mongoose from 'mongoose'
 import cloudinary from '../config/cloudinary.js'
 import upload from '../utils/multerConfig.js'
+import NotificationService from '../services/notificationService.js';
 
 export const createVehicle = async (req, res) => {
     try {
@@ -543,6 +544,40 @@ export const updateVehicle = async (req, res) => {
 
         await vehicle.save();
 
+        // Send driver update notification if driver was changed
+        if (updateData.driverID && updateData.driverID !== vehicle.driverID?.toString()) {
+            try {
+                const driver = await User.findById(updateData.driverID);
+                const notificationData = {
+                    userID: updateData.driverID,
+                    title: 'Vehicle Assignment Updated',
+                    message: `You have been assigned to vehicle ${vehicle.plateNumber}. Please review your new assignment details.`,
+                    type: 'driver_update',
+                    channel: 'all',
+                    priority: 'medium',
+                    metadata: {
+                        userName: driver.fullName,
+                        vehicle: {
+                            plateNumber: vehicle.plateNumber,
+                            carType: vehicle.carType,
+                            model: vehicle.model,
+                            year: vehicle.year
+                        },
+                        station: {
+                            stationName: vehicle.stationID?.stationName,
+                            location: vehicle.stationID?.location
+                        },
+                        actionURL: `${process.env.CLIENT_URL}/dashboard/vehicle/${vehicle._id}`,
+                        actionText: 'View Vehicle Details'
+                    }
+                };
+
+                await NotificationService.createNotification(notificationData);
+            } catch (notificationError) {
+                console.error('Failed to send driver update notification:', notificationError);
+            }
+        }
+//end of notification changes
         // Populate updated data
         await vehicle.populate([
             {
@@ -714,6 +749,45 @@ export const assignDriver = async (req, res) => {
         await vehicle.save();
 
         await vehicle.populate('driverID', 'fullName email phoneNumber licenseNumber');
+
+        // Send notification to driver about assignment
+        try {
+            const notificationData = {
+                userID: driverId,
+                title: 'New Vehicle Assignment - Ready for Service!',
+                message: `You have been assigned to vehicle ${vehicle.plateNumber} (${vehicle.make} ${vehicle.model}). Please review the vehicle details and prepare for service.`,
+                type: 'driver_assignment',
+                channel: 'all',
+                priority: 'medium',
+                metadata: {
+                    userName: driver.fullName,
+                    vehicle: {
+                        plateNumber: vehicle.plateNumber,
+                        make: vehicle.make,
+                        model: vehicle.model,
+                        carType: vehicle.carType,
+                        color: vehicle.color,
+                        totalCapacity: vehicle.totalCapacity
+                    },
+                    station: {
+                        stationName: vehicle.stationID?.stationName,
+                        location: vehicle.stationID?.location
+                    },
+                    assignment: {
+                        assignedBy: req.user.fullName,
+                        assignedAt: new Date(),
+                        status: 'active'
+                    },
+                    actionURL: `${process.env.CLIENT_URL}/dashboard/vehicles/${vehicle._id}`,
+                    actionText: 'View Vehicle Details'
+                }
+            };
+
+            await NotificationService.createNotification(notificationData);
+        } catch (notificationError) {
+            console.error('Failed to send driver assignment notification:', notificationError);
+        }
+        // end notification changes
 
         res.json({
             success: true,
