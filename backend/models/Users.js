@@ -50,8 +50,9 @@ const userSchema = new mongoose.Schema({
         default: ''
     },
     stationID: {
-        type: String,
-        default: ''
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Station',
+        default: null
     },
     profileImage: {
         type: String,
