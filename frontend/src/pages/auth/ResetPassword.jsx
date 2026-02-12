@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +26,7 @@ export default function ResetPassword() {
       if (!token) {
         setTokenValid(false);
         setValidatingToken(false);
-        setError('Invalid or missing reset token');
+        setError(t('Invalid or missing reset token'));
         return;
       }
 
@@ -36,7 +38,7 @@ export default function ResetPassword() {
           setTokenValid(true);
         } else {
           setTokenValid(false);
-          setError(response.data.message || 'Invalid or expired reset token');
+          setError(response.data.message || t('Invalid or expired reset token'));
         }
       } catch (err) {
         console.error('Token validation error:', err);
@@ -45,7 +47,7 @@ export default function ResetPassword() {
         // Handle different error formats
         const errorMessage = err.response?.data?.message || 
                             err.response?.data?.error || 
-                            'Failed to validate reset token';
+                            t('Failed to validate reset token');
         setError(errorMessage);
       } finally {
         setValidatingToken(false);
@@ -64,19 +66,19 @@ export default function ResetPassword() {
     try {
       // Client-side validation
       if (!password || !confirmPassword) {
-        throw new Error('Please enter both password fields');
+        throw new Error(t('Please enter both password fields'));
       }
 
       if (password !== confirmPassword) {
-        throw new Error('Passwords do not match');
+        throw new Error(t('Passwords do not match'));
       }
 
       if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters long');
+        throw new Error(t('Password must be at least 6 characters long'));
       }
 
       if (!token) {
-        throw new Error('Reset token is missing');
+        throw new Error(t('Reset token is missing'));
       }
 
       // Use centralized API instance
@@ -85,7 +87,7 @@ export default function ResetPassword() {
         newPassword: password 
       });
 
-      setSuccess(response.data.message || 'Password has been reset successfully');
+      setSuccess(response.data.message || t('Password has been reset successfully'));
       
       // Redirect to login after 3 seconds
       setTimeout(() => {
@@ -99,7 +101,7 @@ export default function ResetPassword() {
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error || 
                           err.message || 
-                          'Something went wrong. Please try again.';
+                          t('Something went wrong. Please try again.');
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -111,7 +113,7 @@ export default function ResetPassword() {
       <div className="max-w-md mx-auto text-center">
         <div className="animate-pulse">
           <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Validating reset token...</p>
+          <p className="text-gray-600">{t('Validating reset token...')}</p>
         </div>
       </div>
     );
@@ -126,14 +128,14 @@ export default function ResetPassword() {
               <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Invalid Reset Link
+              {t('Invalid Reset Link')}
             </h1>
             <p className="text-gray-600 mb-4">{error}</p>
             <a 
               href="/forgot-password" 
               className="text-primary-600 hover:text-primary-800 font-medium"
             >
-              Request a new reset link
+              {t('Request a new reset link')}
             </a>
           </div>
         </div>
@@ -151,10 +153,10 @@ export default function ResetPassword() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Reset Password
+            {t('Reset Password')}
           </h1>
           <p className="text-gray-600">
-            Enter your new password
+            {t('Enter your new password')}
           </p>
         </div>
       </div>
@@ -164,7 +166,7 @@ export default function ResetPassword() {
           <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Error</p>
+              <p className="font-medium">{t('Error')}</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           </div>
@@ -174,16 +176,16 @@ export default function ResetPassword() {
           <div className="bg-green-50 border border-green-200 text-green-600 p-3 rounded-lg flex items-start gap-3">
             <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">Success</p>
+              <p className="font-medium">{t('Success')}</p>
               <p className="text-sm mt-1">{success}</p>
-              <p className="text-xs mt-2">Redirecting to login page...</p>
+              <p className="text-xs mt-2">{t('Redirecting to login page...')}</p>
             </div>
           </div>
         )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            New Password
+            {t('New Password')}
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -195,20 +197,20 @@ export default function ResetPassword() {
                 setError('');
               }}
               className="input-field pl-10"
-              placeholder="Enter new password"
+              placeholder={t('Enter new password')}
               required
               disabled={isLoading || success}
               minLength={6}
             />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Must be at least 6 characters long
+            {t('Must be at least 6 characters long')}
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Confirm New Password
+            {t('Confirm New Password')}
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -220,7 +222,7 @@ export default function ResetPassword() {
                 setError('');
               }}
               className="input-field pl-10"
-              placeholder="Confirm new password"
+              placeholder={t('Confirm new password')}
               required
               disabled={isLoading || success}
               minLength={6}
@@ -233,7 +235,7 @@ export default function ResetPassword() {
           disabled={isLoading || success}
           className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50"
         >
-          {isLoading ? 'Resetting...' : success ? 'Password Reset!' : 'Reset Password'}
+          {isLoading ? t('Resetting...') : success ? t('Password Reset!') : t('Reset Password')}
         </button>
       </form>
     </div>

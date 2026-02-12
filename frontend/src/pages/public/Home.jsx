@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Search, Shield, Clock, DollarSign } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Home() {
+  const { t } = useTranslation();
+  
   return (
     <div>
       {/* Hero Section with Background Image */}
@@ -19,24 +22,23 @@ export default function Home() {
         
         <div className="container relative z-10 mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            Your Guide to Transportation in Bahir Dar
+            {t('Your Guide to Transportation in Bahir Dar')}
           </h1>
           <p className="text-xl mb-8 opacity-90">
-            Seamlessly connect with rides and drivers across the city. 
-            Your journey, simplified.
+            {t('Seamlessly connect with rides and drivers across the city. Your journey, simplified.')}
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
             <Link 
               to="/login" 
               className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
             >
-              Find a Ride
+              {t('Find a Ride')}
             </Link>
             <Link 
               to="/register?role=driver" 
               className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors"
             >
-              Drive with Us
+              {t('Drive with Us')}
             </Link>
           </div>
         </div>
@@ -55,13 +57,13 @@ export default function Home() {
         }}
       >
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">How It Works</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">{t('How It Works')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { icon: Search, title: 'Search', desc: 'Enter your destination to find available rides' },
-              { icon: Clock, title: 'Book', desc: 'Choose your preferred ride and confirm instantly' },
-              { icon: Shield, title: 'Travel', desc: 'Meet your driver and enjoy a safe trip' },
-              { icon: DollarSign, title: 'Pay', desc: 'Pay securely through the app' },
+              { icon: Search, title: t('Search'), desc: t('Enter your destination to find available rides') },
+              { icon: Clock, title: t('Book'), desc: t('Choose your preferred ride and confirm instantly') },
+              { icon: Shield, title: t('Travel'), desc: t('Meet your driver and enjoy a safe trip') },
+              { icon: DollarSign, title: t('Pay'), desc: t('Pay securely through the app') },
             ].map((step, index) => (
               <div key={index} className="text-center bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-blue-50">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -88,22 +90,22 @@ export default function Home() {
         }}
       >
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">Why Choose Us?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">{t('Why Choose Us?')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                title: 'Real-Time Tracking',
-                desc: 'Watch your ride approach on the map in real-time so you know exactly when to meet your driver.',
+                title: t('Real-Time Tracking'),
+                desc: t('Watch your ride approach on the map in real-time so you know exactly when to meet your driver.'),
                 icon: '📍'
               },
               {
-                title: 'Safe & Secure',
-                desc: 'All drivers are verified, and you can share your trip status with loved ones for peace of mind.',
+                title: t('Safe & Secure'),
+                desc: t('All drivers are verified, and you can share your trip status with loved ones for peace of mind.'),
                 icon: '🛡️'
               },
               {
-                title: 'Fair Pricing',
-                desc: 'Get upfront, transparent pricing before you book. No hidden fees, no surprises.',
+                title: t('Fair Pricing'),
+                desc: t('Get upfront, transparent pricing before you book. No hidden fees, no surprises.'),
                 icon: '💵'
               }
             ].map((feature, index) => (
@@ -125,27 +127,26 @@ export default function Home() {
       {/* Additional Section: Transportation Network */}
       <section className="py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-6 text-gray-800">Bahir Dar's Largest Transport Network</h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-800">{t("Bahir Dar's Largest Transport Network")}</h2>
           <p className="text-gray-600 text-lg mb-8 max-w-3xl mx-auto">
-            Connecting every corner of the city with reliable, affordable, and comfortable transportation options.
-            From the bustling marketplaces to serene lakeside views, we've got your journey covered.
+            {t('Connecting every corner of the city with reliable, affordable, and comfortable transportation options. From the bustling marketplaces to serene lakeside views, we\'ve got your journey covered.')}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="text-3xl font-bold text-blue-600 mb-2">500+</div>
-              <div className="text-gray-700">Active Vehicles</div>
+              <div className="text-gray-700">{t('Active Vehicles')}</div>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="text-3xl font-bold text-blue-600 mb-2">24/7</div>
-              <div className="text-gray-700">Service Availability</div>
+              <div className="text-gray-700">{t('Service Availability')}</div>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="text-3xl font-bold text-blue-600 mb-2">98%</div>
-              <div className="text-gray-700">On-time Arrival</div>
+              <div className="text-gray-700">{t('On-time Arrival')}</div>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="text-3xl font-bold text-blue-600 mb-2">50+</div>
-              <div className="text-gray-700">Routes Covered</div>
+              <div className="text-gray-700">{t('Routes Covered')}</div>
             </div>
           </div>
         </div>

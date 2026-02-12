@@ -47,6 +47,7 @@ import {
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { useTranslation } from '../../hooks/useTranslation';
 
 // Styled components
 const ProfilePaper = styled(Paper)(({ theme }) => ({
@@ -97,6 +98,7 @@ const RoleBadge = styled(Chip)(({ theme, role }) => {
 });
 
 const Profile = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -147,7 +149,7 @@ const Profile = () => {
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
-      setError(err.response?.data?.message || 'Failed to load profile');
+      setError(err.response?.data?.message || t('Failed to load profile'));
     } finally {
       setLoading(false);
     }
@@ -164,12 +166,12 @@ const Profile = () => {
       if (response.data.success) {
         setProfile(response.data.data.user);
         setEditing(false);
-        setSuccess('Profile updated successfully!');
+        setSuccess(t('Profile updated successfully!'));
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
       console.error('Error updating profile:', err);
-      setError(err.response?.data?.message || 'Failed to update profile');
+      setError(err.response?.data?.message || t('Failed to update profile'));
     } finally {
       setSaving(false);
     }
@@ -178,12 +180,12 @@ const Profile = () => {
   // Change password
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match');
+      setError(t('New passwords do not match'));
       return;
     }
     
     if (passwordData.newPassword.length < 6) {
-      setError('New password must be at least 6 characters');
+      setError(t('New password must be at least 6 characters'));
       return;
     }
     
@@ -197,7 +199,7 @@ const Profile = () => {
       });
       
       if (response.data.success) {
-        setSuccess('Password changed successfully!');
+        setSuccess(t('Password changed successfully!'));
         setOpenPasswordDialog(false);
         setPasswordData({
           currentPassword: '',
@@ -208,7 +210,7 @@ const Profile = () => {
       }
     } catch (err) {
       console.error('Error changing password:', err);
-      setError(err.response?.data?.message || 'Failed to change password');
+      setError(err.response?.data?.message || t('Failed to change password'));
     } finally {
       setSaving(false);
     }
@@ -239,12 +241,12 @@ const Profile = () => {
         setOpenAvatarDialog(false);
         setAvatarFile(null);
         setAvatarPreview('');
-        setSuccess('Profile picture updated successfully!');
+        setSuccess(t('Profile picture updated successfully!'));
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
       console.error('Error uploading avatar:', err);
-      setError(err.response?.data?.message || 'Failed to upload profile picture');
+      setError(err.response?.data?.message || t('Failed to upload profile picture'));
     } finally {
       setSaving(false);
     }
@@ -256,12 +258,12 @@ const Profile = () => {
     if (!file) return;
     
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+      setError(t('Please select an image file'));
       return;
     }
     
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      setError('Image size must be less than 5MB');
+      setError(t('Image size must be less than 5MB'));
       return;
     }
     
@@ -276,7 +278,7 @@ const Profile = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('N/A');
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -289,10 +291,10 @@ const Profile = () => {
   // Get role display name
   const getRoleDisplayName = (role) => {
     switch (role) {
-      case 'super_admin': return 'Super Administrator';
-      case 'station_admin': return 'Station Administrator';
-      case 'driver': return 'Driver';
-      case 'passenger': return 'Passenger';
+      case 'super_admin': return t('Super Administrator');
+      case 'station_admin': return t('Station Administrator');
+      case 'driver': return t('Driver');
+      case 'passenger': return t('Passenger');
       default: return role;
     }
   };
@@ -300,7 +302,7 @@ const Profile = () => {
   // Initialize on component mount
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, []); // ⚠️ NO 't' here!
 
   if (loading) {
     return (
@@ -314,10 +316,10 @@ const Profile = () => {
     return (
       <Container maxWidth="lg">
         <Alert severity="error" sx={{ mt: 4 }}>
-          Failed to load profile. Please try again.
+          {t('Failed to load profile. Please try again.')}
         </Alert>
         <Button variant="contained" onClick={fetchProfile} sx={{ mt: 2 }}>
-          Retry
+          {t('Retry')}
         </Button>
       </Container>
     );
@@ -352,7 +354,7 @@ const Profile = () => {
         {/* Header */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
           <Typography variant="h4" component="h1" fontWeight="bold">
-            My Profile
+            {t('My Profile')}
           </Typography>
           {!editing && (
             <Button
@@ -360,7 +362,7 @@ const Profile = () => {
               startIcon={<EditIcon />}
               onClick={() => setEditing(true)}
             >
-              Edit Profile
+              {t('Edit Profile')}
             </Button>
           )}
         </Box>
@@ -403,7 +405,7 @@ const Profile = () => {
               
               <Box mt={2}>
                 <Chip
-                  label={profile.isActive ? 'Active' : 'Inactive'}
+                  label={profile.isActive ? t('Active') : t('Inactive')}
                   color={profile.isActive ? 'success' : 'error'}
                   size="small"
                   icon={profile.isActive ? <CheckCircleIcon /> : <ErrorIcon />}
@@ -415,7 +417,7 @@ const Profile = () => {
             {/* Quick Stats */}
             <ProfileSection mt={3}>
               <Typography variant="h6" gutterBottom fontWeight="bold">
-                Account Information
+                {t('Account Information')}
               </Typography>
               <List dense>
                 <ListItem>
@@ -423,7 +425,7 @@ const Profile = () => {
                     <PersonIcon />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Member Since" 
+                    primary={t('Member Since')} 
                     secondary={formatDate(profile.createdAt)}
                   />
                 </ListItem>
@@ -432,7 +434,7 @@ const Profile = () => {
                     <EmailIcon />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Email" 
+                    primary={t('Email')} 
                     secondary={profile.email}
                   />
                 </ListItem>
@@ -442,7 +444,7 @@ const Profile = () => {
                       <SecurityIcon />
                     </ListItemIcon>
                     <ListItemText 
-                      primary="Last Login" 
+                      primary={t('Last Login')} 
                       secondary={formatDate(profile.lastLogin)}
                     />
                   </ListItem>
@@ -458,7 +460,7 @@ const Profile = () => {
                 fullWidth
                 onClick={() => setOpenPasswordDialog(true)}
               >
-                Change Password
+                {t('Change Password')}
               </Button>
             </Box>
           </Grid>
@@ -469,14 +471,14 @@ const Profile = () => {
               // Edit Form
               <ProfileSection>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Edit Profile Information
+                  {t('Edit Profile Information')}
                 </Typography>
                 
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Full Name"
+                      label={t('Full Name')}
                       value={formData.fullName}
                       onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                       required
@@ -486,7 +488,7 @@ const Profile = () => {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Phone Number"
+                      label={t('Phone Number')}
                       value={formData.phoneNumber}
                       onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                       InputProps={{
@@ -502,11 +504,11 @@ const Profile = () => {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Emergency Contact"
+                      label={t('Emergency Contact')}
                       value={formData.emergencyContact}
                       onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                      placeholder="Name and phone number"
-                      helperText="In case of emergencies"
+                      placeholder={t('Name and phone number')}
+                      helperText={t('In case of emergencies')}
                     />
                   </Grid>
                   
@@ -518,7 +520,7 @@ const Profile = () => {
                         onClick={handleUpdateProfile}
                         disabled={saving}
                       >
-                        {saving ? <CircularProgress size={24} /> : 'Save Changes'}
+                        {saving ? <CircularProgress size={24} /> : t('Save Changes')}
                       </Button>
                       
                       <Button
@@ -533,7 +535,7 @@ const Profile = () => {
                           });
                         }}
                       >
-                        Cancel
+                        {t('Cancel')}
                       </Button>
                     </Box>
                   </Grid>
@@ -543,15 +545,15 @@ const Profile = () => {
               // View Mode
               <ProfileSection>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Personal Information
+                  {t('Personal Information')}
                 </Typography>
                 
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="Full Name"
-                      value={profile.fullName || 'Not set'}
+                      label={t('Full Name')}
+                      value={profile.fullName || t('Not set')}
                       InputProps={{
                         readOnly: true,
                         startAdornment: (
@@ -567,8 +569,8 @@ const Profile = () => {
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="Phone Number"
-                      value={profile.phoneNumber || 'Not set'}
+                      label={t('Phone Number')}
+                      value={profile.phoneNumber || t('Not set')}
                       InputProps={{
                         readOnly: true,
                         startAdornment: (
@@ -584,8 +586,8 @@ const Profile = () => {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Emergency Contact"
-                      value={profile.emergencyContact || 'Not set'}
+                      label={t('Emergency Contact')}
+                      value={profile.emergencyContact || t('Not set')}
                       InputProps={{
                         readOnly: true,
                         startAdornment: (
@@ -595,7 +597,7 @@ const Profile = () => {
                         )
                       }}
                       variant="outlined"
-                      helperText="Contact person in case of emergencies"
+                      helperText={t('Contact person in case of emergencies')}
                     />
                   </Grid>
                 </Grid>
@@ -606,14 +608,14 @@ const Profile = () => {
             {profile.role === 'driver' && (
               <ProfileSection>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Driver Information
+                  {t('Driver Information')}
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="License Number"
-                      value={profile.licenseNumber || 'Not set'}
+                      label={t('License Number')}
+                      value={profile.licenseNumber || t('Not set')}
                       InputProps={{
                         readOnly: true,
                         startAdornment: (
@@ -629,7 +631,7 @@ const Profile = () => {
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Assigned Station"
+                        label={t('Assigned Station')}
                         value={profile.stationID.name || profile.stationID}
                         InputProps={{
                           readOnly: true,
@@ -650,11 +652,11 @@ const Profile = () => {
             {profile.role === 'station_admin' && profile.stationID && (
               <ProfileSection>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Station Administrator
+                  {t('Station Administrator')}
                 </Typography>
                 <TextField
                   fullWidth
-                  label="Managed Station"
+                  label={t('Managed Station')}
                   value={profile.stationID.name || profile.stationID}
                   InputProps={{
                     readOnly: true,
@@ -672,14 +674,14 @@ const Profile = () => {
             {/* Account Status */}
             <ProfileSection>
               <Typography variant="h6" gutterBottom fontWeight="bold">
-                Account Status
+                {t('Account Status')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
-                        Account Status
+                        {t('Account Status')}
                       </Typography>
                       <Box display="flex" alignItems="center" gap={1}>
                         {profile.isActive ? (
@@ -688,7 +690,7 @@ const Profile = () => {
                           <ErrorIcon color="error" />
                         )}
                         <Typography variant="body1">
-                          {profile.isActive ? 'Active' : 'Inactive'}
+                          {profile.isActive ? t('Active') : t('Inactive')}
                         </Typography>
                       </Box>
                     </CardContent>
@@ -699,7 +701,7 @@ const Profile = () => {
                   <Card variant="outlined">
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
-                        Last Updated
+                        {t('Last Updated')}
                       </Typography>
                       <Typography variant="body1">
                         {formatDate(profile.updatedAt)}
@@ -720,14 +722,14 @@ const Profile = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Change Password</DialogTitle>
+        <DialogTitle>{t('Change Password')}</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Current Password"
+                  label={t('Current Password')}
                   type={showPasswords.current ? 'text' : 'password'}
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({
@@ -755,14 +757,14 @@ const Profile = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="New Password"
+                  label={t('New Password')}
                   type={showPasswords.new ? 'text' : 'password'}
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({
                     ...passwordData,
                     newPassword: e.target.value
                   })}
-                  helperText="Minimum 6 characters"
+                  helperText={t('Minimum 6 characters')}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -784,7 +786,7 @@ const Profile = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Confirm New Password"
+                  label={t('Confirm New Password')}
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({
@@ -813,14 +815,14 @@ const Profile = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenPasswordDialog(false)}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleChangePassword}
             disabled={saving}
           >
-            {saving ? <CircularProgress size={24} /> : 'Change Password'}
+            {saving ? <CircularProgress size={24} /> : t('Change Password')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -832,7 +834,7 @@ const Profile = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Change Profile Picture</DialogTitle>
+        <DialogTitle>{t('Change Profile Picture')}</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
@@ -855,32 +857,32 @@ const Profile = () => {
                   component="span"
                   startIcon={<PhotoCameraIcon />}
                 >
-                  Choose Photo
+                  {t('Choose Photo')}
                 </Button>
               </label>
               
               {avatarFile && (
                 <Typography variant="body2" color="textSecondary">
-                  Selected: {avatarFile.name}
+                  {t('Selected')}: {avatarFile.name}
                 </Typography>
               )}
               
               <Typography variant="body2" color="textSecondary" align="center">
-                Maximum file size: 5MB. Supported formats: JPG, PNG, GIF, WebP
+                {t('Maximum file size: 5MB. Supported formats: JPG, PNG, GIF, WebP')}
               </Typography>
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenAvatarDialog(false)}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleUploadAvatar}
             disabled={!avatarFile || saving}
           >
-            {saving ? <CircularProgress size={24} /> : 'Upload'}
+            {saving ? <CircularProgress size={24} /> : t('Upload')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -888,4 +890,4 @@ const Profile = () => {
   );
 };
 
-   export default Profile;
+export default Profile;

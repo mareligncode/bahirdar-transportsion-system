@@ -52,8 +52,10 @@ import {
   alpha,
   useTheme
 } from '@mui/material';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const StationAdminDashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ const StationAdminDashboard = () => {
       const userData = userProfile.data.data?.user;
       
       if (!userData) {
-        showSnackbar('Failed to fetch user profile', 'error');
+        showSnackbar(t('Failed to fetch user profile'), 'error');
         return;
       }
 
@@ -139,12 +141,12 @@ const StationAdminDashboard = () => {
         await setStationDataAndStats(station);
       } else {
         setStationData(null);
-        showSnackbar('No station assigned to your account', 'warning');
+        showSnackbar(t('No station assigned to your account'), 'warning');
       }
       
     } catch (error) {
       console.error('Error fetching station data:', error);
-      showSnackbar('Failed to load station information', 'error');
+      showSnackbar(t('Failed to load station information'), 'error');
     } finally {
       setLoading(false);
     }
@@ -199,13 +201,13 @@ const StationAdminDashboard = () => {
       
     } catch (error) {
       console.error('Error fetching station stats:', error);
-      showSnackbar('Failed to load station statistics', 'warning');
+      showSnackbar(t('Failed to load station statistics'), 'warning');
     }
   };
 
   useEffect(() => {
     fetchStationData();
-  }, []);
+  }, []); // ⚠️ NO 't' here!
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -224,16 +226,16 @@ const StationAdminDashboard = () => {
       const response = await api.put(`/api/station/${stationData._id}`, editForm);
       setStationData(prev => ({ ...prev, ...editForm }));
       setEditDialogOpen(false);
-      showSnackbar('Station updated successfully', 'success');
+      showSnackbar(t('Station updated successfully'), 'success');
     } catch (error) {
-      showSnackbar(error.response?.data?.message || 'Failed to update station', 'error');
+      showSnackbar(error.response?.data?.message || t('Failed to update station'), 'error');
     }
   };
 
   const handleImageUpload = (event) => {
     const files = event.target.files;
     if (files && files[0]) {
-      showSnackbar('Image uploaded successfully', 'success');
+      showSnackbar(t('Image uploaded successfully'), 'success');
       setUploadDialogOpen(false);
     }
   };
@@ -251,44 +253,43 @@ const StationAdminDashboard = () => {
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Alert severity="warning" sx={{ mb: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
-            No Station Assigned
+            {t('No Station Assigned')}
           </Typography>
           <Typography variant="body2">
-            Your account is not currently assigned to any station. 
-            Please contact the system administrator.
+            {t('Your account is not currently assigned to any station. Please contact the system administrator.')}
           </Typography>
           <Button variant="contained" size="small" sx={{ mt: 1 }} onClick={() => navigate('/profile')}>
-            Go to Profile
+            {t('Go to Profile')}
           </Button>
         </Alert>
       </Container>
     );
   }
 
-  const managerName = stationData.manager?.fullName || 'Not Assigned';
-  const managerEmail = stationData.manager?.email || 'N/A';
+  const managerName = stationData.manager?.fullName || t('Not Assigned');
+  const managerEmail = stationData.manager?.email || t('N/A');
 
   const statCards = [
-    { label: 'Drivers', value: stationStats.drivers, icon: <PeopleIcon />, color: theme.palette.primary.main },
-    { label: 'Passengers', value: stationStats.passengers, icon: <PeopleIcon />, color: theme.palette.secondary.main },
-    { label: 'Vehicles', value: stationStats.vehicles, icon: <BusIcon />, color: theme.palette.success.main },
-    { label: 'Today Trips', value: stationStats.todayTrips, icon: <ScheduleIcon />, color: theme.palette.warning.main },
+    { label: t('Drivers'), value: stationStats.drivers, icon: <PeopleIcon />, color: theme.palette.primary.main },
+    { label: t('Passengers'), value: stationStats.passengers, icon: <PeopleIcon />, color: theme.palette.secondary.main },
+    { label: t('Vehicles'), value: stationStats.vehicles, icon: <BusIcon />, color: theme.palette.success.main },
+    { label: t('Today Trips'), value: stationStats.todayTrips, icon: <ScheduleIcon />, color: theme.palette.warning.main },
   ];
 
   const quickActions = [
-    { id: 1, title: 'Vehicles', icon: <CarRentalIcon />, action: () => navigate('/station/vehicles') },
-    { id: 2, title: 'Trips', icon: <ScheduleIcon />, action: () => navigate('/station/trips') },
-    { id: 3, title: 'Users', icon: <GroupIcon />, action: () => navigate('/station/users') },
-    { id: 4, title: 'Assign Driver', icon: <AssignmentIcon />, action: () => navigate('/station/assign-driver') },
-    { id: 5, title: 'Upload', icon: <CameraIcon />, action: () => setUploadDialogOpen(true) },
-    { id: 6, title: 'Edit', icon: <EditIcon />, action: () => setEditDialogOpen(true) }
+    { id: 1, title: t('Vehicles'), icon: <CarRentalIcon />, action: () => navigate('/station/vehicles') },
+    { id: 2, title: t('Trips'), icon: <ScheduleIcon />, action: () => navigate('/station/trips') },
+    { id: 3, title: t('Users'), icon: <GroupIcon />, action: () => navigate('/station/users') },
+    { id: 4, title: t('Assign Driver'), icon: <AssignmentIcon />, action: () => navigate('/station/assign-driver') },
+    { id: 5, title: t('Upload'), icon: <CameraIcon />, action: () => setUploadDialogOpen(true) },
+    { id: 6, title: t('Edit'), icon: <EditIcon />, action: () => setEditDialogOpen(true) }
   ];
 
   const stationInfoCards = [
-    { id: 1, title: 'Station Code', value: stationData.stationCode, icon: <CodeIcon />, color: theme.palette.primary.main },
-    { id: 2, title: 'City', value: stationData.city, icon: <PlaceIcon />, color: theme.palette.secondary.main },
-    { id: 3, title: 'Manager', value: managerName, icon: <PersonIcon />, color: theme.palette.success.main },
-    { id: 4, title: 'Contact', value: stationData.contactPhone, icon: <ContactMailIcon />, color: theme.palette.warning.main }
+    { id: 1, title: t('Station Code'), value: stationData.stationCode, icon: <CodeIcon />, color: theme.palette.primary.main },
+    { id: 2, title: t('City'), value: stationData.city, icon: <PlaceIcon />, color: theme.palette.secondary.main },
+    { id: 3, title: t('Manager'), value: managerName, icon: <PersonIcon />, color: theme.palette.success.main },
+    { id: 4, title: t('Contact'), value: stationData.contactPhone, icon: <ContactMailIcon />, color: theme.palette.warning.main }
   ];
 
   return (
@@ -318,12 +319,12 @@ const StationAdminDashboard = () => {
           color="text.secondary"
           sx={{ mb: 2 }}
         >
-          Station Dashboard
+          {t('Station Dashboard')}
         </Typography>
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Chip 
             icon={<StationIcon />} 
-            label={`Station Code: ${stationData.stationCode}`} 
+            label={`${t('Station Code')}: ${stationData.stationCode}`} 
             size="medium"
             variant="outlined"
             sx={{ fontWeight: 500 }}
@@ -338,7 +339,7 @@ const StationAdminDashboard = () => {
           />
           <Chip 
             icon={<BusinessIcon />}
-            label={stationData.isActive ? 'Active Station' : 'Inactive'} 
+            label={stationData.isActive ? t('Active Station') : t('Inactive')} 
             size="medium"
             color={stationData.isActive ? 'success' : 'error'}
             variant="outlined"
@@ -371,7 +372,7 @@ const StationAdminDashboard = () => {
       {/* Quick Actions - Compact */}
       <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Quick Actions
+          {t('Quick Actions')}
         </Typography>
         <Grid container spacing={1}>
           {quickActions.map((action) => (
@@ -420,23 +421,23 @@ const StationAdminDashboard = () => {
       {/* Additional Info - Compact */}
       <Paper sx={{ p: 2, borderRadius: 2 }}>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Station Details
+          {t('Station Details')}
         </Typography>
         <Grid container spacing={1.5}>
           <Grid item xs={12} sm={6}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <MapIcon fontSize="small" color="primary" />
-              <Typography variant="body2" fontWeight="500">Address</Typography>
+              <Typography variant="body2" fontWeight="500">{t('Address')}</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">{stationData.location}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <AccessTimeIcon fontSize="small" color="primary" />
-              <Typography variant="body2" fontWeight="500">Status</Typography>
+              <Typography variant="body2" fontWeight="500">{t('Status')}</Typography>
             </Box>
             <Chip 
-              label={stationData.isActive ? 'Active' : 'Inactive'} 
+              label={stationData.isActive ? t('Active') : t('Inactive')} 
               size="small" 
               color={stationData.isActive ? 'success' : 'error'}
               variant="outlined"
@@ -447,32 +448,32 @@ const StationAdminDashboard = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Station</DialogTitle>
+        <DialogTitle>{t('Edit Station')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="Station Name"
+              label={t('Station Name')}
               fullWidth
               size="small"
               value={editForm.stationName}
               onChange={(e) => setEditForm(prev => ({ ...prev, stationName: e.target.value }))}
             />
             <TextField
-              label="Location"
+              label={t('Location')}
               fullWidth
               size="small"
               value={editForm.location}
               onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))}
             />
             <TextField
-              label="Contact Phone"
+              label={t('Contact Phone')}
               fullWidth
               size="small"
               value={editForm.contactPhone}
               onChange={(e) => setEditForm(prev => ({ ...prev, contactPhone: e.target.value }))}
             />
             <TextField
-              label="Contact Email"
+              label={t('Contact Email')}
               type="email"
               fullWidth
               size="small"
@@ -482,30 +483,30 @@ const StationAdminDashboard = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button size="small" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button size="small" variant="contained" onClick={handleEditSubmit}>Save</Button>
+          <Button size="small" onClick={() => setEditDialogOpen(false)}>{t('Cancel')}</Button>
+          <Button size="small" variant="contained" onClick={handleEditSubmit}>{t('Save')}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Upload Images</DialogTitle>
+        <DialogTitle>{t('Upload Images')}</DialogTitle>
         <DialogContent>
           <Box sx={{ p: 2, textAlign: 'center' }}>
             <ImageIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 1 }} />
             <Typography variant="body2" color="text.secondary" paragraph>
-              Upload station images (JPG, PNG, GIF)
+              {t('Upload station images (JPG, PNG, GIF)')}
             </Typography>
             <input accept="image/*" style={{ display: 'none' }} id="image-upload" type="file" onChange={handleImageUpload} />
             <label htmlFor="image-upload">
               <Button variant="contained" component="span" size="small" startIcon={<CameraIcon />}>
-                Select Images
+                {t('Select Images')}
               </Button>
             </label>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button size="small" onClick={() => setUploadDialogOpen(false)}>Close</Button>
+          <Button size="small" onClick={() => setUploadDialogOpen(false)}>{t('Close')}</Button>
         </DialogActions>
       </Dialog>
 
