@@ -12,7 +12,7 @@ import {
   Chip,
   Fade,
   Fab
-} from '@mui/material'; // Removed SnackbarCloseReason
+} from '@mui/material';
 import {
   ArrowBack,
   SafetyCheck,
@@ -24,8 +24,10 @@ import api from '../../services/api';
 import TripSearch from '../../components/passenger/TripSearch';
 import TripResults from '../../components/passenger/TripResults';
 import SeatSelection from '../../components/passenger/SeatSelection';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const BookTrip = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -81,13 +83,13 @@ const BookTrip = () => {
       setStations(response.data.stations || []);
     } catch (error) {
       console.error('Error fetching stations:', error);
-      showNotification('Failed to load stations', 'error');
+      showNotification(t('Failed to load stations'), 'error');
     }
   };
 
   const handleSearch = async (searchParams) => {
     if (!searchParams.origin || !searchParams.destination || !searchParams.date) {
-      showNotification('Please fill all search fields', 'error');
+      showNotification(t('Please fill all search fields'), 'error');
       return;
     }
 
@@ -119,13 +121,13 @@ const BookTrip = () => {
       setStep('results');
       
       if (trips.length === 0) {
-        showNotification('No trips found for your search criteria', 'info');
+        showNotification(t('No trips found for your search criteria'), 'info');
       } else {
-        showNotification(`Found ${trips.length} trip${trips.length > 1 ? 's' : ''}`, 'success');
+        showNotification(t('Found {{count}} trip', { count: trips.length }) + (trips.length > 1 ? 's' : ''), 'success');
       }
     } catch (error) {
       console.error('Search error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to search trips';
+      const errorMessage = error.response?.data?.message || t('Failed to search trips');
       showNotification(errorMessage, 'error');
       setAvailableTrips([]);
     } finally {
@@ -135,7 +137,7 @@ const BookTrip = () => {
 
   const handleTripSelect = (trip) => {
     if (trip.availableSeats === 0) {
-      showNotification('This trip is sold out. Please select another trip.', 'error');
+      showNotification(t('This trip is sold out. Please select another trip.'), 'error');
       return;
     }
     setSelectedTrip(trip);
@@ -149,7 +151,7 @@ const BookTrip = () => {
 
   const handleProceedToPayment = async () => {
     if (!selectedTrip || selectedSeats.length === 0) {
-      showNotification('Please select at least one seat', 'error');
+      showNotification(t('Please select at least one seat'), 'error');
       return;
     }
 
@@ -158,7 +160,7 @@ const BookTrip = () => {
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
-        showNotification('Please login to continue', 'error');
+        showNotification(t('Please login to continue'), 'error');
         setTimeout(() => navigate('/login'), 1500);
         return;
       }
@@ -178,7 +180,7 @@ const BookTrip = () => {
       const response = await api.post('/api/booking', bookingData);
 
       if (response.data.success) {
-        showNotification('🎉 Booking successful! Redirecting to bookings...', 'success');
+        showNotification(t('🎉 Booking successful! Redirecting to bookings...'), 'success');
         
         setTimeout(() => {
           setSelectedTrip(null);
@@ -187,11 +189,11 @@ const BookTrip = () => {
           navigate('/passenger/bookings');
         }, 2000);
       } else {
-        showNotification(response.data.message || 'Booking failed', 'error');
+        showNotification(response.data.message || t('Booking failed'), 'error');
       }
     } catch (error) {
       console.error('Booking error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to book trip';
+      const errorMessage = error.response?.data?.message || t('Failed to book trip');
       showNotification(errorMessage, 'error');
     } finally {
       setBookingLoading(false);
@@ -244,7 +246,7 @@ const BookTrip = () => {
         marginBottom: '16px',
         letterSpacing: '-0.5px'
       }} gutterBottom>
-        Find Your Perfect Ride
+        {t('Find Your Perfect Ride')}
       </Typography>
       <Typography variant="h5" sx={{ 
         fontWeight: 400,
@@ -255,7 +257,7 @@ const BookTrip = () => {
         marginLeft: 'auto',
         marginRight: 'auto'
       }} gutterBottom>
-        Comfortable, safe, and affordable travel across Ethiopia
+        {t('Comfortable, safe, and affordable travel across Ethiopia')}
       </Typography>
       <Box sx={{ 
         display: 'flex', 
@@ -264,7 +266,7 @@ const BookTrip = () => {
         flexWrap: 'wrap',
         marginTop: '30px'
       }}>
-        <Chip icon={<SafetyCheck />} label="Safe Travel" sx={{ 
+        <Chip icon={<SafetyCheck />} label={t('Safe Travel')} sx={{ 
           background: 'rgba(255, 255, 255, 0.15)',
           color: 'white',
           backdropFilter: 'blur(10px)',
@@ -272,7 +274,7 @@ const BookTrip = () => {
           fontWeight: 500,
           '& .MuiChip-icon': { color: 'white' }
         }} />
-        <Chip icon={<TrendingUp />} label="Best Prices" sx={{ 
+        <Chip icon={<TrendingUp />} label={t('Best Prices')} sx={{ 
           background: 'rgba(255, 255, 255, 0.15)',
           color: 'white',
           backdropFilter: 'blur(10px)',
@@ -280,7 +282,7 @@ const BookTrip = () => {
           fontWeight: 500,
           '& .MuiChip-icon': { color: 'white' }
         }} />
-        <Chip icon={<Schedule />} label="On Time" sx={{ 
+        <Chip icon={<Schedule />} label={t('On Time')} sx={{ 
           background: 'rgba(255, 255, 255, 0.15)',
           color: 'white',
           backdropFilter: 'blur(10px)',
@@ -288,7 +290,7 @@ const BookTrip = () => {
           fontWeight: 500,
           '& .MuiChip-icon': { color: 'white' }
         }} />
-        <Chip icon={<ElectricCar />} label="Modern Fleet" sx={{ 
+        <Chip icon={<ElectricCar />} label={t('Modern Fleet')} sx={{ 
           background: 'rgba(255, 255, 255, 0.15)',
           color: 'white',
           backdropFilter: 'blur(10px)',
@@ -350,8 +352,8 @@ const BookTrip = () => {
         if (!selectedTrip) {
           return (
             <Box sx={{ textAlign: 'center', padding: '80px', color: '#64748b' }}>
-              <Typography variant="h4">Trip Not Found</Typography>
-              <Typography>Please go back and select another trip.</Typography>
+              <Typography variant="h4">{t('Trip Not Found')}</Typography>
+              <Typography>{t('Please go back and select another trip.')}</Typography>
             </Box>
           );
         }
@@ -365,7 +367,7 @@ const BookTrip = () => {
                   mb: '8px', 
                   color: '#1e293b'
                 }} gutterBottom>
-                  Complete Your Booking
+                  {t('Complete Your Booking')}
                 </Typography>
                 <Paper elevation={1} sx={{ 
                   p: 3, 
@@ -380,20 +382,20 @@ const BookTrip = () => {
                         {selectedTrip.origin?.stationName} → {selectedTrip.destination?.stationName}
                       </Typography>
                       <Typography variant="body1" color="text.secondary">
-                        {new Date(selectedTrip.departureTime).toLocaleDateString('en-US', {
+                        {new Date(selectedTrip.departureTime).toLocaleDateString(t('locale'), {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
-                        })} • {new Date(selectedTrip.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        })} • {new Date(selectedTrip.departureTime).toLocaleTimeString(t('locale'), {hour: '2-digit', minute:'2-digit'})}
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
                       <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e40af' }}>
-                        ${selectedTrip.price} <Typography component="span" variant="body2" color="text.secondary">per seat</Typography>
+                        ${selectedTrip.price} <Typography component="span" variant="body2" color="text.secondary">{t('per seat')}</Typography>
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {selectedTrip.availableSeats} seats available
+                        {t('{{count}} seats available', { count: selectedTrip.availableSeats })}
                       </Typography>
                     </Box>
                   </Box>
@@ -421,14 +423,14 @@ return (
     maxWidth: '1400px !important', 
     minHeight: '100vh', 
     background: '#f8fafc',
-    position: 'relative' // Add this back
+    position: 'relative'
   }}>
     {/* Back Button - Absolute positioned at bottom right */}
     {step !== 'search' && (
       <Fab
         onClick={goBack}
         sx={{
-          position: 'absolute', // Changed from fixed to absolute
+          position: 'absolute',
           bottom: '30px',
           right: '30px',
           zIndex: 9999,
@@ -443,7 +445,7 @@ return (
           width: '56px',
           height: '56px'
         }}
-        aria-label="back"
+        aria-label={t('back')}
       >
         <ArrowBack />
       </Fab>
@@ -453,7 +455,7 @@ return (
     <Box sx={{ 
       padding: { xs: '16px', md: '24px' },
       minHeight: '100vh',
-      pb: '100px' // Add padding bottom to make room for the button
+      pb: '100px'
     }}>
       {renderStepContent()}
     </Box>
@@ -481,10 +483,10 @@ return (
           }}>
             <CircularProgress size={60} sx={{ mb: 3 }} />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Processing your booking...
+              {t('Processing your booking...')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Please wait while we confirm your seats
+              {t('Please wait while we confirm your seats')}
             </Typography>
           </Box>
         </Box>

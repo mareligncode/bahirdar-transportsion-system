@@ -52,8 +52,10 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const MyBookings = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,14 +72,14 @@ const MyBookings = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, []); // ⚠️ NO 't' here!
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (!user._id) {
-        showNotification('Please login to view your bookings', 'error');
+        showNotification(t('Please login to view your bookings'), 'error');
         setTimeout(() => navigate('/login'), 1500);
         return;
       }
@@ -109,7 +111,7 @@ const MyBookings = () => {
       setBookings(sortedBookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to load your bookings';
+      const errorMessage = error.response?.data?.message || t('Failed to load your bookings');
       showNotification(errorMessage, 'error');
       setBookings([]);
     } finally {
@@ -125,7 +127,7 @@ const MyBookings = () => {
       const response = await api.put(`/api/booking/${selectedBooking._id}/cancel`);
 
       if (response.data.success) {
-        showNotification('Booking cancelled successfully', 'success');
+        showNotification(t('Booking cancelled successfully'), 'success');
         // Update the booking in the list
         setBookings(prev => prev.map(booking => 
           booking._id === selectedBooking._id 
@@ -135,11 +137,11 @@ const MyBookings = () => {
         setCancelDialogOpen(false);
         setSelectedBooking(null);
       } else {
-        showNotification(response.data.message || 'Failed to cancel booking', 'error');
+        showNotification(response.data.message || t('Failed to cancel booking'), 'error');
       }
     } catch (error) {
       console.error('Cancel booking error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to cancel booking';
+      const errorMessage = error.response?.data?.message || t('Failed to cancel booking');
       showNotification(errorMessage, 'error');
     } finally {
       setCancelling(false);
@@ -170,7 +172,7 @@ const MyBookings = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('N/A');
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
@@ -181,7 +183,7 @@ const MyBookings = () => {
   };
 
   const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('N/A');
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -190,7 +192,7 @@ const MyBookings = () => {
   };
 
   const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('N/A');
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
       year: 'numeric',
@@ -232,17 +234,17 @@ const MyBookings = () => {
   };
 
   const getStatusLabel = (status) => {
-    if (!status) return 'Unknown';
+    if (!status) return t('Unknown');
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   const calculateDuration = (departure, arrival) => {
-    if (!departure || !arrival) return 'N/A';
+    if (!departure || !arrival) return t('N/A');
     const dep = new Date(departure);
     const arr = new Date(arrival);
     const hours = Math.floor((arr - dep) / (1000 * 60 * 60));
     const minutes = Math.floor(((arr - dep) % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
+    return t('{{hours}}h {{minutes}}m', { hours, minutes });
   };
 
   const getFilteredBookings = () => {
@@ -327,10 +329,10 @@ const MyBookings = () => {
                   </Avatar>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
-                      {origin.stationName || 'Unknown'} → {destination.stationName || 'Unknown'}
+                      {origin.stationName || t('Unknown')} → {destination.stationName || t('Unknown')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Booking #{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
+                      {t('Booking #')}{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
                     </Typography>
                   </Box>
                 </Box>
@@ -340,16 +342,16 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Schedule fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Departure:
+                        {t('Departure')}:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {formatDate(trip.departureTime)} at {formatTime(trip.departureTime)}
+                        {formatDate(trip.departureTime)} {t('at')} {formatTime(trip.departureTime)}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <AccessTime fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Duration:
+                        {t('Duration')}:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {calculateDuration(trip.departureTime, trip.arrivalTime)}
@@ -358,7 +360,7 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <EventSeat fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Seats:
+                        {t('Seats')}:
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                         {booking.seatNumbers?.map((seat, index) => (
@@ -381,25 +383,25 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <DirectionsBus fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Vehicle:
+                        {t('Vehicle')}:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {vehicle.carType || 'N/A'} • {vehicle.plateNumber || 'N/A'}
+                        {vehicle.carType || t('N/A')} • {vehicle.plateNumber || t('N/A')}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Person fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Driver:
+                        {t('Driver')}:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {trip.driver?.fullName || 'N/A'}
+                        {trip.driver?.fullName || t('N/A')}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Receipt fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
-                        Booked on:
+                        {t('Booked on')}:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {formatDate(booking.bookingDate || booking.createdAt)}
@@ -423,7 +425,7 @@ const MyBookings = () => {
                 }}>
                   <Box>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Total Amount
+                      {t('Total Amount')}
                     </Typography>
                     <Typography variant="h4" sx={{ 
                       fontWeight: 800, 
@@ -435,7 +437,7 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <AttachMoney fontSize="small" sx={{ color: '#64748b', fontSize: '16px' }} />
                       <Typography variant="caption" color="text.secondary">
-                        {booking.seatNumbers?.length || 0} seat(s) × ${booking.pricePerSeat || trip.price || 0}
+                        {booking.seatNumbers?.length || 0} {t('seat(s)')} × ${booking.pricePerSeat || trip.price || 0}
                       </Typography>
                     </Box>
                   </Box>
@@ -454,7 +456,7 @@ const MyBookings = () => {
                       fullWidth
                       sx={{ borderRadius: '8px' }}
                     >
-                      Ticket
+                      {t('Ticket')}
                     </Button>
                     
                     {isCancellable && (
@@ -468,7 +470,7 @@ const MyBookings = () => {
                         fullWidth
                         sx={{ borderRadius: '8px' }}
                       >
-                        Cancel
+                        {t('Cancel')}
                       </Button>
                     )}
                   </Box>
@@ -499,12 +501,12 @@ const MyBookings = () => {
         <History sx={{ fontSize: 40 }} />
       </Avatar>
       <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', mb: 1 }}>
-        No Bookings Found
+        {t('No Bookings Found')}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
         {filterStatus !== 'all' || searchDate 
-          ? 'No bookings match your current filters. Try adjusting your search criteria.'
-          : "You haven't made any bookings yet. Start your journey by booking a trip!"}
+          ? t('No bookings match your current filters. Try adjusting your search criteria.')
+          : t("You haven't made any bookings yet. Start your journey by booking a trip!")}
       </Typography>
       {filterStatus !== 'all' || searchDate ? (
         <Button 
@@ -515,7 +517,7 @@ const MyBookings = () => {
           }}
           sx={{ borderRadius: '8px' }}
         >
-          Clear Filters
+          {t('Clear Filters')}
         </Button>
       ) : (
         <Button 
@@ -528,7 +530,7 @@ const MyBookings = () => {
             '&:hover': { background: '#2563eb' }
           }}
         >
-          Book a Trip
+          {t('Book a Trip')}
         </Button>
       )}
     </Paper>
@@ -545,10 +547,10 @@ const MyBookings = () => {
     }}>
       <CircularProgress size={60} />
       <Typography variant="h6" sx={{ color: '#1e293b' }}>
-        Loading your bookings...
+        {t('Loading your bookings...')}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Please wait while we fetch your booking history
+        {t('Please wait while we fetch your booking history')}
       </Typography>
     </Box>
   );
@@ -588,16 +590,16 @@ const MyBookings = () => {
               gap: 1
             }}>
               <ConfirmationNumber sx={{ fontSize: 32, color: '#3b82f6' }} />
-              My Bookings
+              {t('My Bookings')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              View and manage your trip bookings
+              {t('View and manage your trip bookings')}
             </Typography>
           </Box>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Tooltip title="Refresh">
+          <Tooltip title={t('Refresh')}>
             <IconButton 
               onClick={fetchBookings}
               disabled={loading}
@@ -622,7 +624,7 @@ const MyBookings = () => {
               px: 3
             }}
           >
-            Book New Trip
+            {t('Book New Trip')}
           </Button>
         </Box>
       </Box>
@@ -638,13 +640,13 @@ const MyBookings = () => {
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Filter by Status
+              {t('Filter by Status')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {['all', 'confirmed', 'pending', 'completed', 'cancelled'].map((status) => (
                 <Chip
                   key={status}
-                  label={status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                  label={status === 'all' ? t('All') : t(status.charAt(0).toUpperCase() + status.slice(1))}
                   onClick={() => setFilterStatus(status)}
                   color={filterStatus === status ? 'primary' : 'default'}
                   variant={filterStatus === status ? 'filled' : 'outlined'}
@@ -659,11 +661,11 @@ const MyBookings = () => {
           
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Filter by Date
+              {t('Filter by Date')}
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label="Booking Date"
+                label={t('Booking Date')}
                 value={searchDate}
                 onChange={setSearchDate}
                 renderInput={(params) => (
@@ -671,7 +673,7 @@ const MyBookings = () => {
                     {...params} 
                     size="small" 
                     fullWidth 
-                    placeholder="Select date"
+                    placeholder={t('Select date')}
                   />
                 )}
               />
@@ -680,26 +682,26 @@ const MyBookings = () => {
 
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Summary
+              {t('Summary')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.length} color="primary">
                   <ConfirmationNumber color="action" />
                 </Badge>
-                <Typography variant="body2">Total</Typography>
+                <Typography variant="body2">{t('Total')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.filter(b => b.status === 'confirmed').length} color="success">
                   <CheckCircle color="action" />
                 </Badge>
-                <Typography variant="body2">Confirmed</Typography>
+                <Typography variant="body2">{t('Confirmed')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.filter(b => b.status === 'pending').length} color="warning">
                   <Pending color="action" />
                 </Badge>
-                <Typography variant="body2">Pending</Typography>
+                <Typography variant="body2">{t('Pending')}</Typography>
               </Box>
             </Box>
           </Grid>
@@ -717,7 +719,10 @@ const MyBookings = () => {
             <>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Showing {filteredBookings.length} of {bookings.length} booking(s)
+                  {t('Showing {{count}} of {{total}} booking(s)', { 
+                    count: filteredBookings.length, 
+                    total: bookings.length 
+                  })}
                 </Typography>
                 {(filterStatus !== 'all' || searchDate) && (
                   <Button 
@@ -728,7 +733,7 @@ const MyBookings = () => {
                     }}
                     sx={{ textTransform: 'none' }}
                   >
-                    Clear Filters
+                    {t('Clear Filters')}
                   </Button>
                 )}
               </Box>
@@ -760,13 +765,13 @@ const MyBookings = () => {
               <Cancel />
             </Avatar>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Cancel Booking
+              {t('Cancel Booking')}
             </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: '#64748b' }}>
-            Are you sure you want to cancel this booking?
+            {t('Are you sure you want to cancel this booking?')}
             {selectedBooking && (
               <Box sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: '8px' }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -776,7 +781,7 @@ const MyBookings = () => {
                   {formatDateTime(selectedBooking.tripID?.departureTime)}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: '#1e40af' }}>
-                  Refund Amount: ${selectedBooking.totalPrice || selectedBooking.price || 0}
+                  {t('Refund Amount')}: ${selectedBooking.totalPrice || selectedBooking.price || 0}
                 </Typography>
               </Box>
             )}
@@ -788,7 +793,7 @@ const MyBookings = () => {
             variant="outlined"
             sx={{ borderRadius: '8px' }}
           >
-            Keep Booking
+            {t('Keep Booking')}
           </Button>
           <Button 
             onClick={handleCancelBooking}
@@ -800,7 +805,7 @@ const MyBookings = () => {
               px: 3
             }}
           >
-            {cancelling ? <CircularProgress size={24} /> : 'Yes, Cancel'}
+            {cancelling ? <CircularProgress size={24} /> : t('Yes, Cancel')}
           </Button>
         </DialogActions>
       </Dialog>

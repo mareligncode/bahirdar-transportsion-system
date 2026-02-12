@@ -1,3 +1,5 @@
+import { useTranslation } from '../../hooks/useTranslation';
+
 const faqs = [
   {
     question: 'How do I book a trip?',
@@ -18,14 +20,16 @@ const faqs = [
 ];
 
 export default function FAQ() {
+  const { t } = useTranslation();
+  
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-8">{t('Frequently Asked Questions')}</h1>
       <div className="space-y-4">
         {faqs.map((faq, index) => (
           <div key={index} className="card p-6">
-            <h3 className="font-semibold text-lg mb-2">{faq.question}</h3>
-            <p className="text-gray-600">{faq.answer}</p>
+            <h3 className="font-semibold text-lg mb-2">{t(faq.question)}</h3>
+            <p className="text-gray-600">{t(faq.answer)}</p>
           </div>
         ))}
       </div>

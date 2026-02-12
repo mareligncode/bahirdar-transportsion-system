@@ -56,7 +56,7 @@ const checkStationPermission = () => {
     const vehicleStationId = vehicle.stationID?.toString();
     
     // Get user.stationID?.toString() - EXACT match to backend
-    const userStationId = userProfile?._ID?.toString();
+    const userStationId = userProfile?.stationID?.toString();
     
     // EXACT same comparison as your backend
     if (vehicleStationId?.toString() !== userStationId?.toString()) {
