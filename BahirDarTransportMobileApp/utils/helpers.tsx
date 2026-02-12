@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp/utils/helpers.tsx
 import { Platform } from 'react-native';
 
 export const isAndroid = Platform.OS === 'android';
@@ -116,40 +115,43 @@ export const formatTimeDifference = (minutes: number): string => {
 /**
  * Check if a date is today
  */
-export const isToday = (date: Date): boolean => {
+export const isToday = (date: Date | string): boolean => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   const today = new Date();
   return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
+    dateObj.getDate() === today.getDate() &&
+    dateObj.getMonth() === today.getMonth() &&
+    dateObj.getFullYear() === today.getFullYear()
   );
 };
 
 /**
  * Check if a date is tomorrow
  */
-export const isTomorrow = (date: Date): boolean => {
+export const isTomorrow = (date: Date | string): boolean => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   
   return (
-    date.getDate() === tomorrow.getDate() &&
-    date.getMonth() === tomorrow.getMonth() &&
-    date.getFullYear() === tomorrow.getFullYear()
+    dateObj.getDate() === tomorrow.getDate() &&
+    dateObj.getMonth() === tomorrow.getMonth() &&
+    dateObj.getFullYear() === tomorrow.getFullYear()
   );
 };
 
 /**
  * Check if a date is yesterday
  */
-export const isYesterday = (date: Date): boolean => {
+export const isYesterday = (date: Date | string): boolean => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   
   return (
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
+    dateObj.getDate() === yesterday.getDate() &&
+    dateObj.getMonth() === yesterday.getMonth() &&
+    dateObj.getFullYear() === yesterday.getFullYear()
   );
 };
 
@@ -171,10 +173,11 @@ export const formatDate = (date: Date | string): string => {
     return 'Yesterday';
   }
   
-  return dateObj.toLocaleDateString('en-ET', {
+  return dateObj.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
   });
 };
 
@@ -184,8 +187,8 @@ export const formatDate = (date: Date | string): string => {
 export const formatTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  return dateObj.toLocaleTimeString('en-ET', {
-    hour: 'numeric',
+  return dateObj.toLocaleTimeString('en-US', {
+    hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
@@ -198,248 +201,57 @@ export const formatDateTime = (date: Date | string): string => {
   return `${formatDate(date)} at ${formatTime(date)}`;
 };
 
-/**
- * Group array by key
-//  */
-// export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> => {
-//   return array.reduce((groups, item) => {
-//     const groupKey = String(item[key]);
-//     if (!groups[groupKey]) {
-//       groups[groupKey] = [];
-//     }
-//     groups[groupKey].push(item);
-//     return groups;
-//   }, {} as Record<string, T[]>);
-// };
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-ET', {
+    style: 'currency',
+    currency: 'ETB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
-// /**
-//  * Sort trips by departure time
-//  */
-// export const sortTripsByDeparture = <T extends { departureTime: string }>(
-//   trips: T[]
-// ): T[] => {
-//   return [...trips].sort(
-//     (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
-//   );
-// };
-
-// /**
-//  * Filter trips by date
-//  */
-// export const filterTripsByDate = <T extends { departureTime: string }>(
-//   trips: T[],
-//   date: Date
-// ): T[] => {
-//   const targetDate = new Date(date);
-//   targetDate.setHours(0, 0, 0, 0);
+export const calculateDuration = (departure: string, arrival: string): string => {
+  const dep = new Date(departure);
+  const arr = new Date(arrival);
+  const diff = arr.getTime() - dep.getTime();
   
-//   const nextDate = new Date(targetDate);
-//   nextDate.setDate(nextDate.getDate() + 1);
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   
-//   return trips.filter(trip => {
-//     const tripDate = new Date(trip.departureTime);
-//     return tripDate >= targetDate && tripDate < nextDate;
-//   });
-// };
+  return `${hours}h ${minutes}m`;
+};
 
-// /**
-//  * Deep clone object
-//  */
-// export const deepClone = <T>(obj: T): T => {
-//   return JSON.parse(JSON.stringify(obj));
-// };
-
-// /**
-//  * Safe parse JSON
-//  */
-// export const safeParseJSON = <T>(jsonString: string, fallback: T): T => {
-//   try {
-//     return JSON.parse(jsonString) as T;
-//   } catch {
-//     return fallback;
-//   }
-// };
-
-// /**
-//  * Capitalize first letter of each word
-//  */
-// export const capitalizeWords = (text: string): string => {
-//   return text
-//     .split(' ')
-//     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-//     .join(' ');
-// };
-
-// /**
-//  * Format currency (ETB)
-//  */
-// export const formatCurrency = (amount: number): string => {
-//   return new Intl.NumberFormat('en-ET', {
-//     style: 'currency',
-//     currency: 'ETB',
-//     minimumFractionDigits: 2,
-//   }).format(amount);
-// };
-
-// /**
-//  * Generate random color
-//  */
-// export const getRandomColor = (): string => {
-//   const colors = [
-//     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-//     '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-//   ];
-//   return colors[Math.floor(Math.random() * colors.length)];
-// };
-
-// /**
-//  * Validate email
-//  */
-// export const isValidEmail = (email: string): boolean => {
-//   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-//   return emailRegex.test(email);
-// };
-
-// /**
-//  * Validate Ethiopian phone number
-//  */
-// export const isValidEthiopianPhone = (phone: string): boolean => {
-//   const phoneRegex = /^(?:\+251|0)(9\d{8})$/;
-//   return phoneRegex.test(phone.replace(/\s/g, ''));
-// };
-
-// /**
-//  * Format Ethiopian phone number
-//  */
-// export const formatEthiopianPhone = (phone: string): string => {
-//   const cleaned = phone.replace(/\D/g, '');
+export const generateSeatNumbers = (totalSeats: number): string[] => {
+  const seats = [];
+  const rows = Math.ceil(totalSeats / 4);
   
-//   if (cleaned.startsWith('0')) {
-//     return `+251${cleaned.substring(1)}`;
-//   } else if (cleaned.startsWith('251')) {
-//     return `+${cleaned}`;
-//   } else if (cleaned.startsWith('9')) {
-//     return `+251${cleaned}`;
-//   }
+  for (let row = 1; row <= rows; row++) {
+    for (let col = 0; col < 4; col++) {
+      if (seats.length < totalSeats) {
+        seats.push(`${String.fromCharCode(65 + col)}${row}`);
+      }
+    }
+  }
   
-//   return phone;
-// };
+  return seats;
+};
 
-// /**
-//  * Get initials from name
-//  */
-// export const getInitials = (name: string): string => {
-//   return name
-//     .split(' ')
-//     .map(word => word.charAt(0).toUpperCase())
-//     .join('')
-//     .substring(0, 2);
-// };
-
-// /**
-//  * Calculate age from birth date
-//  */
-// export const calculateAge = (birthDate: Date | string): number => {
-//   const birthDateObj = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
-//   const today = new Date();
-//   let age = today.getFullYear() - birthDateObj.getFullYear();
-//   const monthDiff = today.getMonth() - birthDateObj.getMonth();
+export const validateTripSearch = (data: {
+  origin: string;
+  destination: string;
+  date: string;
+}): boolean => {
+  if (!data.origin || !data.destination || !data.date) {
+    return false;
+  }
   
-//   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-//     age--;
-//   }
+  if (data.origin === data.destination) {
+    return false;
+  }
   
-//   return age;
-// };
-
-// /**
-//  * Check if object is empty
-//  */
-// export const isEmptyObject = (obj: object): boolean => {
-//   return Object.keys(obj).length === 0;
-// };
-
-// /**
-//  * Check if array is empty
-//  */
-// export const isEmptyArray = (arr: any[]): boolean => {
-//   return arr.length === 0;
-// };
-
-// /**
-//  * Remove duplicates from array
-//  */
-// export const removeDuplicates = <T>(arr: T[], key?: keyof T): T[] => {
-//   if (!key) {
-//     return [...new Set(arr)];
-//   }
+  const selectedDate = new Date(data.date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-//   const seen = new Set();
-//   return arr.filter(item => {
-//     const value = item[key];
-//     if (seen.has(value)) {
-//       return false;
-//     }
-//     seen.add(value);
-//     return true;
-//   });
-// };
-
-// /**
-//  * Get distance between two coordinates (Haversine formula)
-//  */
-// export const getDistance = (
-//   lat1: number,
-//   lon1: number,
-//   lat2: number,
-//   lon2: number
-// ): number => {
-//   const R = 6371; // Earth's radius in km
-//   const dLat = (lat2 - lat1) * (Math.PI / 180);
-//   const dLon = (lon2 - lon1) * (Math.PI / 180);
-//   const a =
-//     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-//     Math.cos(lat1 * (Math.PI / 180)) *
-//     Math.cos(lat2 * (Math.PI / 180)) *
-//     Math.sin(dLon / 2) *
-//     Math.sin(dLon / 2);
-//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-//   return R * c; // Distance in km
-// };
-
-// export default {
-//   isAndroid,
-//   isIOS,
-//   delay,
-//   debounce,
-//   throttle,
-//   truncateText,
-//   generateId,
-//   calculateTotalPrice,
-//   formatSeatDisplay,
-//   getTimeDifference,
-//   formatTimeDifference,
-//   isToday,
-//   isTomorrow,
-//   isYesterday,
-//   formatDate,
-//   formatTime,
-//   formatDateTime,
-//   groupBy,
-//   sortTripsByDeparture,
-//   filterTripsByDate,
-//   deepClone,
-//   safeParseJSON,
-//   capitalizeWords,
-//   formatCurrency,
-//   getRandomColor,
-//   isValidEmail,
-//   isValidEthiopianPhone,
-//   formatEthiopianPhone,
-//   getInitials,
-//   calculateAge,
-//   isEmptyObject,
-//   isEmptyArray,
-//   removeDuplicates,
-//   getDistance,
-// };
+  return selectedDate >= today;
+};

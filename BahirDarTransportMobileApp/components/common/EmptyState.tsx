@@ -1,40 +1,49 @@
-// components/common/EmptyState.tsx - CREATE THIS FILE
+// components/common/EmptyState.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { LucideIcon } from 'lucide-react-native';
 
 interface EmptyStateProps {
-  icon?: LucideIcon;
+  icon?: React.ReactNode | string;
   title: string;
+  message?: string;
   description?: string;
   buttonText?: string;
   onButtonPress?: () => void;
   children?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export function EmptyState({ 
-  icon: Icon, 
+  icon, 
   title, 
+  message,
   description, 
   buttonText, 
   onButtonPress,
-  children 
+  children,
+  actionLabel,
+  onAction
 }: EmptyStateProps) {
+  const displayMessage = message || description;
+  
   return (
     <View className="flex-1 items-center justify-center p-8">
-      {Icon && (
+      {icon && typeof icon === 'string' ? (
+        <Text className="text-4xl mb-4">{icon}</Text>
+      ) : icon ? (
         <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
-          <Icon size={32} color="#6B7280" />
+          {icon}
         </View>
-      )}
+      ) : null}
       
       <Text className="text-xl font-bold text-gray-900 text-center mb-2">
         {title}
       </Text>
       
-      {description && (
+      {displayMessage && (
         <Text className="text-gray-600 text-center mb-6 max-w-[280px]">
-          {description}
+          {displayMessage}
         </Text>
       )}
       
@@ -45,6 +54,16 @@ export function EmptyState({
           activeOpacity={0.7}
         >
           <Text className="text-white font-medium">{buttonText}</Text>
+        </TouchableOpacity>
+      )}
+      
+      {actionLabel && onAction && (
+        <TouchableOpacity
+          onPress={onAction}
+          className="bg-blue-600 px-6 py-3 rounded-lg mt-4"
+          activeOpacity={0.7}
+        >
+          <Text className="text-white font-medium">{actionLabel}</Text>
         </TouchableOpacity>
       )}
       

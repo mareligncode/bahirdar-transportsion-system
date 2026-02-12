@@ -15,20 +15,115 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bahirdartransport.app",
+      "associatedDomains": [
+        "applinks:192.168.137.1",
+        "applinks:localhost"
+      ],
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "bahirdartransport",
+              "exp"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "package": "com.bahirdartransport.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "http",
+              "host": "192.168.137.1",
+              "port": "5000",
+              "pathPrefix": "/redirect.html"
+            },
+            {
+              "scheme": "https",
+              "host": "192.168.137.1",
+              "port": "5000",
+              "pathPrefix": "/redirect.html"
+            },
+            {
+              "scheme": "http",
+              "host": "localhost",
+              "port": "5000",
+              "pathPrefix": "/redirect.html"
+            },
+            {
+              "scheme": "https",
+              "host": "localhost",
+              "port": "5000",
+              "pathPrefix": "/redirect.html"
+            },
+            {
+              "scheme": "bahirdartransport"
+            },
+            {
+              "scheme": "exp"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "http",
+              "host": "192.168.137.1",
+              "port": "5000",
+              "pathPattern": ".*reset-password.*"
+            },
+            {
+              "scheme": "https",
+              "host": "192.168.137.1",
+              "port": "5000",
+              "pathPattern": ".*reset-password.*"
+            },
+            {
+              "scheme": "http",
+              "host": "localhost",
+              "port": "5000",
+              "pathPattern": ".*reset-password.*"
+            },
+            {
+              "scheme": "https",
+              "host": "localhost",
+              "port": "5000",
+              "pathPattern": ".*reset-password.*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
-    "plugins": ["expo-router"],
-    "scheme": "bahirdartransport"
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker"
+    ],
+    "scheme": "bahirdartransport",
+    "extra": {
+      "router": {
+        "origin": "https://192.168.137.1:5000"
+      }
+    }
   }
 }
