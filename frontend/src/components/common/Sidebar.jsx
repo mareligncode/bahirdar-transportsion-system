@@ -73,7 +73,6 @@ export default function Sidebar({ userRole }) {
       { icon: Car, label: t('vehicles'), path: '/station/vehicles' },
       { icon: Calendar, label: t('trip_management'), path: '/station/trips' },
       { icon: BarChart3, label: t('station_reports'), path: '/station/reports' },
-      { icon: Settings, label: t('station_settings'), path: '/station/station' },
     ];
 
     const superAdminItems = [

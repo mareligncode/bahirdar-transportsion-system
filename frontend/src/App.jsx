@@ -48,7 +48,6 @@ import StationDashboard from './pages/station/Dashboard';
 import StationUsers from './pages/station/Users';
 import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
-import StationSettings from './pages/station/Station';
 import Trips from './pages/station/Trips';
 import Vehicle from './pages/station/Vehicles';
 
@@ -200,14 +199,6 @@ const queryClient = new QueryClient({
             <ProtectedRoute allowedRoles={['station_admin']}>
               <Layout showSidebar>
                 <StationUsers />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-             <Route path="/station/station" element={
-            <ProtectedRoute allowedRoles={['station_admin']}>
-              <Layout showSidebar>
-                <StationSettings />
               </Layout>
             </ProtectedRoute>
           } />
