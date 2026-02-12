@@ -69,12 +69,12 @@ const Trips = () => {
     destination: '',
     departureTime: '',
     arrivalTime: '',
-    vehicle: '',
-    driver: '',
+    vehicleID: '',        // CHANGED: from 'vehicle' to 'vehicleID'
+    driverID: '',         // CHANGED: from 'driver' to 'driverID'
     price: '',
     totalSeats: '',
     availableSeats: '',
-    station: '',
+    station: '',          // Backend expects 'station' (this is correct)
     routePoints: '',
     estimatedDuration: '',
     notes: ''
@@ -113,6 +113,13 @@ const Trips = () => {
     }
   }, [openDialog, userProfile, userStation]);
 
+  // Fetch trips when pagination/sorting changes
+  useEffect(() => {
+    if (userProfile) {
+      fetchTrips();
+    }
+  }, [page, rowsPerPage, sortField, sortDirection, userProfile, userStation]);
+
   const fetchUserProfile = async () => {
     try {
       const response = await api.get('/api/auth/profile');
@@ -120,8 +127,9 @@ const Trips = () => {
         setUserProfile(response.data.data.user);
         if (response.data.data.user.role === 'station_admin' && response.data.data.user.stationID) {
           await fetchUserStation(response.data.data.user.stationID);
+        } else {
+          fetchTrips();
         }
-        fetchTrips();
       }
     } catch (err) {
       console.error('Error fetching user profile:', err);
@@ -233,7 +241,7 @@ const Trips = () => {
         const actualStationId = userStation._id;
         
         if (actualStationId && /^[0-9a-fA-F]{24}$/.test(actualStationId)) {
-          params.append('stationID', actualStationId); // Vehicle model uses stationID
+          params.append('stationID', actualStationId);
         }
       }
       
@@ -343,7 +351,7 @@ const Trips = () => {
       
       const updatedData = {
         ...formData,
-        vehicle: vehicleId,
+        vehicleID: vehicleId,        // CHANGED: from 'vehicle' to 'vehicleID'
         totalSeats: vehicleCapacity,
         availableSeats: vehicleCapacity
       };
@@ -354,22 +362,22 @@ const Trips = () => {
         const assignedDriver = availableDrivers.find(driver => driver._id === driverId);
         
         if (assignedDriver) {
-          updatedData.driver = assignedDriver._id;
+          updatedData.driverID = assignedDriver._id;  // CHANGED: from 'driver' to 'driverID'
         } else {
           fetchAssignedDriver(driverId);
         }
       } else {
-        updatedData.driver = '';
+        updatedData.driverID = '';   // CHANGED: from 'driver' to 'driverID'
       }
       
       setFormData(updatedData);
     } else {
       setFormData(prev => ({
         ...prev,
-        vehicle: '',
+        vehicleID: '',              // CHANGED: from 'vehicle' to 'vehicleID'
         totalSeats: '',
         availableSeats: '',
-        driver: ''
+        driverID: ''               // CHANGED: from 'driver' to 'driverID'
       }));
     }
   };
@@ -401,12 +409,12 @@ const Trips = () => {
           
           setFormData(prev => ({
             ...prev,
-            driver: driver._id
+            driverID: driver._id    // CHANGED: from 'driver' to 'driverID'
           }));
         } else {
           setFormData(prev => ({
             ...prev,
-            driver: ''
+            driverID: ''           // CHANGED: from 'driver' to 'driverID'
           }));
         }
       }
@@ -430,8 +438,8 @@ const Trips = () => {
         destination: '',
         departureTime: '',
         arrivalTime: '',
-        vehicle: '',
-        driver: '',
+        vehicleID: '',              // CHANGED: from 'vehicle' to 'vehicleID'
+        driverID: '',              // CHANGED: from 'driver' to 'driverID'
         price: '',
         totalSeats: '',
         availableSeats: '',
@@ -456,7 +464,7 @@ const Trips = () => {
       setError('');
       
       const requiredFields = ['origin', 'destination', 'departureTime', 'arrivalTime', 
-                             'vehicle', 'driver', 'price', 'totalSeats', 'station'];
+                             'vehicleID', 'driverID', 'price', 'totalSeats', 'station'];  // CHANGED
       const missingFields = requiredFields.filter(field => !formData[field]);
       
       if (missingFields.length > 0) {
@@ -483,22 +491,25 @@ const Trips = () => {
         }
       }
 
+      // CHANGED: Match backend field names exactly
       const tripData = {
         origin: formData.origin,
         destination: formData.destination,
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
-        vehicle: formData.vehicle,
-        driver: formData.driver,
+        vehicleID: formData.vehicleID,     // Changed from 'vehicle' to 'vehicleID'
+        driverID: formData.driverID,       // Changed from 'driver' to 'driverID'
         price: Number(formData.price),
         totalSeats: Number(formData.totalSeats),
         availableSeats: Number(formData.availableSeats || formData.totalSeats),
-        station: formData.station,
+        stationID: formData.station,       // IMPORTANT: Backend expects 'stationID' not 'station'!
         routePoints: formData.routePoints ? formData.routePoints.split(',').map(point => point.trim()) : [],
         estimatedDuration: Number(estimatedDuration),
         notes: formData.notes || ''
       };
 
+      console.log('🚀 Sending trip data:', tripData);
+      
       const response = await api.post('/api/trip', tripData);
       
       if (response.data.success) {
@@ -510,7 +521,17 @@ const Trips = () => {
       }
     } catch (err) {
       console.error('Error creating trip:', err);
-      setError(err.response?.data?.message || 'Failed to create trip. Please try again.');
+      console.error('Error response:', err.response?.data);
+      
+      if (err.response?.status === 404) {
+        setError('API endpoint not found. Please check your backend route configuration.');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to create trips.');
+      } else if (err.response?.status === 400) {
+        setError(err.response.data.message || 'Invalid trip data. Please check your inputs.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to create trip. Please try again.');
+      }
     }
   };
 
@@ -539,17 +560,18 @@ const Trips = () => {
         }
       }
 
+      // CHANGED: Match backend field names exactly
       const updateData = {
         origin: formData.origin,
         destination: formData.destination,
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
-        vehicle: formData.vehicle,
-        driver: formData.driver,
+        vehicleID: formData.vehicleID,     // Changed from 'vehicle' to 'vehicleID'
+        driverID: formData.driverID,       // Changed from 'driver' to 'driverID'
         price: Number(formData.price),
         totalSeats: Number(formData.totalSeats),
         availableSeats: Number(formData.availableSeats || formData.totalSeats),
-        station: formData.station,
+        stationID: formData.station,       // IMPORTANT: Backend expects 'stationID' not 'station'!
         routePoints: formData.routePoints ? formData.routePoints.split(',').map(point => point.trim()) : [],
         estimatedDuration: Number(estimatedDuration),
         notes: formData.notes || ''
@@ -566,7 +588,12 @@ const Trips = () => {
       }
     } catch (err) {
       console.error('Error updating trip:', err);
-      setError(err.response?.data?.message || 'Failed to update trip. Please try again.');
+      
+      if (err.response?.status === 404) {
+        setError('API endpoint not found. Please check your backend route configuration.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to update trip. Please try again.');
+      }
     }
   };
 
@@ -585,7 +612,12 @@ const Trips = () => {
       }
     } catch (err) {
       console.error('Error deleting trip:', err);
-      setError(err.response?.data?.message || 'Failed to delete trip. Please try again.');
+      
+      if (err.response?.status === 404) {
+        setError('API endpoint not found. Please check your backend route configuration.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to delete trip. Please try again.');
+      }
     }
   };
 
@@ -607,7 +639,12 @@ const Trips = () => {
       }
     } catch (err) {
       console.error('Error updating status:', err);
-      setError(err.response?.data?.message || 'Failed to update status. Please try again.');
+      
+      if (err.response?.status === 404) {
+        setError('API endpoint not found. Please check your backend route configuration.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to update status. Please try again.');
+      }
     }
   };
 
@@ -627,7 +664,7 @@ const Trips = () => {
       if (err.response?.status === 403) {
         setError('Permission denied. You can only manage trips from your own station.');
       } else if (err.response?.status === 404) {
-        setError('Trip not found. It may have been deleted.');
+        setError('Trip not found or API endpoint not available.');
       } else {
         setError(err.response?.data?.message || 'Failed to update trip status. Please try again.');
       }
@@ -655,8 +692,8 @@ const Trips = () => {
         destination: tripDestination || '',
         departureTime: trip.departureTime ? new Date(trip.departureTime).toISOString().slice(0, 16) : '',
         arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString().slice(0, 16) : '',
-        vehicle: tripVehicle || '',
-        driver: tripDriver || '',
+        vehicleID: tripVehicle || '',        // CHANGED: from 'vehicle' to 'vehicleID'
+        driverID: tripDriver || '',          // CHANGED: from 'driver' to 'driverID'
         price: trip.price || '',
         totalSeats: trip.totalSeats || '',
         availableSeats: availableSeats,
@@ -878,7 +915,7 @@ const Trips = () => {
         </Grid>
       </Grid>
 
-      {/* Trips Table - Medium Size */}
+      {/* Trips Table */}
       <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
           <Table>
@@ -1184,7 +1221,7 @@ const Trips = () => {
                     </Box>
                   ) : (
                     <Select
-                      value={formData.vehicle}
+                      value={formData.vehicleID}      // CHANGED: from 'vehicle' to 'vehicleID'
                       label="Vehicle"
                       onChange={(e) => handleVehicleChange(e.target.value)}
                     >
@@ -1203,9 +1240,9 @@ const Trips = () => {
                       )}
                     </Select>
                   )}
-                  {formData.vehicle && (
+                  {formData.vehicleID && (           // CHANGED: from 'vehicle' to 'vehicleID'
                     <Typography variant="caption" color="primary" sx={{ mt: 1 }}>
-                      Vehicle capacity: {getVehicleCapacity(formData.vehicle)} seats
+                      Vehicle capacity: {getVehicleCapacity(formData.vehicleID)} seats
                     </Typography>
                   )}
                 </FormControl>
@@ -1222,9 +1259,9 @@ const Trips = () => {
                     </Box>
                   ) : (
                     <Select
-                      value={formData.driver}
+                      value={formData.driverID}      // CHANGED: from 'driver' to 'driverID'
                       label="Driver"
-                      onChange={(e) => setFormData({...formData, driver: e.target.value})}
+                      onChange={(e) => setFormData({...formData, driverID: e.target.value})}  // CHANGED
                     >
                       {availableDrivers.length > 0 ? (
                         availableDrivers.map((driver) => (
@@ -1270,13 +1307,13 @@ const Trips = () => {
                   InputProps={{ 
                     inputProps: { 
                       min: 1, 
-                      max: getVehicleCapacity(formData.vehicle) || 100 
+                      max: getVehicleCapacity(formData.vehicleID) || 100   // CHANGED
                     },
-                    readOnly: !!formData.vehicle
+                    readOnly: !!formData.vehicleID                        // CHANGED
                   }}
                   helperText={
-                    formData.vehicle 
-                      ? `Based on vehicle capacity: ${getVehicleCapacity(formData.vehicle)} seats`
+                    formData.vehicleID                                    // CHANGED
+                      ? `Based on vehicle capacity: ${getVehicleCapacity(formData.vehicleID)} seats`
                       : "Enter total seats"
                   }
                 />
@@ -1302,7 +1339,7 @@ const Trips = () => {
                 />
               </Grid>
 
-              {/* Station field */}
+              {/* Station field - IMPORTANT: This maps to stationID in backend */}
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required sx={{ minWidth: 200, width: '100%' }}>
                   <InputLabel>Station</InputLabel>
@@ -1394,8 +1431,8 @@ const Trips = () => {
               !formData.destination || 
               !formData.departureTime || 
               !formData.arrivalTime || 
-              !formData.vehicle || 
-              !formData.driver || 
+              !formData.vehicleID ||           // CHANGED
+              !formData.driverID ||            // CHANGED
               !formData.price || 
               !formData.totalSeats ||
               !formData.station ||

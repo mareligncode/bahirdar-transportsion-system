@@ -3,7 +3,7 @@ import { X, Car, Wrench } from 'lucide-react';
 import api from '../../services/api'; 
 import { toast } from 'react-hot-toast';
 
-export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
+export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, userStation }) {
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: 'coaster',
@@ -23,10 +23,27 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   const carTypes = ['coaster', 'bus', 'minibus', 'aba dulla', 'van', 'other'];
   const fuelTypes = ['diesel', 'petrol', 'electric', 'hybrid'];
   const featuresOptions = ['ac', 'wifi', 'entertainment', 'charging_port', 'toilet', 'refreshments'];
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/api/auth/profile');
+      if (response.data.success) {
+        setUserProfile(response.data.data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   // Initialize modal once when it opens
   useEffect(() => {
@@ -41,47 +58,78 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
     }
   }, [isOpen, initialized]);
 
-  // Set form data when vehicle or stations data is available
-  useEffect(() => {
-    if (isOpen && stations.length > 0) {
-      if (vehicle) {
-        const stationID = vehicle.stationID?._id || vehicle.stationID || '';
-        
-        setFormData({
-          plateNumber: vehicle.plateNumber || '',
-          carType: vehicle.carType || 'coaster',
-          totalCapacity: vehicle.totalCapacity || '',
-          stationID: stationID,
-          make: vehicle.make || '',
-          model: vehicle.model || '',
-          year: vehicle.year || new Date().getFullYear(),
-          color: vehicle.color || 'white',
-          insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
-          driverID: vehicle.driverID?._id || '',
-          fuelType: vehicle.fuelType || 'diesel',
-          features: vehicle.features || [],
-        });
-      } else {
-        // For new vehicle, use the station admin's station (first station in array)
-        const defaultStationID = stations[0]?._id || '';
-        
-        setFormData({
-          plateNumber: '',
-          carType: 'coaster',
-          totalCapacity: '',
-          stationID: defaultStationID,
-          make: '',
-          model: '',
-          year: new Date().getFullYear(),
-          color: 'white',
-          insuranceExpiry: '',
-          driverID: '',
-          fuelType: 'diesel',
-          features: [],
-        });
+// Set form data when vehicle or stations data is available
+useEffect(() => {
+  if (isOpen) {
+    if (vehicle) {
+      // EDIT MODE - FIXED: Extract stationID from multiple possible locations
+      let stationID = '';
+      
+      if (vehicle.stationID) {
+        stationID = typeof vehicle.stationID === 'object' 
+          ? vehicle.stationID._id || vehicle.stationID 
+          : vehicle.stationID;
+      } else if (vehicle.station) {
+        stationID = typeof vehicle.station === 'object' 
+          ? vehicle.station._id || vehicle.station 
+          : vehicle.station;
       }
+      
+      // Extract driverID from multiple possible locations
+      let driverID = '';
+      if (vehicle.driverID) {
+        driverID = typeof vehicle.driverID === 'object' 
+          ? vehicle.driverID._id || vehicle.driverID 
+          : vehicle.driverID;
+      } else if (vehicle.driver) {
+        driverID = typeof vehicle.driver === 'object' 
+          ? vehicle.driver._id || vehicle.driver 
+          : vehicle.driver;
+      }
+      
+      setFormData({
+        plateNumber: vehicle.plateNumber || '',
+        carType: vehicle.carType || 'coaster',
+        totalCapacity: vehicle.totalCapacity || '',
+        stationID: stationID,
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        year: vehicle.year || new Date().getFullYear(),
+        color: vehicle.color || 'white',
+        insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
+        driverID: driverID,
+        fuelType: vehicle.fuelType || 'diesel',
+        features: vehicle.features || [],
+      });
+    } else {
+      // CREATE MODE - Use station from props or user profile
+      let defaultStationID = '';
+      
+      if (userStation?._id) {
+        defaultStationID = userStation._id;
+      } else if (userProfile?.stationID) {
+        defaultStationID = userProfile.stationID;
+      } else if (stations.length > 0) {
+        defaultStationID = stations[0]?._id || '';
+      }
+      
+      setFormData({
+        plateNumber: '',
+        carType: 'coaster',
+        totalCapacity: '',
+        stationID: defaultStationID,
+        make: '',
+        model: '',
+        year: new Date().getFullYear(),
+        color: 'white',
+        insuranceExpiry: '',
+        driverID: '',
+        fuelType: 'diesel',
+        features: [],
+      });
     }
-  }, [isOpen, vehicle, stations]);
+  }
+}, [isOpen, vehicle, stations, userStation, userProfile]);
 
   // Format date for input field
   const formatDateForInput = (dateString) => {
@@ -92,15 +140,34 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
 
   const fetchStationsAndDrivers = async () => {
     try {
-      // Fetch stations (for station admin, only their station will be returned)
+      // Fetch stations
       const stationsRes = await api.get('/api/station');
-      const stationsData = stationsRes.data.stations || [];
+      let stationsData = [];
+      
+      if (stationsRes.data.stations) {
+        stationsData = stationsRes.data.stations;
+      } else if (stationsRes.data.data?.stations) {
+        stationsData = stationsRes.data.data.stations;
+      } else if (Array.isArray(stationsRes.data)) {
+        stationsData = stationsRes.data;
+      }
+      
       setStations(stationsData);
 
       // Fetch drivers from station-users endpoint
       const usersRes = await api.get('/api/auth/station-users');
-      const driversData = (usersRes.data.data?.users || [])
-        .filter(user => user.role === 'driver' && user.isActive);
+      let usersData = [];
+      
+      if (usersRes.data.data?.users) {
+        usersData = usersRes.data.data.users;
+      } else if (usersRes.data.users) {
+        usersData = usersRes.data.users;
+      } else if (Array.isArray(usersRes.data.data)) {
+        usersData = usersRes.data.data;
+      }
+      
+      const driversData = usersData
+        .filter(user => user.role === 'driver' && user.isActive === true);
       setDrivers(driversData);
 
     } catch (error) {
@@ -172,7 +239,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
         await api.put(`/api/vehicles/${vehicle._id}`, payload);
         toast.success('Vehicle updated successfully');
       } else {
-        // Create new vehicle - backend will handle stationID based on station admin's station
+        // Create new vehicle
         await api.post('/api/vehicles/register', payload);
         toast.success('Vehicle created successfully');
       }
@@ -223,9 +290,11 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
                   {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {stations.length > 0 ? 
-                    `Station: ${stations[0]?.stationName || ''} (${stations[0]?.city || ''})` : 
-                    'Register a new vehicle to your station'}
+                  {userStation?.stationName 
+                    ? `Station: ${userStation.stationName} (${userStation.city || ''})` 
+                    : userProfile?.stationID 
+                    ? 'Register a new vehicle to your station'
+                    : 'Register a new vehicle'}
                 </p>
               </div>
             </div>
@@ -311,19 +380,22 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess }) {
                     value={formData.stationID}
                     onChange={handleChange}
                     required
-                    disabled={stations.length <= 1}
+                    disabled={stations.length <= 1 || !!userStation}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
-                    {stations.map(station => (
-                      <option key={station._id} value={station._id}>
-                        {station.stationName} ({station.city})
+                    {stations.length > 0 ? (
+                      stations.map(station => (
+                        <option key={station._id} value={station._id}>
+                          {station.stationName} ({station.city})
+                        </option>
+                      ))
+                    ) : (
+                      <option value={formData.stationID}>
+                        {userStation?.stationName || 'Your Station'}
                       </option>
-                    ))}
-                    {stations.length === 0 && (
-                      <option value="" disabled>Loading stations...</option>
                     )}
                   </select>
-                  {stations.length <= 1 && (
+                  {(stations.length <= 1 || userStation) && (
                     <p className="text-xs text-gray-600 mt-1">
                       Station admin can only manage vehicles from assigned station
                     </p>
