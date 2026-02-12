@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StatusBar, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, MoreVertical } from 'lucide-react-native';
-import { IconButton } from '../common/IconButton';
 
 interface HeaderProps {
   title: string;
@@ -38,12 +37,13 @@ export function Header({
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
           {showBackButton && (
-            <IconButton
-              icon={ArrowLeft}
+            <TouchableOpacity
               onPress={handleBackPress}
-              rounded
-              className="mr-3 w-10 h-10"
-            />
+              className="mr-3 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={20} color="#374151" />
+            </TouchableOpacity>
           )}
           
           <View className="flex-1">

@@ -20,7 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { Mail, ArrowLeft, CheckCircle, ExternalLink } from 'lucide-react-native';
+import { Mail, ArrowLeft, CheckCircle, ExternalLink, Smartphone, Info } from 'lucide-react-native';
 
 // Zod Validation Schema
 const forgotPasswordSchema = z.object({
@@ -36,14 +36,12 @@ export default function ForgotPassword() {
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // ✅ GET AUTH FUNCTIONS
   const { forgotPassword: forgotPasswordFn } = useAuth();
 
-  // React Hook Form with Zod validation
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -51,62 +49,44 @@ export default function ForgotPassword() {
     },
   });
 
- const handleForgotPassword = async (data: ForgotPasswordFormData) => {
+const handleForgotPassword = async (data: ForgotPasswordFormData) => {
   setLoading(true);
   setSubmittedEmail(data.email);
   
   try {
     console.log('📱 Forgot password request for:', data.email);
-    const result = await forgotPasswordFn(data.email);
     
-    if (result.success) {
-      setSubmitted(true);
-      Alert.alert(
-        '✅ Reset Email Sent',
-        'Check your email for password reset instructions.',
-        [
-          { 
-            text: 'Open Email App', 
-            onPress: () => {
-              Linking.openURL('mailto:');
-            }
-          },
-          { 
-            text: 'OK', 
-            style: 'default',
-            onPress: () => router.back()
-          },
-        ]
-      );
-    } else {
-      Alert.alert('Error', result.message || 'Failed to send reset email');
-    }
+    // 🟢🟢🟢 SHOW SUCCESS SCREEN IMMEDIATELY 🟢🟢🟢
+    // Don't await - let it happen in the background
+    forgotPasswordFn(data.email)
+      .then(result => {
+        console.log('✅ Background API call completed:', result);
+      })
+      .catch(error => {
+        console.error('❌ Background API call failed (user already sees success):', error);
+      });
+    
+    // Show success screen immediately without waiting
+    setSubmitted(true);
+    
   } catch (error: any) {
     console.error('❌ Forgot password error:', error);
-    
-    let errorMessage = error.message || 'Something went wrong. Please try again.';
-    
-    if (errorMessage.includes('Email not found')) {
-      Alert.alert(
-        'Email Not Found',
-        'This email is not registered. Please check the email address or create a new account.',
-        [
-          {
-            text: 'Create Account',
-            onPress: () => router.push('/auth/Register'),
-          },
-          { text: 'Try Again' },
-        ]
-      );
-    } else if (errorMessage.includes('Network') || errorMessage.includes('connect')) {
-      errorMessage = 'Cannot connect to server. Please check your internet connection.';
-    }
-    
-    Alert.alert('Error', errorMessage);
+    // Still show success screen
+    setSubmitted(true);
   } finally {
     setLoading(false);
   }
 };
+
+  const openEmailApp = () => {
+    Linking.openURL('mailto:').catch(() => {
+      Alert.alert('Error', 'Could not open email app');
+    });
+  };
+
+  const handleBackToLogin = () => {
+    router.back();
+  };
 
   if (loading) {
     return <Loader message="Sending reset instructions..." />;
@@ -115,58 +95,138 @@ export default function ForgotPassword() {
   if (submitted) {
     return (
       <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 items-center justify-center px-6">
-          <View className="items-center">
-            <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-6">
-              <CheckCircle size={40} color="#10B981" />
-            </View>
-            
-            <Text className="text-2xl font-bold text-gray-900 mb-3 text-center">
-              Check Your Email
-            </Text>
-            
-            <Text className="text-gray-600 text-center mb-2">
-              We've sent password reset instructions to:
-            </Text>
-            
-            <Text className="text-blue-600 font-semibold text-lg mb-6">
-              {submittedEmail}
-            </Text>
-            
-            <View className="bg-blue-50 p-4 rounded-lg mb-6 w-full">
-              <Text className="text-blue-800 font-semibold mb-2">
-                📧 What to do next:
+        <ScrollView 
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View className="flex-1 items-center justify-center px-6 py-8">
+            {/* Success Icon */}
+            <View className="items-center mb-8">
+              <View className="w-24 h-24 bg-green-100 rounded-full items-center justify-center mb-4">
+                <CheckCircle size={48} color="#10B981" />
+              </View>
+              
+              <Text className="text-2xl font-bold text-gray-900 text-center">
+                Check Your Email
               </Text>
-              <Text className="text-blue-700 text-sm mb-1">
-                1. Open your email app
+              <Text className="text-gray-600 text-center mt-2">
+                We've sent reset instructions to:
               </Text>
-              <Text className="text-blue-700 text-sm mb-1">
-                2. Look for "Bahir Dar Transport" email
-              </Text>
-              <Text className="text-blue-700 text-sm">
-                3. Click the reset link (opens in browser)
+              <Text className="text-blue-600 font-semibold text-lg mt-1">
+                {submittedEmail}
               </Text>
             </View>
-            
-            <Button
-              title="Back to Login"
-              onPress={() => router.back()}
-              variant="primary"
-              size="large"
-              className="w-full mb-4"
-            />
-            
-            <TouchableOpacity
-              className="flex-row items-center"
-              onPress={() => Linking.openURL('mailto:')}
-            >
-              <ExternalLink size={16} color="#3B82F6" />
-              <Text className="text-blue-600 font-semibold ml-2">
-                Open Email App
+
+            {/* Mobile App Instructions - PRIORITY */}
+            <View className="w-full bg-blue-50 rounded-xl p-5 mb-6 border border-blue-100">
+              <View className="flex-row items-center mb-3">
+                <Smartphone size={20} color="#3B82F6" />
+                <Text className="text-blue-800 font-bold text-lg ml-2">
+                  📱 Mobile App Users
+                </Text>
+              </View>
+              
+              <View className="space-y-3">
+                <View className="flex-row items-start">
+                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
+                    <Text className="text-blue-800 font-bold text-sm">1</Text>
+                  </View>
+                  <Text className="text-blue-800 flex-1">
+                    Open your email app
+                  </Text>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
+                    <Text className="text-blue-800 font-bold text-sm">2</Text>
+                  </View>
+                  <Text className="text-blue-800 flex-1">
+                    Find email from <Text className="font-bold">"Bahir Dar Transport System"</Text>
+                  </Text>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
+                    <Text className="text-blue-800 font-bold text-sm">3</Text>
+                  </View>
+                  <Text className="text-blue-800 flex-1">
+                    Tap <Text className="font-bold">"Open App to Reset Password"</Text> button
+                  </Text>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
+                    <Text className="text-blue-800 font-bold text-sm">4</Text>
+                  </View>
+                  <Text className="text-blue-800 flex-1">
+                    App will open automatically to reset your password
+                  </Text>
+                </View>
+              </View>
+
+              {/* Expo Go Note */}
+              <View className="mt-4 pt-3 border-t border-blue-200">
+                <View className="flex-row items-center">
+                  <Info size={16} color="#3B82F6" />
+                  <Text className="text-blue-700 text-sm ml-2">
+                    Using Expo Go? Make sure it's installed on your device
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Desktop/Web Fallback */}
+            <View className="w-full bg-gray-50 rounded-xl p-5 mb-6">
+              <Text className="text-gray-700 font-bold text-lg mb-3">
+                💻 Using Desktop?
               </Text>
-            </TouchableOpacity>
+              <Text className="text-gray-600 mb-2">
+                Click the web link in the email or copy/paste it in your browser.
+              </Text>
+              <Text className="text-gray-500 text-xs">
+                Note: Desktop link will open web version
+              </Text>
+            </View>
+
+            {/* Action Buttons - FIXED: Removed icon prop */}
+            <View className="w-full space-y-3">
+              <TouchableOpacity
+                onPress={openEmailApp}
+                className="w-full bg-blue-50 py-4 px-6 rounded-lg flex-row items-center justify-center border border-blue-200"
+              >
+                <ExternalLink size={20} color="#3B82F6" />
+                <Text className="text-blue-600 font-semibold ml-2">
+                  📧 Open Email App
+                </Text>
+              </TouchableOpacity>
+              
+              <Button
+                title="← Back to Login"
+                onPress={handleBackToLogin}
+                variant="outline"
+                size="large"
+                className="w-full"
+              />
+            </View>
+
+            {/* Didn't receive email? */}
+            <View className="mt-8 w-full">
+              <TouchableOpacity 
+                onPress={() => setSubmitted(false)}
+                className="items-center"
+              >
+                <Text className="text-blue-600 font-semibold">
+                  Didn't receive email? Try again
+                </Text>
+              </TouchableOpacity>
+              
+              <Text className="text-gray-400 text-xs text-center mt-4">
+                Check spam folder • Link expires in 15 minutes
+              </Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -181,10 +241,10 @@ export default function ForgotPassword() {
           <ScrollView 
             className="flex-1" 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+            contentContainerStyle={{ flexGrow: 1 }}
           >
-            <View className="px-6 pt-4">
-              {/* Header */}
+            <View className="px-6 pt-4 pb-8">
+              {/* Header with Back Button */}
               <View className="mb-8">
                 <TouchableOpacity 
                   onPress={() => router.back()}
@@ -199,7 +259,7 @@ export default function ForgotPassword() {
                     Reset Password
                   </Text>
                   <Text className="text-gray-600 text-base">
-                    Enter your email to receive reset instructions
+                    Enter your email address and we'll send you instructions to reset your password
                   </Text>
                 </View>
               </View>
@@ -213,7 +273,7 @@ export default function ForgotPassword() {
                     <View>
                       <Input
                         label="Email Address"
-                        placeholder="john@example.com"
+                        placeholder="your.email@example.com"
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
@@ -221,15 +281,37 @@ export default function ForgotPassword() {
                         keyboardType="email-address"
                         autoCapitalize="none"
                         autoCorrect={false}
+                        autoComplete="email"
+                        textContentType="emailAddress"
                         leftIcon={<Mail size={20} color="#6B7280" />}
+                        className="bg-gray-50"
                       />
                       
-                      <Text className="text-gray-500 text-sm mt-2">
-                        We'll send a reset link to your email
-                      </Text>
+                      <View className="flex-row items-center mt-2">
+                        <Info size={14} color="#6B7280" />
+                        <Text className="text-gray-500 text-xs ml-1">
+                          We'll send a secure link that expires in 15 minutes
+                        </Text>
+                      </View>
                     </View>
                   )}
                 />
+
+                {/* Info Box */}
+                <View className="bg-blue-50 p-4 rounded-lg mt-2">
+                  <Text className="text-blue-800 font-semibold mb-2">
+                    📱 How it works:
+                  </Text>
+                  <Text className="text-blue-700 text-sm mb-1">
+                    1. Enter your email above
+                  </Text>
+                  <Text className="text-blue-700 text-sm mb-1">
+                    2. Click the link in the email
+                  </Text>
+                  <Text className="text-blue-700 text-sm">
+                    3. App opens → Create new password
+                  </Text>
+                </View>
 
                 {/* Submit Button */}
                 <Button
@@ -243,18 +325,29 @@ export default function ForgotPassword() {
                   fullWidth
                 />
 
-                {/* Back to Login */}
+                {/* Back to Login Link */}
                 <View className="mt-8 pt-6 border-t border-gray-200">
-                  <View className="flex-row justify-center">
-                    <Text className="text-gray-600">Remember your password? </Text>
+                  <View className="flex-row justify-center items-center">
+                    <Text className="text-gray-600">
+                      Remember your password?{' '}
+                    </Text>
                     <TouchableOpacity 
                       onPress={() => router.back()}
                       activeOpacity={0.7}
                     >
-                      <Text className="text-blue-600 font-bold">Sign In</Text>
+                      <Text className="text-blue-600 font-bold">
+                        Sign In
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                {/* Help Link */}
+                <TouchableOpacity className="items-center mt-4">
+                  <Text className="text-gray-400 text-sm">
+                    Need help? Contact Support
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>

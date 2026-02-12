@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { authAPI } from '@/lib/api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useAuth = () => {
@@ -19,7 +20,6 @@ export const useAuth = () => {
     login: storeLogin,
     register: storeRegister,
     logout: storeLogout,
-    forgotPassword,
     updateUser,
     clearError,
     initializeAuth,
@@ -61,6 +61,24 @@ export const useAuth = () => {
     return Boolean(isAuthenticated);
   };
 
+const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+  console.log('🔐 useAuth: Forgot password called for:', email);
+  
+  try {
+    // ❌ Don't catch errors here - let them flow through to the UI
+    const result = await authAPI.forgotPassword(email);
+    return result; // Return the REAL result (success or error)
+    
+  } catch (error: any) {
+    console.error('🔐 useAuth: Forgot password error:', error);
+    
+    // Return the REAL error
+    return {
+      success: false,
+      message: error.message || 'Failed to send reset email'
+    };
+  }
+};
   return {
     user,
     token,

@@ -3,18 +3,31 @@ import { X, Image as ImageIcon, Upload, Trash2, Check, Loader2, Eye, Download } 
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 
-export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
+export default function VehicleImagesModal({ isOpen, onClose, vehicle, userStation }) {
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [previewImage, setPreviewImage] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     if (isOpen && vehicle) {
+      fetchUserProfile();
       fetchVehicleImages();
     }
   }, [isOpen, vehicle]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/api/auth/profile');
+      if (response.data.success) {
+        setUserProfile(response.data.data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchVehicleImages = async () => {
     try {
@@ -36,9 +49,40 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
     }
   };
 
+const checkStationPermission = () => {
+  // EXACTLY what your backend does
+  if (userProfile?.role === 'station_admin') {
+    // Get vehicle.stationID.toString() - EXACT match to backend
+    const vehicleStationId = vehicle.stationID?.toString();
+    
+    // Get user.stationID?.toString() - EXACT match to backend
+    const userStationId = userProfile?._ID?.toString();
+    
+    // EXACT same comparison as your backend
+    if (vehicleStationId?.toString() !== userStationId?.toString()) {
+      return false; // 403 - Access denied
+    }
+    return true; // Permission granted
+  }
+  
+  // Super admin check
+  if (userProfile?.role === 'super_admin') {
+    return true;
+  }
+  
+  return false;
+};
+
   const handleFileUpload = async (e) => {
     const files = e.target.files;
     if (!files.length) return;
+
+    // Check permission before uploading
+    if (!checkStationPermission()) {
+      toast.error('You can only upload images to vehicles from your own station');
+      e.target.value = '';
+      return;
+    }
 
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
@@ -63,14 +107,26 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
       }
     } catch (error) {
       console.error('Error uploading images:', error);
-      toast.error(error.response?.data?.message || 'Failed to upload images');
+      
+      // Handle specific error messages
+      if (error.response?.status === 403) {
+        toast.error('You can only upload images to vehicles from your own station');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to upload images');
+      }
     } finally {
       setUploading(false);
-      e.target.value = ''; // Reset file input
+      e.target.value = '';
     }
   };
 
   const handleSetPrimary = async (imageUrl) => {
+    // Check permission before setting primary
+    if (!checkStationPermission()) {
+      toast.error('You can only modify images for vehicles from your own station');
+      return;
+    }
+
     try {
       await api.post(`/api/vehicles/${vehicle._id}/set-primary-image`, {
         imageUrl
@@ -79,11 +135,22 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
       fetchVehicleImages();
     } catch (error) {
       console.error('Error setting primary image:', error);
-      toast.error(error.response?.data?.message || 'Failed to set primary image');
+      
+      if (error.response?.status === 403) {
+        toast.error('You can only modify images for vehicles from your own station');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to set primary image');
+      }
     }
   };
 
   const handleDeleteImage = async (imageUrl) => {
+    // Check permission before deleting
+    if (!checkStationPermission()) {
+      toast.error('You can only delete images from vehicles in your own station');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this image?')) return;
 
     try {
@@ -92,7 +159,12 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
       fetchVehicleImages();
     } catch (error) {
       console.error('Error deleting image:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete image');
+      
+      if (error.response?.status === 403) {
+        toast.error('You can only delete images from vehicles in your own station');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to delete image');
+      }
     }
   };
 
@@ -129,6 +201,11 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                 <p className="text-sm text-gray-600">
                   {vehicle.make} {vehicle.model} • {vehicle.carType}
                 </p>
+                {!checkStationPermission() && userProfile?.role === 'station_admin' && (
+                  <p className="text-xs text-red-600 mt-1">
+                    ⚠️ You don't have permission to modify images for this vehicle
+                  </p>
+                )}
               </div>
             </div>
             <button
@@ -140,42 +217,44 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
           </div>
         </div>
 
-        {/* Upload Section */}
-        <div className="border-b p-4 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">
-                Upload vehicle images (JPEG, PNG, GIF up to 10MB)
-              </p>
-              <p className="text-xs text-gray-500">
-                First uploaded image will be set as primary by default
-              </p>
-            </div>
-            <div>
-              <label className="btn-primary flex items-center gap-2 cursor-pointer">
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload Images
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                  className="hidden"
-                />
-              </label>
+        {/* Upload Section - Only show if user has permission */}
+        {checkStationPermission() && (
+          <div className="border-b p-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">
+                  Upload vehicle images (JPEG, PNG, GIF up to 10MB)
+                </p>
+                <p className="text-xs text-gray-500">
+                  First uploaded image will be set as primary by default
+                </p>
+              </div>
+              <div>
+                <label className="btn-primary flex items-center gap-2 cursor-pointer">
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload Images
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Images Grid */}
         <div className="flex-1 overflow-y-auto p-6">
@@ -187,7 +266,11 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
             <div className="text-center py-12">
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No images uploaded</h3>
-              <p className="text-gray-600">Upload images to display them here</p>
+              <p className="text-gray-600">
+                {checkStationPermission() 
+                  ? 'Upload images to display them here'
+                  : 'This vehicle has no images'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -219,7 +302,8 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                         {image.fileName || `Image ${index + 1}`}
                       </div>
                       <div className="text-xs opacity-75">
-                        {image.fileType} • {(image.fileSize / 1024 / 1024).toFixed(2)}MB
+                        {image.fileType?.split('/')[1]?.toUpperCase() || 'Unknown'} • 
+                        {image.fileSize ? ` ${(image.fileSize / 1024 / 1024).toFixed(2)}MB` : ''}
                       </div>
                     </div>
                   </div>
@@ -232,7 +316,7 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons - Only show delete/set-primary if user has permission */}
                   <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => {
@@ -254,7 +338,7 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                     >
                       <Download className="w-4 h-4" />
                     </button>
-                    {!image.isPrimary && (
+                    {checkStationPermission() && !image.isPrimary && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -266,16 +350,18 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                         <Check className="w-4 h-4" />
                       </button>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteImage(image.url);
-                      }}
-                      className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-full shadow-sm"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {checkStationPermission() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteImage(image.url);
+                        }}
+                        className="p-1.5 bg-red-500 text-white hover:bg-red-600 rounded-full shadow-sm"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -337,7 +423,7 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle }) {
                     >
                       Download
                     </button>
-                    {!selectedImage.isPrimary && (
+                    {checkStationPermission() && !selectedImage.isPrimary && (
                       <button
                         onClick={() => {
                           handleSetPrimary(selectedImage.url);

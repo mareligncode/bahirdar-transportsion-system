@@ -1,108 +1,112 @@
-// components/common/Button.tsx - FIXED VERSION
 import React from 'react';
 import { 
   TouchableOpacity, 
   Text, 
   ActivityIndicator,
-  TouchableOpacityProps 
+  TouchableOpacityProps,
+  View 
 } from 'react-native';
 
-interface ButtonProps extends TouchableOpacityProps {
-  title: string;
+interface ButtonProps extends Omit<TouchableOpacityProps, 'title'> {
+  title?: string;
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'outline';
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
+  children?: React.ReactNode;
+  leftIcon?: React.ReactNode;
 }
 
 export function Button({ 
   title, 
+  children,
   loading = false, 
   disabled = false,
   variant = 'primary',
   size = 'medium',
   fullWidth = false,
   className = '',
+  leftIcon,
   onPress,
   ...props
 }: ButtonProps) {
-  const getVariantClasses = () => {
-    switch (variant) {
-      case 'secondary':
-        return 'bg-gray-600';
-      case 'outline':
-        return 'bg-transparent border border-blue-600';
-      default:
-        return 'bg-blue-600';
-    }
+  
+  // 🟢 FIX: Use static class mappings, NOT dynamic strings
+  const variantClasses = {
+    primary: 'bg-blue-600',
+    secondary: 'bg-gray-600',
+    outline: 'bg-transparent border border-blue-600'
   };
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'small':
-        return 'py-2 px-4';
-      case 'large':
-        return 'py-4 px-8';
-      default:
-        return 'py-3 px-6';
-    }
+  const sizeClasses = {
+    sm: 'py-2 px-4',
+    md: 'py-3 px-6',
+    lg: 'py-4 px-8',
+    small: 'py-2 px-4',
+    medium: 'py-3 px-6',
+    large: 'py-4 px-8'
   };
 
-  const getTextVariantClasses = () => {
-    switch (variant) {
-      case 'outline':
-        return 'text-blue-600';
-      default:
-        return 'text-white';
-    }
+  const textVariantClasses = {
+    primary: 'text-white',
+    secondary: 'text-white',
+    outline: 'text-blue-600'
   };
 
-  const getTextSizeClasses = () => {
-    switch (size) {
-      case 'small':
-        return 'text-sm';
-      case 'large':
-        return 'text-lg';
-      default:
-        return 'text-base';
-    }
+  const textSizeClasses = {
+    sm: 'text-sm',
+    md: 'text-base',
+    lg: 'text-lg',
+    small: 'text-sm',
+    medium: 'text-base',
+    large: 'text-lg'
   };
 
-  // FIX: Handle press properly
-  const handlePress = (e: any) => {
-    if (!disabled && !loading && onPress) {
-      onPress(e);
-    }
-  };
+  const buttonContent = children || title;
+  const isDisabled = disabled || loading;
+
+  // Get the specific classes based on props
+  const variantClass = variantClasses[variant] || variantClasses.primary;
+  const sizeClass = sizeClasses[size] || sizeClasses.medium;
+  const textVariantClass = textVariantClasses[variant] || textVariantClasses.primary;
+  const textSizeClass = textSizeClasses[size] || textSizeClasses.medium;
 
   return (
     <TouchableOpacity
       className={`
         rounded-lg items-center justify-center flex-row
-        ${getVariantClasses()}
-        ${getSizeClasses()}
+        ${variantClass}
+        ${sizeClass}
         ${fullWidth ? 'w-full' : ''}
-        ${disabled || loading ? 'opacity-50' : 'opacity-100'}
+        ${isDisabled ? 'opacity-50' : 'opacity-100'}
         ${className}
       `}
-      onPress={handlePress} // Use our custom handler
-      activeOpacity={disabled || loading ? 1 : 0.7} // Disable opacity effect when disabled
+      onPress={onPress}
+      activeOpacity={isDisabled ? 1 : 0.7}
+      disabled={isDisabled}
       {...props}
     >
       {loading ? (
         <ActivityIndicator 
           color={variant === 'outline' ? '#3B82F6' : '#FFFFFF'} 
-          size={size === 'small' ? 'small' : 'large'}
+          size="small"
         />
       ) : (
-        <Text className={`
-          font-semibold
-          ${getTextVariantClasses()}
-          ${getTextSizeClasses()}
-        `}>
-          {title}
-        </Text>
+        <>
+          {leftIcon && <View className="mr-2">{leftIcon}</View>}
+          {typeof buttonContent === 'string' ? (
+            <Text className={`
+              font-semibold
+              ${textVariantClass}
+              ${textSizeClass}
+            `}>
+              {buttonContent}
+            </Text>
+          ) : (
+            buttonContent
+          )}
+        </>
       )}
     </TouchableOpacity>
   );

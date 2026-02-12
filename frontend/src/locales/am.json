@@ -1000,7 +1000,18 @@
   "vehicleCreated": "ተሽከርካሪ በተሳካ ሁኔታ ተፈጥሯል",
   "failedToLoadFormData": "የቅጽ መረጃን ማምጣት አልተሳካም",
   "accountCreated": "መለያ በተሳካ ሁኔታ ተፈጥሯል!",
-  "accountCreatedPleaseLogin": "መለያ ተፈጥሯል! እባክዎ በማስረጃዎ ይግቡ።"
+  "accountCreatedPleaseLogin": "መለያ ተፈጥሯል! እባክዎ በማስረጃዎ ይግቡ።",
+    "enterBothEmailAndPassword": "እባክዎ ኢሜይል እና የይለፍ ቃል ያስገቡ",
+  "loginFailed": "መግባት አልተሳካም",
+  "invalidCredentials": "ልክ ያልሆነ ኢሜይል ወይም የይለፍ ቃል። እባክዎ እንደገና ይሞክሩ።",
+  "loginError": "የመግቢያ ስህተት:",
+  "welcomeBack": "እንኳን በደህና መጡ",
+  "signInToSystem": "ወደ ባሕር ዳር መነሃሪያ ይግቡ",
+  "signingIn": "በመግባት ላይ...",
+  "signIn": "ግባ",
+
+  "new_trip": "አዲስ ጉዞ"
+ 
 
 
 }
