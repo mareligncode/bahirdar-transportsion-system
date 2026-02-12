@@ -6,5 +6,5 @@ export { IconButton } from './IconButton';
 export { Input } from './Input';
 export { Loader } from './Loader';
 export { PasswordRequirements } from './passwordRequirements';
-export { Select } from './select';
+export { Select } from './Select';
 export { Toast } from './Toast';

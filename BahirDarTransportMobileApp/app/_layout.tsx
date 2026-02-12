@@ -5,12 +5,69 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
 import { storage } from '@/lib/storage';
+import * as Linking from 'expo-linking';
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const [isCheckingStorage, setIsCheckingStorage] = useState(true);
   const segments = useSegments(); 
   const router = useRouter();
+
+  // Handle deep links - FIXED TypeScript error
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      const { url } = event;
+      console.log('🔗 Deep link received in _layout:', url);
+      
+      // Parse the URL
+      const parsed = Linking.parse(url);
+      const queryParams = parsed.queryParams;
+      
+      // Handle reset password links
+      if (url.includes('reset-password') || url.includes('redirect.html')) {
+        // ✅ FIXED: Type-safe token extraction
+        let token: string | null = null;
+        
+        // Try to get token from query params
+        if (queryParams?.token) {
+          const tokenValue = queryParams.token;
+          token = Array.isArray(tokenValue) ? tokenValue[0] : tokenValue;
+        }
+        
+        // If not found, try to extract from URL using regex
+        if (!token) {
+          const match = url.match(/[?&]token=([^&]+)/);
+          token = match ? match[1] : null;
+        }
+        
+        if (token) {
+          console.log('✅ Reset token found in deep link:', token);
+          // Navigate to reset password screen with token
+          setTimeout(() => {
+            router.push({
+              pathname: '/auth/reset-password',
+              params: { token }
+            });
+          }, 100);
+        } else {
+          console.log('❌ No token found in deep link:', url);
+        }
+      }
+    };
+
+    // Subscribe to deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Check for initial URL (app opened from deep link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🔗 Initial URL:', url);
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Check storage on initial load
   useEffect(() => {
@@ -42,7 +99,6 @@ export default function RootLayout() {
       isLoading,
       isCheckingStorage,
       segments,
-      currentSegment: segments[0]
     });
 
     if (isLoading || isCheckingStorage) {
@@ -50,12 +106,16 @@ export default function RootLayout() {
       return;
     }
 
-    // FIX: Safe segment access
-    const currentRoute = segments[0] || 'index';
-    const secondSegment = segments.length > 1 ? segments[1] : undefined; // Safe access
+    // Convert segments to array and access safely
+    const segmentsArray = segments as string[];
+    const currentRoute = segmentsArray[0] || 'index';
+    
+    // Check if we're on a nested route like auth/reset-password
+    const isNestedAuthRoute = segmentsArray[0] === 'auth' && segmentsArray.length > 1;
+    const isResetPasswordRoute = isNestedAuthRoute && segmentsArray[1] === 'reset-password';
     
     // Check route groups and folders
-    const isAuthRoute = currentRoute === 'auth';
+    const isAuthRoute = currentRoute === 'auth' && !isResetPasswordRoute;
     const isTabsRoute = currentRoute === 'tabs';
     const isScreensRoute = currentRoute === '(screens)';
     const isIndexRoute = currentRoute === 'index' || currentRoute === '';
@@ -63,7 +123,8 @@ export default function RootLayout() {
 
     console.log('📍 Layout: Decision data:', {
       currentRoute,
-      secondSegment,
+      isNestedAuthRoute,
+      isResetPasswordRoute,
       isAuthenticated,
       isAuthRoute,
       isTabsRoute,
@@ -71,6 +132,12 @@ export default function RootLayout() {
       isIndexRoute,
       isPublicRoute
     });
+
+    // ALWAYS allow reset password route - NO AUTH REQUIRED
+    if (isResetPasswordRoute) {
+      console.log('✅ Layout: Allowed (reset password route - public)');
+      return;
+    }
 
     // User is NOT authenticated
     if (!isAuthenticated) {
@@ -130,10 +197,11 @@ export default function RootLayout() {
         <Stack.Screen name="privacy" />
         <Stack.Screen name="terms" />
 
-        {/* Auth */}
+        {/* Auth Screens */}
         <Stack.Screen name="auth/Login" />
         <Stack.Screen name="auth/Register" />
         <Stack.Screen name="auth/Forgot-Password" />
+        <Stack.Screen name="auth/reset-password" />
 
         {/* Tabs (Main App Navigation) */}
         <Stack.Screen 

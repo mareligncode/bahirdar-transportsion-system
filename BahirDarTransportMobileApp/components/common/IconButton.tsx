@@ -1,61 +1,103 @@
-// BahirDarTransportMobileApp/components/common/IconButton.tsx
+// components/common/IconButton.tsx
 import React from 'react';
-import { TouchableOpacity, TouchableOpacityProps } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 
-interface IconButtonProps extends TouchableOpacityProps {
+interface IconButtonProps {
+  title: string;
+  onPress: () => void;
   icon: LucideIcon;
-  size?: number;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  rounded?: boolean;
+  variant?: 'primary' | 'secondary' | 'outline';
+  size?: 'small' | 'medium' | 'large';
+  loading?: boolean;
+  disabled?: boolean;
+  iconPosition?: 'left' | 'right';
+  className?: string;
 }
 
-export function IconButton({ 
-  icon: Icon, 
-  size = 20,
+export function IconButton({
+  title,
+  onPress,
+  icon: Icon,
   variant = 'primary',
-  rounded = false,
+  size = 'medium',
+  loading = false,
+  disabled = false,
+  iconPosition = 'left',
   className = '',
-  ...props 
 }: IconButtonProps) {
-  const getVariantClasses = () => {
-    switch (variant) {
-      case 'secondary':
-        return 'bg-gray-100';
-      case 'ghost':
-        return 'bg-transparent';
-      case 'danger':
-        return 'bg-red-100';
-      default:
-        return 'bg-blue-100';
-    }
+  const variantStyles = {
+    primary: 'bg-blue-600',
+    secondary: 'bg-gray-600',
+    outline: 'bg-transparent border border-gray-300',
   };
 
-  const getIconColor = () => {
-    switch (variant) {
-      case 'secondary':
-        return '#4B5563';
-      case 'ghost':
-        return '#6B7280';
-      case 'danger':
-        return '#EF4444';
-      default:
-        return '#3B82F6';
-    }
+  const textStyles = {
+    primary: 'text-white',
+    secondary: 'text-white',
+    outline: 'text-gray-800',
+  };
+
+  const sizeStyles = {
+    small: 'px-3 py-2',
+    medium: 'px-4 py-3',
+    large: 'px-6 py-4',
+  };
+
+  const textSize = {
+    small: 'text-sm',
+    medium: 'text-base',
+    large: 'text-lg',
+  };
+
+  const iconSize = {
+    small: 16,
+    medium: 18,
+    large: 20,
   };
 
   return (
     <TouchableOpacity
       className={`
-        ${rounded ? 'rounded-full' : 'rounded-lg'}
-        items-center justify-center
-        ${getVariantClasses()}
+        flex-row items-center justify-center rounded-lg
+        ${variantStyles[variant]}
+        ${sizeStyles[size]}
+        ${disabled || loading ? 'opacity-50' : ''}
         ${className}
       `}
-      activeOpacity={0.7}
-      {...props}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
     >
-      <Icon size={size} color={getIconColor()} />
+      {loading ? (
+        <ActivityIndicator 
+          size="small" 
+          color={variant === 'outline' ? '#4B5563' : '#FFFFFF'} 
+          className="mr-2"
+        />
+      ) : Icon && iconPosition === 'left' && (
+        <Icon 
+          size={iconSize[size]} 
+          color={variant === 'outline' ? '#4B5563' : '#FFFFFF'}
+          className="mr-2"
+        />
+      )}
+      
+      <Text className={`
+        font-semibold
+        ${textStyles[variant]}
+        ${textSize[size]}
+      `}>
+        {title}
+      </Text>
+      
+      {!loading && Icon && iconPosition === 'right' && (
+        <Icon 
+          size={iconSize[size]} 
+          color={variant === 'outline' ? '#4B5563' : '#FFFFFF'}
+          className="ml-2"
+        />
+      )}
     </TouchableOpacity>
   );
 }
