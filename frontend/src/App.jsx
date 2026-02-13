@@ -36,7 +36,6 @@ import Vehicles from './pages/admin/Vehicles';
 
 // Profile Pages
 import Profile from './pages/profile/Profile';
-import ChangePassword from './pages/profile/ChangePassword';
 
 // Super Admin Pages
 import AllUsers from './pages/admin/AllUsers';
@@ -112,14 +111,6 @@ const queryClient = new QueryClient({
             <ProtectedRoute>
               <Layout showSidebar>
                 <Profile />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/change-password" element={
-            <ProtectedRoute>
-              <Layout showSidebar>
-                <ChangePassword />
               </Layout>
             </ProtectedRoute>
           } />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Container,
   Paper,
@@ -33,10 +34,9 @@ import {
   CardContent,
   Grid,
   Divider,
-  Badge,
   Avatar,
-  Switch,
-  FormControlLabel
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -60,7 +60,8 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
+import authService from '../../services/auth.service'; // ✅ Use authService instead of direct api calls
 
 // Styled components
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -100,7 +101,9 @@ const RoleChip = styled(Chip)(({ theme, role }) => {
 });
 
 const AllUsers = () => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
+  const { user: currentUser } = useAuth(); // ✅ Get current user for permissions
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -136,17 +139,19 @@ const AllUsers = () => {
   const [licenseNumber, setLicenseNumber] = useState('');
   const [stationID, setStationID] = useState('');
 
-  // Fetch all users
+  // Fetch all users - ✅ FIXED: Use authService
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const response = await api.get('/api/auth/all-users');
+      const response = await authService.getAllUsers();
       
-      if (response.data.success) {
-        setUsers(response.data.data.users || []);
-        setTotalUsers(response.data.data.total || response.data.data.users?.length || 0);
+      if (response.success) {
+        // ✅ FIXED: Handle the response structure from authService
+        const usersData = response.data?.users || response.data || [];
+        setUsers(usersData);
+        setTotalUsers(usersData.length);
       }
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -156,14 +161,27 @@ const AllUsers = () => {
     }
   };
 
-  // Toggle user status
+  // Toggle user status - ✅ FIXED: Use authService
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       setError('');
       
-      const response = await api.post('/api/auth/toggle-status', { userId });
+      // ✅ Prevent deactivating own account
+      if (userId === currentUser?._id) {
+        setError(t('cannot_deactivate_own_account'));
+        return;
+      }
       
-      if (response.data.success) {
+      // ✅ Prevent deactivating super admin if current user is not super admin
+      const targetUser = users.find(u => u._id === userId);
+      if (targetUser?.email === process.env.REACT_APP_SUPER_ADMIN_EMAIL) {
+        setError(t('cannot_modify_super_admin'));
+        return;
+      }
+      
+      const response = await authService.toggleUserStatus(userId);
+      
+      if (response.success) {
         // Update local state
         setUsers(users.map(user => 
           user._id === userId 
@@ -180,42 +198,30 @@ const AllUsers = () => {
     }
   };
 
-  // Change user role
+  // Change user role - ✅ FIXED: Use authService
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
     
     try {
       setError('');
       
-      const requestData = {
-        userId: selectedUser._id,
-        newRole: newRole
-      };
+      const response = await authService.changeUserRole(
+        selectedUser._id,
+        newRole,
+        newRole === 'driver' ? licenseNumber : null,
+        newRole === 'station_admin' ? stationID : null
+      );
       
-      // Add additional data for specific roles
-      if (newRole === 'driver') {
-        if (!licenseNumber) {
-          setError(t('license_number_required'));
-          return;
-        }
-        requestData.licenseNumber = licenseNumber;
-      }
-      
-      if (newRole === 'station_admin') {
-        if (!stationID) {
-          setError(t('station_id_required'));
-          return;
-        }
-        requestData.stationID = stationID;
-      }
-      
-      const response = await api.post('/api/auth/change-role', requestData);
-      
-      if (response.data.success) {
+      if (response.success) {
         // Update local state
         setUsers(users.map(user => 
           user._id === selectedUser._id 
-            ? { ...user, role: newRole, licenseNumber, stationID }
+            ? { 
+                ...user, 
+                role: newRole,
+                ...(newRole === 'driver' && { licenseNumber }),
+                ...(newRole === 'station_admin' && { stationID })
+              }
             : user
         ));
         
@@ -255,6 +261,18 @@ const AllUsers = () => {
 
   // Open change role dialog
   const handleOpenChangeRoleDialog = (user) => {
+    // ✅ Prevent changing own role
+    if (user._id === currentUser?._id) {
+      setError(t('cannot_change_own_role'));
+      return;
+    }
+    
+    // ✅ Prevent modifying super admin if not super admin
+    if (user.email === process.env.REACT_APP_SUPER_ADMIN_EMAIL && currentUser?.role !== 'super_admin') {
+      setError(t('cannot_modify_super_admin'));
+      return;
+    }
+    
     setSelectedUser(user);
     setNewRole(user.role);
     setLicenseNumber(user.licenseNumber || '');
@@ -289,7 +307,8 @@ const AllUsers = () => {
     const matchesSearch = searchTerm === '' || 
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phoneNumber?.includes(searchTerm);
+      user.phoneNumber?.includes(searchTerm) ||
+      user._id?.includes(searchTerm);
     
     // Role filter
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
@@ -321,8 +340,13 @@ const AllUsers = () => {
 
   // Initialize on component mount
   useEffect(() => {
+    // ✅ Check if user is super admin
+    if (currentUser?.role !== 'super_admin') {
+      navigate('/dashboard');
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [currentUser, navigate]);
 
   // Get stats
   const stats = {
@@ -531,7 +555,8 @@ const AllUsers = () => {
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={2}>
                       <Avatar
-                        src={user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`}
+                        // ✅ FIXED: profileImage (not profilePicture)
+                        src={user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`}
                         alt={user.fullName}
                       />
                       <Box>
@@ -539,7 +564,7 @@ const AllUsers = () => {
                           {user.fullName || t('no_name')}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          {t('id')}: {user._id.substring(0, 8)}...
+                          ID: {user._id.substring(0, 8)}...
                         </Typography>
                       </Box>
                     </Box>
@@ -553,6 +578,11 @@ const AllUsers = () => {
                     {user.licenseNumber && (
                       <Typography variant="caption" display="block" color="textSecondary">
                         {t('license')}: {user.licenseNumber}
+                      </Typography>
+                    )}
+                    {user.stationID && (
+                      <Typography variant="caption" display="block" color="textSecondary">
+                        {t('station_id')}: {user.stationID}
                       </Typography>
                     )}
                   </TableCell>
@@ -593,23 +623,29 @@ const AllUsers = () => {
                       </Tooltip>
                       
                       <Tooltip title={t('change_role')}>
-                        <IconButton
-                          size="small"
-                          color="warning"
-                          onClick={() => handleOpenChangeRoleDialog(user)}
-                        >
-                          <BadgeIcon />
-                        </IconButton>
+                        <span> {/* ✅ Wrap in span to disable tooltip when button disabled */}
+                          <IconButton
+                            size="small"
+                            color="warning"
+                            onClick={() => handleOpenChangeRoleDialog(user)}
+                            disabled={user._id === currentUser?._id || user.email === process.env.REACT_APP_SUPER_ADMIN_EMAIL}
+                          >
+                            <BadgeIcon />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       
                       <Tooltip title={user.isActive ? t('deactivate') : t('activate')}>
-                        <IconButton
-                          size="small"
-                          color={user.isActive ? 'error' : 'success'}
-                          onClick={() => toggleUserStatus(user._id, user.isActive)}
-                        >
-                          {user.isActive ? <BlockIcon /> : <CheckCircleIcon />}
-                        </IconButton>
+                        <span> {/* ✅ Wrap in span to disable tooltip when button disabled */}
+                          <IconButton
+                            size="small"
+                            color={user.isActive ? 'error' : 'success'}
+                            onClick={() => toggleUserStatus(user._id, user.isActive)}
+                            disabled={user._id === currentUser?._id || user.email === process.env.REACT_APP_SUPER_ADMIN_EMAIL}
+                          >
+                            {user.isActive ? <BlockIcon /> : <CheckCircleIcon />}
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </Box>
                   </TableCell>
@@ -643,7 +679,8 @@ const AllUsers = () => {
             <DialogTitle>
               <Box display="flex" alignItems="center" gap={2}>
                 <Avatar
-                  src={selectedUser.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.fullName)}&background=random`}
+                  // ✅ FIXED: profileImage
+                  src={selectedUser.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.fullName)}&background=random`}
                   alt={selectedUser.fullName}
                   sx={{ width: 60, height: 60 }}
                 />
@@ -762,6 +799,7 @@ const AllUsers = () => {
                   setOpenViewDialog(false);
                   handleOpenChangeRoleDialog(selectedUser);
                 }}
+                disabled={selectedUser._id === currentUser?._id || selectedUser.email === process.env.REACT_APP_SUPER_ADMIN_EMAIL}
               >
                 {t('change_role')}
               </Button>

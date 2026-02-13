@@ -15,7 +15,7 @@ import {
   DirectionsBus,
   Chair as SeatIcon
 } from '@mui/icons-material';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
 
 const SeatSelection = ({ 
   trip, 
@@ -23,28 +23,30 @@ const SeatSelection = ({
   onSeatsSelected, 
   onProceedToPayment 
 }) => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [seats, setSeats] = useState([]);
   const [localSelectedSeats, setLocalSelectedSeats] = useState(selectedSeats || []);
 
-  // Generate seat layout (4 columns)
+  // FIXED: Generate numeric seat numbers (1-based sequential) to match backend
   const generateSeats = () => {
     const seats = [];
-    const rows = Math.ceil(trip.totalSeats / 4);
+    const totalSeats = trip.totalSeats || 50; // Default fallback
     
-    for (let row = 1; row <= rows; row++) {
-      for (let col = 1; col <= 4; col++) {
-        const seatNumber = `${String.fromCharCode(64 + row)}${col}`;
-        if (seats.length < trip.totalSeats) {
-          seats.push({
-            id: seatNumber,
-            row: row,
-            col: col,
-            isBooked: false,
-            isAvailable: true
-          });
-        }
-      }
+    for (let seatNumber = 1; seatNumber <= totalSeats; seatNumber++) {
+      // Calculate row and column for UI display only
+      const row = Math.ceil(seatNumber / 4);
+      const col = ((seatNumber - 1) % 4) + 1;
+      const displayLabel = `${String.fromCharCode(64 + row)}${col}`;
+      
+      seats.push({
+        id: seatNumber,           // ← FIXED: Use numeric ID for backend
+        displayLabel: displayLabel, // ← ADDED: For UI display only
+        seatNumber: seatNumber,   // ← ADDED: Explicit numeric seat number
+        row: row,
+        col: col,
+        isBooked: false, // This should come from API in real implementation
+        isAvailable: true
+      });
     }
     return seats;
   };
@@ -56,11 +58,12 @@ const SeatSelection = ({
   const handleSeatClick = (seat) => {
     if (seat.isBooked) return;
 
-    const newSelectedSeats = localSelectedSeats.includes(seat.id) 
-      ? localSelectedSeats.filter(id => id !== seat.id)
-      : [...localSelectedSeats, seat.id];
+    const newSelectedSeats = localSelectedSeats.includes(seat.seatNumber) 
+      ? localSelectedSeats.filter(id => id !== seat.seatNumber)
+      : [...localSelectedSeats, seat.seatNumber];
 
     setLocalSelectedSeats(newSelectedSeats);
+    // Pass numeric seat numbers to parent component
     onSeatsSelected(newSelectedSeats);
   };
 
@@ -90,7 +93,7 @@ const SeatSelection = ({
         mb: 2,
         fontSize: '1.35rem'
       }}>
-        {t('select_your_seats')} {/* ✅ TRANSLATED */}
+        {t('select_your_seats')}
       </Typography>
       
       <Grid container spacing={10}>
@@ -111,7 +114,7 @@ const SeatSelection = ({
                 mb: 2
               }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  🪑 {t('available_seats_count', { count: trip.availableSeats })} 
+                  🪑 {t('available_seats_count', { count: trip.availableSeats })}
                 </Typography>
                 <Chip 
                   label={t('total_seats_count', { count: trip.totalSeats })} 
@@ -125,7 +128,7 @@ const SeatSelection = ({
                 />
               </Box>
 
-              {/* Seat Grid */}
+              {/* Seat Grid - Now using seatNumber for backend, displayLabel for UI */}
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(4, 1fr)', 
@@ -138,8 +141,8 @@ const SeatSelection = ({
                 {seats.map((seat) => (
                   <Button
                     key={seat.id}
-                    variant={localSelectedSeats.includes(seat.id) ? "contained" : "outlined"}
-                    color={seat.isBooked ? "error" : localSelectedSeats.includes(seat.id) ? "primary" : "inherit"}
+                    variant={localSelectedSeats.includes(seat.seatNumber) ? "contained" : "outlined"}
+                    color={seat.isBooked ? "error" : localSelectedSeats.includes(seat.seatNumber) ? "primary" : "inherit"}
                     onClick={() => handleSeatClick(seat)}
                     disabled={seat.isBooked}
                     sx={{ 
@@ -149,7 +152,7 @@ const SeatSelection = ({
                       flexDirection: 'column',
                       borderRadius: '8px',
                       p: 0.5,
-                      borderWidth: localSelectedSeats.includes(seat.id) ? '2px' : '1px',
+                      borderWidth: localSelectedSeats.includes(seat.seatNumber) ? '2px' : '1px',
                       '&:hover': {
                         transform: 'scale(1.05)',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
@@ -161,9 +164,9 @@ const SeatSelection = ({
                     <Typography variant="caption" sx={{ 
                       mt: 0.25, 
                       fontSize: '0.65rem',
-                      fontWeight: localSelectedSeats.includes(seat.id) ? 600 : 400
+                      fontWeight: localSelectedSeats.includes(seat.seatNumber) ? 600 : 400
                     }}>
-                      {seat.id}
+                      {seat.displayLabel} {/* ← FIXED: Show A1, B2 format to users */}
                     </Typography>
                   </Button>
                 ))}
@@ -181,15 +184,15 @@ const SeatSelection = ({
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'success.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_available')}</Typography> {/* ✅ TRANSLATED */}
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_available')}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'primary.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_selected')}</Typography> {/* ✅ TRANSLATED */}
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_selected')}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box sx={{ width: 14, height: 14, bgcolor: 'error.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_booked')}</Typography> {/* ✅ TRANSLATED */}
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_booked')}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -230,7 +233,7 @@ const SeatSelection = ({
                   color: '#1e40af',
                   fontSize: '1rem'
                 }}>
-                  {t('booking_summary')} {/* ✅ TRANSLATED */}
+                  {t('booking_summary')}
                 </Typography>
               </Box>
               
@@ -244,7 +247,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  {t('trip_details')} {/* ✅ TRANSLATED */}
+                  {t('trip_details')}
                 </Typography>
                 <Paper variant="outlined" sx={{ 
                   p: 1.5, 
@@ -268,7 +271,7 @@ const SeatSelection = ({
                 </Paper>
               </Box>
 
-              {/* Selected Seats */}
+              {/* Selected Seats - Show both seat number and display label */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
@@ -276,7 +279,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  {t('selected_seats')} {/* ✅ TRANSLATED */}
+                  {t('selected_seats')}
                 </Typography>
                 <Box sx={{ 
                   p: 1.5, 
@@ -291,29 +294,39 @@ const SeatSelection = ({
                   gap: 0.5
                 }}>
                   {localSelectedSeats.length > 0 ? (
-                    localSelectedSeats.map((seat) => (
-                      <Chip
-                        key={seat}
-                        label={seat}
-                        size="small"
-                        sx={{ 
-                          bgcolor: '#3b82f6',
-                          color: 'white',
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          '& .MuiChip-label': { px: 1 }
-                        }}
-                      />
-                    ))
+                    localSelectedSeats.map((seatNumber) => {
+                      // Find the seat to get display label
+                      const seat = seats.find(s => s.seatNumber === seatNumber);
+                      return (
+                        <Chip
+                          key={seatNumber}
+                          label={seat?.displayLabel || seatNumber} // ← FIXED: Show A1 format to users
+                          size="small"
+                          sx={{ 
+                            bgcolor: '#3b82f6',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            height: '24px',
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      );
+                    })
                   ) : (
                     <Typography variant="caption" sx={{ 
                       color: '#64748b',
                       fontSize: '0.75rem'
                     }}>
-                      {t('no_seats_selected_yet')} {/* ✅ TRANSLATED */}
+                      {t('no_seats_selected_yet')}
                     </Typography>
                   )}
                 </Box>
+                {/* Show the numeric seat numbers being sent to backend (for debugging) */}
+                {localSelectedSeats.length > 0 && process.env.NODE_ENV === 'development' && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                    {t('backend_seat_ids')}: {localSelectedSeats.join(', ')}
+                  </Typography>
+                )}
               </Box>
 
               {/* Price Breakdown */}
@@ -324,7 +337,7 @@ const SeatSelection = ({
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
-                  {t('price_breakdown')} {/* ✅ TRANSLATED */}
+                  {t('price_breakdown')}
                 </Typography>
                 <Box sx={{ 
                   p: 1.5, 
@@ -334,17 +347,17 @@ const SeatSelection = ({
                   border: '1px solid #e2e8f0'
                 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('price_per_seat')}:</Typography> {/* ✅ TRANSLATED */}
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>${trip.price}</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('price_per_seat')}:</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>ETB {trip.price}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('number_of_seats')}:</Typography> {/* ✅ TRANSLATED */}
+                    <Typography variant="caption" color="text.secondary">{t('number_of_seats')}:</Typography>
                     <Typography variant="caption" sx={{ fontWeight: 600 }}>{localSelectedSeats.length}</Typography>
                   </Box>
                   <Divider sx={{ my: 0.75, borderColor: '#e2e8f0' }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('subtotal')}:</Typography> {/* ✅ TRANSLATED */}
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>${trip.price * localSelectedSeats.length}</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('subtotal')}:</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>ETB {trip.price * localSelectedSeats.length}</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -363,13 +376,13 @@ const SeatSelection = ({
                 border: '1px solid #3b82f6'
               }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                  {t('total_amount')} {/* ✅ TRANSLATED */}
+                  {t('total_amount')}
                 </Typography>
                 <Typography variant="h6" color="primary" sx={{ 
                   fontWeight: 700,
                   fontSize: '1.25rem'
                 }}>
-                  ${totalPrice}
+                  ETB {totalPrice}
                 </Typography>
               </Box>
 
@@ -399,8 +412,8 @@ const SeatSelection = ({
                 }}
               >
                 {localSelectedSeats.length === 0 
-                  ? t('select_seats_to_continue') 
-                  : `${t('proceed_to_payment')} - $${totalPrice}`
+                  ? t('select_seats_to_continue')
+                  : `${t('proceed_to_payment')} - ETB ${totalPrice}`
                 }
               </Button>
 
@@ -411,7 +424,7 @@ const SeatSelection = ({
                   py: 0,
                   '& .MuiAlert-message': { fontSize: '0.75rem', p: 1 }
                 }}>
-                  {t('please_select_at_least_one_seat')} {/* ✅ TRANSLATED */}
+                  {t('please_select_at_least_one_seat')}
                 </Alert>
               )}
             </CardContent>

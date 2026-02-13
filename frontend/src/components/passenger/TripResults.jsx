@@ -27,7 +27,7 @@ import {
   Search
 } from '@mui/icons-material';
 import TripCard from './TripCard';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
 
 const TripResults = ({
   trips,
@@ -38,7 +38,7 @@ const TripResults = ({
   onBack,
   viewMode: initialViewMode = 'grid'
 }) => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -86,6 +86,33 @@ const TripResults = ({
     return 'error';
   };
 
+  // FIXED: Get trip status color based on backend status
+  const getTripStatusColor = (status) => {
+    switch(status) {
+      case 'scheduled': return 'info';
+      case 'boarding': return 'warning';
+      case 'ongoing': return 'primary';
+      case 'completed': return 'success';
+      case 'cancelled': return 'error';
+      case 'delayed': return 'warning';
+      default: return 'default';
+    }
+  };
+
+  // FIXED: Check if trip is bookable
+  const isTripBookable = (trip) => {
+    const bookableStatuses = ['scheduled', 'boarding'];
+    return bookableStatuses.includes(trip.tripStatus) && 
+           trip.isActive === true && 
+           trip.availableSeats > 0;
+  };
+
+  // FIXED: Format price as ETB
+  const formatPrice = (price) => {
+    if (!price) return 'ETB 0';
+    return `ETB ${price.toLocaleString()}`;
+  };
+
   // Filter trips based on search term
   const filteredTrips = trips.filter(trip => {
     if (!trip) return false;
@@ -96,7 +123,9 @@ const TripResults = ({
       trip.destination?.stationName?.toLowerCase().includes(searchLower) ||
       trip.vehicle?.plateNumber?.toLowerCase().includes(searchLower) ||
       trip.driver?.fullName?.toLowerCase().includes(searchLower) ||
-      trip.vehicle?.carType?.toLowerCase().includes(searchLower)
+      trip.vehicle?.carType?.toLowerCase().includes(searchLower) ||
+      trip.tripNumber?.toLowerCase().includes(searchLower) ||
+      trip.tripStatus?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -129,6 +158,7 @@ const TripResults = ({
         <Table stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('trip_number')}</TableCell>
               <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('route')}</TableCell>
               <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('date_and_time')}</TableCell>
               <TableCell sx={{ fontWeight: 600, backgroundColor: '#f8fafc' }}>{t('duration')}</TableCell>
@@ -148,15 +178,22 @@ const TripResults = ({
                   hover
                   sx={{ 
                     '&:hover': { backgroundColor: '#f8fafc' },
-                    cursor: trip.availableSeats > 0 ? 'pointer' : 'default'
+                    cursor: isTripBookable(trip) ? 'pointer' : 'default',
+                    opacity: trip.isActive === false ? 0.7 : 1
                   }}
                 >
+                  {/* Trip Number - ADDED */}
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {trip.tripNumber || 'N/A'}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {trip.origin?.stationName} → {trip.destination?.stationName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {trip.origin?.city} {t('to')} {trip.destination?.city}
+                      {trip.origin?.city || trip.origin?.stationName} {t('to')} {trip.destination?.city || trip.destination?.stationName}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -182,12 +219,12 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {trip.driver?.fullName?.split(' ')[0] || t('na')}
+                      {trip.driver?.fullName?.split(' ')[0] || t('not_assigned')}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e40af' }}>
-                      ${trip.price || '0'}
+                      {formatPrice(trip.price)} {/* FIXED: ETB format */}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {t('per_seat')}
@@ -202,37 +239,42 @@ const TripResults = ({
                     />
                   </TableCell>
                   <TableCell>
-                    {trip.availableSeats > 0 ? (
+                    {/* FIXED: Show proper trip status */}
+                    <Chip 
+                      label={t(`trip_status_${trip.tripStatus}`) || trip.tripStatus}
+                      size="small"
+                      color={getTripStatusColor(trip.tripStatus)}
+                      variant={trip.tripStatus === 'cancelled' ? 'filled' : 'outlined'}
+                      sx={{ fontWeight: 500 }}
+                    />
+                    {!trip.isActive && (
                       <Chip 
-                        label={t('available')} 
-                        size="small" 
-                        color="success" 
-                        variant="filled"
-                        sx={{ fontWeight: 500 }}
-                      />
-                    ) : (
-                      <Chip 
-                        label={t('sold_out')} 
-                        size="small" 
-                        color="error" 
-                        variant="filled"
-                        sx={{ fontWeight: 500 }}
+                        label={t('inactive')}
+                        size="small"
+                        color="default"
+                        variant="outlined"
+                        sx={{ ml: 0.5, fontWeight: 500 }}
                       />
                     )}
                   </TableCell>
                   <TableCell>
                     <Button
-                      variant={trip.availableSeats > 0 ? "contained" : "outlined"}
+                      variant={isTripBookable(trip) ? "contained" : "outlined"}
                       color="primary"
                       size="small"
                       onClick={() => onTripSelect(trip)}
-                      disabled={trip.availableSeats === 0}
+                      disabled={!isTripBookable(trip)}
                       sx={{ 
                         borderRadius: '6px',
                         minWidth: '80px'
                       }}
                     >
-                      {trip.availableSeats === 0 ? t('sold_out') : t('book')}
+                      {!isTripBookable(trip) 
+                        ? trip.availableSeats === 0 ? t('sold_out') :
+                          trip.tripStatus === 'cancelled' ? t('cancelled') :
+                          trip.isActive === false ? t('inactive') :
+                          t('not_available')
+                        : t('book')}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -323,9 +365,12 @@ const TripResults = ({
             fontSize: '1rem'
           }}>
             {t('trips_from_to', { 
-              from: stations.find(s => s._id === searchData.origin)?.stationName,
-              to: stations.find(s => s._id === searchData.destination)?.stationName
+              from: stations?.find(s => s._id === searchData.origin)?.stationName || searchData.origin,
+              to: stations?.find(s => s._id === searchData.destination)?.stationName || searchData.destination
             })} • {searchData.date?.toLocaleDateString()}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+            {t('total_trips_found', { count: filteredTrips.length })}
           </Typography>
         </Box>
         
@@ -345,7 +390,13 @@ const TripResults = ({
               ),
             }}
           />
-          <IconButton onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+          <IconButton 
+            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            sx={{ 
+              bgcolor: viewMode === 'list' ? '#f1f5f9' : 'transparent',
+              '&:hover': { bgcolor: '#f1f5f9' }
+            }}
+          >
             {viewMode === 'grid' ? <ViewList /> : <GridView />}
           </IconButton>
           <Button startIcon={<FilterList />}>{t('filter')}</Button>

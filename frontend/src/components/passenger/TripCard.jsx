@@ -17,10 +17,10 @@ import {
   Schedule,
   ArrowForward
 } from '@mui/icons-material';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
 
 const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -48,10 +48,15 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
 
   const getVehicleIcon = (type) => {
     switch(type?.toLowerCase()) {
-      case 'luxury_bus':
-        return <DirectionsBus color="primary" />;
       case 'coaster':
         return <DirectionsBus color="secondary" />;
+      case 'bus':
+        return <DirectionsBus color="primary" />;
+      case 'minibus':
+      case 'aba dulla':
+        return <DirectionsBus color="warning" />;
+      case 'van':
+        return <DirectionsBus color="info" />;
       default:
         return <DirectionsBus />;
     }
@@ -64,6 +69,20 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
     return 'error';
   };
 
+  // FIXED: Check if trip is available for booking based on backend status
+  const isTripBookable = () => {
+    // From your backend: trips with status 'scheduled' or 'boarding' are bookable
+    const bookableStatuses = ['scheduled', 'boarding'];
+    return bookableStatuses.includes(trip.tripStatus) && 
+           trip.isActive === true && 
+           trip.availableSeats > 0;
+  };
+
+  // FIXED: Format price as ETB
+  const formatPrice = (price) => {
+    return `ETB ${price.toLocaleString()}`;
+  };
+
   if (viewMode === 'list') {
     return (
       <Card sx={{ 
@@ -73,7 +92,12 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         marginBottom: '20px',
         border: '1px solid #e2e8f0',
         background: 'white',
-        borderLeft: '4px solid #3b82f6',
+        borderLeft: `4px solid ${
+          trip.tripStatus === 'cancelled' ? '#ef4444' : 
+          trip.tripStatus === 'delayed' ? '#f59e0b' : 
+          '#3b82f6'
+        }`,
+        opacity: trip.isActive === false ? 0.7 : 1,
         '&:hover': {
           transform: 'translateY(-4px)',
           boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
@@ -82,6 +106,23 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
       }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
+            {/* Trip Status Badge - ADDED */}
+            {trip.tripStatus && trip.tripStatus !== 'scheduled' && (
+              <Grid item xs={12}>
+                <Chip 
+                  label={t(`trip_status_${trip.tripStatus}`)} 
+                  size="small"
+                  color={
+                    trip.tripStatus === 'cancelled' ? 'error' :
+                    trip.tripStatus === 'delayed' ? 'warning' :
+                    trip.tripStatus === 'completed' ? 'success' :
+                    'default'
+                  }
+                  sx={{ mb: 1 }}
+                />
+              </Grid>
+            )}
+
             <Grid item xs={12} md={2}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.25rem' }}>
@@ -124,10 +165,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
             <Grid item xs={12} md={2}>
               <Box sx={{ textAlign: 'right' }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e40af' }}>
-                  ${trip.price}
+                  {formatPrice(trip.price)} {/* FIXED: ETB format */}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {t('per_seat')} {/* ✅ TRANSLATED */}
+                  {t('per_seat')}
                 </Typography>
               </Box>
             </Grid>
@@ -138,11 +179,14 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   variant="contained"
                   color="primary"
                   onClick={() => onSelect(trip)}
-                  disabled={trip.availableSeats === 0}
+                  disabled={!isTripBookable()} 
                   fullWidth
                   sx={{ borderRadius: '8px' }}
                 >
-                  {trip.availableSeats === 0 ? t('sold_out') : t('select')} {/* ✅ TRANSLATED */}
+                  {trip.availableSeats === 0 ? t('sold_out') : 
+                   trip.tripStatus === 'cancelled' ? t('cancelled') :
+                   trip.isActive === false ? t('inactive') : 
+                   t('select')}
                 </Button>
               </CardActions>
             </Grid>
@@ -164,17 +208,26 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
             />
             <Chip 
               icon={<Person />}
-              label={trip.driver?.fullName?.split(' ')[0]}
+              label={trip.driver?.fullName?.split(' ')[0] || t('assigned')}
               size="small"
               variant="outlined"
             />
+            {/* Trip Number Chip - ADDED */}
+            {trip.tripNumber && (
+              <Chip 
+                label={trip.tripNumber}
+                size="small"
+                variant="outlined"
+                sx={{ borderColor: '#94a3b8', color: '#475569' }}
+              />
+            )}
           </Box>
         </CardContent>
       </Card>
     );
   }
 
-  // Grid View (default)
+  // Grid View (default) - FIXED with same improvements
   return (
     <Card sx={{ 
       borderRadius: '12px', 
@@ -183,6 +236,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
       marginBottom: '20px',
       border: '1px solid #e2e8f0',
       background: 'white',
+      opacity: trip.isActive === false ? 0.7 : 1,
       '&:hover': {
         transform: 'translateY(-4px)',
         boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
@@ -206,12 +260,12 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
           fontSize: '0.875rem'
         }}>
           <Typography variant="subtitle2">
-            {trip.origin?.city} → {trip.destination?.city}
+            {trip.origin?.city || trip.origin?.stationName} → {trip.destination?.city || trip.destination?.stationName}
           </Typography>
         </Box>
         {trip.availableSeats < 5 && trip.availableSeats > 0 && (
           <Chip 
-            label={t('almost_full')} // ✅ TRANSLATED
+            label={t('almost_full')}
             size="small"
             color="warning"
             sx={{ fontWeight: 500, fontSize: '0.75rem' }}
@@ -219,9 +273,23 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         )}
         {trip.availableSeats === 0 && (
           <Chip 
-            label={t('sold_out')} // ✅ TRANSLATED
+            label={t('sold_out')}
             size="small"
             color="error"
+            sx={{ fontWeight: 500, fontSize: '0.75rem' }}
+          />
+        )}
+        {/* Trip Status Badge - ADDED */}
+        {trip.tripStatus && trip.tripStatus !== 'scheduled' && (
+          <Chip 
+            label={t(`trip_status_${trip.tripStatus}`)}
+            size="small"
+            color={
+              trip.tripStatus === 'cancelled' ? 'error' :
+              trip.tripStatus === 'delayed' ? 'warning' :
+              trip.tripStatus === 'completed' ? 'success' :
+              'default'
+            }
             sx={{ fontWeight: 500, fontSize: '0.75rem' }}
           />
         )}
@@ -231,7 +299,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         <Grid container spacing={2}>
           <Grid item xs={8}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1e293b' }}>
-              {trip.origin?.stationName} {t('to')} {trip.destination?.stationName} {/* ✅ TRANSLATED */}
+              {trip.origin?.stationName} {t('to')} {trip.destination?.stationName}
             </Typography>
             
             <Box sx={{ 
@@ -246,7 +314,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {formatTime(trip.departureTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {t('departure')} {/* ✅ TRANSLATED */}
+                  {t('departure')}
                 </Typography>
               </Box>
               
@@ -279,7 +347,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {formatTime(trip.arrivalTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {t('arrival')} {/* ✅ TRANSLATED */}
+                  {t('arrival')}
                 </Typography>
               </Box>
             </Box>
@@ -305,8 +373,14 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {trip.vehicle?.carType} • {trip.vehicle?.plateNumber}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {t('driver')}: {trip.driver?.fullName} {/* ✅ TRANSLATED */}
+                  {t('driver')}: {trip.driver?.fullName || t('not_assigned')}
                 </Typography>
+                {/* Trip Number - ADDED */}
+                {trip.tripNumber && (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {t('trip')}: {trip.tripNumber}
+                  </Typography>
+                )}
               </Box>
             </Box>
           </Grid>
@@ -314,10 +388,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
           <Grid item xs={4}>
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#1e40af', fontSize: '2.25rem' }}>
-                ${trip.price}
+                {formatPrice(trip.price)} {/* FIXED: ETB format */}
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block">
-                {t('per_seat')} {/* ✅ TRANSLATED */}
+                {t('per_seat')}
               </Typography>
               
               <Box sx={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', marginTop: '16px' }}>
@@ -331,7 +405,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   {t('seats_available', { 
                     available: trip.availableSeats, 
                     total: trip.totalSeats 
-                  })} {/* ✅ TRANSLATED */}
+                  })}
                 </Typography>
               </Box>
             </Box>
@@ -344,7 +418,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
           variant="contained"
           color="primary"
           onClick={() => onSelect(trip)}
-          disabled={trip.availableSeats === 0}
+          disabled={!isTripBookable()} 
           fullWidth
           size="large"
           sx={{ 
@@ -361,9 +435,12 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
             }
           }}
         >
-          {trip.availableSeats === 0 
-            ? t('sold_out') 
-            : `${t('select_trip')} • $${trip.price}`} {/* ✅ TRANSLATED */}
+          {!isTripBookable() 
+            ? trip.availableSeats === 0 ? t('sold_out') :
+              trip.tripStatus === 'cancelled' ? t('cancelled') :
+              trip.isActive === false ? t('inactive') :
+              t('not_available')
+            : `${t('select_trip')} • ${formatPrice(trip.price)}`}
         </Button>
       </CardActions>
     </Card>
