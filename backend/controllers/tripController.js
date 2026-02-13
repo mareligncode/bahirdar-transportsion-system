@@ -103,9 +103,9 @@ export const getAllTrips = async (req, res) => {
 
         // Station admin can only see their station's trips
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
+            const station = await Station.findOne({ manager: req.user._id });
             if (station) {
-                query.stationID = station._id;
+                query.station = station._id;
             }
         }
 
@@ -185,8 +185,8 @@ export const getTripById = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !trip.stationID.equals(station._id)) {
+            const station = await Station.findOne({ manager: req.user._id });
+            if (station && trip.station && !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to view this trip'
@@ -231,7 +231,7 @@ export const updateTrip = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
+            const station = await Station.findOne({ manager: req.user._id });
             if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
@@ -418,7 +418,7 @@ export const deleteTrip = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
+            const station = await Station.findOne({ manager: req.user._id });
             if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
@@ -516,8 +516,8 @@ export const updateTripStatus = async (req, res) => {
 
         // Check station admin permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (!station || !trip.stationID.equals(station._id)) {
+            const station = await Station.findOne({ manager: req.user._id });
+            if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'
@@ -705,8 +705,8 @@ export const toggleTripActive = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (!station || !trip.stationID.equals(station._id)) {
+            const station = await Station.findOne({ manager: req.user._id });
+            if (!station || !trip.station.equals(station._id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'

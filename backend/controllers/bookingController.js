@@ -118,7 +118,7 @@ export const createBooking = async (req, res) => {
         } catch (notificationError) {
             console.error('Failed to send booking confirmation notification:', notificationError);
         }
-//upto this point
+        //upto this point
         const populatedBooking = await Booking.findById(booking._id)
             .populate('passengerID', 'fullName phoneNumber email')
             .populate('tripID', 'tripNumber origin destination departureTime arrivalTime price')
@@ -150,7 +150,7 @@ export const getAllBookings = async (req, res) => {
 
         // Station admin can only see their station's bookings
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
+            const station = await Station.findOne({ manager: req.user._id });
             if (station) {
                 query.stationID = station._id;
             }
@@ -388,7 +388,7 @@ export const updateBooking = async (req, res) => {
         } catch (notificationError) {
             console.error('Failed to send booking modification notification:', notificationError);
         }
-//end of notfication changes
+        //end of notfication changes
         // Get updated booking with populated data
         const updatedBooking = await Booking.findById(booking._id)
             .populate('passengerID', 'fullName phoneNumber email')
@@ -698,7 +698,7 @@ export const getPassengerBookings = async (req, res) => {
 export const getTripBookings = async (req, res) => {
     try {
         const trip = await Trip.findById(req.params.tripId);
-        
+
         if (!trip) {
             return res.status(404).json({
                 success: false,
