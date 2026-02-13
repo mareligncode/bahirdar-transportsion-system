@@ -49,10 +49,25 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    // stationID: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Station',
+    //     default: null
+    // },
     stationID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Station',
-        default: null
+        validate: {
+            validator: function (value) {
+                // StationID can be null for non-station-admin roles
+                // But MUST have a value for station_admin role
+                if (this.role === 'station_admin') {
+                    return value !== null && value !== undefined;
+                }
+                return true; // Allow null for other roles
+            },
+            message: 'Station Admin must be assigned to a station'
+        }
     },
     profileImage: {
         type: String,

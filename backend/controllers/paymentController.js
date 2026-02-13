@@ -592,13 +592,22 @@ export const getPaymentStatus = async (req, res) => {
 
         // For station admin, only allow payments from their station
         if (req.user.role === 'station_admin') {
+            // Find station managed by this admin
+            const station = await Station.findOne({ manager: req.user._id });
+            if (!station) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'No station assigned to this admin'
+                });
+            }
+
             // We'll need to join with booking and trip to check station
             const payment = await Payment.findOne(query)
                 .populate({
                     path: 'bookingID',
                     populate: {
                         path: 'tripID',
-                        match: { station: req.user.stationID }
+                        match: { station: station._id }
                     }
                 });
 

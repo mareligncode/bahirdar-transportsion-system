@@ -115,6 +115,8 @@ const queryClient = new QueryClient({
             </ProtectedRoute>
           } />
           
+          
+          
           {/* ===== PASSENGER ROUTES =====*/}
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['passenger']}>
