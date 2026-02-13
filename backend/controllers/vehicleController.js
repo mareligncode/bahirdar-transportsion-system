@@ -127,21 +127,29 @@ export const getAllVehicles = async (req, res) => {
 
         const query = { isActive: true };
 
-        // FIXED: Add ObjectId validation with proper error handling
+
+
+        // FIXED: Add ObjectId validation with proper error handling start
         if (req.user.role === 'station_admin' && req.user.stationID) {
             try {
-                // Validate if stationID is a proper MongoDB ObjectId
-                if (mongoose.Types.ObjectId.isValid(req.user.stationID)) {
-                    // Convert to ObjectId to ensure proper casting
+                // Check if stationID is already an ObjectId or a valid ObjectId string
+                if (req.user.stationID instanceof mongoose.Types.ObjectId) {
+                    query.stationID = req.user.stationID;
+                } else if (typeof req.user.stationID === 'string' && mongoose.Types.ObjectId.isValid(req.user.stationID)) {
                     query.stationID = new mongoose.Types.ObjectId(req.user.stationID);
                 } else {
                     console.warn(`Station admin ${req.user._id} has invalid stationID: ${req.user.stationID}`);
-                    // For invalid stationID, don't filter - return vehicles from all stations
+                    // For invalid stationID, return empty result to prevent unauthorized access
+                    query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
                 }
             } catch (validationError) {
                 console.warn('StationID validation error:', validationError.message);
+                // Return empty result for security
+                query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
+
+        //end
         else if (stationID && req.user.role === 'super_admin') {
             try {
                 if (mongoose.Types.ObjectId.isValid(stationID)) {
@@ -488,14 +496,24 @@ export const updateVehicle = async (req, res) => {
             });
         }
 
-        // Check permissions
-        if (req.user.role === 'station_admin' &&
-            vehicle.stationID.toString() !== req.user.stationID?.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Cannot update vehicle from another station'
-            });
+        // Check permissions  new
+        if (req.user.role === 'station_admin') {
+            // Handle both ObjectId and string comparison
+            const userStationId = req.user.stationID;
+            const vehicleStationId = vehicle.stationID;
+            
+            // Convert both to string for comparison
+            const userStationStr = userStationId ? userStationId.toString() : '';
+            const vehicleStationStr = vehicleStationId ? vehicleStationId.toString() : '';
+            
+            if (userStationStr !== vehicleStationStr) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. Cannot update vehicle from another station'
+                });
+            }
         }
+        //new
 
         // If updating station, validate it exists
         if (updateData.stationID && updateData.stationID !== vehicle.stationID.toString()) {
@@ -1030,15 +1048,24 @@ export const uploadVehicleImages = async (req, res) => {
                 message: 'Vehicle not found'
             });
         }
-
-        if (req.user.role === 'station_admin' &&
-            vehicle.stationID.toString() !== req.user.stationID?.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Cannot upload images for vehicle from another station'
-            });
+//new 
+        if (req.user.role === 'station_admin') {
+            // Handle both ObjectId and string comparison
+            const userStationId = req.user.stationID;
+            const vehicleStationId = vehicle.stationID;
+            
+            // Convert both to string for comparison
+            const userStationStr = userStationId ? userStationId.toString() : '';
+            const vehicleStationStr = vehicleStationId ? vehicleStationId.toString() : '';
+            
+            if (userStationStr !== vehicleStationStr) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. Cannot upload images for vehicle from another station'
+                });
+            }
         }
-
+//new
         const uploadMiddleware = upload.array('images', 5);
 
         uploadMiddleware(req, res, async function (err) {
