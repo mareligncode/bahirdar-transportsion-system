@@ -25,6 +25,19 @@ export const createTrip = async (req, res) => {
             return res.status(404).json({ message: 'Driver not found' });
         }
 
+        // // Check permissions
+        // if (req.user.role === 'station_admin') {
+        //     const station = await Station.findOne({ manager: req.user._id });
+
+        //     if (!station || station._id.toString() !== stationID) {
+        //         return res.status(403).json({
+        //             success: false,
+        //             message: 'Not authorized to create trip for this station'
+        //         });
+        //     }
+        // }
+
+
         // Check stations exist
         const [originStation, destinationStation] = await Promise.all([
             Station.findById(origin),
@@ -93,6 +106,8 @@ export const createTrip = async (req, res) => {
         });
     }
 };
+
+
 
 export const getAllTrips = async (req, res) => {
     try {
@@ -233,16 +248,16 @@ export const updateTrip = async (req, res) => {
             });
         }
 
-        // Check permissions
-        if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !trip.station.equals(station._id)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Not authorized to update this trip'
-                });
-            }
-        }
+        // // Check permissions
+        // if (req.user.role === 'station_admin') {
+        //     const station = await Station.findOne({ manager: req.user._id });
+        //     if (!station || !trip.station.equals(station._id)) {
+        //         return res.status(403).json({
+        //             success: false,
+        //             message: 'Not authorized to update this trip'
+        //         });
+        //     }
+        // }
 
         // Update trip fields
         const updates = req.body;

@@ -322,6 +322,12 @@ const TripResults = ({
                   }}
                   onClick={() => trip.availableSeats > 0 && onTripSelect(trip)}
                 >
+                  {/* Trip Number - ADDED */}
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {trip.tripNumber || 'N/A'}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {trip.origin?.stationName || 'Unknown'} → {trip.destination?.stationName || 'Unknown'}
@@ -354,7 +360,7 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {trip.driver?.fullName?.split(' ')[0] || t('na')}
+                      {trip.driver?.fullName?.split(' ')[0] || t('not_assigned')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -400,7 +406,7 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     <Button
-                      variant={trip.availableSeats > 0 ? "contained" : "outlined"}
+                      variant={isTripBookable(trip) ? "contained" : "outlined"}
                       color="primary"
                       size="small"
                       onClick={(e) => {
