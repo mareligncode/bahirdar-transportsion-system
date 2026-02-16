@@ -26,6 +26,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  FormHelperText,
   Alert,
   CircularProgress,
   Snackbar,
@@ -35,33 +36,23 @@ import {
   Grid,
   Divider,
   Avatar,
-  FormControlLabel,
-  Switch
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Visibility as VisibilityIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   Badge as BadgeIcon,
   DriveEta as DriveEtaIcon,
   LocationOn as LocationIcon,
-  Security as SecurityIcon,
-  MoreVert as MoreVertIcon,
-  Check as CheckIcon,
-  Close as CloseIcon
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useTranslation } from '../../hooks/useTranslation';
-import authService from '../../services/auth.service'; // ✅ Use authService instead of direct api calls
 
 // Styled components
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -102,10 +93,10 @@ const RoleChip = styled(Chip)(({ theme, role }) => {
 
 const AllUsers = () => {
   const { t } = useTranslation();
-  const { user: currentUser } = useAuth(); // ✅ Get current user for permissions
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStations, setLoadingStations] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -120,19 +111,9 @@ const AllUsers = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Modals
-  const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openChangeRoleDialog, setOpenChangeRoleDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  
-  // Edit form
-  const [editForm, setEditForm] = useState({
-    fullName: '',
-    email: '',
-    phoneNumber: '',
-    role: '',
-    isActive: true
-  });
   
   // Change role form
   const [newRole, setNewRole] = useState('');
@@ -161,7 +142,30 @@ const AllUsers = () => {
     }
   };
 
-  // Toggle user status - ✅ FIXED: Use authService
+  // Fetch all stations for dropdown
+  const fetchStations = async () => {
+    try {
+      setLoadingStations(true);
+      const response = await api.get('/api/station');
+      
+      let stationsList = [];
+      if (response.data.stations) {
+        stationsList = response.data.stations;
+      } else if (response.data.data?.stations) {
+        stationsList = response.data.data.stations;
+      } else if (Array.isArray(response.data)) {
+        stationsList = response.data;
+      }
+      
+      setStations(stationsList);
+    } catch (err) {
+      console.error('Error fetching stations:', err);
+    } finally {
+      setLoadingStations(false);
+    }
+  };
+
+  // Toggle user status
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       setError('');
@@ -181,15 +185,14 @@ const AllUsers = () => {
       
       const response = await authService.toggleUserStatus(userId);
       
-      if (response.success) {
-        // Update local state
+      if (response.data.success) {
         setUsers(users.map(user => 
           user._id === userId 
             ? { ...user, isActive: !currentStatus }
             : user
         ));
         
-        setSuccess(t(currentStatus ? 'user_deactivated' : 'user_activated'));
+        setSuccess(currentStatus ? t('user_deactivated') : t('user_activated'));
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
@@ -198,35 +201,72 @@ const AllUsers = () => {
     }
   };
 
-  // Change user role - ✅ FIXED: Use authService
+  // Change user role - EXACTLY as your backend expects
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
     
     try {
       setError('');
       
-      const response = await authService.changeUserRole(
-        selectedUser._id,
-        newRole,
-        newRole === 'driver' ? licenseNumber : null,
-        newRole === 'station_admin' ? stationID : null
-      );
+      // Build request exactly as your backend expects
+      const requestData = {
+        userId: selectedUser._id,
+        newRole: newRole
+      };
       
-      if (response.success) {
+      // Add licenseNumber ONLY for driver role
+      if (newRole === 'driver') {
+        if (!licenseNumber) {
+          setError(t('license_number_required'));
+          return;
+        }
+        requestData.licenseNumber = licenseNumber;
+      }
+      
+      // Add stationID ONLY for station_admin role
+      if (newRole === 'station_admin') {
+        if (!stationID) {
+          setError(t('station_id_required'));
+          return;
+        }
+        requestData.stationID = stationID;
+      }
+      
+      console.log('📤 Sending role change request:', requestData);
+      
+      const response = await api.post('/api/auth/change-role', requestData);
+      
+      if (response.data.success) {
+        // Find the selected station name for display
+        const selectedStation = stations.find(s => s._id === stationID);
+        
         // Update local state
         setUsers(users.map(user => 
           user._id === selectedUser._id 
             ? { 
                 ...user, 
                 role: newRole,
-                ...(newRole === 'driver' && { licenseNumber }),
-                ...(newRole === 'station_admin' && { stationID })
+                // For driver: set licenseNumber, keep existing stationID or set to null
+                ...(newRole === 'driver' && { 
+                  licenseNumber,
+                  stationID: null // Clear stationID when becoming driver
+                }),
+                // For station_admin: set stationID
+                ...(newRole === 'station_admin' && { 
+                  stationID,
+                  licenseNumber: null // Clear licenseNumber when becoming station_admin
+                }),
+                // For other roles: clear both
+                ...(newRole !== 'driver' && newRole !== 'station_admin' && {
+                  licenseNumber: null,
+                  stationID: null
+                })
               }
             : user
         ));
         
         setOpenChangeRoleDialog(false);
-        setSuccess(t('user_role_changed', { role: t(newRole) }));
+        setSuccess(t('user_role_changed_successfully'));
         setTimeout(() => setSuccess(''), 3000);
         
         // Reset form
@@ -236,21 +276,9 @@ const AllUsers = () => {
       }
     } catch (err) {
       console.error('Error changing user role:', err);
-      setError(err.response?.data?.message || t('failed_to_change_user_role'));
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || t('failed_to_change_user_role');
+      setError(errorMsg);
     }
-  };
-
-  // Open edit dialog
-  const handleOpenEditDialog = (user) => {
-    setSelectedUser(user);
-    setEditForm({
-      fullName: user.fullName || '',
-      email: user.email || '',
-      phoneNumber: user.phoneNumber || '',
-      role: user.role || '',
-      isActive: user.isActive
-    });
-    setOpenEditDialog(true);
   };
 
   // Open view dialog
@@ -301,19 +329,23 @@ const AllUsers = () => {
     }
   };
 
+  // Get station name by ID
+  const getStationName = (stationId) => {
+    if (!stationId) return t('not_assigned');
+    const station = stations.find(s => s._id === stationId);
+    return station ? `${station.stationName} (${station.city})` : stationId;
+  };
+
   // Filter users
   const filteredUsers = users.filter(user => {
-    // Search filter
     const matchesSearch = searchTerm === '' || 
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phoneNumber?.includes(searchTerm) ||
       user._id?.includes(searchTerm);
     
-    // Role filter
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
-    // Status filter
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && user.isActive) ||
       (statusFilter === 'inactive' && !user.isActive);
@@ -321,24 +353,78 @@ const AllUsers = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Paginate users
+  // Export to CSV function
+  const exportToCSV = () => {
+    try {
+      // Define CSV headers
+      const headers = [
+        'Full Name',
+        'Email',
+        'Phone Number',
+        'Role',
+        'Status',
+        'License Number',
+        'Station',
+        'Created At',
+        'Last Login',
+        'User ID'
+      ];
+
+      // Map user data to CSV rows
+      const csvData = users.map(user => [
+        user.fullName || '',
+        user.email || '',
+        user.phoneNumber || '',
+        getRoleDisplayName(user.role),
+        user.isActive ? 'Active' : 'Inactive',
+        user.licenseNumber || '',
+        user.stationID ? getStationName(user.stationID) : '',
+        user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+        user.lastLogin ? new Date(user.lastLogin).toLocaleString() : '',
+        user._id || ''
+      ]);
+
+      // Combine headers and data
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setSuccess('Users exported successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Error exporting to CSV:', err);
+      setError('Failed to export users');
+    }
+  };
+
   const paginatedUsers = filteredUsers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
 
-  // Handle page change
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
-  // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  // Initialize on component mount
   useEffect(() => {
     // ✅ Check if user is super admin
     if (currentUser?.role !== 'super_admin') {
@@ -346,9 +432,9 @@ const AllUsers = () => {
       return;
     }
     fetchUsers();
-  }, [currentUser, navigate]);
+    fetchStations();
+  }, []);
 
-  // Get stats
   const stats = {
     total: users.length,
     active: users.filter(u => u.isActive).length,
@@ -368,7 +454,6 @@ const AllUsers = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Notifications */}
       <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess('')}>
         <Alert severity="success">{success}</Alert>
       </Snackbar>
@@ -377,7 +462,6 @@ const AllUsers = () => {
         <Alert severity="error">{error}</Alert>
       </Snackbar>
 
-      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
           <Typography variant="h4" component="h1" fontWeight="bold">
@@ -387,16 +471,28 @@ const AllUsers = () => {
             {t('manage_all_system_users')}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={fetchUsers}
-        >
-          {t('refresh')}
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={exportToCSV}
+            disabled={users.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              fetchUsers();
+              fetchStations();
+            }}
+          >
+            {t('refresh')}
+          </Button>
+        </Box>
       </Box>
 
-      {/* Stats Cards */}
       <Grid container spacing={2} mb={4}>
         <Grid item xs={12} sm={6} md={2.4}>
           <Card>
@@ -460,7 +556,6 @@ const AllUsers = () => {
         </Grid>
       </Grid>
 
-      {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
@@ -525,7 +620,6 @@ const AllUsers = () => {
         </Grid>
       </Paper>
 
-      {/* Users Table */}
       <StyledTableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -582,7 +676,7 @@ const AllUsers = () => {
                     )}
                     {user.stationID && (
                       <Typography variant="caption" display="block" color="textSecondary">
-                        {t('station_id')}: {user.stationID}
+                        {t('station')}: {getStationName(user.stationID)}
                       </Typography>
                     )}
                   </TableCell>
@@ -656,7 +750,6 @@ const AllUsers = () => {
         </Table>
       </StyledTableContainer>
 
-      {/* Pagination */}
       <TablePagination
         component="div"
         count={filteredUsers.length}
@@ -667,7 +760,6 @@ const AllUsers = () => {
         rowsPerPageOptions={[5, 10, 25, 50]}
       />
 
-      {/* View User Dialog */}
       <Dialog 
         open={openViewDialog} 
         onClose={() => setOpenViewDialog(false)}
@@ -751,7 +843,6 @@ const AllUsers = () => {
                   </Box>
                 </Grid>
 
-                {/* Role-specific information */}
                 {selectedUser.role === 'driver' && selectedUser.licenseNumber && (
                   <Grid item xs={12}>
                     <Divider sx={{ my: 2 }} />
@@ -768,7 +859,7 @@ const AllUsers = () => {
                       <Box mb={2}>
                         <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                           <LocationIcon fontSize="small" />
-                          <strong>{t('assigned_station')}:</strong> {selectedUser.stationID}
+                          <strong>{t('assigned_station')}:</strong> {getStationName(selectedUser.stationID)}
                         </Typography>
                       </Box>
                     )}
@@ -784,7 +875,7 @@ const AllUsers = () => {
                     <Box mb={2}>
                       <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                         <LocationIcon fontSize="small" />
-                        <strong>{t('managed_station')}:</strong> {selectedUser.stationID}
+                        <strong>{t('managed_station')}:</strong> {getStationName(selectedUser.stationID)}
                       </Typography>
                     </Box>
                   </Grid>
@@ -808,7 +899,7 @@ const AllUsers = () => {
         )}
       </Dialog>
 
-      {/* Change Role Dialog */}
+      {/* Change Role Dialog - MATCHES BACKEND EXACTLY */}
       <Dialog 
         open={openChangeRoleDialog} 
         onClose={() => setOpenChangeRoleDialog(false)}
@@ -836,6 +927,7 @@ const AllUsers = () => {
                   </Select>
                 </FormControl>
 
+                {/* Driver Role - License Number ONLY */}
                 {newRole === 'driver' && (
                   <TextField
                     fullWidth
@@ -845,26 +937,40 @@ const AllUsers = () => {
                     placeholder={t('enter_license_number')}
                     sx={{ mb: 2 }}
                     required
+                    helperText={t('license_number_required_for_driver')}
                   />
                 )}
 
+                {/* Station Admin Role - Station ID ONLY */}
                 {newRole === 'station_admin' && (
-                  <TextField
-                    fullWidth
-                    label={t('station_id')}
-                    value={stationID}
-                    onChange={(e) => setStationID(e.target.value)}
-                    placeholder={t('enter_station_id')}
-                    sx={{ mb: 2 }}
-                    required
-                  />
+                  <FormControl fullWidth sx={{ mb: 2 }} required>
+                    <InputLabel>{t('select_station')}</InputLabel>
+                    <Select
+                      value={stationID}
+                      label={t('select_station')}
+                      onChange={(e) => setStationID(e.target.value)}
+                      disabled={loadingStations}
+                    >
+                      <MenuItem value="" disabled>
+                        <em>{loadingStations ? t('loading_stations') : t('select_station_placeholder')}</em>
+                      </MenuItem>
+                      {stations.map((station) => (
+                        <MenuItem key={station._id} value={station._id}>
+                          {station.stationName} - {station.city}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {loadingStations && <CircularProgress size={20} sx={{ position: 'absolute', right: 40, top: 15 }} />}
+                    <FormHelperText>{t('select_station_for_admin')}</FormHelperText>
+                  </FormControl>
                 )}
 
                 <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>{t('note')}:</strong> {t('changing_role_warning')}
-                    {newRole === 'driver' && ` ${t('driver_role_requires_license')}`}
-                    {newRole === 'station_admin' && ` ${t('station_admin_requires_station')}`}
+                    <strong>{t('note')}:</strong> 
+                    {newRole === 'driver' && t('driver_role_change_note')}
+                    {newRole === 'station_admin' && t('station_admin_role_change_note')}
+                    {(!newRole || (newRole !== 'driver' && newRole !== 'station_admin')) && t('role_change_general_note')}
                   </Typography>
                 </Alert>
               </Box>
@@ -874,7 +980,11 @@ const AllUsers = () => {
               <Button 
                 variant="contained" 
                 onClick={handleChangeRole}
-                disabled={!newRole || (newRole === 'driver' && !licenseNumber) || (newRole === 'station_admin' && !stationID)}
+                disabled={
+                  !newRole || 
+                  (newRole === 'driver' && !licenseNumber) || 
+                  (newRole === 'station_admin' && !stationID)
+                }
               >
                 {t('update_role')}
               </Button>

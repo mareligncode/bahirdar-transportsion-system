@@ -1,4 +1,4 @@
-// src/components/admin/station/Users.jsx
+// src/components/station/Users.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -31,7 +31,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  FormHelperText
+  LinearProgress,
+  Badge,
+  Stack
 } from '@mui/material';
 import {
   PersonAdd as PersonAddIcon,
@@ -39,20 +41,30 @@ import {
   Visibility as ViewIcon,
   Block as BlockIcon,
   CheckCircle as ActivateIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  CalendarToday as CalendarIcon,
+  LocationOn as LocationIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Badge as BadgeIcon,
+  DirectionsCar as CarIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
-import { format } from 'date-fns';
+import { format, formatDistance } from 'date-fns';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [stationInfo, setStationInfo] = useState(null);
 
   // Dialog states
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -72,21 +84,38 @@ const Users = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignErrors, setAssignErrors] = useState({});
 
-  // Get current user's stationID from localStorage
-  const getCurrentUserStationID = () => {
+  // Fetch station info for current admin
+  const fetchStationInfo = async () => {
     try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        return user.stationID || '';
+      // First get current user profile
+      const response = await api.get('/api/auth/profile');
+      console.log('Profile response:', response.data);
+      
+      if (response.data.success) {
+        const userData = response.data.data?.user || response.data.data;
+        
+        if (userData.stationID) {
+          if (typeof userData.stationID === 'object') {
+            setStationInfo(userData.stationID);
+          } else {
+            // Fetch station details
+            try {
+              const stationResponse = await api.get(`/api/station/${userData.stationID}`);
+              if (stationResponse.data?.station) {
+                setStationInfo(stationResponse.data.station);
+              }
+            } catch (err) {
+              console.error('Error fetching station:', err);
+            }
+          }
+        }
       }
     } catch (err) {
-      console.error('Error getting user data:', err);
+      console.error('Error fetching station info:', err);
     }
-    return '';
   };
 
-  // Fetch users
+  // Fetch users (ONLY passengers)
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -94,30 +123,33 @@ const Users = () => {
       
       const response = await api.get('/api/auth/station-users');
       
+      console.log('📊 Station Users Response:', response.data);
+      
       if (response.data.success) {
-        // Filter out drivers and station_admins, only show passengers
-        const filteredUsers = (response.data.data.users || []).filter(user => 
-          user.role === 'passenger'
-        );
+        const allUsers = response.data.data?.users || [];
         
-        setUsers(filteredUsers);
-        setTotalUsers(filteredUsers.length);
+        // Filter to ONLY show passengers
+        const passengers = allUsers.filter(user => user.role === 'passenger');
+        
+        setUsers(passengers);
+        
+        // Fetch station info if not already set
+        if (!stationInfo) {
+          await fetchStationInfo();
+        }
       } else {
         setError(response.data.message || 'Failed to fetch users');
       }
     } catch (err) {
-      console.error('Fetch users error:', err);
-      let errorMessage = 'Failed to load users. Please try again.';
+      console.error('❌ Fetch users error:', err);
       
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.response?.status === 403) {
-        errorMessage = 'Access denied. You may not have permission to view station users.';
+      if (err.response?.status === 403) {
+        setError('Access denied. You may not have permission to view station users.');
       } else if (err.response?.status === 401) {
-        errorMessage = 'Session expired. Please login again.';
+        setError('Session expired. Please login again.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load users. Please try again.');
       }
-      
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -127,167 +159,7 @@ const Users = () => {
     fetchUsers();
   }, []);
 
-  // Handle assign driver dialog open
-  const handleAssignOpen = (user) => {
-    setSelectedUser(user);
-    setAssignForm({
-      passengerId: user._id,
-      licenseNumber: '',
-      stationID: getCurrentUserStationID() || ''
-    });
-    setAssignErrors({});
-    setAssignDialogOpen(true);
-  };
-
-  // Handle view user dialog open
-  const handleViewOpen = (user) => {
-    try {
-      setSelectedUserDetails(user);
-      setViewDialogOpen(true);
-    } catch (err) {
-      console.error('View user error:', err);
-      setError('Failed to load user details');
-    }
-  };
-
-  // Handle toggle status dialog open
-  const handleToggleOpen = (user) => {
-    setSelectedUser(user);
-    setToggleDialogOpen(true);
-  };
-
-  // Handle assign driver
-  const handleAssignDriver = async () => {
-    // Validation
-    const errors = {};
-    if (!assignForm.licenseNumber.trim()) {
-      errors.licenseNumber = 'License number is required';
-    }
-    
-    if (Object.keys(errors).length > 0) {
-      setAssignErrors(errors);
-      return;
-    }
-
-    try {
-      setAssignLoading(true);
-      
-      // Ensure stationID is set (use current user's stationID if empty)
-      const formData = {
-        ...assignForm,
-        stationID: assignForm.stationID || getCurrentUserStationID() || ''
-      };
-      
-      const response = await api.post('/api/auth/assign-driver', formData);
-      
-      if (response.data.success) {
-        setSuccess('Passenger assigned as driver successfully');
-        setAssignDialogOpen(false);
-        fetchUsers();
-      } else {
-        setError(response.data.message || 'Failed to assign driver role');
-      }
-    } catch (err) {
-      console.error('Assign driver error:', err);
-      setError(
-        err.response?.data?.message || 
-        'Failed to assign driver role. Please try again.'
-      );
-    } finally {
-      setAssignLoading(false);
-    }
-  };
-
-  // Handle toggle user status - FIXED: Add stationID workaround
-  const handleToggleStatus = async () => {
-    if (!selectedUser) return;
-
-    try {
-      setLoading(true);
-      
-      // First, let's try the normal way
-      const response = await api.post('/api/auth/toggle-status', {
-        userId: selectedUser._id
-      });
-      
-      if (response.data.success) {
-        const action = selectedUser.isActive ? 'deactivated' : 'activated';
-        setSuccess(`Passenger ${action} successfully`);
-        setToggleDialogOpen(false);
-        fetchUsers();
-      } else {
-        setError(response.data.message || 'Failed to update user status');
-      }
-    } catch (err) {
-      console.error('Toggle status error:', err);
-      
-      // If it's a 403 error about stationID, try workaround
-      if (err.response?.status === 403 && 
-          err.response?.data?.message?.includes('Cannot manage users from other stations')) {
-        
-        // WORKAROUND: Temporarily assign passenger to station admin's station
-        try {
-          const currentStationID = getCurrentUserStationID();
-          
-          if (!currentStationID) {
-            setError('You are not assigned to a station. Please contact super admin.');
-            return;
-          }
-          
-          // Update passenger with station admin's stationID
-          const updateResponse = await api.put(`/api/auth/user/${selectedUser._id}`, {
-            stationID: currentStationID
-          });
-          
-          if (updateResponse.data.success) {
-            // Now try toggling status again
-            const toggleResponse = await api.post('/api/auth/toggle-status', {
-              userId: selectedUser._id
-            });
-            
-            if (toggleResponse.data.success) {
-              const action = selectedUser.isActive ? 'deactivated' : 'activated';
-              setSuccess(`Passenger ${action} successfully (station assigned)`);
-              setToggleDialogOpen(false);
-              fetchUsers();
-              
-              // Remove stationID after toggling (optional)
-              setTimeout(async () => {
-                try {
-                  await api.put(`/api/auth/user/${selectedUser._id}`, {
-                    stationID: ''
-                  });
-                } catch (removeErr) {
-                  console.warn('Could not remove stationID:', removeErr);
-                }
-              }, 1000);
-              
-            } else {
-              setError(toggleResponse.data.message || 'Failed to update user status after station assignment');
-            }
-          } else {
-            setError('Failed to assign passenger to your station');
-          }
-          
-        } catch (workaroundErr) {
-          console.error('Workaround error:', workaroundErr);
-          setError(
-            workaroundErr.response?.data?.message || 
-            'Failed to manage passenger. Please contact super admin.'
-          );
-        }
-      } else {
-        // Regular error handling
-        const errorMessage = err.response?.data?.message || 
-                            'Failed to update user status. Please try again.';
-        setError(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filter users based on search and filters
+  // Filter users based on search and status
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -317,6 +189,140 @@ const Users = () => {
     }
   };
 
+  // Format relative time
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return formatDistance(new Date(dateString), new Date(), { addSuffix: true });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Handle assign driver dialog open
+  const handleAssignOpen = (user) => {
+    setSelectedUser(user);
+    setAssignForm({
+      passengerId: user._id,
+      licenseNumber: '',
+      stationID: stationInfo?._id || ''
+    });
+    setAssignErrors({});
+    setAssignDialogOpen(true);
+  };
+
+  // Handle view user dialog open - FIXED: Use existing data instead of API call
+  const handleViewOpen = (user) => {
+    console.log('🔍 Viewing passenger details:', user);
+    setSelectedUserDetails(user);
+    setViewDialogOpen(true);
+  };
+
+  // Handle toggle status dialog open
+  const handleToggleOpen = (user) => {
+    setSelectedUser(user);
+    setToggleDialogOpen(true);
+  };
+
+  // Handle assign driver
+  const handleAssignDriver = async () => {
+    // Validation
+    const errors = {};
+    if (!assignForm.licenseNumber.trim()) {
+      errors.licenseNumber = 'License number is required';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setAssignErrors(errors);
+      return;
+    }
+
+    try {
+      setAssignLoading(true);
+      
+      const formData = {
+        passengerId: assignForm.passengerId,
+        licenseNumber: assignForm.licenseNumber,
+        stationID: stationInfo?._id || assignForm.stationID
+      };
+      
+      console.log('📤 Assigning driver with data:', formData);
+      
+      const response = await api.post('/api/auth/assign-driver', formData);
+      
+      if (response.data.success) {
+        setSuccess('✅ Passenger assigned as driver successfully');
+        setAssignDialogOpen(false);
+        fetchUsers(); // Refresh the list
+      } else {
+        setError(response.data.message || 'Failed to assign driver role');
+      }
+    } catch (err) {
+      console.error('❌ Assign driver error:', err);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error ||
+                          'Failed to assign driver role. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  // Handle toggle user status
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setActionLoading(true);
+      setError('');
+      
+      console.log('🔄 Toggling status for user:', selectedUser._id);
+      
+      const response = await api.post('/api/auth/toggle-status', {
+        userId: selectedUser._id
+      });
+      
+      console.log('📊 Toggle response:', response.data);
+      
+      if (response.data.success) {
+        const action = selectedUser.isActive ? 'deactivated' : 'activated';
+        setSuccess(`✅ User ${action} successfully`);
+        setToggleDialogOpen(false);
+        
+        // Update the user in the local state immediately
+        setUsers(prevUsers => 
+          prevUsers.map(u => 
+            u._id === selectedUser._id 
+              ? { ...u, isActive: !selectedUser.isActive }
+              : u
+          )
+        );
+        
+        // Also refresh from server to be safe
+        setTimeout(() => fetchUsers(), 500);
+      } else {
+        setError(response.data.message || 'Failed to update user status');
+      }
+    } catch (err) {
+      console.error('❌ Toggle status error:', err);
+      
+      let errorMessage = 'Failed to update user status';
+      if (err.response?.status === 403) {
+        if (err.response?.data?.message?.includes('Cannot manage users from other stations')) {
+          errorMessage = 'Cannot manage users from other stations. This user may belong to a different station.';
+        } else {
+          errorMessage = 'You do not have permission to perform this action.';
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Handle page change
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -338,6 +344,10 @@ const Users = () => {
     setSuccess('');
   };
 
+  // Stats calculations
+  const activeCount = users.filter(u => u.isActive).length;
+  const inactiveCount = users.filter(u => !u.isActive).length;
+
   return (
     <Box>
       {/* Header */}
@@ -346,15 +356,28 @@ const Users = () => {
           <Typography variant="h5" fontWeight="bold">
             Passenger Management
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={fetchUsers}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
+          <Box display="flex" gap={2}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchUsers}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Box>
+
+        {/* Station Info Card */}
+        {stationInfo && (
+          <Alert severity="info" sx={{ mb: 3 }} icon={<LocationIcon />}>
+            <Typography variant="body2">
+              <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode}) | 
+              <strong> City:</strong> {stationInfo.city} | 
+              <strong> Location:</strong> {stationInfo.location}
+            </Typography>
+          </Alert>
+        )}
 
         {/* Stats Cards */}
         <Grid container spacing={2} mb={3}>
@@ -365,7 +388,7 @@ const Users = () => {
                   Total Passengers
                 </Typography>
                 <Typography variant="h4">
-                  {totalUsers}
+                  {users.length}
                 </Typography>
               </CardContent>
             </Card>
@@ -376,8 +399,8 @@ const Users = () => {
                 <Typography color="textSecondary" gutterBottom>
                   Active Passengers
                 </Typography>
-                <Typography variant="h4" color="primary.main">
-                  {users.filter(u => u.isActive).length}
+                <Typography variant="h4" color="success.main">
+                  {activeCount}
                 </Typography>
               </CardContent>
             </Card>
@@ -389,7 +412,7 @@ const Users = () => {
                   Inactive Passengers
                 </Typography>
                 <Typography variant="h4" color="error.main">
-                  {users.filter(u => !u.isActive).length}
+                  {inactiveCount}
                 </Typography>
               </CardContent>
             </Card>
@@ -397,19 +420,20 @@ const Users = () => {
         </Grid>
 
         {/* Filters */}
-        <Grid container spacing={2} mb={3}>
-          <Grid item xs={12} md={6}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={8}>
             <TextField
               fullWidth
               label="Search Passengers"
               variant="outlined"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, email, or phone..."
+              placeholder="Search by name, email, phone..."
+              size="small"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth size="small">
               <InputLabel>Status</InputLabel>
               <Select
                 value={statusFilter}
@@ -428,8 +452,11 @@ const Users = () => {
       {/* Users Table */}
       <Paper elevation={3}>
         {loading ? (
-          <Box display="flex" justifyContent="center" p={5}>
-            <CircularProgress />
+          <Box sx={{ width: '100%' }}>
+            <LinearProgress />
+            <Box display="flex" justifyContent="center" p={5}>
+              <CircularProgress />
+            </Box>
           </Box>
         ) : error ? (
           <Alert 
@@ -437,7 +464,7 @@ const Users = () => {
             sx={{ m: 2 }}
             action={
               <Button color="inherit" size="small" onClick={clearError}>
-                DISMISS
+                Dismiss
               </Button>
             }
           >
@@ -452,14 +479,15 @@ const Users = () => {
                     <TableCell>Passenger</TableCell>
                     <TableCell>Contact</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Created</TableCell>
+                    <TableCell>Emergency Contact</TableCell>
+                    <TableCell>Last Login</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {paginatedUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                         <Typography color="textSecondary">
                           No passengers found
                         </Typography>
@@ -470,42 +498,64 @@ const Users = () => {
                       <TableRow key={user._id} hover>
                         <TableCell>
                           <Box display="flex" alignItems="center">
-                            <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                            <Avatar 
+                              sx={{ 
+                                mr: 2, 
+                                bgcolor: 'primary.main',
+                                width: 40,
+                                height: 40
+                              }}
+                            >
                               {user.fullName?.charAt(0).toUpperCase()}
                             </Avatar>
                             <Box>
                               <Typography fontWeight="medium">
                                 {user.fullName}
                               </Typography>
-                              <Typography variant="body2" color="textSecondary">
+                              <Typography variant="caption" color="textSecondary">
                                 ID: {user._id?.substring(0, 8)}...
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography>{user.email}</Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {user.phoneNumber}
-                          </Typography>
-                          {user.emergencyContact && (
-                            <Typography variant="body2" color="textSecondary">
-                              Emergency: {user.emergencyContact}
-                            </Typography>
-                          )}
+                          <Box>
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <EmailIcon fontSize="small" color="action" />
+                              <Typography variant="body2">{user.email}</Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <PhoneIcon fontSize="small" color="action" />
+                              <Typography variant="body2">{user.phoneNumber}</Typography>
+                            </Box>
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
                             label={user.isActive ? 'Active' : 'Inactive'}
                             color={user.isActive ? 'success' : 'error'}
                             size="small"
+                            icon={user.isActive ? <CheckCircleIcon /> : <CancelIcon />}
                           />
                         </TableCell>
                         <TableCell>
-                          {formatDate(user.createdAt)}
+                          {user.emergencyContact ? (
+                            <Typography variant="body2">{user.emergencyContact}</Typography>
+                          ) : (
+                            <Typography variant="caption" color="textSecondary">
+                              Not provided
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Box display="flex" gap={1}>
+                          <Tooltip title={formatDate(user.lastLogin)}>
+                            <Typography variant="caption">
+                              {formatRelativeTime(user.lastLogin)}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
                             <Tooltip title="View Details">
                               <IconButton
                                 size="small"
@@ -535,7 +585,7 @@ const Users = () => {
                                 {user.isActive ? <BlockIcon /> : <ActivateIcon />}
                               </IconButton>
                             </Tooltip>
-                          </Box>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))
@@ -585,33 +635,33 @@ const Users = () => {
               error={!!assignErrors.licenseNumber}
               helperText={assignErrors.licenseNumber}
               required
-              sx={{ mb: 3 }}
+              size="small"
+              sx={{ mb: 2 }}
               placeholder="Enter driver's license number"
             />
             
-            <TextField
-              fullWidth
-              label="Station ID"
-              value={assignForm.stationID}
-              onChange={(e) => setAssignForm({
-                ...assignForm,
-                stationID: e.target.value
-              })}
-              helperText={`Your station ID: ${getCurrentUserStationID() || 'Not assigned'}`}
-              sx={{ mb: 2 }}
-              placeholder="Station ID"
-            />
+            {stationInfo && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode})
+                </Typography>
+                <Typography variant="body2">
+                  This driver will be assigned to your station automatically.
+                </Typography>
+              </Alert>
+            )}
 
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Note:</strong> Assigning a passenger as driver will:
-                <ul>
-                  <li>Change their role from passenger to driver</li>
-                  <li>Require them to provide license information for trips</li>
-                  <li>Allow them to be assigned to vehicles</li>
-                  <li>Assign them to your station automatically</li>
-                </ul>
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2" fontWeight="bold">
+                Important Notes:
               </Typography>
+              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                <li>This will change the user's role from passenger to driver</li>
+                <li>The user will need to provide license information for trips</li>
+                <li>They can be assigned to vehicles after this change</li>
+                <li>They will be assigned to your station automatically</li>
+                <li>This action cannot be undone without super admin</li>
+              </ul>
             </Alert>
           </Box>
         </DialogContent>
@@ -621,6 +671,7 @@ const Users = () => {
           </Button>
           <Button
             variant="contained"
+            color="warning"
             onClick={handleAssignDriver}
             disabled={assignLoading}
             startIcon={assignLoading ? <CircularProgress size={20} /> : <PersonAddIcon />}
@@ -630,7 +681,7 @@ const Users = () => {
         </DialogActions>
       </Dialog>
 
-      {/* View User Dialog */}
+      {/* View User Dialog - Using existing data */}
       <Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
@@ -642,68 +693,121 @@ const Users = () => {
             <DialogTitle>
               Passenger Details
             </DialogTitle>
-            <DialogContent>
+            <DialogContent dividers>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
                   <Box display="flex" flexDirection="column" alignItems="center" p={2}>
-                    <Avatar
-                      sx={{
-                        width: 100,
-                        height: 100,
-                        fontSize: 40,
-                        bgcolor: 'primary.main',
-                        mb: 2
-                      }}
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      badgeContent={
+                        <Chip
+                          label={selectedUserDetails.isActive ? 'Active' : 'Inactive'}
+                          color={selectedUserDetails.isActive ? 'success' : 'error'}
+                          size="small"
+                          sx={{ position: 'absolute', bottom: 0, right: 0 }}
+                        />
+                      }
                     >
-                      {selectedUserDetails.fullName?.charAt(0).toUpperCase()}
-                    </Avatar>
+                      <Avatar
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          fontSize: 48,
+                          bgcolor: 'primary.main',
+                          mb: 2
+                        }}
+                      >
+                        {selectedUserDetails.fullName?.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </Badge>
+                    
                     <Typography variant="h6" gutterBottom>
                       {selectedUserDetails.fullName}
                     </Typography>
+                    
                     <Chip
-                      label={selectedUserDetails.role?.replace('_', ' ')}
-                      color="success"
+                      label="PASSENGER"
+                      color="primary"
                       sx={{ mb: 1 }}
-                    />
-                    <Chip
-                      label={selectedUserDetails.isActive ? 'Active' : 'Inactive'}
-                      color={selectedUserDetails.isActive ? 'success' : 'error'}
                     />
                   </Box>
                 </Grid>
                 
                 <Grid item xs={12} md={8}>
                   <Box mb={3}>
-                    <Typography variant="subtitle2" color="textSecondary">
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                       Contact Information
                     </Typography>
-                    <Typography>Email: {selectedUserDetails.email}</Typography>
-                    <Typography>Phone: {selectedUserDetails.phoneNumber}</Typography>
-                    {selectedUserDetails.emergencyContact && (
-                      <Typography>
-                        Emergency Contact: {selectedUserDetails.emergencyContact}
-                      </Typography>
-                    )}
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        <EmailIcon fontSize="small" color="primary" />
+                        <Typography>{selectedUserDetails.email}</Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        <PhoneIcon fontSize="small" color="primary" />
+                        <Typography>{selectedUserDetails.phoneNumber}</Typography>
+                      </Box>
+                      {selectedUserDetails.emergencyContact && (
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <WarningIcon fontSize="small" color="warning" />
+                          <Typography>
+                            Emergency: {selectedUserDetails.emergencyContact}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Paper>
                   </Box>
 
                   <Box mb={3}>
-                    <Typography variant="subtitle2" color="textSecondary">
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                       Account Information
                     </Typography>
-                    <Typography>
-                      Created: {formatDate(selectedUserDetails.createdAt)}
-                    </Typography>
-                    {selectedUserDetails.lastLogin && (
-                      <Typography>
-                        Last Login: {formatDate(selectedUserDetails.lastLogin)}
-                      </Typography>
-                    )}
-                    {selectedUserDetails.lastPasswordReset && (
-                      <Typography>
-                        Last Password Reset: {formatDate(selectedUserDetails.lastPasswordReset)}
-                      </Typography>
-                    )}
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="textSecondary">
+                            Created
+                          </Typography>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <CalendarIcon fontSize="small" color="action" />
+                            <Typography variant="body2">
+                              {formatDate(selectedUserDetails.createdAt)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="textSecondary">
+                            Last Login
+                          </Typography>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <CalendarIcon fontSize="small" color="action" />
+                            <Typography variant="body2">
+                              {formatRelativeTime(selectedUserDetails.lastLogin)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Paper>
                   </Box>
+
+                  {selectedUserDetails.stationID && (
+                    <Box>
+                      <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                        Station Information
+                      </Typography>
+                      <Paper variant="outlined" sx={{ p: 2 }}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <LocationIcon fontSize="small" color="primary" />
+                          <Typography>
+                            {typeof selectedUserDetails.stationID === 'object' 
+                              ? `${selectedUserDetails.stationID.stationName} (${selectedUserDetails.stationID.stationCode}) - ${selectedUserDetails.stationID.city}`
+                              : `Station ID: ${selectedUserDetails.stationID}`}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    </Box>
+                  )}
                 </Grid>
               </Grid>
             </DialogContent>
@@ -715,7 +819,7 @@ const Users = () => {
           </>
         ) : (
           <Box display="flex" justifyContent="center" p={5}>
-            <CircularProgress />
+            <Typography>No user data available</Typography>
           </Box>
         )}
       </Dialog>
@@ -732,46 +836,48 @@ const Users = () => {
         </DialogTitle>
         <DialogContent>
           {selectedUser && (
-            <Alert 
-              severity={selectedUser.isActive ? 'warning' : 'info'} 
-              sx={{ mt: 2 }}
-            >
-              <Typography>
-                Are you sure you want to{' '}
-                <strong>{selectedUser.isActive ? 'deactivate' : 'activate'}</strong>{' '}
-                the passenger <strong>{selectedUser.fullName}</strong>?
-              </Typography>
-              {selectedUser.isActive && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Deactivated passengers cannot log in to the system.
-                </Typography>
-              )}
-              {!selectedUser.isActive && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Activated passengers will be able to log in and use the system.
-                </Typography>
-              )}
-              <Alert severity="info" sx={{ mt: 2 }}>
+            <>
+              <Alert 
+                severity={selectedUser.isActive ? 'warning' : 'info'} 
+                sx={{ mt: 2 }}
+              >
                 <Typography variant="body2">
-                  <strong>Note:</strong> This will temporarily assign the passenger to your station
-                  to bypass backend permission checks.
+                  Are you sure you want to{' '}
+                  <strong>{selectedUser.isActive ? 'deactivate' : 'activate'}</strong>{' '}
+                  <strong>{selectedUser.fullName}</strong>?
                 </Typography>
               </Alert>
-            </Alert>
+              
+              {selectedUser.isActive && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Warning:</strong> Deactivated passengers cannot log in to the system or make bookings.
+                  </Typography>
+                </Alert>
+              )}
+              
+              {!selectedUser.isActive && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Note:</strong> Activated passengers will be able to log in and make bookings normally.
+                  </Typography>
+                </Alert>
+              )}
+            </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setToggleDialogOpen(false)} disabled={loading}>
+          <Button onClick={() => setToggleDialogOpen(false)} disabled={actionLoading}>
             Cancel
           </Button>
           <Button
             variant="contained"
             color={selectedUser?.isActive ? 'error' : 'success'}
             onClick={handleToggleStatus}
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
+            disabled={actionLoading}
+            startIcon={actionLoading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? 'Processing...' : (selectedUser?.isActive ? 'Deactivate' : 'Activate')}
+            {actionLoading ? 'Processing...' : (selectedUser?.isActive ? 'Deactivate' : 'Activate')}
           </Button>
         </DialogActions>
       </Dialog>

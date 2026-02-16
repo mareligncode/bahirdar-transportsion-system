@@ -27,7 +27,9 @@ import {
   Zoom,
   Tooltip,
   Badge,
-  TextField
+  TextField,
+  alpha,
+  useTheme
 } from '@mui/material';
 import {
   DirectionsBus,
@@ -46,17 +48,23 @@ import {
   Error as ErrorIcon,
   Info,
   ConfirmationNumber,
-  AccessTime
+  AccessTime,
+  Payment as PaymentIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import api from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
+import PaymentButton from '../../components/passenger/PaymentButton';
 
 const MyBookings = () => {
   const { t } = useTranslation();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -64,36 +72,48 @@ const MyBookings = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchDate, setSearchDate] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
+  // Check authentication when auth state changes
   useEffect(() => {
-    fetchBookings();
-  }, []); // ⚠️ NO 't' here!
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
+    }
 
-  const fetchBookings = async () => {
-    setLoading(true);
+    // If not authenticated after loading, redirect to login
+    if (!isAuthenticated || !user) {
+      navigate('/login');
+      return;
+    }
+
+    // If authenticated and first check, fetch bookings
+    if (!initialCheckDone) {
+      setInitialCheckDone(true);
+      fetchBookings();
+    }
+  }, [isAuthenticated, user, authLoading, navigate, initialCheckDone]);
+
+  const fetchBookings = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (!user._id) {
-        showNotification(t('Please login to view your bookings'), 'error');
-        setTimeout(() => navigate('/login'), 1500);
-        return;
-      }
-
-      const response = await api.get('/api/booking/my-bookings', {
-        params: {
-          passengerId: user._id
-        }
-      });
-
-      console.log('Bookings response:', response.data);
+      const response = await api.get('/api/booking/my-bookings');
+      
+      console.log('Bookings API response:', response.data);
 
       let fetchedBookings = [];
-      if (response.data.success && Array.isArray(response.data.data)) {
+      if (response.data?.success && Array.isArray(response.data.data)) {
         fetchedBookings = response.data.data;
       } else if (Array.isArray(response.data.data)) {
         fetchedBookings = response.data.data;
@@ -109,13 +129,26 @@ const MyBookings = () => {
       );
 
       setBookings(sortedBookings);
+      
+      if (showRefreshIndicator) {
+        showNotification(t('Bookings refreshed'), 'success');
+      }
     } catch (error) {
       console.error('Error fetching bookings:', error);
+      
+      // Handle 401 Unauthorized specifically
+      if (error.response?.status === 401) {
+        showNotification(t('Session expired. Please login again.'), 'error');
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
+      
       const errorMessage = error.response?.data?.message || t('Failed to load your bookings');
       showNotification(errorMessage, 'error');
       setBookings([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -124,9 +157,9 @@ const MyBookings = () => {
 
     setCancelling(true);
     try {
-      const response = await api.put(`/api/booking/${selectedBooking._id}/cancel`);
+      const response = await api.delete(`/api/booking/${selectedBooking._id}`);
 
-      if (response.data.success) {
+      if (response.data?.success) {
         showNotification(t('Booking cancelled successfully'), 'success');
         // Update the booking in the list
         setBookings(prev => prev.map(booking => 
@@ -137,15 +170,38 @@ const MyBookings = () => {
         setCancelDialogOpen(false);
         setSelectedBooking(null);
       } else {
-        showNotification(response.data.message || t('Failed to cancel booking'), 'error');
+        showNotification(response.data?.message || t('Failed to cancel booking'), 'error');
       }
     } catch (error) {
       console.error('Cancel booking error:', error);
-      const errorMessage = error.response?.data?.message || t('Failed to cancel booking');
-      showNotification(errorMessage, 'error');
+      
+      if (error.response?.status === 400) {
+        showNotification(error.response.data?.message || t('Cannot cancel booking at this time'), 'error');
+      } else if (error.response?.status === 401) {
+        showNotification(t('Session expired. Please login again.'), 'error');
+        setTimeout(() => navigate('/login'), 1500);
+      } else {
+        const errorMessage = error.response?.data?.message || t('Failed to cancel booking');
+        showNotification(errorMessage, 'error');
+      }
     } finally {
       setCancelling(false);
     }
+  };
+
+  const handlePaymentSuccess = (bookingId) => {
+    showNotification(t('Payment completed successfully!'), 'success');
+    // Refresh bookings to update status
+    fetchBookings(true);
+  };
+
+  const handlePaymentError = (error) => {
+    console.error('Payment error:', error);
+    showNotification(error || t('Payment failed'), 'error');
+  };
+
+  const handleViewTicket = (booking) => {
+    navigate(`/passenger/booking/${booking._id}/ticket`);
   };
 
   const openCancelDialog = (booking) => {
@@ -173,34 +229,46 @@ const MyBookings = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return t('N/A');
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return t('Invalid date');
+    }
   };
 
   const formatTime = (dateString) => {
     if (!dateString) return t('N/A');
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return t('Invalid time');
+    }
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return t('N/A');
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return t('Invalid date');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -240,11 +308,24 @@ const MyBookings = () => {
 
   const calculateDuration = (departure, arrival) => {
     if (!departure || !arrival) return t('N/A');
-    const dep = new Date(departure);
-    const arr = new Date(arrival);
-    const hours = Math.floor((arr - dep) / (1000 * 60 * 60));
-    const minutes = Math.floor(((arr - dep) % (1000 * 60 * 60)) / (1000 * 60));
-    return t('{{hours}}h {{minutes}}m', { hours, minutes });
+    try {
+      const dep = new Date(departure);
+      const arr = new Date(arrival);
+      const hours = Math.floor((arr - dep) / (1000 * 60 * 60));
+      const minutes = Math.floor(((arr - dep) % (1000 * 60 * 60)) / (1000 * 60));
+      return t('{{hours}}h {{minutes}}m', { hours, minutes });
+    } catch {
+      return t('N/A');
+    }
+  };
+
+  const canCancelBooking = (booking) => {
+    const isPendingOrConfirmed = ['pending', 'confirmed'].includes(booking.status?.toLowerCase());
+    const departureTime = booking.tripID?.departureTime ? new Date(booking.tripID.departureTime) : null;
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    return isPendingOrConfirmed && departureTime && departureTime > twoHoursFromNow;
   };
 
   const getFilteredBookings = () => {
@@ -271,34 +352,58 @@ const MyBookings = () => {
   const filteredBookings = getFilteredBookings();
 
   const renderBookingCard = (booking) => {
-    const isCancellable = booking.status?.toLowerCase() === 'confirmed' || 
-                          booking.status?.toLowerCase() === 'pending';
+    const isPending = booking.status?.toLowerCase() === 'pending';
+    const isConfirmed = booking.status?.toLowerCase() === 'confirmed';
+    const isCancelled = booking.status?.toLowerCase() === 'cancelled';
+    const canCancel = canCancelBooking(booking);
+    
     const trip = booking.tripID || booking.trip || {};
     const vehicle = trip.vehicle || {};
     const origin = trip.origin || {};
     const destination = trip.destination || {};
+    
+    // Handle seat numbers (could be single number or array)
+    const seatNumbers = booking.seatNumber ? [booking.seatNumber] : (booking.seatNumbers || []);
+    const totalAmount = booking.totalPrice || booking.amount || 0;
+    const pricePerSeat = booking.pricePerSeat || trip.price || 0;
+
+    // Check if payment is needed (pending status and no payment or payment pending)
+    const needsPayment = isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending');
 
     return (
       <Zoom in={true} style={{ transitionDelay: '50ms' }}>
         <Card sx={{ 
           mb: 3, 
           borderRadius: '16px',
-          border: '1px solid #e2e8f0',
+          border: '1px solid',
+          borderColor: isPending ? '#f59e0b' : isCancelled ? '#ef4444' : '#e2e8f0',
           overflow: 'visible',
           position: 'relative',
           transition: 'all 0.3s ease',
+          bgcolor: isCancelled ? alpha('#ef4444', 0.02) : 'white',
           '&:hover': {
             boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
             transform: 'translateY(-4px)',
-            borderColor: '#3b82f6'
+            borderColor: isPending ? '#f59e0b' : isCancelled ? '#ef4444' : '#3b82f6'
           }
         }}>
           <Box sx={{ 
             position: 'absolute', 
             top: '20px', 
             right: '20px',
-            zIndex: 1
+            zIndex: 1,
+            display: 'flex',
+            gap: 1
           }}>
+            {needsPayment && (
+              <Chip
+                icon={<PaymentIcon />}
+                label={t('Payment Required')}
+                color="warning"
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+            )}
             <Chip
               icon={getStatusIcon(booking.status)}
               label={getStatusLabel(booking.status)}
@@ -320,7 +425,7 @@ const MyBookings = () => {
               <Grid item xs={12} md={8}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar sx={{ 
-                    bgcolor: '#3b82f6',
+                    bgcolor: isPending ? '#f59e0b' : '#3b82f6',
                     width: 40,
                     height: 40,
                     mr: 2
@@ -334,6 +439,11 @@ const MyBookings = () => {
                     <Typography variant="body2" color="text.secondary">
                       {t('Booking #')}{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
                     </Typography>
+                    {booking.ticketNumber && (
+                      <Typography variant="caption" color="text.secondary">
+                        {t('Ticket')}: {booking.ticketNumber}
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
 
@@ -363,13 +473,13 @@ const MyBookings = () => {
                         {t('Seats')}:
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {booking.seatNumbers?.map((seat, index) => (
+                        {seatNumbers.map((seat, index) => (
                           <Chip
                             key={index}
-                            label={seat}
+                            label={`Seat ${seat}`}
                             size="small"
                             sx={{ 
-                              bgcolor: '#e2e8f0',
+                              bgcolor: alpha(theme.palette.primary.main, 0.1),
                               fontWeight: 600,
                               fontSize: '0.75rem'
                             }}
@@ -432,34 +542,68 @@ const MyBookings = () => {
                       color: '#1e40af',
                       mb: 1
                     }}>
-                      ${booking.totalPrice || booking.price || 0}
+                      ETB {totalAmount.toLocaleString()}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <AttachMoney fontSize="small" sx={{ color: '#64748b', fontSize: '16px' }} />
                       <Typography variant="caption" color="text.secondary">
-                        {booking.seatNumbers?.length || 0} {t('seat(s)')} × ${booking.pricePerSeat || trip.price || 0}
+                        {seatNumbers.length} {t('seat(s)')} × ETB {pricePerSeat.toLocaleString()}
                       </Typography>
                     </Box>
+                    
+                    {booking.paymentStatus && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('Payment')}: 
+                          <Chip
+                            size="small"
+                            label={booking.paymentStatus === 'success' ? t('Paid') : 
+                                   booking.paymentStatus === 'pending' ? t('Pending') : 
+                                   booking.paymentStatus}
+                            color={booking.paymentStatus === 'success' ? 'success' : 
+                                   booking.paymentStatus === 'pending' ? 'warning' : 'default'}
+                            sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
 
                   <Box sx={{ 
                     display: 'flex', 
                     gap: 1, 
                     mt: 3,
-                    flexDirection: { xs: 'row', sm: 'row' }
+                    flexDirection: { xs: 'column', sm: 'row' }
                   }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Receipt />}
-                      onClick={() => {/* Handle view ticket */}}
-                      fullWidth
-                      sx={{ borderRadius: '8px' }}
-                    >
-                      {t('Ticket')}
-                    </Button>
+                    {/* Payment Button for Pending Bookings */}
+                    {needsPayment && (
+                      <PaymentButton
+                        bookingId={booking._id}
+                        amount={totalAmount}
+                        onSuccess={() => handlePaymentSuccess(booking._id)}
+                        onError={handlePaymentError}
+                        size="small"
+                        variant="contained"
+                        fullWidth
+                      />
+                    )}
                     
-                    {isCancellable && (
+                    {/* Ticket Button - Show for confirmed/completed bookings */}
+                    {(isConfirmed || booking.status?.toLowerCase() === 'completed') && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Receipt />}
+                        onClick={() => handleViewTicket(booking)}
+                        fullWidth
+                        sx={{ borderRadius: '8px' }}
+                      >
+                        {t('View Ticket')}
+                      </Button>
+                    )}
+                    
+                    {/* Cancel Button */}
+                    {canCancel && (
                       <Button
                         variant="outlined"
                         color="error"
@@ -471,6 +615,19 @@ const MyBookings = () => {
                         sx={{ borderRadius: '8px' }}
                       >
                         {t('Cancel')}
+                      </Button>
+                    )}
+                    
+                    {/* If no actions available, show disabled state */}
+                    {!needsPayment && !canCancel && !isConfirmed && booking.status?.toLowerCase() !== 'completed' && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        disabled
+                        fullWidth
+                        sx={{ borderRadius: '8px' }}
+                      >
+                        {t('No Actions Available')}
                       </Button>
                     )}
                   </Box>
@@ -526,8 +683,8 @@ const MyBookings = () => {
           onClick={() => navigate('/passenger/book-trip')}
           sx={{ 
             borderRadius: '8px',
-            background: '#3b82f6',
-            '&:hover': { background: '#2563eb' }
+            background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
+            '&:hover': { background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' }
           }}
         >
           {t('Book a Trip')}
@@ -555,6 +712,26 @@ const MyBookings = () => {
     </Box>
   );
 
+  // Show loading while auth is being checked
+  if (authLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography sx={{ mt: 2 }}>{t('Checking authentication...')}</Typography>
+      </Container>
+    );
+  }
+
+  // If not authenticated after loading, show redirect message
+  if (!isAuthenticated || !user) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography sx={{ mt: 2 }}>{t('Redirecting to login...')}</Typography>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ 
       py: 4,
@@ -572,7 +749,7 @@ const MyBookings = () => {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
-            onClick={() => navigate('/passenger')}
+            onClick={() => navigate('/passenger/dashboard')}
             sx={{ 
               bgcolor: 'white',
               border: '1px solid #e2e8f0',
@@ -601,15 +778,15 @@ const MyBookings = () => {
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Tooltip title={t('Refresh')}>
             <IconButton 
-              onClick={fetchBookings}
-              disabled={loading}
+              onClick={() => fetchBookings(true)}
+              disabled={refreshing}
               sx={{ 
                 bgcolor: 'white',
                 border: '1px solid #e2e8f0',
                 '&:hover': { bgcolor: '#f8fafc' }
               }}
             >
-              <Refresh />
+              {refreshing ? <CircularProgress size={24} /> : <Refresh />}
             </IconButton>
           </Tooltip>
           
@@ -619,8 +796,8 @@ const MyBookings = () => {
             onClick={() => navigate('/passenger/book-trip')}
             sx={{ 
               borderRadius: '8px',
-              background: '#3b82f6',
-              '&:hover': { background: '#2563eb' },
+              background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' },
               px: 3
             }}
           >
@@ -684,7 +861,7 @@ const MyBookings = () => {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               {t('Summary')}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.length} color="primary">
                   <ConfirmationNumber color="action" />
@@ -737,7 +914,7 @@ const MyBookings = () => {
                   </Button>
                 )}
               </Box>
-              {filteredBookings.map((booking, index) => (
+              {filteredBookings.map((booking) => (
                 <Box key={booking._id}>
                   {renderBookingCard(booking)}
                 </Box>
@@ -781,7 +958,7 @@ const MyBookings = () => {
                   {formatDateTime(selectedBooking.tripID?.departureTime)}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: '#1e40af' }}>
-                  {t('Refund Amount')}: ${selectedBooking.totalPrice || selectedBooking.price || 0}
+                  {t('Refund Amount')}: ETB {(selectedBooking.totalPrice || selectedBooking.amount || 0).toLocaleString()}
                 </Typography>
               </Box>
             )}

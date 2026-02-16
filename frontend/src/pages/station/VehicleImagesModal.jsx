@@ -49,29 +49,46 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle, userStati
     }
   };
 
-const checkStationPermission = () => {
-  // EXACTLY what your backend does
-  if (userProfile?.role === 'station_admin') {
-    // Get vehicle.stationID.toString() - EXACT match to backend
-    const vehicleStationId = vehicle.stationID?.toString();
-    
-    // Get user.stationID?.toString() - EXACT match to backend
-    const userStationId = userProfile?.stationID?.toString();
-    
-    // EXACT same comparison as your backend
-    if (vehicleStationId?.toString() !== userStationId?.toString()) {
-      return false; // 403 - Access denied
+  // Check if user has permission to modify this vehicle
+  const checkStationPermission = () => {
+    // Super admin can do everything
+    if (userProfile?.role === 'super_admin') {
+      return true;
     }
-    return true; // Permission granted
-  }
-  
-  // Super admin check
-  if (userProfile?.role === 'super_admin') {
-    return true;
-  }
-  
-  return false;
-};
+    
+    // Station admin check - must match stationID
+    if (userProfile?.role === 'station_admin') {
+      // Get vehicle station ID (handle both populated and unpopulated)
+      let vehicleStationId = null;
+      
+      if (vehicle.stationID) {
+        vehicleStationId = typeof vehicle.stationID === 'object' 
+          ? vehicle.stationID._id || vehicle.stationID 
+          : vehicle.stationID;
+      } else if (vehicle.station) {
+        vehicleStationId = typeof vehicle.station === 'object'
+          ? vehicle.station._id || vehicle.station
+          : vehicle.station;
+      }
+      
+      // Get user station ID
+      const userStationId = userProfile?.stationID;
+      
+      // Convert both to strings for comparison
+      const vehicleIdStr = vehicleStationId?.toString();
+      const userIdStr = userStationId?.toString();
+      
+      console.log('Permission check:', {
+        vehicleStationId: vehicleIdStr,
+        userStationId: userIdStr,
+        match: vehicleIdStr === userIdStr
+      });
+      
+      return vehicleIdStr === userIdStr;
+    }
+    
+    return false;
+  };
 
   const handleFileUpload = async (e) => {
     const files = e.target.files;
@@ -108,7 +125,6 @@ const checkStationPermission = () => {
     } catch (error) {
       console.error('Error uploading images:', error);
       
-      // Handle specific error messages
       if (error.response?.status === 403) {
         toast.error('You can only upload images to vehicles from your own station');
       } else {
@@ -184,6 +200,8 @@ const checkStationPermission = () => {
 
   if (!isOpen || !vehicle) return null;
 
+  const hasPermission = checkStationPermission();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
@@ -201,7 +219,7 @@ const checkStationPermission = () => {
                 <p className="text-sm text-gray-600">
                   {vehicle.make} {vehicle.model} • {vehicle.carType}
                 </p>
-                {!checkStationPermission() && userProfile?.role === 'station_admin' && (
+                {!hasPermission && userProfile?.role === 'station_admin' && (
                   <p className="text-xs text-red-600 mt-1">
                     ⚠️ You don't have permission to modify images for this vehicle
                   </p>
@@ -218,7 +236,7 @@ const checkStationPermission = () => {
         </div>
 
         {/* Upload Section - Only show if user has permission */}
-        {checkStationPermission() && (
+        {hasPermission && (
           <div className="border-b p-4 bg-gray-50">
             <div className="flex items-center justify-between">
               <div>
@@ -267,7 +285,7 @@ const checkStationPermission = () => {
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No images uploaded</h3>
               <p className="text-gray-600">
-                {checkStationPermission() 
+                {hasPermission 
                   ? 'Upload images to display them here'
                   : 'This vehicle has no images'}
               </p>
@@ -316,7 +334,7 @@ const checkStationPermission = () => {
                     </div>
                   )}
 
-                  {/* Action Buttons - Only show delete/set-primary if user has permission */}
+                  {/* Action Buttons */}
                   <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => {
@@ -338,7 +356,7 @@ const checkStationPermission = () => {
                     >
                       <Download className="w-4 h-4" />
                     </button>
-                    {checkStationPermission() && !image.isPrimary && (
+                    {hasPermission && !image.isPrimary && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -350,7 +368,7 @@ const checkStationPermission = () => {
                         <Check className="w-4 h-4" />
                       </button>
                     )}
-                    {checkStationPermission() && (
+                    {hasPermission && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -423,7 +441,7 @@ const checkStationPermission = () => {
                     >
                       Download
                     </button>
-                    {checkStationPermission() && !selectedImage.isPrimary && (
+                    {hasPermission && !selectedImage.isPrimary && (
                       <button
                         onClick={() => {
                           handleSetPrimary(selectedImage.url);

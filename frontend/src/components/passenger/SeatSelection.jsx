@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -9,115 +9,190 @@ import {
   Divider,
   Alert,
   Chip,
-  Paper
+  Paper,
+  IconButton,
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import {
   DirectionsBus,
-  Chair as SeatIcon
+  Chair as SeatIcon,
+  ArrowBack,
+  Info,
+  CheckCircle,
+  Schedule,
+  LocationOn,
+  AccessTime,
+  Person
 } from '@mui/icons-material';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const SeatSelection = ({ 
   trip, 
-  selectedSeats, 
-  onSeatsSelected, 
-  onProceedToPayment 
+  selectedSeats = [], 
+  onSeatSelect, 
+  onProceedToPayment,
+  onBack,
+  loading = false,
+  maxSeats = 8
 }) => {
   const { t } = useTranslation();
-  const [seats, setSeats] = useState([]);
   const [localSelectedSeats, setLocalSelectedSeats] = useState(selectedSeats || []);
+  const [error, setError] = useState('');
 
-  // FIXED: Generate numeric seat numbers (1-based sequential) to match backend
-  const generateSeats = () => {
-    const seats = [];
-    const totalSeats = trip.totalSeats || 50; // Default fallback
+  // Generate seats with numbers (1 to totalSeats)
+  const generateSeats = useCallback(() => {
+    if (!trip) return [];
     
-    for (let seatNumber = 1; seatNumber <= totalSeats; seatNumber++) {
-      // Calculate row and column for UI display only
-      const row = Math.ceil(seatNumber / 4);
-      const col = ((seatNumber - 1) % 4) + 1;
-      const displayLabel = `${String.fromCharCode(64 + row)}${col}`;
-      
-      seats.push({
-        id: seatNumber,           // ← FIXED: Use numeric ID for backend
-        displayLabel: displayLabel, // ← ADDED: For UI display only
-        seatNumber: seatNumber,   // ← ADDED: Explicit numeric seat number
-        row: row,
-        col: col,
-        isBooked: false, // This should come from API in real implementation
-        isAvailable: true
-      });
+    const totalSeats = trip.totalSeats || 40;
+    const availableSeats = trip.availableSeats || 0;
+    const rows = Math.ceil(totalSeats / 4);
+    
+    // Create a set of booked seats (seats that are not available)
+    const bookedSeats = new Set();
+    // For demo: assume first (totalSeats - availableSeats) seats are booked
+    for (let i = 1; i <= totalSeats - availableSeats; i++) {
+      bookedSeats.add(i);
+    }
+    
+    const seats = [];
+    for (let row = 1; row <= rows; row++) {
+      for (let col = 1; col <= 4; col++) {
+        const seatNumber = (row - 1) * 4 + col;
+        if (seatNumber <= totalSeats) {
+          seats.push({
+            id: seatNumber,
+            number: seatNumber,
+            row: row,
+            col: col,
+            label: seatNumber.toString(), // Just use the number as label
+            isBooked: bookedSeats.has(seatNumber),
+            isAvailable: !bookedSeats.has(seatNumber)
+          });
+        }
+      }
     }
     return seats;
-  };
+  }, [trip]);
 
+  const seats = useMemo(() => generateSeats(), [generateSeats]);
+
+  // Update local state when prop changes
   useEffect(() => {
-    setSeats(generateSeats());
-  }, [trip.totalSeats]);
+    setLocalSelectedSeats(selectedSeats);
+  }, [selectedSeats]);
 
   const handleSeatClick = (seat) => {
     if (seat.isBooked) return;
 
-    const newSelectedSeats = localSelectedSeats.includes(seat.seatNumber) 
-      ? localSelectedSeats.filter(id => id !== seat.seatNumber)
-      : [...localSelectedSeats, seat.seatNumber];
+    setError('');
+    
+    let newSelectedSeats;
+    if (localSelectedSeats.includes(seat.number)) {
+      // Remove seat
+      newSelectedSeats = localSelectedSeats.filter(num => num !== seat.number);
+    } else {
+      // Add seat if under max limit
+      if (localSelectedSeats.length >= maxSeats) {
+        setError(t('max_seats_error', { count: maxSeats }));
+        return;
+      }
+      newSelectedSeats = [...localSelectedSeats, seat.number];
+    }
 
     setLocalSelectedSeats(newSelectedSeats);
-    // Pass numeric seat numbers to parent component
-    onSeatsSelected(newSelectedSeats);
+    onSeatSelect(newSelectedSeats);
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '';
+    }
   };
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
   };
 
-  const totalPrice = trip.price * localSelectedSeats.length;
+  const totalPrice = (trip?.price || 0) * localSelectedSeats.length;
+
+  const handleProceed = () => {
+    if (localSelectedSeats.length === 0) {
+      setError(t('select_seats_error'));
+      return;
+    }
+    onProceedToPayment();
+  };
 
   return (
     <Box sx={{ mt: 2 }}>
+      {/* Back Button */}
+      <Box sx={{ mb: 2 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={onBack}
+          sx={{ 
+            color: '#64748b',
+            '&:hover': { color: '#1e293b' }
+          }}
+        >
+          {t('back_to_results')}
+        </Button>
+      </Box>
+
       <Typography variant="h5" gutterBottom sx={{ 
         fontWeight: 600, 
-        mb: 2,
-        fontSize: '1.35rem'
+        mb: 3,
+        fontSize: '1.35rem',
+        color: '#1e293b'
       }}>
         {t('select_your_seats')}
       </Typography>
       
-      <Grid container spacing={10}>
+      <Grid container spacing={4}>
         {/* Left Side: Seat Selection */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={7}>
           <Card variant="outlined" sx={{ 
             borderRadius: '12px',
             border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             height: '100%'
           }}>
-            <CardContent sx={{ p: 2.5 }}>
+            <CardContent sx={{ p: 3 }}>
               {/* Header with seat count */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                mb: 2
+                mb: 3
               }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  🪑 {t('available_seats_count', { count: trip.availableSeats })}
-                </Typography>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                    {t('available_seats')}: {trip?.availableSeats || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('select_up_to', { count: maxSeats })} seats
+                  </Typography>
+                </Box>
                 <Chip 
-                  label={t('total_seats_count', { count: trip.totalSeats })} 
+                  label={t('total_seats', { count: trip?.totalSeats || 0 })} 
                   size="small"
                   sx={{ 
                     bgcolor: '#f1f5f9', 
@@ -128,73 +203,115 @@ const SeatSelection = ({
                 />
               </Box>
 
-              {/* Seat Grid - Now using seatNumber for backend, displayLabel for UI */}
+              {/* Driver Seat Indicator */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 1.5, 
+                bgcolor: '#f8fafc', 
+                borderRadius: '8px',
+                textAlign: 'center',
+                border: '1px dashed #94a3b8'
+              }}>
+                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                  🚌 {t('driver_seat_front')}
+                </Typography>
+              </Box>
+
+              {/* Seat Grid */}
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(4, 1fr)', 
                 gap: 1.5,
-                maxWidth: 280,
+                maxWidth: 320,
                 mx: 'auto',
-                mb: 2.5,
+                mb: 3,
                 p: 1
               }}>
-                {seats.map((seat) => (
-                  <Button
-                    key={seat.id}
-                    variant={localSelectedSeats.includes(seat.seatNumber) ? "contained" : "outlined"}
-                    color={seat.isBooked ? "error" : localSelectedSeats.includes(seat.seatNumber) ? "primary" : "inherit"}
-                    onClick={() => handleSeatClick(seat)}
-                    disabled={seat.isBooked}
-                    sx={{ 
-                      height: 48,
-                      minWidth: 48,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderRadius: '8px',
-                      p: 0.5,
-                      borderWidth: localSelectedSeats.includes(seat.seatNumber) ? '2px' : '1px',
-                      '&:hover': {
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <SeatIcon sx={{ fontSize: 18 }} />
-                    <Typography variant="caption" sx={{ 
-                      mt: 0.25, 
-                      fontSize: '0.65rem',
-                      fontWeight: localSelectedSeats.includes(seat.seatNumber) ? 600 : 400
-                    }}>
-                      {seat.displayLabel} {/* ← FIXED: Show A1, B2 format to users */}
-                    </Typography>
-                  </Button>
-                ))}
+                {seats.map((seat) => {
+                  const isSelected = localSelectedSeats.includes(seat.number);
+                  
+                  return (
+                    <Tooltip 
+                      key={seat.number}
+                      title={seat.isBooked ? t('seat_booked') : `Seat ${seat.number}`}
+                      arrow
+                    >
+                      <Button
+                        variant={isSelected ? "contained" : "outlined"}
+                        color={seat.isBooked ? "error" : isSelected ? "primary" : "inherit"}
+                        onClick={() => handleSeatClick(seat)}
+                        disabled={seat.isBooked}
+                        sx={{ 
+                          height: 56,
+                          minWidth: 56,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          borderRadius: '10px',
+                          p: 0.5,
+                          borderWidth: isSelected ? '2px' : '1px',
+                          borderColor: seat.isBooked ? '#ef4444' : isSelected ? '#3b82f6' : '#e2e8f0',
+                          bgcolor: seat.isBooked ? '#fee2e2' : isSelected ? '#3b82f6' : 'white',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            bgcolor: seat.isBooked ? '#fee2e2' : isSelected ? '#2563eb' : '#f8fafc'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <SeatIcon sx={{ 
+                          fontSize: 20,
+                          color: seat.isBooked ? '#ef4444' : isSelected ? 'white' : '#64748b'
+                        }} />
+                        <Typography variant="caption" sx={{ 
+                          mt: 0.25, 
+                          fontSize: '0.7rem',
+                          fontWeight: isSelected ? 600 : 400,
+                          color: seat.isBooked ? '#ef4444' : isSelected ? 'white' : '#1e293b'
+                        }}>
+                          {seat.number}
+                        </Typography>
+                      </Button>
+                    </Tooltip>
+                  );
+                })}
               </Box>
 
               {/* Seat Legend */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'center', 
-                gap: 2.5,
-                p: 1.5,
+                gap: 3,
+                p: 2,
                 bgcolor: '#f8fafc',
                 borderRadius: '8px',
                 border: '1px solid #e2e8f0'
               }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Box sx={{ width: 14, height: 14, bgcolor: 'success.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_available')}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 16, height: 16, bgcolor: 'white', border: '2px solid #e2e8f0', borderRadius: 0.5 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.75rem' }}>
+                    {t('available')}
+                  </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Box sx={{ width: 14, height: 14, bgcolor: 'primary.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_selected')}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 16, height: 16, bgcolor: '#3b82f6', borderRadius: 0.5 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.75rem' }}>
+                    {t('selected')}
+                  </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Box sx={{ width: 14, height: 14, bgcolor: 'error.main', borderRadius: 0.5 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>{t('legend_booked')}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 16, height: 16, bgcolor: '#fee2e2', border: '1px solid #ef4444', borderRadius: 0.5 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.75rem' }}>
+                    {t('booked')}
+                  </Typography>
                 </Box>
               </Box>
+
+              {error && (
+                <Alert severity="error" sx={{ mt: 2, borderRadius: '8px' }}>
+                  {error}
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -206,27 +323,26 @@ const SeatSelection = ({
             border: '1px solid #3b82f6',
             height: '100%',
             boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08)',
-            ml: { md: 6 }
+            position: 'sticky',
+            top: 20
           }}>
-            <CardContent sx={{ p: 2.5 }}>
+            <CardContent sx={{ p: 3 }}>
               {/* Header */}
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: 1,
-                mb: 1.5
+                mb: 2
               }}>
                 <Box sx={{ 
                   bgcolor: '#3b82f6', 
-                  borderRadius: '6px',
-                  p: 0.5,
+                  borderRadius: '8px',
+                  p: 0.75,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
-                    📋
-                  </Typography>
+                  <Info sx={{ fontSize: 16, color: 'white' }} />
                 </Box>
                 <Typography variant="subtitle1" sx={{ 
                   fontWeight: 700, 
@@ -240,7 +356,7 @@ const SeatSelection = ({
               <Divider sx={{ mb: 2, borderColor: '#e2e8f0' }} />
               
               {/* Trip Details */}
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 2.5 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
                   textTransform: 'uppercase',
@@ -250,29 +366,32 @@ const SeatSelection = ({
                   {t('trip_details')}
                 </Typography>
                 <Paper variant="outlined" sx={{ 
-                  p: 1.5, 
+                  p: 2, 
                   mt: 0.5,
                   bgcolor: '#f8fafc',
                   borderRadius: '8px',
                   border: '1px solid #e2e8f0'
                 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.85rem' }}>
-                    {trip.origin?.stationName} → {trip.destination?.stationName}
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.9rem' }}>
+                    {trip?.origin?.stationName || 'Unknown'} → {trip?.destination?.stationName || 'Unknown'}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5, fontSize: '0.7rem' }}>
-                    {formatDate(trip.departureTime)} • {formatTime(trip.departureTime)}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75 }}>
-                    <DirectionsBus sx={{ fontSize: 12, color: '#64748b' }} />
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                      {trip.vehicle?.carType} • {trip.vehicle?.plateNumber}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                    <Schedule sx={{ fontSize: 14, color: '#64748b' }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                      {formatDate(trip?.departureTime)} • {formatTime(trip?.departureTime)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                    <DirectionsBus sx={{ fontSize: 14, color: '#64748b' }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                      {trip?.vehicle?.carType || 'Bus'} • {trip?.vehicle?.plateNumber || 'N/A'}
                     </Typography>
                   </Box>
                 </Paper>
               </Box>
 
-              {/* Selected Seats - Show both seat number and display label */}
-              <Box sx={{ mb: 2 }}>
+              {/* Selected Seats */}
+              <Box sx={{ mb: 2.5 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
                   textTransform: 'uppercase',
@@ -282,32 +401,32 @@ const SeatSelection = ({
                   {t('selected_seats')}
                 </Typography>
                 <Box sx={{ 
-                  p: 1.5, 
+                  p: 2, 
                   mt: 0.5,
                   bgcolor: localSelectedSeats.length > 0 ? '#f0f9ff' : '#f8fafc', 
                   borderRadius: '8px',
                   border: '1px solid #e2e8f0',
-                  minHeight: '45px',
+                  minHeight: '60px',
                   display: 'flex',
                   alignItems: 'center',
                   flexWrap: 'wrap',
-                  gap: 0.5
+                  gap: 1
                 }}>
                   {localSelectedSeats.length > 0 ? (
                     localSelectedSeats.map((seatNumber) => {
-                      // Find the seat to get display label
-                      const seat = seats.find(s => s.seatNumber === seatNumber);
                       return (
                         <Chip
                           key={seatNumber}
-                          label={seat?.displayLabel || seatNumber} // ← FIXED: Show A1 format to users
+                          label={`Seat ${seatNumber}`}
                           size="small"
+                          onDelete={() => handleSeatClick({ number: seatNumber, isBooked: false })}
                           sx={{ 
                             bgcolor: '#3b82f6',
                             color: 'white',
-                            fontSize: '0.7rem',
-                            height: '24px',
-                            '& .MuiChip-label': { px: 1 }
+                            fontSize: '0.75rem',
+                            height: '28px',
+                            '& .MuiChip-label': { px: 1.5 },
+                            '& .MuiChip-deleteIcon': { color: 'white', fontSize: '16px' }
                           }}
                         />
                       );
@@ -315,7 +434,9 @@ const SeatSelection = ({
                   ) : (
                     <Typography variant="caption" sx={{ 
                       color: '#64748b',
-                      fontSize: '0.75rem'
+                      fontSize: '0.8rem',
+                      textAlign: 'center',
+                      width: '100%'
                     }}>
                       {t('no_seats_selected_yet')}
                     </Typography>
@@ -330,7 +451,7 @@ const SeatSelection = ({
               </Box>
 
               {/* Price Breakdown */}
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 2.5 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ 
                   fontWeight: 600, 
                   textTransform: 'uppercase',
@@ -340,47 +461,47 @@ const SeatSelection = ({
                   {t('price_breakdown')}
                 </Typography>
                 <Box sx={{ 
-                  p: 1.5, 
+                  p: 2, 
                   mt: 0.5,
                   bgcolor: '#f8fafc', 
                   borderRadius: '8px',
                   border: '1px solid #e2e8f0'
                 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('price_per_seat')}:</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>ETB {trip.price}</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">{t('price_per_seat')}:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>ETB {trip?.price || 0}</Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('number_of_seats')}:</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>{localSelectedSeats.length}</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">{t('number_of_seats')}:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{localSelectedSeats.length}</Typography>
                   </Box>
-                  <Divider sx={{ my: 0.75, borderColor: '#e2e8f0' }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
-                    <Typography variant="caption" color="text.secondary">{t('subtotal')}:</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>ETB {trip.price * localSelectedSeats.length}</Typography>
+                  <Divider sx={{ my: 1, borderColor: '#e2e8f0' }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">{t('subtotal')}:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>ETB {totalPrice}</Typography>
                   </Box>
                 </Box>
               </Box>
 
-              <Divider sx={{ my: 1.5, borderColor: '#e2e8f0' }} />
+              <Divider sx={{ my: 2, borderColor: '#e2e8f0' }} />
 
               {/* Total Price */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center', 
-                mb: 2,
-                p: 1.5,
+                mb: 2.5,
+                p: 2,
                 bgcolor: '#f0f9ff',
                 borderRadius: '8px',
                 border: '1px solid #3b82f6'
               }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                   {t('total_amount')}
                 </Typography>
-                <Typography variant="h6" color="primary" sx={{ 
+                <Typography variant="h5" color="primary" sx={{ 
                   fontWeight: 700,
-                  fontSize: '1.25rem'
+                  fontSize: '1.3rem'
                 }}>
                   ETB {totalPrice}
                 </Typography>
@@ -389,44 +510,35 @@ const SeatSelection = ({
               {/* Proceed to Payment Button */}
               <Button
                 variant="contained"
-                color="primary"
                 fullWidth
-                size="medium"
-                onClick={onProceedToPayment}
-                disabled={localSelectedSeats.length === 0}
+                size="large"
+                onClick={handleProceed}
+                disabled={localSelectedSeats.length === 0 || loading}
                 sx={{ 
-                  borderRadius: '8px',
-                  padding: '10px',
+                  borderRadius: '10px',
+                  py: 1.5,
                   fontWeight: 600,
                   textTransform: 'none',
-                  fontSize: '0.9rem',
+                  fontSize: '1rem',
                   background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
                   '&:hover': { 
                     background: 'linear-gradient(135deg, #2563eb, #1e3a8a)',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                    boxShadow: '0 6px 16px rgba(59, 130, 246, 0.4)',
                   },
                   '&:disabled': {
                     background: '#cbd5e1'
                   }
                 }}
               >
-                {localSelectedSeats.length === 0 
-                  ? t('select_seats_to_continue')
-                  : `${t('proceed_to_payment')} - ETB ${totalPrice}`
-                }
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : localSelectedSeats.length === 0 ? (
+                  t('select_seats_to_continue')
+                ) : (
+                  `${t('proceed_to_payment')} - ETB ${totalPrice}`
+                )}
               </Button>
-
-              {localSelectedSeats.length === 0 && (
-                <Alert severity="info" sx={{ 
-                  mt: 2, 
-                  borderRadius: '6px',
-                  py: 0,
-                  '& .MuiAlert-message': { fontSize: '0.75rem', p: 1 }
-                }}>
-                  {t('please_select_at_least_one_seat')}
-                </Alert>
-              )}
             </CardContent>
           </Card>
         </Grid>

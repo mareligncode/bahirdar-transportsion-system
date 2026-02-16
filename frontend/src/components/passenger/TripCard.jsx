@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -9,56 +9,88 @@ import {
   Chip,
   Avatar,
   Button,
-  LinearProgress
+  LinearProgress,
+  Tooltip,
+  alpha,
+  useTheme
 } from '@mui/material';
 import {
   DirectionsBus,
   Person,
   Schedule,
-  ArrowForward
+  ArrowForward,
+  AccessTime,
+  EventSeat,
+  LocalOffer,
+  Star,
+  Warning
 } from '@mui/icons-material';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
+const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (date.toDateString() === today.toDateString()) return t('Today');
+      if (date.toDateString() === tomorrow.toDateString()) return t('Tomorrow');
+
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '';
+    }
   };
 
   const calculateDuration = (departure, arrival) => {
-    const dep = new Date(departure);
-    const arr = new Date(arrival);
-    const hours = Math.floor((arr - dep) / (1000 * 60 * 60));
-    const minutes = Math.floor(((arr - dep) % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
+    if (!departure || !arrival) return '';
+    try {
+      const dep = new Date(departure);
+      const arr = new Date(arrival);
+      const diffMs = arr - dep;
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours}h ${minutes}m`;
+    } catch {
+      return '';
+    }
   };
 
   const getVehicleIcon = (type) => {
     switch(type?.toLowerCase()) {
-      case 'coaster':
-        return <DirectionsBus color="secondary" />;
+      case 'luxury_bus':
       case 'bus':
-        return <DirectionsBus color="primary" />;
+        return <DirectionsBus sx={{ color: '#3b82f6' }} />;
+      case 'coaster':
+        return <DirectionsBus sx={{ color: '#10b981' }} />;
       case 'minibus':
-      case 'aba dulla':
-        return <DirectionsBus color="warning" />;
+        return <DirectionsBus sx={{ color: '#f59e0b' }} />;
       case 'van':
-        return <DirectionsBus color="info" />;
+        return <DirectionsBus sx={{ color: '#8b5cf6' }} />;
       default:
-        return <DirectionsBus />;
+        return <DirectionsBus sx={{ color: '#64748b' }} />;
     }
   };
 
@@ -69,103 +101,96 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
     return 'error';
   };
 
-  // FIXED: Check if trip is available for booking based on backend status
-  const isTripBookable = () => {
-    // From your backend: trips with status 'scheduled' or 'boarding' are bookable
-    const bookableStatuses = ['scheduled', 'boarding'];
-    return bookableStatuses.includes(trip.tripStatus) && 
-           trip.isActive === true && 
-           trip.availableSeats > 0;
+  const getSeatAvailabilityText = (available, total) => {
+    const percentage = (available / total) * 100;
+    if (available === 0) return t('sold_out');
+    if (percentage <= 20) return t('few_seats_left', { count: available });
+    if (percentage <= 50) return t('limited_seats', { count: available });
+    return t('seats_available', { count: available });
   };
 
-  // FIXED: Format price as ETB
-  const formatPrice = (price) => {
-    return `ETB ${price.toLocaleString()}`;
-  };
+  const isAlmostFull = useMemo(() => {
+    const percentage = (trip.availableSeats / trip.totalSeats) * 100;
+    return percentage <= 20 && trip.availableSeats > 0;
+  }, [trip.availableSeats, trip.totalSeats]);
 
+  const isSoldOut = trip.availableSeats === 0;
+
+  // List View
   if (viewMode === 'list') {
     return (
       <Card sx={{ 
         borderRadius: '12px', 
         overflow: 'hidden', 
         transition: 'all 0.3s ease',
-        marginBottom: '20px',
-        border: '1px solid #e2e8f0',
-        background: 'white',
-        borderLeft: `4px solid ${
-          trip.tripStatus === 'cancelled' ? '#ef4444' : 
-          trip.tripStatus === 'delayed' ? '#f59e0b' : 
-          '#3b82f6'
-        }`,
-        opacity: trip.isActive === false ? 0.7 : 1,
+        marginBottom: '16px',
+        border: '1px solid',
+        borderColor: isSoldOut ? '#fee2e2' : highlight ? '#3b82f6' : '#e2e8f0',
+        background: isSoldOut ? '#fef2f2' : 'white',
+        borderLeft: isSoldOut ? '4px solid #ef4444' : '4px solid #3b82f6',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
-          borderColor: '#3b82f6'
-        }
+          transform: 'translateY(-2px)',
+          boxShadow: theme.shadows[10],
+          borderColor: isSoldOut ? '#ef4444' : '#3b82f6'
+        },
+        opacity: isSoldOut ? 0.8 : 1,
+        cursor: isSoldOut ? 'not-allowed' : 'pointer'
       }}>
-        <CardContent>
-          <Grid container spacing={3} alignItems="center">
-            {/* Trip Status Badge - ADDED */}
-            {trip.tripStatus && trip.tripStatus !== 'scheduled' && (
-              <Grid item xs={12}>
-                <Chip 
-                  label={t(`trip_status_${trip.tripStatus}`)} 
-                  size="small"
-                  color={
-                    trip.tripStatus === 'cancelled' ? 'error' :
-                    trip.tripStatus === 'delayed' ? 'warning' :
-                    trip.tripStatus === 'completed' ? 'success' :
-                    'default'
-                  }
-                  sx={{ mb: 1 }}
-                />
-              </Grid>
-            )}
-
-            <Grid item xs={12} md={2}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.25rem' }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Grid container spacing={2} alignItems="center">
+            {/* Departure Time */}
+            <Grid item xs={12} sm={2}>
+              <Box sx={{ textAlign: { xs: 'left', sm: 'center' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
                   {formatTime(trip.departureTime)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Schedule sx={{ fontSize: 14 }} />
                   {formatDate(trip.departureTime)}
                 </Typography>
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={1}>
-              <Box sx={{ textAlign: 'center', color: '#3b82f6' }}>
+            {/* Arrow */}
+            <Grid item xs={12} sm={1} sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Box sx={{ textAlign: 'center', color: '#94a3b8' }}>
                 <ArrowForward />
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={2}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.25rem' }}>
+            {/* Arrival Time */}
+            <Grid item xs={12} sm={2}>
+              <Box sx={{ textAlign: { xs: 'left', sm: 'center' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
                   {formatTime(trip.arrivalTime)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Schedule sx={{ fontSize: 14 }} />
                   {formatDate(trip.arrivalTime)}
                 </Typography>
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            {/* Route Info */}
+            <Grid item xs={12} sm={3}>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  {trip.origin?.stationName} → {trip.destination?.stationName}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem' }}>
+                  {trip.origin?.stationName || 'Unknown'} → {trip.destination?.stationName || 'Unknown'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {calculateDuration(trip.departureTime, trip.arrivalTime)} • {trip.vehicle?.carType}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <AccessTime sx={{ fontSize: 14, color: '#64748b' }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {calculateDuration(trip.departureTime, trip.arrivalTime)} • {trip.vehicle?.carType || 'Bus'}
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={2}>
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e40af' }}>
-                  {formatPrice(trip.price)} {/* FIXED: ETB format */}
+            {/* Price */}
+            <Grid item xs={12} sm={2}>
+              <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e40af', fontSize: '1.25rem' }}>
+                  ETB {trip.price?.toLocaleString()}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {t('per_seat')}
@@ -173,52 +198,64 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={2}>
-              <CardActions>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => onSelect(trip)}
-                  disabled={!isTripBookable()} 
-                  fullWidth
-                  sx={{ borderRadius: '8px' }}
-                >
-                  {trip.availableSeats === 0 ? t('sold_out') : 
-                   trip.tripStatus === 'cancelled' ? t('cancelled') :
-                   trip.isActive === false ? t('inactive') : 
-                   t('select')}
-                </Button>
-              </CardActions>
+            {/* Action Button */}
+            <Grid item xs={12} sm={2}>
+              <Button
+                variant="contained"
+                color={isSoldOut ? 'error' : 'primary'}
+                onClick={() => !isSoldOut && onSelect(trip)}
+                disabled={isSoldOut}
+                fullWidth
+                sx={{ 
+                  borderRadius: '8px',
+                  py: 1,
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  background: isSoldOut ? '#ef4444' : 'linear-gradient(135deg, #3b82f6, #1e40af)',
+                  '&:hover': {
+                    background: isSoldOut ? '#dc2626' : 'linear-gradient(135deg, #2563eb, #1e3a8a)'
+                  }
+                }}
+              >
+                {isSoldOut ? t('sold_out') : t('select')}
+              </Button>
             </Grid>
           </Grid>
 
-          <Box sx={{ display: 'flex', gap: '8px', marginTop: '20px', flexWrap: 'wrap' }}>
+          {/* Chips Row */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1, 
+            mt: 2,
+            flexWrap: 'wrap'
+          }}>
             <Chip 
-              icon={<Schedule />}
-              label={t('seats_left', { count: trip.availableSeats })} 
+              icon={<EventSeat />}
+              label={getSeatAvailabilityText(trip.availableSeats, trip.totalSeats)}
               size="small"
               color={getSeatAvailabilityColor(trip.availableSeats, trip.totalSeats)}
-              variant="outlined"
+              variant={isAlmostFull ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 500 }}
             />
             <Chip 
               icon={getVehicleIcon(trip.vehicle?.carType)}
-              label={trip.vehicle?.plateNumber}
+              label={trip.vehicle?.plateNumber || 'N/A'}
               size="small"
               variant="outlined"
             />
             <Chip 
               icon={<Person />}
-              label={trip.driver?.fullName?.split(' ')[0] || t('assigned')}
+              label={trip.driver?.fullName?.split(' ')[0] || 'Driver'}
               size="small"
               variant="outlined"
             />
-            {/* Trip Number Chip - ADDED */}
-            {trip.tripNumber && (
+            {isAlmostFull && !isSoldOut && (
               <Chip 
-                label={trip.tripNumber}
+                icon={<Warning />}
+                label={t('almost_full')}
                 size="small"
-                variant="outlined"
-                sx={{ borderColor: '#94a3b8', color: '#475569' }}
+                color="warning"
+                sx={{ fontWeight: 500 }}
               />
             )}
           </Box>
@@ -233,50 +270,63 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
       borderRadius: '12px', 
       overflow: 'hidden', 
       transition: 'all 0.3s ease',
-      marginBottom: '20px',
-      border: '1px solid #e2e8f0',
-      background: 'white',
-      opacity: trip.isActive === false ? 0.7 : 1,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid',
+      borderColor: isSoldOut ? '#fee2e2' : highlight ? '#3b82f6' : '#e2e8f0',
+      background: isSoldOut ? '#fef2f2' : 'white',
       '&:hover': {
         transform: 'translateY(-4px)',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
-        borderColor: '#3b82f6'
-      }
+        boxShadow: theme.shadows[12],
+        borderColor: isSoldOut ? '#ef4444' : '#3b82f6'
+      },
+      opacity: isSoldOut ? 0.8 : 1,
+      cursor: isSoldOut ? 'not-allowed' : 'pointer'
     }}>
+      {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        padding: '16px 24px',
-        background: '#f1f5f9',
-        borderBottom: '1px solid #e2e8f0'
+        p: 2,
+        background: isSoldOut ? '#fee2e2' : alpha(theme.palette.primary.main, 0.04),
+        borderBottom: '1px solid',
+        borderColor: isSoldOut ? '#fecaca' : '#e2e8f0'
       }}>
         <Box sx={{ 
-          background: '#3b82f6',
+          background: isSoldOut ? '#ef4444' : theme.palette.primary.main,
           color: 'white',
-          padding: '6px 16px',
+          px: 2,
+          py: 0.5,
           borderRadius: '20px',
-          fontWeight: 500,
-          fontSize: '0.875rem'
+          fontWeight: 600,
+          fontSize: '0.8rem'
         }}>
-          <Typography variant="subtitle2">
-            {trip.origin?.city || trip.origin?.stationName} → {trip.destination?.city || trip.destination?.stationName}
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+            {trip.origin?.city || 'City'} → {trip.destination?.city || 'City'}
           </Typography>
         </Box>
-        {trip.availableSeats < 5 && trip.availableSeats > 0 && (
-          <Chip 
-            label={t('almost_full')}
-            size="small"
-            color="warning"
-            sx={{ fontWeight: 500, fontSize: '0.75rem' }}
-          />
+        
+        {isAlmostFull && !isSoldOut && (
+          <Tooltip title={t('book_soon')}>
+            <Chip 
+              label={t('almost_full')}
+              size="small"
+              color="warning"
+              icon={<Warning sx={{ fontSize: 14 }} />}
+              sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+            />
+          </Tooltip>
         )}
-        {trip.availableSeats === 0 && (
+        
+        {isSoldOut && (
           <Chip 
             label={t('sold_out')}
             size="small"
             color="error"
-            sx={{ fontWeight: 500, fontSize: '0.75rem' }}
+            icon={<EventSeat sx={{ fontSize: 14 }} />}
+            sx={{ fontWeight: 600, fontSize: '0.7rem' }}
           />
         )}
         {/* Trip Status Badge - ADDED */}
@@ -295,31 +345,45 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         )}
       </Box>
 
-      <CardContent>
+      <CardContent sx={{ flex: 1, p: 2.5 }}>
         <Grid container spacing={2}>
+          {/* Left Column - Route Info */}
           <Grid item xs={8}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1e293b' }}>
-              {trip.origin?.stationName} {t('to')} {trip.destination?.stationName}
+            <Typography variant="h6" gutterBottom sx={{ 
+              fontWeight: 700, 
+              color: '#1e293b',
+              fontSize: '1rem',
+              lineHeight: 1.3
+            }}>
+              {trip.origin?.stationName || 'Unknown'} {t('to')} {trip.destination?.stationName || 'Unknown'}
             </Typography>
             
+            {/* Timeline */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'space-between',
-              margin: '24px 0',
-              padding: '0 16px'
+              my: 2,
+              px: 1
             }}>
-              <Box sx={{ textAlign: 'center', flex: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.5rem' }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
                   {formatTime(trip.departureTime)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('departure')}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Schedule sx={{ fontSize: 12 }} />
+                  {formatDate(trip.departureTime)}
                 </Typography>
               </Box>
               
-              <Box sx={{ textAlign: 'center', flex: 2, position: 'relative' }}>
-                <Typography variant="body2" sx={{ color: '#64748b', marginBottom: '12px', fontWeight: 500 }}>
+              <Box sx={{ flex: 1, mx: 2, position: 'relative' }}>
+                <Typography variant="caption" sx={{ 
+                  color: '#64748b', 
+                  display: 'block', 
+                  textAlign: 'center',
+                  mb: 0.5,
+                  fontSize: '0.7rem'
+                }}>
                   {calculateDuration(trip.departureTime, trip.arrivalTime)}
                 </Typography>
                 <Box sx={{ 
@@ -329,51 +393,54 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
                   '&::before, &::after': {
                     content: '""',
                     position: 'absolute',
-                    width: '12px',
-                    height: '12px',
-                    background: '#3b82f6',
+                    width: '10px',
+                    height: '10px',
+                    background: theme.palette.primary.main,
                     borderRadius: '50%',
-                    top: '-5px',
+                    top: '-4px',
                     border: '2px solid white',
-                    boxShadow: '0 0 0 2px #3b82f6'
+                    boxShadow: `0 0 0 2px ${theme.palette.primary.main}`
                   },
                   '&::before': { left: 0 },
                   '&::after': { right: 0 }
                 }} />
               </Box>
               
-              <Box sx={{ textAlign: 'center', flex: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.5rem' }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
                   {formatTime(trip.arrivalTime)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('arrival')}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Schedule sx={{ fontSize: 12 }} />
+                  {formatDate(trip.arrivalTime)}
                 </Typography>
               </Box>
             </Box>
 
+            {/* Vehicle & Driver Info */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '16px',
-              marginTop: '20px',
-              padding: '16px',
-              background: '#f8fafc',
-              borderRadius: '8px'
+              gap: 1.5,
+              p: 1.5,
+              bgcolor: alpha(theme.palette.primary.main, 0.02),
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
             }}>
               <Avatar sx={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
-                width: '40px',
-                height: '40px'
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                width: 36,
+                height: 36
               }}>
                 {getVehicleIcon(trip.vehicle?.carType)}
               </Avatar>
               <Box>
-                <Typography variant="body2">
-                  {trip.vehicle?.carType} • {trip.vehicle?.plateNumber}
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                  {trip.vehicle?.carType || 'Bus'} • {trip.vehicle?.plateNumber || 'N/A'}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('driver')}: {trip.driver?.fullName || t('not_assigned')}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Person sx={{ fontSize: 12 }} />
+                  {t('driver')}: {trip.driver?.fullName || 'N/A'}
                 </Typography>
                 {/* Trip Number - ADDED */}
                 {trip.tripNumber && (
@@ -385,27 +452,54 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
             </Box>
           </Grid>
 
+          {/* Right Column - Price & Availability */}
           <Grid item xs={4}>
             <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#1e40af', fontSize: '2.25rem' }}>
-                {formatPrice(trip.price)} {/* FIXED: ETB format */}
+              <Typography variant="h5" gutterBottom sx={{ 
+                fontWeight: 800, 
+                color: '#1e40af',
+                fontSize: '1.5rem',
+                lineHeight: 1.2
+              }}>
+                ETB {trip.price?.toLocaleString()}
               </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.7rem' }}>
                 {t('per_seat')}
               </Typography>
               
-              <Box sx={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', marginTop: '16px' }}>
+              {/* Availability Bar */}
+              <Box sx={{ 
+                mt: 2,
+                p: 1.5,
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                    {t('availability')}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                    {trip.availableSeats}/{trip.totalSeats}
+                  </Typography>
+                </Box>
                 <LinearProgress 
                   variant="determinate" 
                   value={(trip.availableSeats / trip.totalSeats) * 100}
                   color={getSeatAvailabilityColor(trip.availableSeats, trip.totalSeats)}
-                  sx={{ marginBottom: '8px' }}
+                  sx={{ 
+                    height: 6,
+                    borderRadius: 3,
+                    bgcolor: alpha(theme.palette.grey[500], 0.2)
+                  }}
                 />
-                <Typography variant="caption">
-                  {t('seats_available', { 
-                    available: trip.availableSeats, 
-                    total: trip.totalSeats 
-                  })}
+                <Typography variant="caption" color="text.secondary" sx={{ 
+                  display: 'block', 
+                  mt: 1,
+                  fontSize: '0.65rem',
+                  fontWeight: 500
+                }}>
+                  {getSeatAvailabilityText(trip.availableSeats, trip.totalSeats)}
                 </Typography>
               </Box>
             </Box>
@@ -413,34 +507,32 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid' }) => {
         </Grid>
       </CardContent>
 
-      <CardActions>
+      <CardActions sx={{ p: 2, pt: 0 }}>
         <Button
           variant="contained"
-          color="primary"
-          onClick={() => onSelect(trip)}
-          disabled={!isTripBookable()} 
+          onClick={() => !isSoldOut && onSelect(trip)}
+          disabled={isSoldOut}
           fullWidth
           size="large"
           sx={{ 
             borderRadius: '8px',
-            padding: '14px',
-            fontWeight: 500,
-            background: '#3b82f6',
+            py: 1.5,
+            fontWeight: 600,
             textTransform: 'none',
-            fontSize: '1rem',
-            '&:hover': { background: '#2563eb' },
+            fontSize: '0.95rem',
+            background: isSoldOut ? '#ef4444' : 'linear-gradient(135deg, #3b82f6, #1e40af)',
+            '&:hover': {
+              background: isSoldOut ? '#dc2626' : 'linear-gradient(135deg, #2563eb, #1e3a8a)'
+            },
             '&:disabled': {
               background: '#cbd5e1',
               color: '#64748b'
             }
           }}
         >
-          {!isTripBookable() 
-            ? trip.availableSeats === 0 ? t('sold_out') :
-              trip.tripStatus === 'cancelled' ? t('cancelled') :
-              trip.isActive === false ? t('inactive') :
-              t('not_available')
-            : `${t('select_trip')} • ${formatPrice(trip.price)}`}
+          {isSoldOut 
+            ? t('sold_out') 
+            : `${t('select_trip')} • ETB ${trip.price?.toLocaleString()}`}
         </Button>
       </CardActions>
     </Card>

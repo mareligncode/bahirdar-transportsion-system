@@ -126,7 +126,9 @@ export const getAllTrips = async (req, res) => {
 
         // Driver can only see their trips
         if (req.user.role === 'driver') {
-            query.driverID = req.user.id;
+
+               //leul
+            query.driver = req.user.id;
         }
 
         // Passengers can only see available trips
@@ -210,7 +212,9 @@ export const getTripById = async (req, res) => {
         }
 
         if (req.user.role === 'driver') {
-            if (!trip.driverID.equals(req.user.id)) {
+
+            //leul
+            if (!trip.driver.equals(req.user.id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to view this trip'
@@ -521,7 +525,9 @@ export const updateTripStatus = async (req, res) => {
 
         // Check driver can only update their own trips
         if (req.user.role === 'driver') {
-            if (!trip.driverID.equals(req.user.id)) {
+
+            //leul
+            if (!trip.driver.equals(req.user.id)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'

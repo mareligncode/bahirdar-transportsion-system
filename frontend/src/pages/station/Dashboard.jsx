@@ -1,523 +1,717 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
-import {
-  LocationOn as StationIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
-  People as PeopleIcon,
-  DirectionsBus as BusIcon,
-  Schedule as ScheduleIcon,
-  Map as MapIcon,
-  Edit as EditIcon,
-  PhotoCamera as CameraIcon,
-  Image as ImageIcon,
-  Logout as LogoutIcon,
-  Settings as SettingsIcon,
-  Business as BusinessIcon,
-  Place as PlaceIcon,
-  AccessTime as AccessTimeIcon,
-  Star as StarIcon,
-  Assignment as AssignmentIcon,
-  CarRental as CarRentalIcon,
-  Group as GroupIcon,
-  Dashboard as DashboardIcon,
-  Code as CodeIcon,
-  Person as PersonIcon,
-  ContactMail as ContactMailIcon
-} from '@mui/icons-material';
-import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Avatar,
-  Divider,
-  CircularProgress,
-  Alert,
-  Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Snackbar,
-  Container,
-  IconButton,
-  Tooltip,
-  alpha,
-  useTheme
-} from '@mui/material';
-import { useTranslation } from '../../hooks/useTranslation';
+import { 
+  CalendarIcon, 
+  UsersIcon, 
+  TruckIcon, 
+  ClockIcon,
+  ArrowPathIcon,
+  MapPinIcon,
+  BuildingOfficeIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  UserIcon
+} from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-const StationAdminDashboard = () => {
-  const { t } = useTranslation();
+const StationDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
   const [loading, setLoading] = useState(true);
-  const [stationData, setStationData] = useState(null);
-  const [stationStats, setStationStats] = useState({
-    drivers: 0,
-    passengers: 0,
-    vehicles: 0,
-    todayTrips: 0,
-    activeVehicles: 0,
-    upcomingTrips: 0
+  const [refreshing, setRefreshing] = useState(false);
+  const [station, setStation] = useState(null);
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalTrips: 0,
+    activeTrips: 0,
+    totalVehicles: 0,
+    availableVehicles: 0,
+    totalDrivers: 0,
+    availableDrivers: 0,
+    completedTrips: 0,
+    cancelledTrips: 0
   });
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
-    stationName: '',
-    contactPhone: '',
-    contactEmail: '',
-    location: ''
-  });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  
+  // Data states
+  const [recentTrips, setRecentTrips] = useState([]);
+  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
 
-  const getCurrentUserId = () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return null;
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-      return payload.id;
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return null;
+  // Pagination states
+  const [tripsPage, setTripsPage] = useState(1);
+  const [vehiclesPage, setVehiclesPage] = useState(1);
+  const itemsPerPage = 3;
+
+  // Helper function to safely extract data from API responses
+  const extractData = (response, dataPath = '') => {
+    if (!response) return null;
+    
+    if (response.data) {
+      if (dataPath) {
+        const paths = dataPath.split('.');
+        let result = response.data;
+        for (const path of paths) {
+          if (result && result[path] !== undefined) {
+            result = result[path];
+          } else {
+            return null;
+          }
+        }
+        return result;
+      }
+      
+      if (response.data.data?.users) return response.data.data.users;
+      if (response.data.data?.vehicles) return response.data.data.vehicles;
+      if (response.data.data?.trips) return response.data.data.trips;
+      if (response.data.data && Array.isArray(response.data.data)) return response.data.data;
+      if (response.data.users) return response.data.users;
+      if (response.data.vehicles) return response.data.vehicles;
+      if (response.data.trips) return response.data.trips;
+      if (Array.isArray(response.data)) return response.data;
+      
+      return response.data;
     }
+    
+    return response;
   };
 
-  const fetchStationData = async () => {
+  // Fetch all dashboard data
+  const fetchDashboardData = async (showRefreshToast = false) => {
     try {
-      setLoading(true);
-      const currentUserId = getCurrentUserId();
-      if (!currentUserId) {
-        navigate('/login');
-        return;
-      }
-
-      const userProfile = await api.get('/api/auth/profile');
-      const userData = userProfile.data.data?.user;
-      
-      if (!userData) {
-        showSnackbar(t('Failed to fetch user profile'), 'error');
-        return;
-      }
-
-      let station = null;
-      
-      if (userData.stationID) {
-        try {
-          const response = await api.get(`/api/station/${userData.stationID}`);
-          if (response.data.station) {
-            station = response.data.station;
-          }
-        } catch (error) {
-          console.log('Could not fetch station by ID:', error.message);
-        }
-      }
-      
-      if (!station) {
-        try {
-          const stationsResponse = await api.get('/api/station');
-          station = stationsResponse.data.stations?.find(s => 
-            s.manager?._id === currentUserId || s.manager === currentUserId
-          );
-        } catch (error) {
-          console.log('Could not fetch stations list:', error.message);
-        }
-      }
-      
-      if (station) {
-        await setStationDataAndStats(station);
+      if (showRefreshToast) {
+        setRefreshing(true);
       } else {
-        setStationData(null);
-        showSnackbar(t('No station assigned to your account'), 'warning');
+        setLoading(true);
       }
       
+      if (user?.stationID) {
+        try {
+          const stationRes = await api.get(`/api/station/${user.stationID}`);
+          console.log('Station response:', stationRes.data);
+          
+          let stationData = stationRes.data?.station || stationRes.data?.data || stationRes.data;
+          setStation(stationData);
+        } catch (error) {
+          console.error('Error fetching station:', error);
+        }
+      }
+
+      const [
+        tripsRes,
+        vehiclesRes,
+        stationUsersRes
+      ] = await Promise.allSettled([
+        api.get('/api/trip', { params: { limit: 100 } }),
+        api.get('/api/vehicles', { params: { limit: 100 } }),
+        api.get('/api/auth/station-users')
+      ]);
+
+      if (tripsRes.status === 'fulfilled') {
+        const tripsData = extractData(tripsRes.value);
+        const trips = Array.isArray(tripsData) ? tripsData : 
+                     (tripsData?.trips || tripsData?.data || []);
+        
+        console.log('Trips data:', trips);
+        
+        const now = new Date();
+        
+        const activeTrips = trips.filter(t => 
+          t && ['scheduled', 'boarding', 'ongoing'].includes(t.tripStatus)
+        ).length;
+        
+        const completedTrips = trips.filter(t => 
+          t && t.tripStatus === 'completed'
+        ).length;
+        
+        const cancelledTrips = trips.filter(t => 
+          t && t.tripStatus === 'cancelled'
+        ).length;
+        
+        const sortedTrips = [...trips].sort((a, b) => 
+          new Date(b.departureTime || b.createdAt) - new Date(a.departureTime || a.createdAt)
+        );
+        
+        setRecentTrips(sortedTrips.slice(0, 5));
+        
+        const upcoming = trips
+          .filter(t => 
+            t && t.tripStatus === 'scheduled' && 
+            t.departureTime && new Date(t.departureTime) > now
+          )
+          .sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime));
+        
+        setUpcomingTrips(upcoming);
+        
+        setStats(prev => ({
+          ...prev,
+          totalTrips: trips.length,
+          activeTrips,
+          completedTrips,
+          cancelledTrips
+        }));
+      }
+
+      if (vehiclesRes.status === 'fulfilled') {
+        const vehiclesData = extractData(vehiclesRes.value);
+        let vehiclesArray = [];
+        
+        if (Array.isArray(vehiclesData)) {
+          vehiclesArray = vehiclesData;
+        } else if (vehiclesData?.vehicles && Array.isArray(vehiclesData.vehicles)) {
+          vehiclesArray = vehiclesData.vehicles;
+        } else if (vehiclesData?.data && Array.isArray(vehiclesData.data)) {
+          vehiclesArray = vehiclesData.data;
+        }
+        
+        console.log('Vehicles data:', vehiclesArray);
+        setVehicles(vehiclesArray);
+        
+        const availableVehicles = vehiclesArray.filter(v => 
+          v && (v.currentStatus === 'available' || v.currentStatus === 'active')
+        ).length;
+        
+        setStats(prev => ({
+          ...prev,
+          totalVehicles: vehiclesArray.length,
+          availableVehicles
+        }));
+      }
+
+      if (stationUsersRes.status === 'fulfilled') {
+        const usersData = extractData(stationUsersRes.value);
+        let usersArray = [];
+        
+        if (Array.isArray(usersData)) {
+          usersArray = usersData;
+        } else if (usersData?.users && Array.isArray(usersData.users)) {
+          usersArray = usersData.users;
+        } else if (usersData?.data && Array.isArray(usersData.data)) {
+          usersArray = usersData.data;
+        }
+        
+        console.log('Users data:', usersArray);
+        
+        const drivers = usersArray.filter(u => u && u.role === 'driver');
+        const activeDrivers = drivers.filter(d => d && d.isActive).length;
+        const availableDrivers = drivers.filter(d => d && d.isActive).length;
+        
+        setStats(prev => ({
+          ...prev,
+          totalDrivers: drivers.length,
+          activeDrivers,
+          availableDrivers
+        }));
+      }
+
+      if (showRefreshToast) {
+        toast.success('Dashboard refreshed successfully');
+      }
+
     } catch (error) {
-      console.error('Error fetching station data:', error);
-      showSnackbar(t('Failed to load station information'), 'error');
+      console.error('Error loading dashboard:', error);
+      
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please login again.');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to view this dashboard');
+        navigate('/unauthorized');
+      } else {
+        toast.error('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const setStationDataAndStats = async (station) => {
-    setStationData(station);
-    setEditForm({
-      stationName: station.stationName,
-      contactPhone: station.contactPhone,
-      contactEmail: station.contactEmail,
-      location: station.location
-    });
-    
-    try {
-      const [usersResponse, vehiclesResponse, tripsResponse] = await Promise.all([
-        api.get('/api/auth/station-users'),
-        api.get(`/api/vehicles?stationID=${station._id}`),
-        api.get('/api/trip')
-      ]);
-      
-      const users = usersResponse.data.data?.users || [];
-      const vehicles = vehiclesResponse.data.data?.vehicles || [];
-      const allTrips = tripsResponse.data.data || [];
-      
-      const stationTrips = allTrips.filter(trip => 
-        trip.station?._id === station._id || trip.station === station._id
-      );
-      
-      const today = new Date().toISOString().split('T')[0];
-      const todayTrips = stationTrips.filter(trip => {
-        const tripDate = new Date(trip.departureTime).toISOString().split('T')[0];
-        return tripDate === today;
-      });
-      
-      const upcomingTrips = stationTrips.filter(trip => 
-        new Date(trip.departureTime) > new Date()
-      );
-      
-      const activeVehicles = vehicles.filter(v => 
-        v.currentStatus === 'active' || v.currentStatus === 'on_trip'
-      ).length;
-      
-      setStationStats({
-        drivers: users.filter(user => user.role === 'driver').length,
-        passengers: users.filter(user => user.role === 'passenger').length,
-        vehicles: vehicles.length,
-        todayTrips: todayTrips.length,
-        activeVehicles,
-        upcomingTrips: upcomingTrips.length
-      });
-      
-    } catch (error) {
-      console.error('Error fetching station stats:', error);
-      showSnackbar(t('Failed to load station statistics'), 'warning');
-    }
+  const handleRefresh = () => {
+    fetchDashboardData(true);
   };
 
   useEffect(() => {
-    fetchStationData();
-  }, []); // ⚠️ NO 't' here!
+    fetchDashboardData();
+  }, []);
 
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({ open: true, message, severity });
+  const getStatusColor = (status) => {
+    const colors = {
+      scheduled: 'bg-blue-100 text-blue-800',
+      boarding: 'bg-yellow-100 text-yellow-800',
+      ongoing: 'bg-green-100 text-green-800',
+      completed: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-red-100 text-red-800',
+      delayed: 'bg-orange-100 text-orange-800',
+      active: 'bg-green-100 text-green-800',
+      maintenance: 'bg-orange-100 text-orange-800',
+      available: 'bg-green-100 text-green-800',
+      on_trip: 'bg-purple-100 text-purple-800',
+      inactive: 'bg-gray-100 text-gray-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userId');
-    navigate('/login');
+  // Pagination functions
+  const getPaginatedTrips = () => {
+    const startIndex = (tripsPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return upcomingTrips.slice(startIndex, endIndex);
   };
 
-  const handleEditSubmit = async () => {
-    try {
-      const response = await api.put(`/api/station/${stationData._id}`, editForm);
-      setStationData(prev => ({ ...prev, ...editForm }));
-      setEditDialogOpen(false);
-      showSnackbar(t('Station updated successfully'), 'success');
-    } catch (error) {
-      showSnackbar(error.response?.data?.message || t('Failed to update station'), 'error');
-    }
+  const getPaginatedVehicles = () => {
+    const startIndex = (vehiclesPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return vehicles.slice(startIndex, endIndex);
   };
 
-  const handleImageUpload = (event) => {
-    const files = event.target.files;
-    if (files && files[0]) {
-      showSnackbar(t('Image uploaded successfully'), 'success');
-      setUploadDialogOpen(false);
-    }
+  const totalTripsPages = Math.ceil(upcomingTrips.length / itemsPerPage);
+  const totalVehiclesPages = Math.ceil(vehicles.length / itemsPerPage);
+
+  const goToTripsPage = (page) => {
+    setTripsPage(Math.max(1, Math.min(page, totalTripsPages)));
+  };
+
+  const goToVehiclesPage = (page) => {
+    setVehiclesPage(Math.max(1, Math.min(page, totalVehiclesPages)));
+  };
+
+  // Pagination component - FIXED: Now shows even when there's only 1 page
+  const Pagination = ({ currentPage, totalPages, onPageChange, label }) => {
+    // Don't hide pagination, always show it when there are items
+    if (totalPages === 0) return null;
+
+    return (
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(1)}
+            disabled={currentPage === 1}
+            className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="First page"
+          >
+            <ChevronDoubleLeftIcon className="h-4 w-4 text-gray-600" />
+          </button>
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Previous page"
+          >
+            <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
+          </button>
+          
+          <span className="text-sm text-gray-600 mx-2">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Next page"
+          >
+            <ChevronRightIcon className="h-4 w-4 text-gray-600" />
+          </button>
+          <button
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages}
+            className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Last page"
+          >
+            <ChevronDoubleRightIcon className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
+        <span className="text-xs text-gray-500">
+          Showing {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, label === 'trips' ? upcomingTrips.length : vehicles.length)} of {label === 'trips' ? upcomingTrips.length : vehicles.length}
+        </span>
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress size={40} />
-      </Box>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-20 w-20 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-10 w-10 bg-blue-600 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <p className="mt-6 text-gray-600 font-medium">Loading your dashboard...</p>
+          <p className="text-sm text-gray-500">Please wait a moment</p>
+        </div>
+      </div>
     );
   }
-
-  if (!stationData) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            {t('No Station Assigned')}
-          </Typography>
-          <Typography variant="body2">
-            {t('Your account is not currently assigned to any station. Please contact the system administrator.')}
-          </Typography>
-          <Button variant="contained" size="small" sx={{ mt: 1 }} onClick={() => navigate('/profile')}>
-            {t('Go to Profile')}
-          </Button>
-        </Alert>
-      </Container>
-    );
-  }
-
-  const managerName = stationData.manager?.fullName || t('Not Assigned');
-  const managerEmail = stationData.manager?.email || t('N/A');
-
-  const statCards = [
-    { label: t('Drivers'), value: stationStats.drivers, icon: <PeopleIcon />, color: theme.palette.primary.main },
-    { label: t('Passengers'), value: stationStats.passengers, icon: <PeopleIcon />, color: theme.palette.secondary.main },
-    { label: t('Vehicles'), value: stationStats.vehicles, icon: <BusIcon />, color: theme.palette.success.main },
-    { label: t('Today Trips'), value: stationStats.todayTrips, icon: <ScheduleIcon />, color: theme.palette.warning.main },
-  ];
-
-  const quickActions = [
-    { id: 1, title: t('Vehicles'), icon: <CarRentalIcon />, action: () => navigate('/station/vehicles') },
-    { id: 2, title: t('Trips'), icon: <ScheduleIcon />, action: () => navigate('/station/trips') },
-    { id: 3, title: t('Users'), icon: <GroupIcon />, action: () => navigate('/station/users') },
-    { id: 4, title: t('Assign Driver'), icon: <AssignmentIcon />, action: () => navigate('/station/assign-driver') },
-    { id: 5, title: t('Upload'), icon: <CameraIcon />, action: () => setUploadDialogOpen(true) },
-    { id: 6, title: t('Edit'), icon: <EditIcon />, action: () => setEditDialogOpen(true) }
-  ];
-
-  const stationInfoCards = [
-    { id: 1, title: t('Station Code'), value: stationData.stationCode, icon: <CodeIcon />, color: theme.palette.primary.main },
-    { id: 2, title: t('City'), value: stationData.city, icon: <PlaceIcon />, color: theme.palette.secondary.main },
-    { id: 3, title: t('Manager'), value: managerName, icon: <PersonIcon />, color: theme.palette.success.main },
-    { id: 4, title: t('Contact'), value: stationData.contactPhone, icon: <ContactMailIcon />, color: theme.palette.warning.main }
-  ];
 
   return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      {/* Header - Big and Centered Name */}
-      <Paper sx={{ 
-        p: 3, 
-        mb: 2, 
-        borderRadius: 2,
-        textAlign: 'center',
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`
-      }}>
-        <Typography 
-          variant="h3" 
-          fontWeight="bold" 
-          gutterBottom
-          sx={{
-            fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-            color: theme.palette.primary.main,
-            mb: 1
-          }}
-        >
-          {stationData.stationName}
-        </Typography>
-        <Typography 
-          variant="h5" 
-          color="text.secondary"
-          sx={{ mb: 2 }}
-        >
-          {t('Station Dashboard')}
-        </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Chip 
-            icon={<StationIcon />} 
-            label={`${t('Station Code')}: ${stationData.stationCode}`} 
-            size="medium"
-            variant="outlined"
-            sx={{ fontWeight: 500 }}
-          />
-          <Chip 
-            icon={<PlaceIcon />} 
-            label={stationData.city} 
-            size="medium"
-            color="primary"
-            variant="filled"
-            sx={{ fontWeight: 500 }}
-          />
-          <Chip 
-            icon={<BusinessIcon />}
-            label={stationData.isActive ? t('Active Station') : t('Inactive')} 
-            size="medium"
-            color={stationData.isActive ? 'success' : 'error'}
-            variant="outlined"
-            sx={{ fontWeight: 500 }}
-          />
-        </Box>
-      </Paper>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="space-y-6 p-6 max-w-7xl mx-auto">
+        {/* Unified Header with Blue Gradient Background - Station Name and Welcome Combined */}
+        <div className="relative overflow-hidden">
+          {/* Background decorative elements */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl"></div>
+          <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/20 rounded-full blur-3xl"></div>
+          <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl"></div>
+          
+          {/* Header Content */}
+          <div className="relative p-8 text-white">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              {/* Left Side - Station Info */}
+              <div className="flex-1">
+                {station && (
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                      <BuildingOfficeIcon className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold">{station.stationName}</h1>
+                        <span className="text-sm bg-white/30 px-3 py-1 rounded-full">
+                          {station.stationCode}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-blue-100">
+                        <MapPinIcon className="h-4 w-4" />
+                        <span>{station.city}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Welcome Message with Manager Name */}
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <UserIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-100 font-medium">Welcome back,</p>
+                    <h2 className="text-2xl font-bold">{user?.fullName || 'Station Manager'}</h2>
+                  </div>
+                </div>
+                
+                {/* Station Contact Info */}
+                {station && (
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-blue-100 mt-4 ml-14">
+                    <div className="flex items-center gap-1">
+                      <PhoneIcon className="h-4 w-4" />
+                      <span>{station.contactPhone}</span>
+                    </div>
+                    {station.contactEmail && (
+                      <div className="flex items-center gap-1">
+                        <EnvelopeIcon className="h-4 w-4" />
+                        <span>{station.contactEmail}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Right Side - Refresh Button */}
+              <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="inline-flex items-center px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
+                >
+                  <ArrowPathIcon className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+                <div className="text-sm text-white border-l border-white/30 pl-4">
+                  <p className="font-medium">Last Updated</p>
+                  <p className="text-blue-100">{format(new Date(), 'PPp')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Stats Cards - Compact */}
-      <Grid container spacing={1.5} sx={{ mb: 2 }}>
-        {statCards.map((stat, index) => (
-          <Grid item xs={6} sm={3} key={index}>
-            <Card sx={{ borderRadius: 2, height: '100%' }}>
-              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Avatar sx={{ bgcolor: alpha(stat.color, 0.1), color: stat.color, width: 36, height: 36 }}>
-                    {stat.icon}
-                  </Avatar>
-                  <Box textAlign="right">
-                    <Typography variant="h6" fontWeight="bold">{stat.value}</Typography>
-                    <Typography variant="caption" color="text.secondary">{stat.label}</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+        {/* Stats Grid - Enhanced Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Trips Card */}
+          <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Trips</p>
+                  <p className="text-4xl font-bold text-gray-800 mt-2">{stats.totalTrips}</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
+                  <CalendarIcon className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <div className="flex-1 bg-green-50 rounded-lg p-2 text-center">
+                  <p className="text-xs text-green-600 font-medium">Active</p>
+                  <p className="text-lg font-bold text-green-700">{stats.activeTrips}</p>
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-600 font-medium">Completed</p>
+                  <p className="text-lg font-bold text-gray-700">{stats.completedTrips || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {/* Quick Actions - Compact */}
-      <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          {t('Quick Actions')}
-        </Typography>
-        <Grid container spacing={1}>
-          {quickActions.map((action) => (
-            <Grid item xs={4} sm={2} key={action.id}>
-              <Card 
-                sx={{ 
-                  borderRadius: 2, 
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) }
-                }}
-                onClick={action.action}
-              >
-                <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
-                  <Box sx={{ color: theme.palette.primary.main, mb: 0.5 }}>
-                    {action.icon}
-                  </Box>
-                  <Typography variant="caption" fontWeight="500">{action.title}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+          {/* Vehicles Card */}
+          <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Vehicles</p>
+                  <p className="text-4xl font-bold text-gray-800 mt-2">{stats.totalVehicles}</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
+                  <TruckIcon className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="mt-6">
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-green-600 font-medium">Available Now</span>
+                    <span className="text-2xl font-bold text-green-700">{stats.availableVehicles}</span>
+                  </div>
+                  <div className="w-full bg-green-200 h-2 rounded-full mt-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${(stats.availableVehicles / (stats.totalVehicles || 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {/* Station Info - Compact */}
-      <Grid container spacing={1.5} sx={{ mb: 2 }}>
-        {stationInfoCards.map((info) => (
-          <Grid item xs={6} sm={3} key={info.id}>
-            <Card sx={{ borderRadius: 2, height: '100%' }}>
-              <CardContent sx={{ p: 1.5 }}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Avatar sx={{ bgcolor: alpha(info.color, 0.1), color: info.color, width: 32, height: 32 }}>
-                    {info.icon}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">{info.title}</Typography>
-                    <Typography variant="body2" fontWeight="bold">{info.value}</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+          {/* Drivers Card */}
+          <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Drivers</p>
+                  <p className="text-4xl font-bold text-gray-800 mt-2">{stats.totalDrivers}</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
+                  <UsersIcon className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <div className="flex-1 bg-green-50 rounded-lg p-2 text-center">
+                  <p className="text-xs text-green-600 font-medium">Active</p>
+                  <p className="text-lg font-bold text-green-700">{stats.activeDrivers || 0}</p>
+                </div>
+                <div className="flex-1 bg-yellow-50 rounded-lg p-2 text-center">
+                  <p className="text-xs text-yellow-600 font-medium">Available</p>
+                  <p className="text-lg font-bold text-yellow-700">{stats.availableDrivers || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Additional Info - Compact */}
-      <Paper sx={{ p: 2, borderRadius: 2 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          {t('Station Details')}
-        </Typography>
-        <Grid container spacing={1.5}>
-          <Grid item xs={12} sm={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <MapIcon fontSize="small" color="primary" />
-              <Typography variant="body2" fontWeight="500">{t('Address')}</Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary">{stationData.location}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <AccessTimeIcon fontSize="small" color="primary" />
-              <Typography variant="body2" fontWeight="500">{t('Status')}</Typography>
-            </Box>
-            <Chip 
-              label={stationData.isActive ? t('Active') : t('Inactive')} 
-              size="small" 
-              color={stationData.isActive ? 'success' : 'error'}
-              variant="outlined"
-            />
-          </Grid>
-        </Grid>
-      </Paper>
+        {/* Two Column Layout with Pagination */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming Trips with Pagination */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CalendarIcon className="h-5 w-5 text-blue-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-800">Upcoming Trips</h2>
+              </div>
+              <Link to="/station/Trips" className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 group">
+                View All
+                <ChevronRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+            
+            {upcomingTrips.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No upcoming trips</p>
+                <p className="text-sm text-gray-400 mt-1">Schedule a new trip to get started</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 min-h-[320px]">
+                  {getPaginatedTrips().map((trip, index) => (
+                    <div key={trip._id} className="group relative">
+                      <div className="relative flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                            {(tripsPage - 1) * itemsPerPage + index + 1}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {trip.origin?.stationName || 'N/A'} → {trip.destination?.stationName || 'N/A'}
+                              </p>
+                              <div className="flex items-center mt-2 text-sm text-gray-600">
+                                <ClockIcon className="h-4 w-4 mr-1" />
+                                {trip.departureTime ? format(new Date(trip.departureTime), 'PPp') : 'N/A'}
+                              </div>
+                              <div className="mt-3 flex items-center gap-3 text-xs">
+                                <span className="px-2 py-1 bg-white rounded-full shadow-sm">
+                                  🚌 {trip.vehicle?.plateNumber || 'N/A'}
+                                </span>
+                                <span className="px-2 py-1 bg-white rounded-full shadow-sm">
+                                  👤 {trip.driver?.fullName || 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusColor(trip.tripStatus)}`}>
+                              {trip.tripStatus}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <Pagination 
+                  currentPage={tripsPage}
+                  totalPages={totalTripsPages}
+                  onPageChange={goToTripsPage}
+                  label="trips"
+                />
+              </>
+            )}
+          </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('Edit Station')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label={t('Station Name')}
-              fullWidth
-              size="small"
-              value={editForm.stationName}
-              onChange={(e) => setEditForm(prev => ({ ...prev, stationName: e.target.value }))}
-            />
-            <TextField
-              label={t('Location')}
-              fullWidth
-              size="small"
-              value={editForm.location}
-              onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))}
-            />
-            <TextField
-              label={t('Contact Phone')}
-              fullWidth
-              size="small"
-              value={editForm.contactPhone}
-              onChange={(e) => setEditForm(prev => ({ ...prev, contactPhone: e.target.value }))}
-            />
-            <TextField
-              label={t('Contact Email')}
-              type="email"
-              fullWidth
-              size="small"
-              value={editForm.contactEmail}
-              onChange={(e) => setEditForm(prev => ({ ...prev, contactEmail: e.target.value }))}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button size="small" onClick={() => setEditDialogOpen(false)}>{t('Cancel')}</Button>
-          <Button size="small" variant="contained" onClick={handleEditSubmit}>{t('Save')}</Button>
-        </DialogActions>
-      </Dialog>
+          {/* Vehicle Status with Pagination */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <TruckIcon className="h-5 w-5 text-green-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-800">Vehicle Status</h2>
+              </div>
+              <Link to="/station/vehicles" className="text-sm text-green-600 hover:text-green-800 flex items-center gap-1 group">
+                Manage Vehicles
+                <ChevronRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+            
+            {vehicles.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <TruckIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No vehicles found</p>
+                <p className="text-sm text-gray-400 mt-1">Register a vehicle to get started</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 min-h-[320px]">
+                  {getPaginatedVehicles().map((vehicle, index) => (
+                    <div key={vehicle._id} className="group p-4 bg-gray-50 rounded-lg hover:bg-green-50 transition-all hover:shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          {vehicle.images && vehicle.images.length > 0 ? (
+                            <img 
+                              src={vehicle.images[0]?.url || vehicle.thumbnailImage} 
+                              alt={vehicle.plateNumber}
+                              className="w-16 h-16 object-cover rounded-lg border-2 border-white shadow-md group-hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
+                              <TruckIcon className="h-8 w-8 text-gray-500" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-800 text-lg">
+                                {vehicle.plateNumber}
+                              </p>
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${getStatusColor(vehicle.currentStatus)}`}>
+                                {vehicle.currentStatus}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {vehicle.make || 'N/A'} {vehicle.model || 'N/A'} • {vehicle.carType || 'N/A'}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">Capacity:</span> {vehicle.totalCapacity || 0} seats
+                              </span>
+                              {vehicle.driverID && (
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Driver:</span> {typeof vehicle.driverID === 'object' ? vehicle.driverID.fullName : 'Assigned'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRightIcon className="h-5 w-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-      {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('Upload Images')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <ImageIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 1 }} />
-            <Typography variant="body2" color="text.secondary" paragraph>
-              {t('Upload station images (JPG, PNG, GIF)')}
-            </Typography>
-            <input accept="image/*" style={{ display: 'none' }} id="image-upload" type="file" onChange={handleImageUpload} />
-            <label htmlFor="image-upload">
-              <Button variant="contained" component="span" size="small" startIcon={<CameraIcon />}>
-                {t('Select Images')}
-              </Button>
-            </label>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button size="small" onClick={() => setUploadDialogOpen(false)}>{t('Close')}</Button>
-        </DialogActions>
-      </Dialog>
+                <Pagination 
+                  currentPage={vehiclesPage}
+                  totalPages={totalVehiclesPages}
+                  onPageChange={goToVehiclesPage}
+                  label="vehicles"
+                />
+              </>
+            )}
+          </div>
+        </div>
 
-      {/* Snackbar */}
-      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-        <Alert severity={snackbar.severity} variant="filled" sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+        {/* Quick Actions - Enhanced */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link
+            to="/station/Trips"
+            className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+          >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <div className="relative flex items-center gap-4">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform">
+                <CalendarIcon className="h-8 w-8" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-1">Create New Trip</h3>
+                <p className="text-blue-100 text-sm">Schedule a new journey</p>
+              </div>
+              <ChevronRightIcon className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+            </div>
+          </Link>
+          
+          <Link
+            to="/station/vehicles"
+            className="group relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+          >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <div className="relative flex items-center gap-4">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform">
+                <TruckIcon className="h-8 w-8" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-1">Register Vehicle</h3>
+                <p className="text-green-100 text-sm">Add new vehicle to fleet</p>
+              </div>
+              <ChevronRightIcon className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+            </div>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default StationAdminDashboard;
+export default StationDashboard;

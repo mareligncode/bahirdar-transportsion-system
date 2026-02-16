@@ -59,11 +59,9 @@ export default function Sidebar({ userRole }) {
 
     const driverItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/driver/dashboard' },
-      { icon: Car, label: t('assigned_trips'), path: '/driver/trips' },
-      { icon: MapPin, label: t('trip_tracking'), path: '/driver/tracking' },
-      { icon: BarChart3, label: t('earnings'), path: '/driver/earnings' },
-      { icon: Calendar, label: t('availability'), path: '/driver/availability' },
-      { icon: FileText, label: t('documents'), path: '/driver/documents' },
+      { icon: Car, label: t('My Trips'), path: '/driver/trips' },
+      { icon: BarChart3, label: t('My Vehicle'), path: '/driver/vehicle' },
+      { icon: Calendar, label: t('Driver Reports'), path: '/driver/reports' },
     ];
 
     const stationAdminItems = [
@@ -77,14 +75,12 @@ export default function Sidebar({ userRole }) {
 
     const superAdminItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/admin/dashboard' },     
-      { icon: Shield, label: t('role_management'), path: '/admin/role-management' },
       { icon: Users, label: t('all_users'), path: '/admin/AllUsers' },
+      { icon: Shield, label: t('role_management'), path: '/admin/role-management' },
       { icon: Calendar, label: t('schedules'), path: '/admin/schedules' },
       { icon: Car, label: t('vehicles'), path: '/admin/vehicles' },
       { icon: MapPin, label: t('stations'), path: '/admin/stations' },
       { icon: BarChart3, label: t('system_reports'), path: '/admin/reports' },
-      { icon: Settings, label: t('system_settings'), path: '/admin/settings' },
-      { icon: FileText, label: t('audit_logs'), path: '/admin/audit-logs' },
     ];
 
     switch(userRole) {
@@ -130,13 +126,13 @@ export default function Sidebar({ userRole }) {
   };
 
   return (
-    <aside className="w-64 bg-white border-r shadow-sm dark:bg-gray-900 dark:border-gray-700">
+    <aside className="w-64 bg-white border-r border-gray-200 shadow-sm">
       <div className="p-6">
         {/* User Info Section */}
         {user && (
-          <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center border-2 border-primary-200 dark:border-primary-700">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-100">
                 {user.profileImage ? (
                   <img 
                     src={user.profileImage} 
@@ -144,18 +140,18 @@ export default function Sidebar({ userRole }) {
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <UserCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                  <UserCircle className="w-6 h-6 text-blue-500" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                <p className="font-semibold text-gray-800 truncate">
                   {user.fullName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1">
+                <p className="text-xs text-gray-500 capitalize mt-1">
                   {getRoleName()}
                 </p>
                 {user.stationID && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     {t('station')}: {user.stationID}
                   </p>
                 )}
@@ -165,7 +161,7 @@ export default function Sidebar({ userRole }) {
         )}
 
         {/* Panel Title */}
-        <h2 className="text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
+        <h2 className="text-lg font-semibold mb-6 text-gray-700">
           {getPanelTitle()}
         </h2>
 
@@ -179,15 +175,15 @@ export default function Sidebar({ userRole }) {
               className={({ isActive }) =>
                 `flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                   isActive
-                    ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-l-4 border-primary-600 dark:border-primary-500 shadow-sm'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 hover:border-l-4 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800 hover:border-l-4 hover:border-gray-300'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
                   <item.icon className={`w-5 h-5 ${
-                    isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
+                    isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'
                   }`} />
                   <span className="font-medium">{item.label}</span>
                 </>
@@ -200,8 +196,8 @@ export default function Sidebar({ userRole }) {
             onClick={() => setShowSettings(!showSettings)}
             className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors ${
               showSettings 
-                ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
-                : 'text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400'
+                ? 'bg-blue-50 text-blue-700' 
+                : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
             }`}
           >
             <div className="flex items-center space-x-3">
@@ -220,21 +216,21 @@ export default function Sidebar({ userRole }) {
 
           {/* Quick Settings Dropdown */}
           {showSettings && (
-            <div className="ml-8 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+            <div className="ml-8 p-3 bg-gray-50 rounded-lg space-y-3 border border-gray-100">
               {/* Theme Toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   {settings.themeMode === 'dark' ? (
-                    <Moon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <Moon className="w-4 h-4 text-gray-500" />
                   ) : (
-                    <Sun className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <Sun className="w-4 h-4 text-gray-500" />
                   )}
-                  <span className="text-sm">{t('dark_mode')}</span>
+                  <span className="text-sm text-gray-700">{t('dark_mode')}</span>
                 </div>
                 <button
                   onClick={toggleTheme}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.themeMode === 'dark' ? 'bg-blue-600' : 'bg-gray-300'
+                    settings.themeMode === 'dark' ? 'bg-blue-500' : 'bg-gray-300'
                   }`}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -246,13 +242,13 @@ export default function Sidebar({ userRole }) {
               {/* Language Selector */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm">{t('language')}</span>
+                  <Globe className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">{t('language')}</span>
                 </div>
                 <select
                   value={settings.language}
                   onChange={(e) => changeLanguage(e.target.value)}
-                  className="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
+                  className="text-sm bg-white border border-gray-300 rounded px-2 py-1 text-gray-700"
                 >
                   {languages.map(lang => (
                     <option key={lang.code} value={lang.code}>
@@ -265,13 +261,13 @@ export default function Sidebar({ userRole }) {
               {/* Font Size */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm">{t('font_size')}</span>
+                  <Eye className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">{t('font_size')}</span>
                 </div>
                 <select
                   value={settings.fontSize}
                   onChange={(e) => updateSetting('fontSize', e.target.value)}
-                  className="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
+                  className="text-sm bg-white border border-gray-300 rounded px-2 py-1 text-gray-700"
                 >
                   <option value="small">{t('small')}</option>
                   <option value="medium">{t('medium')}</option>
@@ -282,8 +278,8 @@ export default function Sidebar({ userRole }) {
               {/* Auto Refresh */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <RefreshCw className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm">{t('auto_refresh')}</span>
+                  <RefreshCw className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">{t('auto_refresh')}</span>
                 </div>
                 <button
                   onClick={() => updateSetting('autoRefresh', !settings.autoRefresh)}
@@ -303,7 +299,7 @@ export default function Sidebar({ userRole }) {
                   navigate('/settings');
                   setShowSettings(false);
                 }}
-                className="w-full text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 pt-2 border-t border-gray-200 dark:border-gray-700"
+                className="w-full text-center text-sm text-blue-600 hover:text-blue-800 pt-2 border-t border-gray-200"
               >
                 {t('view_all_settings')} →
               </button>
@@ -316,14 +312,14 @@ export default function Sidebar({ userRole }) {
             className={({ isActive }) =>
               `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mt-6 ${
                 isActive
-                  ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <HelpCircle className={`w-5 h-5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                <HelpCircle className={`w-5 h-5 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
                 <span className="font-medium">{t('help_support')}</span>
               </>
             )}
@@ -332,7 +328,7 @@ export default function Sidebar({ userRole }) {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 hover:text-red-700 dark:hover:text-red-300 mt-2"
+            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-red-600 hover:bg-red-50 hover:text-red-700 mt-2"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">{t('logout')}</span>
@@ -340,47 +336,47 @@ export default function Sidebar({ userRole }) {
         </nav>
 
         {/* Settings Status */}
-        <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-medium text-gray-500">
               {t('current_settings')}
             </span>
-            <span className="text-xs px-2 py-1 rounded bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300">
+            <span className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600">
               {settings.language.toUpperCase()}
             </span>
           </div>
-          <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+          <div className="flex items-center space-x-2 text-xs text-gray-600">
             <div className="flex items-center">
               {settings.themeMode === 'dark' ? (
                 <>
-                  <Moon className="w-3 h-3 mr-1" />
+                  <Moon className="w-3 h-3 mr-1 text-gray-500" />
                   <span>{t('dark_mode_enabled')}</span>
                 </>
               ) : (
                 <>
-                  <Sun className="w-3 h-3 mr-1" />
+                  <Sun className="w-3 h-3 mr-1 text-gray-500" />
                   <span>{t('light_mode_enabled')}</span>
                 </>
               )}
             </div>
-            <span>•</span>
+            <span className="text-gray-300">•</span>
             <span>{t('font_size')}: {t(settings.fontSize)}</span>
-            <span>•</span>
-            <span>{settings.autoRefresh ? t('auto_refresh_on') : t('auto_refresh_off')}</span>
+            <span className="text-gray-300">•</span>
+            <span>{t('auto_refresh')}: {settings.autoRefresh ? t('on') : t('off')}</span>
           </div>
         </div>
 
         {/* Role Badge */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               {t('account_type')}
             </span>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              userRole === 'super_admin' ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300' :
-              userRole === 'station_admin' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300' :
-              userRole === 'driver' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' :
-              'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
+              userRole === 'super_admin' ? 'bg-purple-100 text-purple-700' :
+              userRole === 'station_admin' ? 'bg-blue-100 text-blue-700' :
+              userRole === 'driver' ? 'bg-green-100 text-green-700' :
+              'bg-gray-100 text-gray-700'
             }`}>
               {getRoleName()}
             </span>

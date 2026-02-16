@@ -17,10 +17,31 @@ export const createStation = async (req, res) => {
             return res.status(400).json({ message: 'Station code already exists' });
         }
 
+
+
+
+
+
+
+
+
+
+// leul
+        
         // Check if manager exists and is a station admin
-        if (!req.body.manager) {
-            return res.status(400).json({ message: 'Manager is required' });
-        }
+        // if (!req.body.manager) {
+        //     return res.status(400).json({ message: 'Manager is required' });
+        // }
+
+
+
+
+
+
+
+
+
+
         if (req.body.manager) {
             const manager = await User.findById(req.body.manager);
             if (!manager || manager.role !== 'station_admin') {

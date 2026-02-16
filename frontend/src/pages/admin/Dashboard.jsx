@@ -16,16 +16,12 @@ import {
   Error as ErrorIcon,
   Payments as PaymentsIcon
 } from '@mui/icons-material';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { useAuth } from '../../hooks/useAuth';
-import authService from '../../services/auth.service';
-import api from '../../services/api'; // Keep for non-auth endpoints
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import api from '../../services/api';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const Dashboard = () => {
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState(null);
@@ -45,7 +41,6 @@ const Dashboard = () => {
   });
   
   const [userRoles, setUserRoles] = useState([]);
-  const [activityData, setActivityData] = useState([]);
   const [vehicleStatus, setVehicleStatus] = useState([]);
   const [tripStatus, setTripStatus] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -180,40 +175,6 @@ const Dashboard = () => {
       
       // ✅ Set recent bookings for activity
       setRecentBookings(bookings.slice(0, 5));
-      
-      // ✅ Prepare activity data (last 7 days - from actual bookings)
-      const last7Days = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-        
-        const dayBookings = bookings.filter(b => {
-          const bookingDate = new Date(b.createdAt);
-          return bookingDate >= date && bookingDate < nextDate;
-        });
-        
-        const dayUsers = users.filter(u => {
-          const createdDate = new Date(u.createdAt);
-          return createdDate >= date && createdDate < nextDate;
-        });
-        
-        const dayTrips = trips.filter(t => {
-          const createdDate = new Date(t.createdAt);
-          return createdDate >= date && createdDate < nextDate;
-        });
-        
-        last7Days.push({
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-          users: dayUsers.length,
-          trips: dayTrips.length,
-          bookings: dayBookings.length
-        });
-      }
-      setActivityData(last7Days);
       
       // Set overall stats
       setStats({
@@ -481,7 +442,7 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Charts Section - Full Width Vertical Layout */}
+      {/* Charts Section */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         
         {/* User Roles Distribution */}
@@ -518,90 +479,32 @@ const Dashboard = () => {
         )}
 
         {/* Vehicle Status Distribution */}
-        {vehicleStatus.length > 0 && (
-          <Card elevation={3}>
-            <CardHeader
-              title={t('vehicle_status_distribution')}
-              subheader={t('current_status_of_vehicles')}
-            />
-            <Divider />
-            <CardContent sx={{ height: 400 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={vehicleStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={120}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {vehicleStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} ${t('vehicles')}`, t('count')]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ✅ Trip Status Distribution - NEW */}
-        {tripStatus.length > 0 && (
-          <Card elevation={3}>
-            <CardHeader
-              title={t('trip_status_distribution')}
-              subheader={t('current_status_of_trips')}
-            />
-            <Divider />
-            <CardContent sx={{ height: 400 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={tripStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={120}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {tripStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} ${t('trips')}`, t('count')]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Weekly Activity */}
         <Card elevation={3}>
           <CardHeader
-            title={t('weekly_activity')}
-            subheader={t('last_7_days_overview')}
+            title={t('vehicle_status_distribution')}
+            subheader={t('current_status_of_vehicles')}
           />
           <Divider />
           <CardContent sx={{ height: 400 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
+              <PieChart>
+                <Pie
+                  data={vehicleStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {vehicleStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} ${t('vehicles')}`, t('count')]} />
                 <Legend />
-                <Bar dataKey="users" fill="#8884d8" name={t('new_users')} />
-                <Bar dataKey="trips" fill="#82ca9d" name={t('new_trips')} />
-                <Bar dataKey="bookings" fill="#ffc658" name={t('bookings')} />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -621,7 +524,7 @@ const Dashboard = () => {
                 fullWidth
                 variant="contained"
                 color="primary"
-                href="/admin/users"
+                href="/admin/AllUsers"
                 startIcon={<PeopleIcon />}
               >
                 {t('manage_users')}
