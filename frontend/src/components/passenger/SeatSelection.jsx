@@ -442,12 +442,6 @@ const SeatSelection = ({
                     </Typography>
                   )}
                 </Box>
-                {/* Show the numeric seat numbers being sent to backend (for debugging) */}
-                {localSelectedSeats.length > 0 && process.env.NODE_ENV === 'development' && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
-                    {t('backend_seat_ids')}: {localSelectedSeats.join(', ')}
-                  </Typography>
-                )}
               </Box>
 
               {/* Price Breakdown */}
