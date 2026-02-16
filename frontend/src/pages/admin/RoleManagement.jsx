@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import Layout from '../../components/common/Layout';
 import { 
   User, 
   UserCheck, 
@@ -13,7 +12,6 @@ import {
   Download,
   Eye,
   Edit,
-  Trash2,
   ChevronDown,
   AlertCircle,
   CheckCircle,
@@ -21,15 +19,27 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  X,
+  Mail,
+  Phone,
+  Calendar,
+  Clock,
+  MapPin,
+  Award,
+  Key,
+  Info
 } from 'lucide-react';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
+import api from '../../services/api';
 
 export default function RoleManagement() {
   const { user, authService } = useAuth();
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
+  const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStations, setLoadingStations] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -71,9 +81,59 @@ export default function RoleManagement() {
     }
   };
 
+  // FIXED: Proper station fetching function
+  const fetchStations = async () => {
+    try {
+      setLoadingStations(true);
+      console.log('Fetching stations...');
+      
+      const response = await api.get('/api/station');
+      
+      console.log('Stations API full response:', response);
+      console.log('Stations API response data:', response.data);
+      
+      let stationsList = [];
+      
+      // Handle different response structures
+      if (response.data?.data?.stations) {
+        stationsList = response.data.data.stations;
+      } else if (response.data?.stations) {
+        stationsList = response.data.stations;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        stationsList = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        stationsList = response.data;
+      }
+      
+      console.log('Processed stations list:', stationsList);
+      setStations(stationsList);
+      
+    } catch (err) {
+      console.error('Error fetching stations:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setStations([]);
+      
+      setMessage({ 
+        type: 'error', 
+        text: 'Failed to load stations. Please refresh the page.' 
+      });
+    } finally {
+      setLoadingStations(false);
+    }
+  };
+
+  // Fetch stations on component mount and when user changes
   useEffect(() => {
-    fetchUsers();
+    if (user?.role === 'super_admin') {
+      fetchUsers();
+      fetchStations();
+    }
   }, [user]);
+
+  // Debug: log stations when they change
+  useEffect(() => {
+    console.log('Current stations in state:', stations);
+  }, [stations]);
 
   const filteredUsers = users.filter(userItem => {
     const matchesSearch = 
@@ -128,6 +188,23 @@ export default function RoleManagement() {
     return roleMap[role] || role;
   };
 
+  const getStationName = (stationId) => {
+    if (!stationId) return t('not_assigned');
+    const station = stations.find(s => s._id === stationId);
+    return station ? `${station.stationName} (${station.city})` : stationId;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return t('na');
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
 
@@ -135,54 +212,67 @@ export default function RoleManagement() {
       setChangingRole(true);
       setMessage({ type: '', text: '' });
       
-      let licenseNumberParam = '';
-      let stationIDParam = '';
-
+      const requestData = {
+        userId: selectedUser._id,
+        newRole: newRole
+      };
+      
+      // Validation for driver
       if (newRole === 'driver') {
         if (!licenseNumber.trim()) {
           setMessage({ type: 'error', text: t('license_number_required') });
           setChangingRole(false);
           return;
         }
-        licenseNumberParam = licenseNumber;
+        requestData.licenseNumber = licenseNumber;
+        // Include stationID for driver if selected (OPTIONAL)
+        if (stationID) {
+          requestData.stationID = stationID;
+        }
       }
-
+      
+      // Validation for station_admin
       if (newRole === 'station_admin') {
-        if (!stationID.trim()) {
+        if (!stationID) {
           setMessage({ type: 'error', text: t('station_id_required') });
           setChangingRole(false);
           return;
         }
-        stationIDParam = stationID;
+        requestData.stationID = stationID;
       }
+
+      console.log('📤 Sending role change request:', requestData);
 
       const response = await authService.changeUserRole(
         selectedUser._id,
         newRole,
-        licenseNumberParam,
-        stationIDParam
+        newRole === 'driver' ? licenseNumber : '',
+        (newRole === 'driver' && stationID) ? stationID : (newRole === 'station_admin' ? stationID : '')
       );
 
       if (response.success) {
+        const selectedStation = stations.find(s => s._id === stationID);
+        
         setMessage({ 
           type: 'success', 
           text: t('role_changed_successfully', { role: getRoleDisplay(newRole) })
         });
         
+        // Update users list
         setUsers(prevUsers => 
           prevUsers.map(u => {
             if (u._id === selectedUser._id) {
               const updatedUser = { ...u, role: newRole };
               
               if (newRole === 'driver') {
-                updatedUser.licenseNumber = licenseNumberParam;
-                updatedUser.stationID = '';
+                updatedUser.licenseNumber = licenseNumber;
+                updatedUser.stationID = stationID || null;
               } else if (newRole === 'station_admin') {
-                updatedUser.stationID = stationIDParam;
-                updatedUser.licenseNumber = '';
+                updatedUser.stationID = stationID;
+                updatedUser.licenseNumber = null;
               } else {
-                updatedUser.licenseNumber = '';
-                updatedUser.stationID = '';
+                updatedUser.licenseNumber = null;
+                updatedUser.stationID = null;
               }
               
               return updatedUser;
@@ -200,6 +290,7 @@ export default function RoleManagement() {
         setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
+      console.error('❌ Role change error:', error);
       setMessage({ type: 'error', text: t('failed_to_change_role') });
     } finally {
       setChangingRole(false);
@@ -254,6 +345,11 @@ export default function RoleManagement() {
     setMessage({ type: '', text: '' });
   };
 
+  const openUserDetails = (user) => {
+    setSelectedUser(user);
+    setShowUserDetails(true);
+  };
+
   const openConfirmDialog = (user, type) => {
     setSelectedUser(user);
     setActionType(type);
@@ -262,14 +358,16 @@ export default function RoleManagement() {
 
   const exportToCSV = () => {
     const csvContent = [
-      [t('name'), t('email'), t('phone'), t('role'), t('status'), t('created_at')],
+      [t('name'), t('email'), t('phone'), t('role'), t('status'), t('created_at'), t('license_number'), t('station')],
       ...users.map(u => [
         u.fullName,
         u.email,
-        u.phoneNumber,
+        u.phoneNumber || '',
         getRoleDisplay(u.role),
         u.isActive ? t('active') : t('inactive'),
-        new Date(u.createdAt).toLocaleDateString()
+        new Date(u.createdAt).toLocaleDateString(),
+        u.licenseNumber || '',
+        u.stationID ? getStationName(u.stationID) : ''
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -380,7 +478,10 @@ export default function RoleManagement() {
           </div>
 
           <button 
-            onClick={fetchUsers}
+            onClick={() => {
+              fetchUsers();
+              fetchStations();
+            }}
             className="btn-primary flex items-center justify-center gap-2"
             disabled={loading}
           >
@@ -458,7 +559,7 @@ export default function RoleManagement() {
                           <p className="text-xs text-gray-500 mt-1">{t('license')}: {userItem.licenseNumber}</p>
                         )}
                         {userItem.stationID && (
-                          <p className="text-xs text-gray-500 mt-1">{t('station')}: {userItem.stationID}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('station')}: {getStationName(userItem.stationID)}</p>
                         )}
                       </td>
                       <td className="py-4 px-4">
@@ -476,7 +577,7 @@ export default function RoleManagement() {
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => setShowUserDetails(true) || setSelectedUser(userItem)}
+                            onClick={() => openUserDetails(userItem)}
                             className="p-2 hover:bg-gray-100 rounded"
                             title={t('view_details')}
                           >
@@ -600,6 +701,168 @@ export default function RoleManagement() {
         )}
       </div>
 
+      {/* User Details Modal */}
+      {showUserDetails && selectedUser && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowUserDetails(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">{t('user_details')}</h3>
+                <button
+                  onClick={() => setShowUserDetails(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl font-semibold text-primary-600">
+                    {selectedUser.fullName?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-2xl font-bold">{selectedUser.fullName}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      selectedUser.isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedUser.isActive ? t('active') : t('inactive')}
+                    </span>
+                    <span className={`p-1 rounded ${getRoleColor(selectedUser.role)}`}>
+                      {getRoleIcon(selectedUser.role)}
+                    </span>
+                    <span className="font-medium">{getRoleDisplay(selectedUser.role)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h5 className="font-semibold text-gray-700 border-b pb-2">{t('personal_information')}</h5>
+                  
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">{t('email')}</p>
+                      <p className="font-medium">{selectedUser.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">{t('phone')}</p>
+                      <p className="font-medium">{selectedUser.phoneNumber || t('not_provided')}</p>
+                    </div>
+                  </div>
+
+                  {selectedUser.emergencyContact && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">{t('emergency_contact')}</p>
+                        <p className="font-medium">{selectedUser.emergencyContact}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="font-semibold text-gray-700 border-b pb-2">{t('account_information')}</h5>
+                  
+                  <div className="flex items-start gap-3">
+                    <Key className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">{t('user_id')}</p>
+                      <p className="font-medium text-sm break-all">{selectedUser._id}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">{t('member_since')}</p>
+                      <p className="font-medium">{formatDate(selectedUser.createdAt)}</p>
+                    </div>
+                  </div>
+
+                  {selectedUser.lastLogin && (
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">{t('last_login')}</p>
+                        <p className="font-medium">{formatDate(selectedUser.lastLogin)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Role-specific information */}
+              {(selectedUser.role === 'driver' || selectedUser.role === 'station_admin') && (
+                <div className="mt-6 pt-6 border-t">
+                  <h5 className="font-semibold text-gray-700 mb-4">
+                    {selectedUser.role === 'driver' ? t('driver_information') : t('station_administrator')}
+                  </h5>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedUser.role === 'driver' && selectedUser.licenseNumber && (
+                      <div className="flex items-start gap-3">
+                        <Award className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">{t('license_number')}</p>
+                          <p className="font-medium">{selectedUser.licenseNumber}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedUser.stationID && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">{t('assigned_station')}</p>
+                          <p className="font-medium">{getStationName(selectedUser.stationID)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={() => setShowUserDetails(false)}
+                  className="btn-secondary"
+                >
+                  {t('close')}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUserDetails(false);
+                    openChangeRoleModal(selectedUser);
+                  }}
+                  className="btn-primary"
+                >
+                  {t('change_role')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Role Modal - NOW WITH STATION SELECTION FOR DRIVERS */}
       {showChangeRoleModal && selectedUser && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -619,9 +882,9 @@ export default function RoleManagement() {
                     setShowChangeRoleModal(false);
                     resetForm();
                   }}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  &times;
+                  <X className="w-6 h-6" />
                 </button>
               </div>
               
@@ -651,34 +914,103 @@ export default function RoleManagement() {
                 </div>
 
                 {newRole === 'driver' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('license_number')} *
-                    </label>
-                    <input
-                      type="text"
-                      value={licenseNumber}
-                      onChange={(e) => setLicenseNumber(e.target.value)}
-                      className="input-field w-full"
-                      placeholder={t('enter_license_number')}
-                      required
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('license_number')} *
+                      </label>
+                      <input
+                        type="text"
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value)}
+                        className="input-field w-full"
+                        placeholder={t('enter_license_number')}
+                        required
+                      />
+                    </div>
+                    
+                    {/* NEW: Station selection for drivers (optional) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('assign_station')} <span className="text-xs text-gray-500 font-normal">({t('optional')})</span>
+                      </label>
+                      {loadingStations ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                          <span className="ml-2 text-sm text-gray-600">{t('loading_stations')}</span>
+                        </div>
+                      ) : stations.length > 0 ? (
+                        <>
+                          <select
+                            value={stationID}
+                            onChange={(e) => setStationID(e.target.value)}
+                            className="input-field w-full"
+                          >
+                            <option value="">{t('no_station_assigned')}</option>
+                            {stations.map((station) => (
+                              <option key={station._id} value={station._id}>
+                                {station.stationName} - {station.city} {station.location ? `(${station.location})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Info className="w-3 h-3" />
+                            {t('driver_can_be_assigned_later')}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-sm text-yellow-700 font-medium">No stations found!</p>
+                          <p className="text-xs text-yellow-600 mt-1">Create stations first or leave unassigned.</p>
+                          <button
+                            onClick={fetchStations}
+                            className="mt-2 text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Retry fetching stations
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 {newRole === 'station_admin' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('station_id')} *
+                      {t('select_station')} *
                     </label>
-                    <input
-                      type="text"
-                      value={stationID}
-                      onChange={(e) => setStationID(e.target.value)}
-                      className="input-field w-full"
-                      placeholder={t('enter_station_id')}
-                      required
-                    />
+                    {loadingStations ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                        <span className="ml-2 text-sm text-gray-600">{t('loading_stations')}</span>
+                      </div>
+                    ) : stations.length > 0 ? (
+                      <select
+                        value={stationID}
+                        onChange={(e) => setStationID(e.target.value)}
+                        className="input-field w-full"
+                      >
+                        <option value="">{t('select_station_placeholder')}</option>
+                        {stations.map((station) => (
+                          <option key={station._id} value={station._id}>
+                            {station.stationName} - {station.city} {station.location ? `(${station.location})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-700 font-medium">No stations found!</p>
+                        <p className="text-xs text-yellow-600 mt-1">Please create stations first before assigning station admin.</p>
+                        <button
+                          onClick={fetchStations}
+                          className="mt-2 text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Retry fetching stations
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -697,7 +1029,12 @@ export default function RoleManagement() {
                 <button
                   onClick={handleChangeRole}
                   className="btn-primary flex items-center justify-center gap-2"
-                  disabled={!newRole || changingRole}
+                  disabled={
+                    !newRole || 
+                    changingRole || 
+                    (newRole === 'driver' && !licenseNumber) || 
+                    (newRole === 'station_admin' && !stationID)
+                  }
                 >
                   {changingRole ? (
                     <>
@@ -714,6 +1051,7 @@ export default function RoleManagement() {
         </div>
       )}
 
+      {/* Confirm Dialog for Activate/Deactivate */}
       {showConfirmDialog && selectedUser && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"

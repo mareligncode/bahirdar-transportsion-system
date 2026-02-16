@@ -1,372 +1,570 @@
-import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Car, DollarSign, Calendar, TrendingUp, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { 
+  CalendarIcon, 
+  ClockIcon, 
+  MapPinIcon, 
+  UserGroupIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  TruckIcon,
+  ArrowPathIcon,
+  SparklesIcon
+} from '@heroicons/react/24/outline';
+import { 
+  TruckIcon as TruckSolidIcon,
+  UserGroupIcon as UserGroupSolidIcon,
+  CheckCircleIcon as CheckCircleSolidIcon
+} from '@heroicons/react/24/solid';
+import toast from 'react-hot-toast';
+import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
-import authService from '../../services/auth.service';
 
-export default function DriverDashboard() {
+const DriverDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [assignedTrips, setAssignedTrips] = useState([]);
-  const [driverStats, setDriverStats] = useState({
-    totalTripsToday: 0,
-    completedTrips: 0,
-    totalDistance: 0,
-    totalEarnings: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // This is temporary - replace with real API when you add trip management
-  const mockTrips = [
-    {
-      id: 'BD-GND-045',
-      from: 'Bahir Dar',
-      to: 'Gondar',
-      departureTime: new Date().toISOString(),
-      arrivalTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
-      vehiclePlate: 'ET 54321A',
-      vehicleType: 'minibus',
-      status: 'assigned',
-      passengers: 3,
-      price: 850,
-    },
-    {
-      id: 'BD-AA-0600',
-      from: 'Bahir Dar',
-      to: 'Addis Ababa',
-      departureTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      arrivalTime: new Date(Date.now() + 31 * 60 * 60 * 1000).toISOString(),
-      vehiclePlate: 'ET 12345B',
-      vehicleType: 'luxury_bus',
-      status: 'upcoming',
-      passengers: 0,
-      price: 1200,
-    },
-  ];
-
-  useEffect(() => {
-    const fetchDriverData = async () => {
-      try {
-        setLoading(true);
-        
-        // Check if user is actually a driver
-        if (user?.role !== 'driver') {
-          setError('This dashboard is only available for drivers');
-          return;
-        }
-
-        // TODO: Replace with real API calls when trip management is added
-        // For now, use mock data
-        setAssignedTrips(mockTrips);
-        
-        // Calculate mock statistics
-        const stats = {
-          totalTripsToday: mockTrips.filter(trip => 
-            new Date(trip.departureTime).toDateString() === new Date().toDateString()
-          ).length,
-          completedTrips: 2, // Mock data
-          totalDistance: 76, // Mock data in km
-          totalEarnings: mockTrips.reduce((sum, trip) => sum + trip.price, 0)
-        };
-        
-        setDriverStats(stats);
-
-      } catch (error) {
-        console.error('Failed to fetch driver data:', error);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchDriverData();
-    }
-  }, [user]);
-
+  // Get current hour for dynamic greeting
+  const currentHour = new Date().getHours();
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
+    if (currentHour < 12) return 'Good Morning';
+    if (currentHour < 17) return 'Good Afternoon';
     return 'Good Evening';
   };
 
-  const formatTime = (timeString) => {
-    return new Date(timeString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  // Fetch driver's trips
+  const { data: tripsData, isLoading: tripsLoading, refetch: refetchTrips } = useQuery({
+    queryKey: ['driverTrips', selectedDate],
+    queryFn: async () => {
+      try {
+        console.log('Fetching trips for driver:', user?._id);
+        console.log('Selected date:', selectedDate);
+        
+        // Get all trips for this driver
+        const response = await api.get('/api/trip', {
+          params: { 
+            driverID: user?._id
+          }
+        });
+        
+        console.log('API Response:', response.data);
+        
+        // Extract trips from response
+        let allTrips = [];
+        if (response.data?.data) {
+          allTrips = response.data.data;
+        } else if (response.data?.trips) {
+          allTrips = response.data.trips;
+        } else if (Array.isArray(response.data)) {
+          allTrips = response.data;
+        }
+        
+        console.log('All trips fetched:', allTrips.length);
+        
+        // Log each trip for debugging
+        allTrips.forEach((trip, index) => {
+          console.log(`Trip ${index + 1}:`, {
+            id: trip._id,
+            departureTime: trip.departureTime,
+            localDate: new Date(trip.departureTime).toLocaleDateString('en-CA')
+          });
+        });
+        
+        // FIXED: Filter trips by comparing dates properly
+        const filteredTrips = allTrips.filter(trip => {
+          if (!trip.departureTime) return false;
+          
+          // Create date objects for comparison
+          const tripDate = new Date(trip.departureTime);
+          const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+          
+          // Compare year, month, and day only (ignore time)
+          return tripDate.getUTCFullYear() === selectedDateObj.getUTCFullYear() &&
+                 tripDate.getUTCMonth() === selectedDateObj.getUTCMonth() &&
+                 tripDate.getUTCDate() === selectedDateObj.getUTCDate();
+        });
+        
+        console.log('Filtered trips for date:', filteredTrips.length);
+        
+        return filteredTrips;
+        
+      } catch (error) {
+        console.error('Error fetching trips:', error);
+        toast.error('Failed to fetch trips');
+        return [];
+      }
+    },
+    enabled: !!user?._id
+  });
+
+  // Update trip status mutation
+  const updateTripStatusMutation = useMutation({
+    mutationFn: async ({ tripId, status }) => {
+      const response = await api.patch(`/api/trip/${tripId}/status`, { status });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['driverTrips', selectedDate]);
+      toast.success('Trip status updated successfully');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update trip status');
+    }
+  });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetchTrips();
+    setRefreshing(false);
+    toast.success('Dashboard refreshed');
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const handleStatusChange = (tripId, newStatus) => {
+    if (!tripId) {
+      toast.error('Invalid trip ID');
+      return;
+    }
+    updateTripStatusMutation.mutate({ tripId, status: newStatus });
   };
 
-  const formatCurrency = (amount) => {
-    return `ETB ${amount.toLocaleString('en-ET')}`;
+  const handleViewTrip = (tripId) => {
+    console.log('Navigating to trip with ID:', tripId);
+    if (tripId) {
+      navigate(`/driver/trip/${tripId}`);
+    } else {
+      toast.error('Cannot view trip: Invalid trip ID');
+    }
   };
 
-  const handleStartTrip = async (tripId) => {
-    // TODO: Implement trip start API when available
-    alert(`Starting trip ${tripId}`);
-    console.log('Start trip:', tripId);
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      scheduled: { 
+        lightColor: 'bg-blue-50 text-blue-700 border-blue-200',
+        icon: ClockIcon,
+        label: 'Scheduled'
+      },
+      boarding: { 
+        lightColor: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+        icon: UserGroupIcon,
+        label: 'Boarding'
+      },
+      ongoing: { 
+        lightColor: 'bg-green-50 text-green-700 border-green-200',
+        icon: TruckIcon,
+        label: 'Ongoing'
+      },
+      completed: { 
+        lightColor: 'bg-gray-50 text-gray-700 border-gray-200',
+        icon: CheckCircleIcon,
+        label: 'Completed'
+      },
+      cancelled: { 
+        lightColor: 'bg-red-50 text-red-700 border-red-200',
+        icon: XCircleIcon,
+        label: 'Cancelled'
+      },
+      delayed: { 
+        lightColor: 'bg-orange-50 text-orange-700 border-orange-200',
+        icon: ExclamationTriangleIcon,
+        label: 'Delayed'
+      }
+    };
+    return statusConfig[status] || statusConfig.scheduled;
   };
 
-  const handleUpdateStatus = async (status) => {
-    // TODO: Implement driver status update API
-    alert(`Status updated to: ${status}`);
-    console.log('Update status:', status);
-  };
+  // Use trips from the main query
+  const schedule = tripsData || [];
 
-  if (loading) {
+  // Calculate statistics
+  const todayTrips = schedule.filter(t => t.tripStatus !== 'cancelled').length;
+  const completedToday = schedule.filter(t => t.tripStatus === 'completed').length;
+  const ongoingNow = schedule.filter(t => t.tripStatus === 'ongoing').length;
+  const boardingNow = schedule.filter(t => t.tripStatus === 'boarding').length;
+  const totalPassengersToday = schedule.reduce((acc, trip) => 
+    acc + (trip.totalSeats - trip.availableSeats), 0
+  );
+  
+  const nextTrip = schedule
+    .filter(t => ['scheduled', 'boarding'].includes(t.tripStatus))
+    .sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime))[0];
+
+  const completionRate = todayTrips > 0 ? Math.round((completedToday / todayTrips) * 100) : 0;
+
+  // Loading state
+  if (tripsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading driver dashboard...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-24 w-24 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+            <TruckSolidIcon className="h-8 w-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          </div>
+          <p className="mt-4 text-gray-600 font-medium">Loading your dashboard...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 text-red-600" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Dashboard</h3>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <p className="text-sm text-gray-500">Only drivers can access this dashboard.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Driver'}
-        </h1>
-        <p className="text-gray-600">Here are your assignments for {formatDate(new Date())}</p>
-        
-        {/* Driver Info Badge */}
-        <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
-          <Car className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            License: {user?.licenseNumber || 'Not provided'}
-            {user?.stationID && ` • Station: ${user.stationID}`}
-          </span>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-          <div className="card p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Trips Today</p>
-                <p className="text-2xl font-bold">{driverStats.totalTripsToday}</p>
-                <div className="flex items-center mt-1">
-                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+2 from yesterday</span>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-20 border-b border-gray-200/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-3 rounded-2xl shadow-lg">
+                <TruckSolidIcon className="h-8 w-8 text-white" />
               </div>
-              <Car className="w-8 h-8 text-primary-500" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Driver'}!
+                </h1>
+                <p className="text-sm text-gray-600 flex items-center">
+                  <SparklesIcon className="h-4 w-4 mr-1 text-yellow-500" />
+                  Here's your overview for {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <div className="card p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Completed Trips</p>
-                <p className="text-2xl font-bold">{driverStats.completedTrips}</p>
-                <div className="flex items-center mt-1">
-                  <Clock className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">On track</span>
-                </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200"
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
+              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                <CalendarIcon className="h-5 w-5 text-blue-500" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent border-none focus:outline-none text-sm font-medium text-gray-700"
+                />
               </div>
-              <Clock className="w-8 h-8 text-green-500" />
-            </div>
-          </div>
-          
-          <div className="card p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Distance</p>
-                <p className="text-2xl font-bold">{driverStats.totalDistance} km</p>
-                <div className="flex items-center mt-1">
-                  <MapPin className="w-4 h-4 text-blue-500 mr-1" />
-                  <span className="text-sm text-blue-600">Today</span>
-                </div>
-              </div>
-              <MapPin className="w-8 h-8 text-blue-500" />
-            </div>
-          </div>
-          
-          <div className="card p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Today's Earnings</p>
-                <p className="text-2xl font-bold">{formatCurrency(driverStats.totalEarnings)}</p>
-                <div className="flex items-center mt-1">
-                  <DollarSign className="w-4 h-4 text-purple-500 mr-1" />
-                  <span className="text-sm text-purple-600">Estimate</span>
-                </div>
-              </div>
-              <DollarSign className="w-8 h-8 text-purple-500" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <button 
-            onClick={() => handleUpdateStatus('available')}
-            className="btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            <Car className="w-4 h-4" />
-            Go Online
-          </button>
-          <button 
-            onClick={() => handleUpdateStatus('on_trip')}
-            className="btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            <MapPin className="w-4 h-4" />
-            Start Trip
-          </button>
-          <button 
-            onClick={() => handleUpdateStatus('break')}
-            className="btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            <Clock className="w-4 h-4" />
-            Take Break
-          </button>
-          <button 
-            onClick={() => handleUpdateStatus('offline')}
-            className="btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            <Calendar className="w-4 h-4" />
-            End Shift
-          </button>
-        </div>
-      </div>
-
-      {/* Today's Trips */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Today's Trips</h2>
-          <span className="text-sm text-gray-600">
-            {assignedTrips.length} trip{assignedTrips.length !== 1 ? 's' : ''} assigned
-          </span>
-        </div>
-        
-        {assignedTrips.length === 0 ? (
-          <div className="card p-12 text-center">
-            <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Trips Assigned</h3>
-            <p className="text-gray-600 mb-4">You don't have any trips scheduled for today.</p>
-            <p className="text-sm text-gray-500">Check back later or contact your station manager.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {assignedTrips.map((trip) => (
-              <div key={trip.id} className="card p-6 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">{trip.id}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        trip.status === 'assigned' 
-                          ? 'bg-blue-100 text-blue-800'
-                          : trip.status === 'in_progress'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {formatCurrency(trip.price)}
-                      </span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleStartTrip(trip.id)}
-                    className="btn-primary"
-                    disabled={trip.status !== 'assigned'}
-                  >
-                    {trip.status === 'assigned' ? 'Start Trip' : 'View Details'}
-                  </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Today's Trips</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{todayTrips}</p>
+                <div className="flex items-center mt-2">
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    todayTrips > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {todayTrips} active
+                  </span>
                 </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium">{trip.from} → {trip.to}</p>
-                      <p className="text-sm text-gray-600">
-                        {formatTime(trip.departureTime)} - {formatTime(trip.arrivalTime)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Car className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium capitalize">{trip.vehicleType?.replace('_', ' ')}</p>
-                      <p className="text-sm text-gray-600">{trip.vehiclePlate}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium">{trip.passengers} Passenger{trip.passengers !== 1 ? 's' : ''}</p>
-                      <p className="text-sm text-gray-600">
-                        {trip.passengers > 0 ? 'Ready to go' : 'Awaiting passengers'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trip Progress (if in progress) */}
-                {trip.status === 'in_progress' && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Trip Progress</span>
-                      <span className="font-medium">65%</span>
-                    </div>
-                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
-                )}
               </div>
-            ))}
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-2xl shadow-lg">
+                <TruckIcon className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Ongoing</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{ongoingNow}</p>
+                <p className="text-xs text-gray-500 mt-2">Currently on road</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-4 rounded-2xl shadow-lg">
+                <TruckSolidIcon className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Boarding</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{boardingNow}</p>
+                <p className="text-xs text-gray-500 mt-2">Ready to depart</p>
+              </div>
+              <div className="bg-gradient-to-br from-yellow-500 to-amber-500 p-4 rounded-2xl shadow-lg">
+                <UserGroupIcon className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Completed</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{completedToday}</p>
+                <p className="text-xs text-gray-500 mt-2">{completionRate}% success</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl shadow-lg">
+                <CheckCircleIcon className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Passengers</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{totalPassengersToday}</p>
+                <p className="text-xs text-gray-500 mt-2">Today's total</p>
+              </div>
+              <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-4 rounded-2xl shadow-lg">
+                <UserGroupSolidIcon className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Next Trip Banner */}
+        {nextTrip && nextTrip._id && (
+          <div className="mb-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                  <ClockIcon className="h-8 w-8" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-100">NEXT TRIP</p>
+                  <h3 className="text-xl font-bold">
+                    {nextTrip.origin?.stationName || 'N/A'} → {nextTrip.destination?.stationName || 'N/A'}
+                  </h3>
+                  <p className="text-amber-100">
+                    {nextTrip.departureTime ? `Departs at ${format(new Date(nextTrip.departureTime), 'hh:mm a')}` : 'Time TBD'} • 
+                    {nextTrip.totalSeats - nextTrip.availableSeats} passengers booked
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleViewTrip(nextTrip._id)}
+                className="px-6 py-3 bg-white text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors shadow-lg"
+              >
+                View Details
+              </button>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Upcoming Trips */}
-      {assignedTrips.filter(trip => trip.status === 'upcoming').length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Upcoming Trips</h2>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Trip management APIs are not yet implemented. 
-              This dashboard currently shows mock data. 
-              Contact the development team when trip management features are added to the backend.
-            </p>
+        {/* Today's Schedule */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <CalendarIcon className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-bold text-gray-900">
+                  Today's Schedule
+                </h2>
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">
+                  {schedule.length} {schedule.length === 1 ? 'trip' : 'trips'}
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/driver/trips')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+              >
+                View All
+                <ChevronRightIcon className="h-4 w-4 ml-1" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
+            {schedule.length > 0 ? (
+              schedule.map((trip) => {
+                if (!trip || !trip._id) return null;
+                
+                const StatusIcon = getStatusBadge(trip.tripStatus).icon;
+                const isNextTrip = nextTrip?._id === trip._id;
+                
+                return (
+                  <div 
+                    key={trip._id} 
+                    className={`p-6 hover:bg-gray-50 transition-all duration-200 cursor-pointer group relative
+                      ${isNextTrip ? 'bg-amber-50/30' : ''}`}
+                    onClick={() => {
+                      console.log('Clicked trip with ID:', trip._id);
+                      handleViewTrip(trip._id);
+                    }}
+                  >
+                    {isNextTrip && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500 to-orange-500"></div>
+                    )}
+                    
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${getStatusBadge(trip.tripStatus).lightColor} border`}>
+                            <div className="flex items-center space-x-1">
+                              <StatusIcon className="h-3 w-3" />
+                              <span>{getStatusBadge(trip.tripStatus).label}</span>
+                            </div>
+                          </span>
+                          <span className="text-sm font-medium text-gray-500">
+                            #{trip.tripNumber || 'N/A'}
+                          </span>
+                          {trip.tripStatus === 'delayed' && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                              ⚠ Delayed
+                            </span>
+                          )}
+                          {isNextTrip && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
+                              ⭐ Next
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm">
+                              <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                                <MapPinIcon className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">From</p>
+                                <p className="font-medium text-gray-900">{trip.origin?.stationName || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center text-sm">
+                              <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
+                                <MapPinIcon className="h-3 w-3 text-red-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">To</p>
+                                <p className="font-medium text-gray-900">{trip.destination?.stationName || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm">
+                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                                <ClockIcon className="h-3 w-3 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Departure</p>
+                                <p className="font-medium text-gray-900">
+                                  {trip.departureTime ? format(new Date(trip.departureTime), 'hh:mm a') : 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center text-sm">
+                              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+                                <UserGroupIcon className="h-3 w-3 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Seats</p>
+                                <p className="font-medium text-gray-900">
+                                  {trip.totalSeats - trip.availableSeats}/{trip.totalSeats} filled
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Update Buttons */}
+                        <div className="mt-4 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                          {trip.tripStatus === 'scheduled' && (
+                            <button
+                              onClick={() => handleStatusChange(trip._id, 'boarding')}
+                              className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-sm font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <UserGroupIcon className="h-4 w-4" />
+                                <span>Start Boarding</span>
+                              </div>
+                            </button>
+                          )}
+                          {trip.tripStatus === 'boarding' && (
+                            <button
+                              onClick={() => handleStatusChange(trip._id, 'ongoing')}
+                              className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <TruckIcon className="h-4 w-4" />
+                                <span>Start Trip</span>
+                              </div>
+                            </button>
+                          )}
+                          {trip.tripStatus === 'ongoing' && (
+                            <button
+                              onClick={() => handleStatusChange(trip._id, 'completed')}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <CheckCircleIcon className="h-4 w-4" />
+                                <span>Complete Trip</span>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <ChevronRightIcon className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors group-hover:translate-x-1 transform duration-200" />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-12 text-center">
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                  <CalendarIcon className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900">No trips scheduled</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  You have no trips assigned for {format(new Date(selectedDate), 'MMMM d, yyyy')}.
+                </p>
+                <button
+                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  Go to Today
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Quick Actions Footer */}
+        <div className="mt-8 flex justify-center space-x-4">
+          <button
+            onClick={() => navigate('/driver/trips')}
+            className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+          >
+            <TruckIcon className="h-5 w-5 mr-2" />
+            All Trips
+          </button>
+          <button
+            onClick={() => navigate('/driver/reports')}
+            className="px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+          >
+            <CheckCircleIcon className="h-5 w-5 mr-2" />
+            Reports
+          </button>
+          <button
+            onClick={() => navigate('/profile')}
+            className="px-6 py-3 bg-white text-pink-600 rounded-xl font-semibold hover:bg-pink-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+          >
+            <UserGroupIcon className="h-5 w-5 mr-2" />
+            Profile
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default DriverDashboard;

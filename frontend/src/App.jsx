@@ -25,8 +25,13 @@ import PassengerDashboard from './pages/passenger/Dashboard';
 import BookTrip from './pages/passenger/BookTrip';
 import MyBookings from './pages/passenger/MyBookings';
 
+
 // Driver Pages
 import DriverDashboard from './pages/driver/Dashboard';
+import MyTrips from './pages/driver/MyTrips';
+import TripDetails from './pages/driver/TripDetails';
+import MyVehicle from './pages/driver/MyVehicle';
+import DriverReports from './pages/driver/Reports';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -166,6 +171,43 @@ const queryClient = new QueryClient({
               </Layout>
             </ProtectedRoute>
           } />
+
+<Route path="/driver/trips" element={
+  <ProtectedRoute allowedRoles={['driver']}>
+    <Layout showSidebar>
+      <MyTrips />
+    </Layout>
+  </ProtectedRoute>
+} />
+
+<Route path="/driver/trip/:tripId" element={
+  <ProtectedRoute allowedRoles={['driver']}>
+    <Layout showSidebar>
+      <TripDetails />
+    </Layout>
+  </ProtectedRoute>
+} />
+
+<Route path="/driver/vehicle" element={
+  <ProtectedRoute allowedRoles={['driver']}>
+    <Layout showSidebar>
+      <MyVehicle />
+    </Layout>
+  </ProtectedRoute>
+} />
+
+<Route path="/driver/reports" element={
+  <ProtectedRoute allowedRoles={['driver']}>
+    <Layout showSidebar>
+      <DriverReports />
+    </Layout>
+  </ProtectedRoute>
+} />
+
+
+
+
+
           
           {/* ===== STATION ADMIN ROUTES ===== */}
           <Route path="/station/dashboard" element={

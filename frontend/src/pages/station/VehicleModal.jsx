@@ -58,78 +58,78 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
     }
   }, [isOpen, initialized]);
 
-// Set form data when vehicle or stations data is available
-useEffect(() => {
-  if (isOpen) {
-    if (vehicle) {
-      // EDIT MODE - FIXED: Extract stationID from multiple possible locations
-      let stationID = '';
-      
-      if (vehicle.stationID) {
-        stationID = typeof vehicle.stationID === 'object' 
-          ? vehicle.stationID._id || vehicle.stationID 
-          : vehicle.stationID;
-      } else if (vehicle.station) {
-        stationID = typeof vehicle.station === 'object' 
-          ? vehicle.station._id || vehicle.station 
-          : vehicle.station;
+  // Set form data when vehicle or stations data is available
+  useEffect(() => {
+    if (isOpen) {
+      if (vehicle) {
+        // EDIT MODE - Extract stationID from multiple possible locations
+        let stationID = '';
+        
+        if (vehicle.stationID) {
+          stationID = typeof vehicle.stationID === 'object' 
+            ? vehicle.stationID._id || vehicle.stationID 
+            : vehicle.stationID;
+        } else if (vehicle.station) {
+          stationID = typeof vehicle.station === 'object' 
+            ? vehicle.station._id || vehicle.station 
+            : vehicle.station;
+        }
+        
+        // Extract driverID from multiple possible locations
+        let driverID = '';
+        if (vehicle.driverID) {
+          driverID = typeof vehicle.driverID === 'object' 
+            ? vehicle.driverID._id || vehicle.driverID 
+            : vehicle.driverID;
+        } else if (vehicle.driver) {
+          driverID = typeof vehicle.driver === 'object' 
+            ? vehicle.driver._id || vehicle.driver 
+            : vehicle.driver;
+        }
+        
+        setFormData({
+          plateNumber: vehicle.plateNumber || '',
+          carType: vehicle.carType || 'coaster',
+          totalCapacity: vehicle.totalCapacity || '',
+          stationID: stationID,
+          make: vehicle.make || '',
+          model: vehicle.model || '',
+          year: vehicle.year || new Date().getFullYear(),
+          color: vehicle.color || 'white',
+          insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
+          driverID: driverID,
+          fuelType: vehicle.fuelType || 'diesel',
+          features: vehicle.features || [],
+        });
+      } else {
+        // CREATE MODE - Use station from props or user profile
+        let defaultStationID = '';
+        
+        if (userStation?._id) {
+          defaultStationID = userStation._id;
+        } else if (userProfile?.stationID) {
+          defaultStationID = userProfile.stationID;
+        } else if (stations.length > 0) {
+          defaultStationID = stations[0]?._id || '';
+        }
+        
+        setFormData({
+          plateNumber: '',
+          carType: 'coaster',
+          totalCapacity: '',
+          stationID: defaultStationID,
+          make: '',
+          model: '',
+          year: new Date().getFullYear(),
+          color: 'white',
+          insuranceExpiry: '',
+          driverID: '',
+          fuelType: 'diesel',
+          features: [],
+        });
       }
-      
-      // Extract driverID from multiple possible locations
-      let driverID = '';
-      if (vehicle.driverID) {
-        driverID = typeof vehicle.driverID === 'object' 
-          ? vehicle.driverID._id || vehicle.driverID 
-          : vehicle.driverID;
-      } else if (vehicle.driver) {
-        driverID = typeof vehicle.driver === 'object' 
-          ? vehicle.driver._id || vehicle.driver 
-          : vehicle.driver;
-      }
-      
-      setFormData({
-        plateNumber: vehicle.plateNumber || '',
-        carType: vehicle.carType || 'coaster',
-        totalCapacity: vehicle.totalCapacity || '',
-        stationID: stationID,
-        make: vehicle.make || '',
-        model: vehicle.model || '',
-        year: vehicle.year || new Date().getFullYear(),
-        color: vehicle.color || 'white',
-        insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
-        driverID: driverID,
-        fuelType: vehicle.fuelType || 'diesel',
-        features: vehicle.features || [],
-      });
-    } else {
-      // CREATE MODE - Use station from props or user profile
-      let defaultStationID = '';
-      
-      if (userStation?._id) {
-        defaultStationID = userStation._id;
-      } else if (userProfile?.stationID) {
-        defaultStationID = userProfile.stationID;
-      } else if (stations.length > 0) {
-        defaultStationID = stations[0]?._id || '';
-      }
-      
-      setFormData({
-        plateNumber: '',
-        carType: 'coaster',
-        totalCapacity: '',
-        stationID: defaultStationID,
-        make: '',
-        model: '',
-        year: new Date().getFullYear(),
-        color: 'white',
-        insuranceExpiry: '',
-        driverID: '',
-        fuelType: 'diesel',
-        features: [],
-      });
     }
-  }
-}, [isOpen, vehicle, stations, userStation, userProfile]);
+  }, [isOpen, vehicle, stations, userStation, userProfile]);
 
   // Format date for input field
   const formatDateForInput = (dateString) => {
@@ -166,8 +166,11 @@ useEffect(() => {
         usersData = usersRes.data.data;
       }
       
+      // Filter only active drivers
       const driversData = usersData
-        .filter(user => user.role === 'driver' && user.isActive === true);
+        .filter(user => user && user.role === 'driver' && user.isActive === true);
+      
+      console.log('Available drivers:', driversData);
       setDrivers(driversData);
 
     } catch (error) {
