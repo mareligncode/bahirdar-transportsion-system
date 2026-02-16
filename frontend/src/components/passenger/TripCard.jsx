@@ -264,7 +264,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
     );
   }
 
-  // Grid View (default) - FIXED with same improvements
+  // Grid View (default)
   return (
     <Card sx={{ 
       borderRadius: '12px', 
@@ -327,20 +327,6 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             color="error"
             icon={<EventSeat sx={{ fontSize: 14 }} />}
             sx={{ fontWeight: 600, fontSize: '0.7rem' }}
-          />
-        )}
-        {/* Trip Status Badge - ADDED */}
-        {trip.tripStatus && trip.tripStatus !== 'scheduled' && (
-          <Chip 
-            label={t(`trip_status_${trip.tripStatus}`)}
-            size="small"
-            color={
-              trip.tripStatus === 'cancelled' ? 'error' :
-              trip.tripStatus === 'delayed' ? 'warning' :
-              trip.tripStatus === 'completed' ? 'success' :
-              'default'
-            }
-            sx={{ fontWeight: 500, fontSize: '0.75rem' }}
           />
         )}
       </Box>
@@ -442,12 +428,6 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
                   <Person sx={{ fontSize: 12 }} />
                   {t('driver')}: {trip.driver?.fullName || 'N/A'}
                 </Typography>
-                {/* Trip Number - ADDED */}
-                {trip.tripNumber && (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {t('trip')}: {trip.tripNumber}
-                  </Typography>
-                )}
               </Box>
             </Box>
           </Grid>
