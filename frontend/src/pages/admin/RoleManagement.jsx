@@ -58,9 +58,6 @@ export default function RoleManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // ✅ Get initial super admin email from env or use default
-  const SUPER_ADMIN_EMAIL = import.meta.env.VITE_SUPER_ADMIN_EMAIL || 'superadmin@bahirdar.com';
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -72,17 +69,12 @@ export default function RoleManagement() {
       }
 
       const response = await authService.getAllUsers();
-      
-      // ✅ FIXED: Handle response structure correctly
       if (response.success) {
-        // authService.getAllUsers returns { success, data: { users } }
-        const usersData = response.data?.users || response.data || [];
-        setUsers(usersData);
+        setUsers(response.data.users || []);
       } else {
         setMessage({ type: 'error', text: response.message || t('failed_to_fetch_users') });
       }
     } catch (error) {
-      console.error('Fetch users error:', error);
       setMessage({ type: 'error', text: t('failed_to_load_users') });
     } finally {
       setLoading(false);
@@ -216,18 +208,6 @@ export default function RoleManagement() {
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
 
-    // ✅ Prevent self-modification
-    if (selectedUser._id === user?._id) {
-      setMessage({ type: 'error', text: t('cannot_change_own_role') });
-      return;
-    }
-
-    // ✅ Prevent modifying initial super admin
-    if (selectedUser.email === SUPER_ADMIN_EMAIL) {
-      setMessage({ type: 'error', text: t('cannot_modify_super_admin') });
-      return;
-    }
-
     try {
       setChangingRole(true);
       setMessage({ type: '', text: '' });
@@ -304,10 +284,10 @@ export default function RoleManagement() {
         setTimeout(() => {
           setShowChangeRoleModal(false);
           resetForm();
-        }, 1500);
+        }, 300);
         
       } else {
-        setMessage({ type: 'error', text: response.message || t('failed_to_change_role') });
+        setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
       console.error('❌ Role change error:', error);
@@ -319,20 +299,6 @@ export default function RoleManagement() {
 
   const handleToggleStatus = async () => {
     if (!selectedUser) return;
-
-    // ✅ Prevent self-deactivation
-    if (selectedUser._id === user?._id) {
-      setMessage({ type: 'error', text: t('cannot_deactivate_own_account') });
-      setShowConfirmDialog(false);
-      return;
-    }
-
-    // ✅ Prevent deactivating initial super admin
-    if (selectedUser.email === SUPER_ADMIN_EMAIL) {
-      setMessage({ type: 'error', text: t('cannot_modify_super_admin') });
-      setShowConfirmDialog(false);
-      return;
-    }
 
     try {
       setMessage({ type: '', text: '' });
@@ -354,19 +320,11 @@ export default function RoleManagement() {
         );
         
         setShowConfirmDialog(false);
-        
-        setTimeout(() => {
-          setMessage({ type: '', text: '' });
-        }, 3000);
       } else {
-        setMessage({ type: 'error', text: response.message || t('failed_to_update_user_status') });
+        setMessage({ type: 'error', text: response.message });
       }
     } catch (error) {
-      console.error('Toggle status error:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || t('failed_to_update_user_status') 
-      });
+      setMessage({ type: 'error', text: t('failed_to_update_user_status') });
     }
   };
 
@@ -376,20 +334,9 @@ export default function RoleManagement() {
     setLicenseNumber('');
     setStationID('');
     setChangingRole(false);
-    setMessage({ type: '', text: '' });
   };
 
   const openChangeRoleModal = (user) => {
-    // ✅ Check if user can be modified
-    if (!canModifyUser(user)) {
-      if (user._id === user?._id) {
-        setMessage({ type: 'error', text: t('cannot_change_own_role') });
-      } else {
-        setMessage({ type: 'error', text: t('cannot_modify_super_admin') });
-      }
-      return;
-    }
-
     setSelectedUser(user);
     setNewRole(user.role);
     setLicenseNumber(user.licenseNumber || '');
@@ -404,24 +351,9 @@ export default function RoleManagement() {
   };
 
   const openConfirmDialog = (user, type) => {
-    // ✅ Check if user can be modified
-    if (!canModifyUser(user)) {
-      if (user._id === user?._id) {
-        setMessage({ type: 'error', text: t('cannot_deactivate_own_account') });
-      } else {
-        setMessage({ type: 'error', text: t('cannot_modify_super_admin') });
-      }
-      return;
-    }
-
     setSelectedUser(user);
     setActionType(type);
     setShowConfirmDialog(true);
-  };
-
-  const openViewDetails = (user) => {
-    setSelectedUser(user);
-    setShowUserDetails(true);
   };
 
   const exportToCSV = () => {
@@ -499,12 +431,6 @@ export default function RoleManagement() {
             </p>
             <p className="text-sm mt-1">{message.text}</p>
           </div>
-          <button 
-            onClick={() => setMessage({ type: '', text: '' })}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            &times;
-          </button>
         </div>
       )}
 
@@ -603,63 +529,29 @@ export default function RoleManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {currentUsers.map((userItem) => {
-                    const canModify = canModifyUser(userItem);
-                    const isOwnAccount = userItem._id === user?._id;
-                    const isSuperAdminAccount = userItem.email === SUPER_ADMIN_EMAIL;
-                    
-                    return (
-                      <tr key={userItem._id} className="hover:bg-gray-50">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                              <span className="font-semibold text-primary-600">
-                                {userItem.fullName?.charAt(0).toUpperCase() || 'U'}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium flex items-center gap-2">
-                                {userItem.fullName}
-                                {isOwnAccount && (
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                    {t('you')}
-                                  </span>
-                                )}
-                                {isSuperAdminAccount && (
-                                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
-                                    {t('initial_admin')}
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-sm text-gray-500">{t('id')}: {userItem._id.substring(0, 8)}...</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <p className="font-medium">{userItem.email}</p>
-                          <p className="text-sm text-gray-500">{userItem.phoneNumber || t('na')}</p>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`p-1 rounded ${getRoleColor(userItem.role)}`}>
-                              {getRoleIcon(userItem.role)}
+                  {currentUsers.map((userItem) => (
+                    <tr key={userItem._id} className="hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span className="font-semibold text-primary-600">
+                              {userItem.fullName?.charAt(0).toUpperCase() || 'U'}
                             </span>
-                            <span className="font-medium">{getRoleDisplay(userItem.role)}</span>
                           </div>
-                          {userItem.licenseNumber && (
-                            <p className="text-xs text-gray-500 mt-1">{t('license')}: {userItem.licenseNumber}</p>
-                          )}
-                          {userItem.stationID && (
-                            <p className="text-xs text-gray-500 mt-1">{t('station')}: {userItem.stationID}</p>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            userItem.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {userItem.isActive ? t('active') : t('inactive')}
+                          <div>
+                            <p className="font-medium">{userItem.fullName}</p>
+                            <p className="text-sm text-gray-500">{t('id')}: {userItem._id.substring(0, 8)}...</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <p className="font-medium">{userItem.email}</p>
+                        <p className="text-sm text-gray-500">{userItem.phoneNumber || t('na')}</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`p-1 rounded ${getRoleColor(userItem.role)}`}>
+                            {getRoleIcon(userItem.role)}
                           </span>
                           <span className="font-medium">{getRoleDisplay(userItem.role)}</span>
                         </div>
@@ -736,14 +628,14 @@ export default function RoleManagement() {
                   <option value="100">100</option>
                 </select>
                 <span className="text-sm text-gray-600 ml-4">
-                  {t('showing')} {filteredUsers.length > 0 ? indexOfFirstUser + 1 : 0} {t('to')} {Math.min(indexOfLastUser, filteredUsers.length)} {t('of')} {filteredUsers.length} {t('users')}
+                  {t('showing')} {indexOfFirstUser + 1} {t('to')} {Math.min(indexOfLastUser, filteredUsers.length)} {t('of')} {filteredUsers.length} {t('users')}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => goToPage(1)}
-                  disabled={currentPage === 1 || filteredUsers.length === 0}
+                  disabled={currentPage === 1}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('first_page')}
                 >
@@ -751,7 +643,7 @@ export default function RoleManagement() {
                 </button>
                 <button
                   onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1 || filteredUsers.length === 0}
+                  disabled={currentPage === 1}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('previous_page')}
                 >
@@ -759,7 +651,7 @@ export default function RoleManagement() {
                 </button>
                 
                 <div className="flex items-center gap-1">
-                  {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNumber;
                     if (totalPages <= 5) {
                       pageNumber = i + 1;
@@ -789,7 +681,7 @@ export default function RoleManagement() {
 
                 <button
                   onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages || filteredUsers.length === 0}
+                  disabled={currentPage === totalPages}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('next_page')}
                 >
@@ -797,7 +689,7 @@ export default function RoleManagement() {
                 </button>
                 <button
                   onClick={() => goToPage(totalPages)}
-                  disabled={currentPage === totalPages || filteredUsers.length === 0}
+                  disabled={currentPage === totalPages}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('last_page')}
                 >
@@ -1001,12 +893,12 @@ export default function RoleManagement() {
                   <p className="text-sm text-gray-600">{t('user')}:</p>
                   <p className="font-medium">{selectedUser.fullName}</p>
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t('current_role')}: {getRoleDisplay(selectedUser.role)}</p>
+                  <p className="text-xs text-gray-400">{t('current_role')}: {getRoleDisplay(selectedUser.role)}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('new_role')} *
+                    {t('new_role')}
                   </label>
                   <select
                     value={newRole}
@@ -1121,16 +1013,6 @@ export default function RoleManagement() {
                     )}
                   </div>
                 )}
-
-                {message.text && (
-                  <div className={`p-3 rounded-lg text-sm ${
-                    message.type === 'error' 
-                      ? 'bg-red-50 text-red-700 border border-red-200' 
-                      : 'bg-green-50 text-green-700 border border-green-200'
-                  }`}>
-                    {message.text}
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
@@ -1196,20 +1078,14 @@ export default function RoleManagement() {
                 </h3>
               </div>
 
-              <p className="text-gray-600 mb-2">
+              <p className="text-gray-600 mb-6">
                 {actionType === 'deactivate' 
                   ? t('deactivate_confirmation', { name: selectedUser.fullName })
                   : t('activate_confirmation', { name: selectedUser.fullName })
                 }
               </p>
-              
-              {actionType === 'deactivate' && selectedUser.role === 'super_admin' && (
-                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                  {t('deactivate_super_admin_warning')}
-                </p>
-              )}
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowConfirmDialog(false)}
                   className="btn-secondary"
