@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, User, Bell, LogOut, MapPin, Bus, Settings } from 'lucide-react';
+import { Menu, User, LogOut, MapPin, Bus, Settings } from 'lucide-react'; // Removed Bell from here
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from '../../hooks/useTranslation';
+import NotificationBell from '../notifications/NotificationBell'; // ✅ ADD THIS
 
 export default function Header() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -201,14 +202,9 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Notification Button */}
+              {/* Notification Bell - REPLACED the old notification button with this */}
               {isAuthenticated && user && (
-                <button className="relative p-2 rounded-full hover:bg-white/20 transition-colors">
-                  <Bell className="w-5 h-5 text-white" />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    0
-                  </span>
-                </button>
+                <NotificationBell />
               )}
 
               {/* User Info */}

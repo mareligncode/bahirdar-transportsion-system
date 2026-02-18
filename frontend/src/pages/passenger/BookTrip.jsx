@@ -259,11 +259,14 @@ export default function BookTrip() {
     setPaymentStatus('success');
     toast.success(t('Payment completed successfully!'));
     
-    // Redirect to my bookings after a short delay
+    // Get the first booking ID to show in confirmation
+    const bookingId = createdBookings[0]?._id;
+    
+    // Redirect to booking confirmation page
     setTimeout(() => {
-      navigate('/passenger/my-bookings');
-    }, 2000);
-  }, [navigate, t]);
+      navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
+    }, 1500);
+  }, [navigate, createdBookings]);
 
   const handlePaymentError = useCallback((error) => {
     console.error('Payment error in BookTrip:', error);
@@ -302,7 +305,8 @@ export default function BookTrip() {
   const handleClosePaymentDialog = () => {
     setPaymentDialogOpen(false);
     if (paymentStatus === 'success') {
-      navigate('/passenger/my-bookings');
+      const bookingId = createdBookings[0]?._id;
+      navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
     } else {
       setPaymentStatus(null);
     }
@@ -521,7 +525,7 @@ export default function BookTrip() {
                 {t('Your booking has been confirmed.')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                {t('Redirecting to your bookings...')}
+                {t('Redirecting to confirmation page...')}
               </Typography>
             </>
           ) : (
@@ -544,7 +548,7 @@ export default function BookTrip() {
               fullWidth
               color={paymentStatus === 'success' ? 'success' : 'primary'}
             >
-              {paymentStatus === 'success' ? t('View My Bookings') : t('Close')}
+              {paymentStatus === 'success' ? t('View Confirmation') : t('Close')}
             </Button>
           </DialogActions>
         )}

@@ -10,7 +10,8 @@ import connectDB from './config/database.js'
 import tripRoutes from './routes/tripRoutes.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
-   connectDB()
+import notificationRoutes from './routes/notificationRoutes.js'
+connectDB()
    initSuperAdmin()
 
 const PORT = process.env.PORT || 5000
@@ -64,7 +65,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/trip', tripRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/payment',paymentRoutes)
-
+app.use('/api/notifications', notificationRoutes);
 // Socket.io instance for use in controllers
 app.set('io', io);
 

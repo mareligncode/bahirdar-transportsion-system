@@ -60,6 +60,9 @@ const PaymentButton = ({
 
       if (paymentResult?.checkoutUrl) {
         console.log('🔗 Redirecting to:', paymentResult.checkoutUrl);
+        // Store booking ID in sessionStorage before redirect
+        sessionStorage.setItem('pendingBookingId', bookingId);
+        console.log('💾 Saved booking ID to sessionStorage:', bookingId);
         window.location.href = paymentResult.checkoutUrl;
       } else {
         throw new Error('No checkout URL received from server');
