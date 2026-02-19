@@ -8,13 +8,13 @@ export const register = async (req, res) => {
         const { fullName, email, phoneNumber, password } = req.body;
 
         const existingUser = await User.findOne({
-            $or: [{ email }, { phoneNumber }]
+            email
         });
 
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'User with this email or phone already exists'
+                message: 'User with this email already exists'
             });
         }
 
@@ -230,17 +230,18 @@ export const updateProfile = async (req, res) => {
         // Update fields if provided
         if (fullName) user.fullName = fullName;
         if (phoneNumber) {
-            // Check if phone number is already taken by another user
-            const existingUser = await User.findOne({
-                phoneNumber,
-                _id: { $ne: userId }
-            });
-            if (existingUser) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Phone number already in use'
-                });
-            }
+
+            // // Check if phone number is already taken by another user
+            // const existingUser = await User.findOne({
+            //     phoneNumber,
+            //     _id: { $ne: userId }
+            // });
+            // if (existingUser) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         message: 'Phone number already in use'
+            //     });
+            // }
             user.phoneNumber = phoneNumber;
         }
         if (emergencyContact !== undefined) user.emergencyContact = emergencyContact;
