@@ -34,7 +34,8 @@ import {
   Stack,
   Tooltip,
   CircularProgress,
-  TablePagination
+  TablePagination,
+  Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -51,7 +52,8 @@ import {
   Cancel as CancelIcon,
   MoreVert as MoreIcon,
   ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon
+  ArrowDownward as ArrowDownIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -65,6 +67,7 @@ const Trips = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [formData, setFormData] = useState({
     origin: '',
@@ -710,6 +713,11 @@ const Trips = () => {
     }
   };
 
+  const openViewDetails = (trip) => {
+    setSelectedTrip(trip);
+    setOpenViewDialog(true);
+  };
+
   const openDeleteConfirmation = (trip) => {
     setSelectedTrip(trip);
     setOpenDeleteDialog(true);
@@ -1057,7 +1065,7 @@ const Trips = () => {
                         <Tooltip title={t('View Details')}>
                           <IconButton
                             size="medium"
-                            onClick={() => navigate(`/trips/${trip._id}`)}
+                            onClick={() => openViewDetails(trip)}
                           >
                             <ViewIcon />
                           </IconButton>
@@ -1498,6 +1506,304 @@ const Trips = () => {
           <Button onClick={() => setOpenStatusDialog(false)}>{t('Cancel')}</Button>
           <Button onClick={handleUpdateStatus} variant="contained">
             {t('Update Status')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Trip Details Dialog */}
+      <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h5">{t('Trip Details')}</Typography>
+            <IconButton onClick={() => setOpenViewDialog(false)} size="small">
+              <ArrowBackIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedTrip && (
+            <Box sx={{ py: 2 }}>
+              {/* Trip Status Banner */}
+              <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.50' }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={6}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Chip
+                        label={selectedTrip.tripStatus}
+                        color={getStatusColor(selectedTrip.tripStatus)}
+                        size="large"
+                        sx={{ fontSize: '1rem', py: 2 }}
+                      />
+                      <Chip
+                        label={selectedTrip.isActive ? t('Active') : t('Inactive')}
+                        color={selectedTrip.isActive ? 'success' : 'error'}
+                        variant="outlined"
+                        size="large"
+                        sx={{ fontSize: '1rem', py: 2 }}
+                      />
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="textSecondary" align="right">
+                      {t('Trip ID')}: <strong>{selectedTrip._id}</strong>
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Route Information */}
+              <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                <LocationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                {t('Route Information')}
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Origin Station')}
+                      </Typography>
+                      <Typography variant="h6" gutterBottom>
+                        {getStationName(selectedTrip.origin)}
+                      </Typography>
+                      {typeof selectedTrip.origin === 'object' && (
+                        <Typography variant="body2" color="textSecondary">
+                          {selectedTrip.origin?.city}, {selectedTrip.origin?.address}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Destination Station')}
+                      </Typography>
+                      <Typography variant="h6" gutterBottom>
+                        {getStationName(selectedTrip.destination)}
+                      </Typography>
+                      {typeof selectedTrip.destination === 'object' && (
+                        <Typography variant="body2" color="textSecondary">
+                          {selectedTrip.destination?.city}, {selectedTrip.destination?.address}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Schedule Information */}
+              <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+                <ScheduleIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                {t('Schedule Information')}
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Departure Time')}
+                      </Typography>
+                      <Typography variant="h6">
+                        {formatDate(selectedTrip.departureTime)}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Arrival Time')}
+                      </Typography>
+                      <Typography variant="h6">
+                        {formatDate(selectedTrip.arrivalTime)}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Duration')}
+                      </Typography>
+                      <Typography variant="h6">
+                        {formatDuration(selectedTrip.estimatedDuration)}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Vehicle & Driver Information */}
+              <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+                <BusIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                {t('Vehicle & Driver')}
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Vehicle Details')}
+                      </Typography>
+                      {selectedTrip.vehicle ? (
+                        <>
+                          <Typography variant="h6" gutterBottom>
+                            {selectedTrip.vehicle.plateNumber}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('Type')}: {selectedTrip.vehicle.carType || t('N/A')}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('Capacity')}: {selectedTrip.vehicle.totalCapacity} {t('seats')}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('Color')}: {selectedTrip.vehicle.color || t('N/A')}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="textSecondary">
+                          {t('Vehicle information not available')}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Driver Details')}
+                      </Typography>
+                      {selectedTrip.driver ? (
+                        <>
+                          <Typography variant="h6" gutterBottom>
+                            {getDriverName(selectedTrip.driver)}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('License')}: {selectedTrip.driver.licenseNumber || t('N/A')}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('Phone')}: {selectedTrip.driver.phoneNumber || t('N/A')}
+                          </Typography>
+                          <Typography variant="body2">
+                            {t('Email')}: {selectedTrip.driver.email || t('N/A')}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="textSecondary">
+                          {t('Driver information not available')}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Seats & Price Information */}
+              <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+                <MoneyIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                {t('Seats & Pricing')}
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Total Seats')}
+                      </Typography>
+                      <Typography variant="h4" color="primary">
+                        {selectedTrip.totalSeats || 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Available Seats')}
+                      </Typography>
+                      <Typography variant="h4" color={selectedTrip.availableSeats > 0 ? 'success' : 'error'}>
+                        {selectedTrip.availableSeats || 0}
+                      </Typography>
+                      {selectedTrip.totalSeats > 0 && (
+                        <LinearProgress
+                          variant="determinate"
+                          value={((selectedTrip.availableSeats || 0) / selectedTrip.totalSeats) * 100}
+                          sx={{ height: 8, borderRadius: 4, mt: 2 }}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        {t('Price per Seat')}
+                      </Typography>
+                      <Typography variant="h4" color="success">
+                        ${selectedTrip.price || 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Route Points */}
+              {selectedTrip.routePoints && selectedTrip.routePoints.length > 0 && (
+                <>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+                    <LocationIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    {t('Route Stops')}
+                  </Typography>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        {selectedTrip.routePoints.map((point, index) => (
+                          <Grid item xs={12} sm={6} md={4} key={index}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label={index + 1}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                              <Typography>{point}</Typography>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {/* Notes */}
+              {selectedTrip.notes && (
+                <>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+                    {t('Additional Notes')}
+                  </Typography>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="body1">
+                        {selectedTrip.notes}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenViewDialog(false)} variant="contained">
+            {t('Close')}
           </Button>
         </DialogActions>
       </Dialog>
