@@ -5,7 +5,7 @@ import { authMiddleware } from '../middleware/auth.js';
 const router = express.Router();
 
 // Apply auth middleware to all routes
-router.use(authMiddleware);
+router.use(authMiddleware());        // no role restriction
 
 // User notification routes
 router.get('/', NotificationController.getUserNotifications);
