@@ -49,18 +49,23 @@ export const createBooking = async (req, res) => {
                 message: `Seat ${seatNumber} is already booked`
             });
         }
-        const existingPassengerBooking = await Booking.findOne({
-            tripID,
-            passengerID: req.user.id,
-            status: { $in: ['pending', 'confirmed'] }
-        });
+        // Note: Removed restriction that prevented users from booking multiple seats per trip
+        // This allows users to book multiple seats for family/group travel
+        // The system now only prevents booking the same specific seat number twice
 
-        if (existingPassengerBooking) {
-            return res.status(400).json({
-                success: false,
-                message: 'You already have a booking for this trip'
-            });
-        }
+
+        // const existingPassengerBooking = await Booking.findOne({
+        //     tripID,
+        //     passengerID: req.user.id,
+        //     status: { $in: ['pending', 'confirmed'] }
+        // });
+
+        // if (existingPassengerBooking) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'You already have a booking for this trip'
+        //     });
+        // }
 
         const booking = new Booking({
             passengerID: req.user.id,
