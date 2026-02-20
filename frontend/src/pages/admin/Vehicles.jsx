@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, CreditCard, Phone, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import VehicleModal from './VehicleModal';
@@ -112,6 +112,20 @@ export default function Vehicles() {
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  // Format phone number
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return 'N/A';
+    return phone;
+  };
+
+  // Format bank details
+  const formatBankDetails = (ownerDetails) => {
+    if (!ownerDetails?.bankDetails) return 'N/A';
+    const { bankName, accountNumber } = ownerDetails.bankDetails;
+    if (!bankName && !accountNumber) return 'N/A';
+    return `${bankName || 'Unknown Bank'} - ${accountNumber ? `****${accountNumber.slice(-4)}` : 'No Account'}`;
   };
 
   // Pagination calculations
@@ -275,6 +289,9 @@ export default function Vehicles() {
                       Driver & Station
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Owner Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Maintenance
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -307,6 +324,9 @@ export default function Vehicles() {
                           <div className="text-sm text-gray-600">
                             Fuel: {vehicle.fuelType} • {vehicle.make} {vehicle.model}
                           </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Color: {vehicle.color || 'N/A'}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -326,6 +346,32 @@ export default function Vehicles() {
                             </div>
                           )}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {vehicle.ownerDetails ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm font-medium">
+                                {vehicle.ownerDetails.ownerName}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {formatPhoneNumber(vehicle.ownerDetails.phoneNumber)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-4 h-4 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {formatBankDetails(vehicle.ownerDetails)}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">No owner details</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm">
