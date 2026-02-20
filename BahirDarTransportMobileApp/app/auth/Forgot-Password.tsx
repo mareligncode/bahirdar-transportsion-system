@@ -11,7 +11,7 @@ import {
   Keyboard,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +32,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPassword() {
+  const insets = useSafeAreaInsets();
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,34 +50,33 @@ export default function ForgotPassword() {
     },
   });
 
-const handleForgotPassword = async (data: ForgotPasswordFormData) => {
-  setLoading(true);
-  setSubmittedEmail(data.email);
-  
-  try {
-    console.log('📱 Forgot password request for:', data.email);
+  const handleForgotPassword = async (data: ForgotPasswordFormData) => {
+    setLoading(true);
+    setSubmittedEmail(data.email);
     
-    // 🟢🟢🟢 SHOW SUCCESS SCREEN IMMEDIATELY 🟢🟢🟢
-    // Don't await - let it happen in the background
-    forgotPasswordFn(data.email)
-      .then(result => {
-        console.log('✅ Background API call completed:', result);
-      })
-      .catch(error => {
-        console.error('❌ Background API call failed (user already sees success):', error);
-      });
-    
-    // Show success screen immediately without waiting
-    setSubmitted(true);
-    
-  } catch (error: any) {
-    console.error('❌ Forgot password error:', error);
-    // Still show success screen
-    setSubmitted(true);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      console.log('📱 Forgot password request for:', data.email);
+      
+      // Show success screen immediately without waiting
+      forgotPasswordFn(data.email)
+        .then(result => {
+          console.log('✅ Background API call completed:', result);
+        })
+        .catch(error => {
+          console.error('❌ Background API call failed (user already sees success):', error);
+        });
+      
+      // Show success screen immediately
+      setSubmitted(true);
+      
+    } catch (error: any) {
+      console.error('❌ Forgot password error:', error);
+      // Still show success screen
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openEmailApp = () => {
     Linking.openURL('mailto:').catch(() => {
@@ -89,16 +89,25 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
   };
 
   if (loading) {
-    return <Loader message="Sending reset instructions..." />;
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="flex-1 items-center justify-center">
+          <Loader message="Sending reset instructions..." />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (submitted) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <ScrollView 
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ 
+            flexGrow: 1,
+            paddingBottom: insets.bottom + 40 
+          }}
         >
           <View className="flex-1 items-center justify-center px-6 py-8">
             {/* Success Icon */}
@@ -189,7 +198,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
               </Text>
             </View>
 
-            {/* Action Buttons - FIXED: Removed icon prop */}
+            {/* Action Buttons */}
             <View className="w-full space-y-3">
               <TouchableOpacity
                 onPress={openEmailApp}
@@ -233,7 +242,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -241,7 +250,10 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
           <ScrollView 
             className="flex-1" 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={{ 
+              flexGrow: 1,
+              paddingBottom: insets.bottom + 40 
+            }}
           >
             <View className="px-6 pt-4 pb-8">
               {/* Header with Back Button */}

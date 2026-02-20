@@ -11,6 +11,8 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'title'> {
   title?: string;
   loading?: boolean;
   disabled?: boolean;
+  icon?: React.ReactNode; 
+  className?: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
@@ -32,7 +34,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   
-  // 🟢 FIX: Use static class mappings, NOT dynamic strings
+  // Use static class mappings
   const variantClasses = {
     primary: 'bg-blue-600',
     secondary: 'bg-gray-600',
@@ -72,16 +74,26 @@ export function Button({
   const textVariantClass = textVariantClasses[variant] || textVariantClasses.primary;
   const textSizeClass = textSizeClasses[size] || textSizeClasses.medium;
 
+  // Build className safely - use conditional logic instead of template literals with booleans
+  let buttonClassName = 'rounded-lg items-center justify-center flex-row';
+  buttonClassName += ` ${variantClass}`;
+  buttonClassName += ` ${sizeClass}`;
+  
+  if (fullWidth) {
+    buttonClassName += ' w-full';
+  }
+  
+  if (isDisabled) {
+    buttonClassName += ' opacity-50';
+  }
+  
+  if (className) {
+    buttonClassName += ` ${className}`;
+  }
+
   return (
     <TouchableOpacity
-      className={`
-        rounded-lg items-center justify-center flex-row
-        ${variantClass}
-        ${sizeClass}
-        ${fullWidth ? 'w-full' : ''}
-        ${isDisabled ? 'opacity-50' : 'opacity-100'}
-        ${className}
-      `}
+      className={buttonClassName}
       onPress={onPress}
       activeOpacity={isDisabled ? 1 : 0.7}
       disabled={isDisabled}
@@ -96,11 +108,7 @@ export function Button({
         <>
           {leftIcon && <View className="mr-2">{leftIcon}</View>}
           {typeof buttonContent === 'string' ? (
-            <Text className={`
-              font-semibold
-              ${textVariantClass}
-              ${textSizeClass}
-            `}>
+            <Text className={`font-semibold ${textVariantClass} ${textSizeClass}`}>
               {buttonContent}
             </Text>
           ) : (

@@ -21,6 +21,9 @@ interface SelectProps {
   placeholder?: string;
   leftIcon?: React.ReactNode;
   className?: string;
+    loading?: boolean;  
+  error?: string;     
+  disabled?: boolean;
 }
 
 export function Select({

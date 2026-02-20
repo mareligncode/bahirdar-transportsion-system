@@ -1,4 +1,4 @@
-// components/common/EmptyState.tsx
+ // components/common/EmptyState.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
@@ -8,6 +8,7 @@ interface EmptyStateProps {
   message?: string;
   description?: string;
   buttonText?: string;
+  buttonTitle?: string; 
   onButtonPress?: () => void;
   children?: React.ReactNode;
   actionLabel?: string;

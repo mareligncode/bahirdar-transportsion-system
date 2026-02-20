@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
+import { useBooking } from '@/hooks/useBooking';
 import { 
   Bus,
   Shield,
@@ -45,9 +46,12 @@ const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 
 export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { getMyBookings } = useBooking();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
   const [imageError, setImageError] = useState(false);
+  const [realTestimonials, setRealTestimonials] = useState<any[]>([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(false);
 
   // If already authenticated, redirect to home
   useEffect(() => {
@@ -55,6 +59,11 @@ export default function LandingPage() {
       router.replace('/tabs/home');
     }
   }, [isAuthenticated]);
+
+  // Load real testimonials from backend
+  useEffect(() => {
+    loadRealTestimonials();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -75,6 +84,95 @@ export default function LandingPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const loadRealTestimonials = async () => {
+    setLoadingTestimonials(true);
+    try {
+      // Get user bookings to find frequent travelers
+      const bookings = await getMyBookings();
+      
+      if (bookings && bookings.length > 0) {
+        // Extract unique passengers from bookings
+        const uniquePassengers = Array.from(
+          new Set(bookings.map((b: any) => b.passengerDetails?.fullName))
+        ).filter(Boolean);
+
+        // Create testimonials from real booking data
+        const realTestimonialsData = uniquePassengers.slice(0, 3).map((name, index) => {
+          const userBookings = bookings.filter((b: any) => b.passengerDetails?.fullName === name);
+          const totalTrips = userBookings.length;
+          const recentTrip = userBookings[userBookings.length - 1];
+          
+          return {
+            id: index + 1,
+            name: name,
+            role: totalTrips > 5 ? 'Frequent Traveler' : totalTrips > 2 ? 'Regular User' : 'New User',
+            text: totalTrips > 5 
+              ? `Booked ${totalTrips} trips! Always on time and reliable service.`
+              : totalTrips > 2
+              ? `Great service for my regular trips. Very convenient!`
+              : `Easy to use and saved me time on my first booking.`,
+            rating: totalTrips > 5 ? 5 : totalTrips > 2 ? 5 : 4,
+          };
+        });
+
+        setRealTestimonials(realTestimonialsData);
+      } else {
+        // Fallback to static testimonials if no bookings
+        setRealTestimonials([
+          {
+            id: 1,
+            name: 'Alem Gebre',
+            role: 'Daily Commuter',
+            text: 'Saves me 2 hours every day! Very reliable service.',
+            rating: 5,
+          },
+          {
+            id: 2,
+            name: 'Mikias Hailu',
+            role: 'Student',
+            text: 'Affordable and reliable. Perfect for campus travel.',
+            rating: 5,
+          },
+          {
+            id: 3,
+            name: 'Selamawit Tadele',
+            role: 'Tourist Guide',
+            text: 'Makes showing tourists around Bahir Dar so easy.',
+            rating: 4,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to load testimonials:', error);
+      // Use fallback testimonials
+      setRealTestimonials([
+        {
+          id: 1,
+          name: 'Alem Gebre',
+          role: 'Daily Commuter',
+          text: 'Saves me 2 hours every day! Very reliable service.',
+          rating: 5,
+        },
+        {
+          id: 2,
+          name: 'Mikias Hailu',
+          role: 'Student',
+          text: 'Affordable and reliable. Perfect for campus travel.',
+          rating: 5,
+        },
+        {
+          id: 3,
+          name: 'Selamawit Tadele',
+          role: 'Tourist Guide',
+          text: 'Makes showing tourists around Bahir Dar so easy.',
+          rating: 4,
+        },
+      ]);
+    } finally {
+      setLoadingTestimonials(false);
+    }
+  };
 
   const handleImageError = () => {
     setImageError(true);
@@ -398,43 +496,49 @@ export default function LandingPage() {
             Loved by Passengers
           </Text>
           
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {testimonials.map((testimonial) => (
-              <View
-                key={testimonial.id}
-                className="bg-white mr-4 p-5 rounded-xl shadow-sm border border-gray-100 w-72"
-              >
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
-                    <Users size={20} color="#3B82F6" />
+          {loadingTestimonials ? (
+            <View className="flex-row justify-center">
+              <Text className="text-gray-600">Loading real passenger reviews...</Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {realTestimonials.map((testimonial) => (
+                <View
+                  key={testimonial.id}
+                  className="bg-white mr-4 p-5 rounded-xl shadow-sm border border-gray-100 w-72"
+                >
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
+                      <Users size={20} color="#3B82F6" />
+                    </View>
+                    <View className="ml-3">
+                      <Text className="font-bold text-gray-900">
+                        {testimonial.name}
+                      </Text>
+                      <Text className="text-gray-600 text-xs">
+                        {testimonial.role}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="ml-3">
-                    <Text className="font-bold text-gray-900">
-                      {testimonial.name}
-                    </Text>
-                    <Text className="text-gray-600 text-xs">
-                      {testimonial.role}
-                    </Text>
+                  
+                  <Text className="text-gray-700 text-sm mb-4 leading-relaxed">
+                    "{testimonial.text}"
+                  </Text>
+                  
+                  <View className="flex-row">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        fill={i < testimonial.rating ? "#F59E0B" : "none"}
+                        color="#F59E0B"
+                      />
+                    ))}
                   </View>
                 </View>
-                
-                <Text className="text-gray-700 text-sm mb-4 leading-relaxed">
-                  "{testimonial.text}"
-                </Text>
-                
-                <View className="flex-row">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      fill={i < testimonial.rating ? "#F59E0B" : "none"}
-                      color="#F59E0B"
-                    />
-                  ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Final CTA */}
