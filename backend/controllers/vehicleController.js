@@ -63,6 +63,17 @@ export const createVehicle = async (req, res) => {
             }
         }
 
+        // Validate owner details for new vehicles
+        const { ownerDetails } = req.body;
+        if (!ownerDetails || !ownerDetails.ownerName || !ownerDetails.phoneNumber || 
+            !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber || 
+            !ownerDetails.bankDetails.bankName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Owner details are required for new vehicles'
+            });
+        }
+
         // Create new vehicle
         const vehicle = new Vehicle({
             plateNumber,
@@ -77,6 +88,7 @@ export const createVehicle = async (req, res) => {
             driverID,
             fuelType,
             features,
+            ownerDetails,//new
             createdBy: req.user._id,
             currentStatus: driverID ? 'active' : 'available'
         });
@@ -522,6 +534,19 @@ export const updateVehicle = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     message: 'Invalid driver ID or driver is not active'
+                });
+            }
+        }
+
+        // Validate owner details if being updated
+        if (updateData.ownerDetails) {
+            const { ownerDetails } = updateData;
+            if (!ownerDetails.ownerName || !ownerDetails.phoneNumber || 
+                !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber || 
+                !ownerDetails.bankDetails.bankName) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All owner details fields are required'
                 });
             }
         }
