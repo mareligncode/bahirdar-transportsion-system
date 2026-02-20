@@ -73,6 +73,33 @@ const vehicleSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    ownerDetails: {
+        ownerName: {
+            type: String,
+            required: [true, 'Owner name is required'],
+            trim: true
+        },
+        phoneNumber: {
+            type: String,
+            required: [true, 'Owner phone number is required'],
+            trim: true,
+            match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number']
+        },
+        bankDetails: {
+            accountNumber: {
+                type: String,
+                required: [true, 'Bank account number is required'],
+                trim: true
+            },
+            bankName: {
+                type: String,
+                required: [true, 'Bank name is required'],
+                trim: true
+            }
+           
+        }
+    },
+
     maintenanceLog: [{
         date: {
             type: Date,
