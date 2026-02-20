@@ -1,30 +1,28 @@
-// BahirDarTransportMobileApp\lib\storage.ts - UPDATED
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StorageKeys = {
-  ACCESS_TOKEN: 'access_token',
+  ACCESS_TOKEN: 'auth_token',
   REFRESH_TOKEN: 'refresh_token',
   USER_DATA: 'user_data',
   IS_LOGGED_IN: 'is_logged_in',
 } as const;
 
 export const storage = {
-  // Token Management - FIXED
+  // Token Management
   async storeToken(token: string): Promise<void> {
     try {
-      console.log('💾 [storeToken] Storing token:', token.substring(0, 20) + '...');
+      console.log('💾 [storeToken] Storing token');
       await AsyncStorage.setItem(StorageKeys.ACCESS_TOKEN, token);
-      console.log('✅ [storeToken] Token stored successfully');
+      console.log('✅ [storeToken] Token stored');
     } catch (error) {
       console.error('❌ [storeToken] Error:', error);
-      throw error;
     }
   },
 
   async getToken(): Promise<string | null> {
     try {
       const token = await AsyncStorage.getItem(StorageKeys.ACCESS_TOKEN);
-      console.log('🔍 [getToken] Retrieved:', token ? token.substring(0, 20) + '...' : 'null');
+      console.log('🔍 [getToken] Retrieved:', token ? 'yes' : 'null');
       return token;
     } catch (error) {
       console.error('❌ [getToken] Error:', error);
@@ -34,54 +32,45 @@ export const storage = {
 
   async storeRefreshToken(token: string): Promise<void> {
     try {
-      console.log('💾 [storeRefreshToken] Storing refresh token');
       await AsyncStorage.setItem(StorageKeys.REFRESH_TOKEN, token);
-      console.log('✅ [storeRefreshToken] Refresh token stored');
+      console.log('✅ [storeRefreshToken] Stored');
     } catch (error) {
       console.error('❌ [storeRefreshToken] Error:', error);
-      throw error;
     }
   },
 
   async getRefreshToken(): Promise<string | null> {
     try {
-      const token = await AsyncStorage.getItem(StorageKeys.REFRESH_TOKEN);
-      console.log('🔍 [getRefreshToken] Retrieved:', token ? 'yes' : 'null');
-      return token;
+      return await AsyncStorage.getItem(StorageKeys.REFRESH_TOKEN);
     } catch (error) {
       console.error('❌ [getRefreshToken] Error:', error);
       return null;
     }
   },
 
-  // User Data Management - FIXED
+  // User Data Management
   async storeUser(user: any): Promise<void> {
     try {
-      console.log('💾 [storeUser] Storing user:', {
-        id: user.id,
-        email: user.email,
-        name: user.fullName || user.name
-      });
-      
+      console.log('💾 [storeUser] Storing user:', user?.email);
       const userData = JSON.stringify(user);
       await AsyncStorage.setItem(StorageKeys.USER_DATA, userData);
       await AsyncStorage.setItem(StorageKeys.IS_LOGGED_IN, 'true');
-      
-      console.log('✅ [storeUser] User stored successfully');
+      console.log('✅ [storeUser] User stored');
     } catch (error) {
       console.error('❌ [storeUser] Error:', error);
-      throw error;
     }
   },
 
   async getUser(): Promise<any | null> {
     try {
       const userString = await AsyncStorage.getItem(StorageKeys.USER_DATA);
-      console.log('🔍 [getUser] Retrieved:', userString ? 'yes' : 'null');
-      
-      if (!userString) return null;
+      if (!userString) {
+        console.log('🔍 [getUser] No user data found');
+        return null;
+      }
       
       const user = JSON.parse(userString);
+      console.log('🔍 [getUser] Retrieved:', user?.email);
       return user;
     } catch (error) {
       console.error('❌ [getUser] Error:', error);
@@ -92,17 +81,18 @@ export const storage = {
   // Auth State
   async isLoggedIn(): Promise<boolean> {
     try {
-      const isLoggedIn = await AsyncStorage.getItem(StorageKeys.IS_LOGGED_IN);
-      const result = isLoggedIn === 'true';
-      console.log('🔍 [isLoggedIn] Result:', result);
-      return result;
+      const token = await this.getToken();
+      const user = await this.getUser();
+      const isLoggedIn = !!(token && user);
+      console.log('🔍 [isLoggedIn] Result:', isLoggedIn);
+      return isLoggedIn;
     } catch (error) {
       console.error('❌ [isLoggedIn] Error:', error);
       return false;
     }
   },
 
-  // Clear all auth data
+  // Remove tokens
   async removeTokens(): Promise<void> {
     try {
       console.log('🧹 [removeTokens] Clearing tokens...');
@@ -115,11 +105,10 @@ export const storage = {
       console.log('✅ [removeTokens] Tokens cleared');
     } catch (error) {
       console.error('❌ [removeTokens] Error:', error);
-      throw error;
     }
   },
 
-  // Clear everything (for logout)
+  // Clear everything
   async clearAll(): Promise<void> {
     try {
       console.log('🧹 [clearAll] Clearing all storage...');
@@ -127,7 +116,6 @@ export const storage = {
       console.log('✅ [clearAll] All storage cleared');
     } catch (error) {
       console.error('❌ [clearAll] Error:', error);
-      throw error;
     }
   },
 };

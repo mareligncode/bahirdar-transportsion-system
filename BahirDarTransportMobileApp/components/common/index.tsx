@@ -4,7 +4,7 @@ export { Card } from './Card';
 export { EmptyState } from './EmptyState';
 export { IconButton } from './IconButton';
 export { Input } from './Input';
-export { Loader } from './Loader';
+export {Loader, Spinner, PageLoader, ContentLoader } from './Loader';
 export { PasswordRequirements } from './passwordRequirements';
 export { Select } from './Select';
 export { Toast } from './Toast';

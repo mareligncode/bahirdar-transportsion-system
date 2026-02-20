@@ -1,9 +1,19 @@
 import { COLORS } from '../constants/colors';
 
-// Define the theme structure first
+// Define proper types for nested color objects
+type SeatColors = typeof COLORS.seat;
+type TripStatusColors = typeof COLORS.tripStatus;
+type BookingColors = typeof COLORS.booking;
+
+// Define the theme structure with proper typing
 const theme = {
-  // Colors
-  colors: COLORS,
+  // Colors - properly typed to handle both strings and nested objects
+  colors: COLORS as typeof COLORS & {
+    // This ensures TypeScript knows these are objects, not strings
+    seat: SeatColors;
+    tripStatus: TripStatusColors;
+    booking: BookingColors;
+  },
   
   // Typography
   typography: {
@@ -169,7 +179,7 @@ const theme = {
     
     badge: {
       success: {
-        backgroundColor: `${COLORS.success}20`, // 20 = 12% opacity in hex
+        backgroundColor: `${COLORS.success}20`,
         textColor: COLORS.success,
       },
       warning: {
@@ -224,29 +234,45 @@ export const THEME = theme;
 
 // Type definitions
 export type Theme = typeof THEME;
-export type Color = keyof typeof COLORS;
-export type ThemeColor = typeof COLORS[keyof typeof COLORS];
+
+// Fix the Color type to handle both string keys and nested object keys
+export type Color = 
+  | keyof Omit<typeof COLORS, 'seat' | 'tripStatus' | 'booking'>
+  | 'seat'
+  | 'tripStatus'
+  | 'booking';
+
+// Fix ThemeColor to handle both strings and nested objects
+export type ThemeColor = 
+  | string 
+  | SeatColors 
+  | TripStatusColors 
+  | BookingColors;
+
+// Rest of your types
 export type ThemeSpacing = keyof typeof THEME.spacing;
 export type ThemeBorderRadius = keyof typeof THEME.borders.radius;
 export type ThemeShadow = keyof typeof THEME.shadows;
 export type ThemeTypographySize = keyof typeof THEME.typography.fontSize;
 export type ThemeTypographyWeight = keyof typeof THEME.typography.fontWeight;
 
-// Helper functions
-export const getColor = (color: Color): string => COLORS[color];
+// Helper functions with proper typing
+export const getColor = (color: keyof typeof COLORS): string | object => {
+  return COLORS[color];
+};
+
+// For getting specific color strings
+export const getColorString = (color: keyof Omit<typeof COLORS, 'seat' | 'tripStatus' | 'booking'>): string => {
+  return COLORS[color] as string;
+};
+
 export const getSpacing = (size: ThemeSpacing): number => THEME.spacing[size];
 export const getBorderRadius = (radius: ThemeBorderRadius): number => THEME.borders.radius[radius];
 export const getFontSize = (size: ThemeTypographySize): number => THEME.typography.fontSize[size];
 
 // Fixed getShadow function with proper typing
 export const getShadow = (shadow: ThemeShadow) => {
-  const shadows = {
-    none: THEME.shadows.none,
-    sm: THEME.shadows.sm,
-    md: THEME.shadows.md,
-    lg: THEME.shadows.lg,
-  };
-  return shadows[shadow];
+  return THEME.shadows[shadow];
 };
 
 // Theme variants for light/dark mode
@@ -256,12 +282,15 @@ export const darkTheme = {
   ...THEME,
   colors: {
     ...COLORS,
-    // Override colors for dark mode
     background: COLORS.gray900,
     cardBackground: COLORS.gray800,
     textPrimary: COLORS.gray100,
     textSecondary: COLORS.gray300,
     textTertiary: COLORS.gray400,
+    inputBackground: COLORS.gray800,
+    border: COLORS.gray700,
+    borderLight: COLORS.gray800,
+    borderDark: COLORS.gray600,
   },
   components: {
     ...THEME.components,
