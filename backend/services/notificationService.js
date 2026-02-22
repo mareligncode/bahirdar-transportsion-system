@@ -16,7 +16,6 @@ class NotificationService {
             const notification = new Notification(notificationData);
             await notification.save();
             
-            // Send notification based on channel
             if (notification.channel === 'email' || notification.channel === 'all') {
                 await this.sendEmailNotification(notification);
             }
