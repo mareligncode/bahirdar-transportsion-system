@@ -63,13 +63,13 @@ export default function BookingConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  
+
   // Get booking ID from URL or sessionStorage
   const [bookingId, setBookingId] = useState(() => {
     const params = new URLSearchParams(location.search);
     const urlId = params.get('bookingId');
     if (urlId) return urlId;
-    
+
     const storedId = sessionStorage.getItem('pendingBookingId');
     if (storedId) {
       console.log('📦 Found in sessionStorage:', storedId);
@@ -79,7 +79,7 @@ export default function BookingConfirmation() {
   });
 
   const paymentSuccess = new URLSearchParams(location.search).get('success') === 'true';
-  
+
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -99,9 +99,9 @@ export default function BookingConfirmation() {
   useEffect(() => {
     if (paymentSuccess) {
       setShowConfetti(true);
-      confetti({ 
-        particleCount: 150, 
-        spread: 70, 
+      confetti({
+        particleCount: 150,
+        spread: 70,
         origin: { y: 0.6 },
         colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
       });
@@ -109,7 +109,7 @@ export default function BookingConfirmation() {
         duration: 5000,
         icon: '🎉',
       });
-      
+
       // Force refresh after payment success
       setTimeout(() => {
         handleRefresh();
@@ -133,7 +133,7 @@ export default function BookingConfirmation() {
         const bookingData = response.data?.data || response.data;
         console.log('Booking data:', bookingData);
         setBooking(bookingData);
-        
+
         // Clear sessionStorage after successful fetch
         if (sessionStorage.getItem('pendingBookingId')) {
           sessionStorage.removeItem('pendingBookingId');
@@ -159,29 +159,29 @@ export default function BookingConfirmation() {
   // PDF Generation Function
   const generatePDF = () => {
     if (!booking) return;
-    
+
     const doc = new jsPDF();
     const trip = booking.tripID || {};
     const origin = trip.origin?.stationName || 'N/A';
     const destination = trip.destination?.stationName || 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
     const arrivalTime = trip.arrivalTime ? new Date(trip.arrivalTime) : null;
-    
+
     // Add logo or title
     doc.setFontSize(20);
     doc.setTextColor(41, 128, 185);
     doc.text('Bahir Dar Transport System', 105, 20, { align: 'center' });
-    
+
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text('E-Ticket', 105, 30, { align: 'center' });
-    
+
     // Booking details
     doc.setFontSize(12);
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
     doc.text(`Ticket #: ${booking.ticketNumber || 'N/A'}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
-    
+
     // Passenger details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
@@ -191,7 +191,7 @@ export default function BookingConfirmation() {
     doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85);
     doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92);
     doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99);
-    
+
     // Journey details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
@@ -200,31 +200,32 @@ export default function BookingConfirmation() {
     doc.setFontSize(12);
     doc.text(`From: ${origin}`, 20, 125);
     doc.text(`To: ${destination}`, 20, 132);
-    
+
     if (departureTime) {
       doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139);
     }
     if (arrivalTime) {
       doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146);
     }
-    
+
     doc.text(`Seat: ${booking.seatNumber || 'N/A'}`, 20, 153);
-    
+
     // Payment details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
     doc.text('Payment Information', 20, 170);
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`Amount: ETB ${(booking.totalPrice || booking.amount || 0).toLocaleString()}`, 20, 180);
+    const finalAmount = booking.tripID?.price || booking.totalPrice || booking.amount || 0;
+    doc.text(`Amount: ETB ${finalAmount.toLocaleString()}`, 20, 180);
     doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 187);
-    
+
     // Footer
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128);
     doc.text('Thank you for choosing Bahir Dar Transport System!', 105, 270, { align: 'center' });
     doc.text('This is a computer generated ticket.', 105, 277, { align: 'center' });
-    
+
     // Save PDF
     doc.save(`ticket-${booking.bookingNumber || 'booking'}.pdf`);
   };
@@ -251,18 +252,18 @@ export default function BookingConfirmation() {
     try {
       // Generate PDF and send as attachment
       const pdf = generatePDFForEmail();
-      
+
       // Convert PDF to blob for sending
       const pdfBlob = pdf.output('blob');
       const formData = new FormData();
       formData.append('pdf', pdfBlob, `ticket-${booking.bookingNumber || 'booking'}.pdf`);
       formData.append('bookingId', bookingId);
       formData.append('email', user?.email);
-      
+
       await api.post('/api/booking/send-email', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       toast.success('Ticket sent to your email!', { duration: 4000 });
       setEmailDialogOpen(false);
     } catch (error) {
@@ -276,27 +277,27 @@ export default function BookingConfirmation() {
   // Helper for email PDF
   const generatePDFForEmail = () => {
     if (!booking) return new jsPDF();
-    
+
     const doc = new jsPDF();
     const trip = booking.tripID || {};
     const origin = trip.origin?.stationName || 'N/A';
     const destination = trip.destination?.stationName || 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
     const arrivalTime = trip.arrivalTime ? new Date(trip.arrivalTime) : null;
-    
+
     doc.setFontSize(20);
     doc.setTextColor(41, 128, 185);
     doc.text('Bahir Dar Transport System', 105, 20, { align: 'center' });
-    
+
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text('E-Ticket', 105, 30, { align: 'center' });
-    
+
     doc.setFontSize(12);
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
     doc.text(`Ticket #: ${booking.ticketNumber || 'N/A'}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
-    
+
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
     doc.text('Passenger Information', 20, 75);
@@ -305,7 +306,7 @@ export default function BookingConfirmation() {
     doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85);
     doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92);
     doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99);
-    
+
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
     doc.text('Journey Information', 20, 115);
@@ -313,41 +314,42 @@ export default function BookingConfirmation() {
     doc.setFontSize(12);
     doc.text(`From: ${origin}`, 20, 125);
     doc.text(`To: ${destination}`, 20, 132);
-    
+
     if (departureTime) {
       doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139);
     }
     if (arrivalTime) {
       doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146);
     }
-    
+
     doc.text(`Seat: ${booking.seatNumber || 'N/A'}`, 20, 153);
-    
+
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
     doc.text('Payment Information', 20, 170);
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`Amount: ETB ${(booking.totalPrice || booking.amount || 0).toLocaleString()}`, 20, 180);
+    const finalAmount = booking.tripID?.price || booking.totalPrice || booking.amount || 0;
+    doc.text(`Amount: ETB ${finalAmount.toLocaleString()}`, 20, 180);
     doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 187);
-    
+
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128);
     doc.text('Thank you for choosing Bahir Dar Transport System!', 105, 270, { align: 'center' });
-    
+
     return doc;
   };
 
   // WhatsApp share handler
   const handleWhatsApp = () => {
     if (!booking) return;
-    
+
     const trip = booking.tripID || {};
     const origin = trip.origin?.stationName || 'Origin';
     const destination = trip.destination?.stationName || 'Destination';
     const departureDate = trip.departureTime ? new Date(trip.departureTime).toLocaleDateString() : 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-    
+
     const message = `🚌 *Bahir Dar Transport System - Ticket*\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
       `*From:* ${origin}\n` +
@@ -357,10 +359,10 @@ export default function BookingConfirmation() {
       `*Seat:* ${booking.seatNumber}\n` +
       `*Booking #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
       `*Ticket #:* ${booking.ticketNumber || 'N/A'}\n` +
-      `*Amount:* ETB ${(booking.totalPrice || booking.amount || 0).toLocaleString()}\n\n` +
+      `*Amount:* ETB ${(booking.tripID?.price || booking.totalPrice || booking.amount || 0).toLocaleString()}\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
       `Thank you for choosing Bahir Dar Transport System!`;
-    
+
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -379,7 +381,7 @@ export default function BookingConfirmation() {
     setCancelling(true);
     try {
       const response = await api.delete(`/api/booking/${booking._id}`);
-      
+
       if (response.data?.success) {
         toast.success('Booking cancelled successfully', { duration: 4000 });
         setCancelDialogOpen(false);
@@ -393,9 +395,9 @@ export default function BookingConfirmation() {
       }
     } catch (error) {
       console.error('Cancel error:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'Failed to cancel booking';
+      const errorMessage = error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Failed to cancel booking';
       toast.error(errorMessage, { duration: 4000 });
     } finally {
       setCancelling(false);
@@ -462,7 +464,7 @@ export default function BookingConfirmation() {
       return 'Invalid date';
     }
   };
-  
+
   const formatTime = (date) => {
     if (!date) return 'N/A';
     try {
@@ -476,7 +478,7 @@ export default function BookingConfirmation() {
   };
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'confirmed': return 'success';
       case 'pending': return 'warning';
       case 'cancelled': return 'error';
@@ -487,7 +489,7 @@ export default function BookingConfirmation() {
   };
 
   const getStatusIcon = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'confirmed': return <CheckCircleIcon />;
       case 'pending': return <CircularProgress size={16} />;
       case 'cancelled': return <CancelIcon />;
@@ -514,7 +516,7 @@ export default function BookingConfirmation() {
 
   // Get total amount correctly
   const getTotalAmount = () => {
-    return booking?.totalPrice || booking?.amount || 0;
+    return booking?.tripID?.price || booking?.totalPrice || booking?.amount || 0;
   };
 
   // Loading
@@ -536,11 +538,11 @@ export default function BookingConfirmation() {
   if (error || !booking) {
     return (
       <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Alert 
-          severity="error" 
-          sx={{ 
-            borderRadius: '16px', 
-            p: 4, 
+        <Alert
+          severity="error"
+          sx={{
+            borderRadius: '16px',
+            p: 4,
             textAlign: 'center',
             boxShadow: '0 4px 12px rgba(239, 68, 68, 0.1)'
           }}
@@ -552,15 +554,15 @@ export default function BookingConfirmation() {
             The booking you're looking for doesn't exist or you don't have permission to view it.
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/passenger/my-bookings')}
               startIcon={<ReceiptIcon />}
             >
               View My Bookings
             </Button>
-            <Button 
-              variant="outlined" 
+            <Button
+              variant="outlined"
               onClick={() => navigate('/passenger/book-trip')}
               startIcon={<DirectionsBus />}
             >
@@ -603,10 +605,10 @@ export default function BookingConfirmation() {
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header with back button and refresh */}
-        <Box sx={{ 
-          mb: 3, 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 2
@@ -614,14 +616,14 @@ export default function BookingConfirmation() {
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate('/passenger/my-bookings')}
-            sx={{ 
+            sx={{
               textTransform: 'none',
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
             }}
           >
             Back to My Bookings
           </Button>
-          
+
           <Tooltip title="Refresh booking">
             <IconButton onClick={handleRefresh} size="small">
               <RefreshIcon />
@@ -643,12 +645,12 @@ export default function BookingConfirmation() {
                 '& .MuiAlert-message': { width: '100%' }
               }}
             >
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                flexWrap: 'wrap', 
-                gap: 2 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 2
               }}>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -702,9 +704,9 @@ export default function BookingConfirmation() {
             {/* Ticket Header */}
             <Box sx={{
               p: 3,
-              background: isConfirmed ? 'linear-gradient(135deg, #f0f9ff, #e6f7e6)' : 
-                          isPending ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' : 
-                          '#f8fafc',
+              background: isConfirmed ? 'linear-gradient(135deg, #f0f9ff, #e6f7e6)' :
+                isPending ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' :
+                  '#f8fafc',
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               justifyContent: 'space-between',
@@ -713,10 +715,10 @@ export default function BookingConfirmation() {
               gap: 2
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ 
+                <Avatar sx={{
                   bgcolor: isConfirmed ? '#3b82f6' : isPending ? '#f59e0b' : '#64748b',
-                  width: 48, 
-                  height: 48 
+                  width: 48,
+                  height: 48
                 }}>
                   <TicketIcon />
                 </Avatar>
@@ -736,7 +738,7 @@ export default function BookingConfirmation() {
                   </Box>
                 </Box>
               </Box>
-              
+
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Chip
                   icon={getStatusIcon(booking.status)}
@@ -865,10 +867,10 @@ export default function BookingConfirmation() {
                           Seat Information
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ 
-                            bgcolor: '#3b82f6', 
-                            width: 48, 
-                            height: 48 
+                          <Avatar sx={{
+                            bgcolor: '#3b82f6',
+                            width: 48,
+                            height: 48
                           }}>
                             <EventSeat />
                           </Avatar>
@@ -953,8 +955,8 @@ export default function BookingConfirmation() {
                   }}>
                     {/* QR Code */}
                     <Box sx={{ mb: 3 }}>
-                      <Paper sx={{ 
-                        p: 2, 
+                      <Paper sx={{
+                        p: 2,
                         display: 'inline-block',
                         bgcolor: 'white',
                         borderRadius: '12px',
@@ -974,8 +976,8 @@ export default function BookingConfirmation() {
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Total Amount
                       </Typography>
-                      <Typography variant="h3" sx={{ 
-                        fontWeight: 800, 
+                      <Typography variant="h3" sx={{
+                        fontWeight: 800,
                         color: '#1e40af',
                         lineHeight: 1.2
                       }}>
@@ -991,7 +993,7 @@ export default function BookingConfirmation() {
                           startIcon={<PrintIcon />}
                           onClick={handlePrint}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
@@ -1007,7 +1009,7 @@ export default function BookingConfirmation() {
                           startIcon={<DownloadIcon />}
                           onClick={handleDownload}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
@@ -1023,7 +1025,7 @@ export default function BookingConfirmation() {
                           startIcon={<EmailIcon />}
                           onClick={handleEmail}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
@@ -1039,7 +1041,7 @@ export default function BookingConfirmation() {
                           startIcon={<WhatsAppIcon />}
                           onClick={handleWhatsApp}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             color: '#25D366',
@@ -1064,7 +1066,7 @@ export default function BookingConfirmation() {
                           startIcon={<CancelIcon />}
                           onClick={() => setCancelDialogOpen(true)}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
@@ -1083,7 +1085,7 @@ export default function BookingConfirmation() {
                           startIcon={<PaymentIcon />}
                           onClick={() => setRefundDialogOpen(true)}
                           fullWidth
-                          sx={{ 
+                          sx={{
                             borderRadius: '8px',
                             py: 1.2,
                             boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
@@ -1140,7 +1142,7 @@ export default function BookingConfirmation() {
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
               Are you sure you want to cancel this booking? This action cannot be undone.
             </DialogContentText>
-            
+
             <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
               <Typography variant="body2">
                 Refund amount: <strong>ETB {totalAmount.toLocaleString()}</strong>
@@ -1149,7 +1151,7 @@ export default function BookingConfirmation() {
                 Refund will be processed to your original payment method.
               </Typography>
             </Alert>
-            
+
             <TextField
               fullWidth
               multiline
@@ -1161,8 +1163,8 @@ export default function BookingConfirmation() {
             />
           </DialogContent>
           <DialogActions sx={{ p: 3, pt: 0 }}>
-            <Button 
-              onClick={() => setCancelDialogOpen(false)} 
+            <Button
+              onClick={() => setCancelDialogOpen(false)}
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
@@ -1200,13 +1202,13 @@ export default function BookingConfirmation() {
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
               Process a refund for this booking. The amount will be returned to the passenger's original payment method.
             </DialogContentText>
-            
+
             <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
               <Typography variant="body2">
                 Maximum refund: <strong>ETB {totalAmount.toLocaleString()}</strong>
               </Typography>
             </Alert>
-            
+
             <TextField
               fullWidth
               label="Refund Amount"
@@ -1219,7 +1221,7 @@ export default function BookingConfirmation() {
                 startAdornment: <Typography sx={{ mr: 1, color: '#64748b' }}>ETB</Typography>
               }}
             />
-            
+
             <TextField
               fullWidth
               multiline
@@ -1231,8 +1233,8 @@ export default function BookingConfirmation() {
             />
           </DialogContent>
           <DialogActions sx={{ p: 3, pt: 0 }}>
-            <Button 
-              onClick={() => setRefundDialogOpen(false)} 
+            <Button
+              onClick={() => setRefundDialogOpen(false)}
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
@@ -1270,7 +1272,7 @@ export default function BookingConfirmation() {
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
               Send your ticket to your email address for easy access.
             </DialogContentText>
-            
+
             <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '8px' }}>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {user?.email}
@@ -1281,8 +1283,8 @@ export default function BookingConfirmation() {
             </Paper>
           </DialogContent>
           <DialogActions sx={{ p: 3, pt: 0 }}>
-            <Button 
-              onClick={() => setEmailDialogOpen(false)} 
+            <Button
+              onClick={() => setEmailDialogOpen(false)}
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
@@ -1312,18 +1314,18 @@ export default function BookingConfirmation() {
         </Snackbar>
 
         {/* Bottom Navigation */}
-        <Box sx={{ 
-          mt: 4, 
-          display: 'flex', 
-          justifyContent: 'center', 
-          gap: 2, 
-          flexWrap: 'wrap' 
+        <Box sx={{
+          mt: 4,
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 2,
+          flexWrap: 'wrap'
         }}>
           <Button
             variant="contained"
             onClick={() => navigate('/passenger/book-trip')}
             startIcon={<DirectionsBus />}
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               px: 3,
               py: 1.2,
@@ -1339,7 +1341,7 @@ export default function BookingConfirmation() {
             variant="outlined"
             onClick={() => navigate('/passenger/my-bookings')}
             startIcon={<ReceiptIcon />}
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               px: 3,
               py: 1.2
