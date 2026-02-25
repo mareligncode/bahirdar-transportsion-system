@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 
 interface BadgeProps {
   text: string;
-  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info';
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'error' | 'info'; // Added 'error'
   size?: 'small' | 'medium';
   rounded?: boolean;
   className?: string;
@@ -28,6 +28,7 @@ export function Badge({
       case 'warning':
         return 'bg-yellow-100';
       case 'danger':
+      case 'error': // Handle error the same as danger
         return 'bg-red-100';
       case 'info':
         return 'bg-blue-100';
@@ -45,6 +46,7 @@ export function Badge({
       case 'warning':
         return 'text-yellow-800';
       case 'danger':
+      case 'error': // Handle error the same as danger
         return 'text-red-800';
       case 'info':
         return 'text-blue-800';

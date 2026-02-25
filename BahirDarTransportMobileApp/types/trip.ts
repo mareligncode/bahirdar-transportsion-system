@@ -1,5 +1,6 @@
 export interface Trip {
-  id: string;
+  _id: string; 
+  id?: string;
   origin: {
     _id: string;
     stationName: string;
@@ -21,6 +22,7 @@ export interface Trip {
     totalCapacity: number;
     color?: string;
   };
+  
   driver: {
     _id: string;
     fullName: string;
@@ -31,7 +33,7 @@ export interface Trip {
   price: number;
   availableSeats: number;
   totalSeats: number;
-  station: {
+  station:{
     _id: string;
     stationName: string;
     location?: string;
@@ -80,3 +82,29 @@ export interface Booking {
   qrCode?: string;
   ticketNumber: string;
 }
+
+export interface TripSearchResponse {
+  success: boolean;
+  data?: Trip[];
+  message?: string;
+  trips?: Trip[];
+}
+export interface Station {
+  _id: string;
+  stationName: string;
+  city: string;
+  location?: string;
+  contactPhone?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StationOption {
+  value: string;
+  label: string;
+  fullLabel: string;
+  city?: string;
+  location?: string;
+}
+

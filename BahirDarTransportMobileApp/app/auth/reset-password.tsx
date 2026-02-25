@@ -10,12 +10,12 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { api } from '@/config/api';
+import { authAPI } from '@/lib/api/auth';
 import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -37,6 +37,7 @@ const resetPasswordSchema = z.object({
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPassword() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,21 +90,19 @@ export default function ResetPassword() {
       }
 
       try {
-        const response = await api.post('/auth/validate-reset-token', { token });
+        const result = await authAPI.validateResetToken(token);
 
-        if (response.data.success) {
+        if (result.valid) {
           setTokenValid(true);
           setError('');
         } else {
           setTokenValid(false);
-          setError(response.data.message || 'Invalid or expired reset token');
+          setError(result.message || 'Invalid or expired reset token');
         }
       } catch (err: any) {
         console.error('❌ Token validation error:', err);
         setTokenValid(false);
-        const errorMessage = err.response?.data?.message || 
-                            err.response?.data?.error || 
-                            'Failed to validate reset token';
+        const errorMessage = err.message || 'Failed to validate reset token';
         setError(errorMessage);
       } finally {
         setValidatingToken(false);
@@ -125,25 +124,23 @@ export default function ResetPassword() {
         throw new Error('Reset token is missing');
       }
 
-      const response = await api.post('/auth/reset-password', { 
-        token, 
-        newPassword: data.password 
-      });
+      const result = await authAPI.resetPassword(token, data.password);
 
-      setSuccess(response.data.message || 'Password has been reset successfully');
-      
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.replace('/auth/Login');
-      }, 3000);
+      if (result.success) {
+        setSuccess(result.message || 'Password has been reset successfully');
+        
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          router.replace('/auth/Login');
+        }, 3000);
+      } else {
+        setError(result.message || 'Failed to reset password');
+      }
       
     } catch (err: any) {
       console.error('❌ Reset password error:', err);
       
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          err.message || 
-                          'Something went wrong. Please try again.';
+      const errorMessage = err.message || 'Something went wrong. Please try again.';
       setError(errorMessage);
       
       Alert.alert('Error', errorMessage);
@@ -186,7 +183,7 @@ export default function ResetPassword() {
   // Loading state
   if (validatingToken) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
           <View className="items-center">
             <View className="w-16 h-16 bg-gray-200 rounded-full mb-4 animate-pulse" />
@@ -200,7 +197,7 @@ export default function ResetPassword() {
   // Invalid token state
   if (!tokenValid) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center mb-8">
             <View className="w-20 h-20 bg-red-100 rounded-full items-center justify-center mb-4">
@@ -229,7 +226,7 @@ export default function ResetPassword() {
   // Success state
   if (success) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center">
             <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
@@ -260,7 +257,7 @@ export default function ResetPassword() {
   // Main form
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -268,7 +265,10 @@ export default function ResetPassword() {
           <ScrollView 
             className="flex-1" 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              paddingBottom: insets.bottom + 20 
+            }}
             keyboardShouldPersistTaps="handled"
           >
             <View className="px-6 pt-4">

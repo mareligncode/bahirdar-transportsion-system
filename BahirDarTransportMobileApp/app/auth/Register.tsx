@@ -184,15 +184,15 @@ const passwordMeetsAllCriteria = useMemo(() => {
     try {
       const result = await registerUser(data);
       
-      if (result.success) {
-        setSuccess('Account created successfully! Redirecting...');
-        
-        setTimeout(() => {
-          router.replace('/main/home');
-        }, 2000);
-      } else {
-        throw new Error(result.message || 'Registration failed');
-      }
+        if (result.success) {
+          setSuccess('Account created successfully! Redirecting...');
+          
+          setTimeout(() => {
+            router.replace('/tabs/home');
+          }, 2000);
+        } else {
+          throw new Error(result.message || 'Registration failed');
+        }
     } catch (err: any) {
       const errorMessage = err.message || 'Registration failed. Please try again.';
       setError(errorMessage);

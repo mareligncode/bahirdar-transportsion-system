@@ -13,7 +13,8 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
-  CheckCheck
+  CheckCheck,
+  LucideIcon
 } from 'lucide-react-native';
 
 const MOCK_NOTIFICATIONS = [
@@ -170,7 +171,7 @@ export default function NotificationScreen() {
       showBottomTab={false}
     >
       {/* Tabs */}
-      <Card variant="outline" className="mx-4 mt-4 p-0">
+      <Card className="mx-4 mt-4 p-0 border border-gray-300">
         <View className="flex-row">
           <TouchableOpacity
             className={`flex-1 py-3 rounded-l-lg ${activeTab === 'all' ? 'bg-blue-50' : 'bg-white'}`}
@@ -225,10 +226,18 @@ export default function NotificationScreen() {
               >
                 <View className="flex-row items-start">
                   <View className={`w-12 h-12 rounded-full ${notification.bgColor} items-center justify-center mr-3`}>
-                    {notification.type === 'booking' && <Ticket size={24} color={notification.color} />}
-                    {notification.type === 'payment' && <CreditCard size={24} color={notification.color} />}
-                    {notification.type === 'alert' && <AlertCircle size={24} color={notification.color} />}
-                    {notification.type === 'tracking' && <MapPin size={24} color={notification.color} />}
+                    {notification.type === 'booking' && (
+                      <Ticket size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'payment' && (
+                      <CreditCard size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'alert' && (
+                      <AlertCircle size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'tracking' && (
+                      <MapPin size={24} color={notification.color} />
+                    )}
                   </View>
                   
                   <View className="flex-1">

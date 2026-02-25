@@ -1,10 +1,10 @@
-// store/authStore.ts - FIXED
+// store/authStore.ts - FIXED VERSION
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User, LoginCredentials, RegisterFormData } from '../types/auth';
 import { authAPI } from '../lib/api/auth';
-import { storage } from '@/lib/storage'; // ADD THIS IMPORT
+import { storage } from '../lib/storage'; // ✅ Make sure this path is correct
 
 interface AuthState {
   user: User | null;
@@ -53,9 +53,10 @@ export const useAuthStore = create<AuthState>()(
       initializeAuth: async () => {
         try {
           console.log('🔄 AuthStore: Initializing auth from storage...');
-          // Use storage utility instead of AsyncStorage directly
-          const token = await storage.getToken(); // FIXED: uses 'access_token'
-          const user = await storage.getUser(); // FIXED: uses 'user_data'
+          
+          // ✅ Use the SAME storage utility as authAPI
+          const token = await storage.getToken(); // This uses 'access_token' key
+          const user = await storage.getUser();   // This uses 'user_data' key
           
           console.log('🔍 AuthStore: Loaded from storage:', {
             hasToken: !!token,
@@ -78,6 +79,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoggingIn: true, error: null });
         try {
           console.log('🔄 AuthStore: Login attempt for:', credentials.email);
+          
+          // ✅ authAPI.login already stores tokens using storage utility
           const response = await authAPI.login(credentials);
 
           console.log('✅ AuthStore: API response:', {
@@ -90,17 +93,8 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(response.message || 'Login failed');
           }
 
-          // Use storage utility consistently
-          if (response.accessToken) {
-            await storage.storeToken(response.accessToken); // FIXED
-          }
-          if (response.refreshToken) {
-            await storage.storeRefreshToken(response.refreshToken); // FIXED
-          }
-          if (response.user) {
-            await storage.storeUser(response.user); // FIXED
-          }
-
+          // ✅ No need to store again - authAPI already did it
+          // Just update the state
           set({
             user: response.user || null,
             token: response.accessToken || null,
@@ -129,6 +123,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isRegistering: true, error: null });
         try {
           console.log('🔄 AuthStore: Register attempt for:', data.email);
+          
+          // ✅ authAPI.register already stores tokens using storage utility
           const response = await authAPI.register(data);
 
           console.log('✅ AuthStore: API response:', {
@@ -141,17 +137,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(response.message || 'Registration failed');
           }
 
-          // Use storage utility consistently
-          if (response.accessToken) {
-            await storage.storeToken(response.accessToken); // FIXED
-          }
-          if (response.refreshToken) {
-            await storage.storeRefreshToken(response.refreshToken); // FIXED
-          }
-          if (response.user) {
-            await storage.storeUser(response.user); // FIXED
-          }
-
+          // ✅ No need to store again - authAPI already did it
           set({
             user: response.user || null,
             token: response.accessToken || null,
@@ -182,8 +168,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (e) {
           console.error('Logout API error:', e);
         } finally {
-          // Use storage utility
-          await storage.removeTokens(); // FIXED
+          // ✅ storage.clearAll() already called in authAPI.logout
           set({ 
             user: null, 
             token: null, 
@@ -215,8 +200,8 @@ export const useAuthStore = create<AuthState>()(
           if (!currentUser) throw new Error('No user found');
           const updatedUser = { ...currentUser, ...userData };
           
-          // Use storage utility
-          await storage.storeUser(updatedUser); // FIXED
+          // ✅ Use storage utility
+          await storage.storeUser(updatedUser);
           
           set({ user: updatedUser, isLoading: false });
         } catch (error: any) {
@@ -231,6 +216,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      // ✅ Only persist these fields to avoid duplication
       partialize: (state) => ({ 
         user: state.user, 
         token: state.token, 
@@ -240,7 +226,7 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Selectors remain the same
+// Selectors
 export const useUser = () => useAuthStore((s) => s.user);
 export const useToken = () => useAuthStore((s) => s.token);
 export const useIsAuthenticated = () => useAuthStore((s) => s.isAuthenticated);
