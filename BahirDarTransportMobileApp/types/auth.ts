@@ -1,3 +1,4 @@
+
 // ==================== USER TYPES ====================
 export interface User {
   _id: string;

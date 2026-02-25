@@ -1,77 +1,65 @@
+// types/booking.ts
+
 import { Trip } from './trip';
+import { User } from './auth';
+import { PaymentStatus } from './payment'; // Import from payment
+
+export interface PassengerDetails {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  emergencyContact?: string;
+  idNumber?: string;
+  idType?: 'passport' | 'national_id' | 'drivers_license';
+}
+
+// Booking status type
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+
 export interface Booking {
   _id: string;
   bookingNumber: string;
-  ticketNumber: string;
-  passengerID: {
-    _id: string;
-    fullName: string;
-    phoneNumber: string;
-    email: string;
-  };
+  ticketNumber?: string;
+  passengerID: User | string;
   tripID: Trip | string;
-  vehicleID: {
-    _id: string;
-    plateNumber: string;
-    carType: string;
-    totalCapacity: number;
-    color?: string;
-  };
-  seatNumbers: string[];
-  seatNumber?: number; // For backward compatibility
+  seatNumber: number;
+  seatNumbers?: number[];
   totalPrice: number;
-  pricePerSeat?: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  totalAmount?: number;
+  amount?: number;
+  pricePerSeat: number;
+  status: BookingStatus;
+  paymentStatus?: PaymentStatus; // Use the imported type
+  paymentID?: string;
+  paymentMethod?: string;
   bookingDate: string;
-  passengerDetails: {
-    fullName: string;
-    phoneNumber: string;
-    email: string;
-    emergencyContact?: string;
-  };
-  specialRequests?: string;
-  cancellationReason?: string;
-  refundAmount?: number;
-  checkedIn: boolean;
-  checkedInAt?: string;
-  qrCode?: string;
   createdAt: string;
   updatedAt: string;
+  passengerDetails?: PassengerDetails;
+  specialRequests?: string;
+  checkedIn?: boolean;
+  checkedInAt?: string;
+  cancellationReason?: string;
+  refundAmount?: number;
+  qrCode?: string;
 }
 
-export interface CreateBookingPayload {
+export interface BookingCreateData {
   tripID: string;
-  seatNumbers: string[];
-  passengerDetails?: {
-    fullName: string;
-    phoneNumber: string;
-    email: string;
-    emergencyContact?: string;
-  };
+  seatNumber: number;
+  passengerDetails: PassengerDetails;
   specialRequests?: string;
 }
 
 export interface BookingResponse {
   success: boolean;
-  message: string;
-  data: Booking;
+  data?: Booking;
+  message?: string;
 }
 
 export interface BookingsListResponse {
   success: boolean;
-  count: number;
-  total?: number;
-  data: Booking[];
+  data?: Booking[];
+  count?: number;
+  message?: string;
 }
-
-export interface CancelBookingPayload {
-  cancellationReason?: string;
-}
-
-export interface BookingFilters {
-  status?: string;
-  fromDate?: string;
-  toDate?: string;
-}
-

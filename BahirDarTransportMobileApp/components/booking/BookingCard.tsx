@@ -1,11 +1,11 @@
 // components/booking/BookingCard.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { 
-  Bus, 
-  Clock, 
-  MapPin, 
-  User, 
+import {
+  Bus,
+  Clock,
+  MapPin,
+  User,
   CreditCard,
   ChevronRight,
   XCircle,
@@ -30,31 +30,31 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onViewTicket
 }) => {
   const trip = typeof booking.tripID === 'object' ? booking.tripID as Trip : null;
-  
+
   const origin = trip?.origin || { stationName: 'Unknown', city: '' };
   const destination = trip?.destination || { stationName: 'Unknown', city: '' };
   const vehicle = trip?.vehicle || { carType: 'Bus', plateNumber: 'N/A', _id: '' };
 
   const getStatusIcon = (status: string) => {
-    switch(status?.toLowerCase()) {
-      case 'confirmed': 
+    switch (status?.toLowerCase()) {
+      case 'confirmed':
         return <CheckCircle size={16} color={COLORS.booking.confirmedText} />;
-      case 'pending': 
+      case 'pending':
         return <PendingIcon size={16} color={COLORS.booking.pendingText} />;
-      case 'cancelled': 
+      case 'cancelled':
         return <XCircle size={16} color={COLORS.booking.cancelledText} />;
-      case 'completed': 
+      case 'completed':
         return <CheckCircle size={16} color={COLORS.booking.completedText} />;
-      default: 
+      default:
         return <AlertCircle size={16} color={COLORS.gray500} />;
     }
   };
 
   const isCancellable = ['confirmed', 'pending'].includes(booking.status?.toLowerCase() || '');
   const statusColors = getBookingStatusColors(booking.status);
-  
-  const duration = trip?.departureTime && trip?.arrivalTime 
-    ? calculateDuration(trip.departureTime, trip.arrivalTime) 
+
+  const duration = trip?.departureTime && trip?.arrivalTime
+    ? calculateDuration(trip.departureTime, trip.arrivalTime)
     : '~2h';
 
   return (
@@ -73,13 +73,13 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             </Text>
           </View>
         </View>
-        
-        <View 
+
+        <View
           className="px-2 py-1 rounded-full flex-row items-center"
           style={{ backgroundColor: statusColors.bg }}
         >
           {getStatusIcon(booking.status)}
-          <Text 
+          <Text
             className="ml-1 text-xs font-medium"
             style={{ color: statusColors.text }}
           >
@@ -101,7 +101,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               {trip?.departureTime ? formatDate(trip.departureTime) : 'N/A'}
             </Text>
           </View>
-          
+
           <View className="items-center px-2">
             <Clock size={14} color={COLORS.gray400} />
             <Text className="text-xs text-gray-500 mt-1">Duration</Text>
@@ -109,7 +109,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               {duration}
             </Text>
           </View>
-          
+
           <View className="flex-1 items-end">
             <Text className="text-xs text-gray-500">Arrival</Text>
             <Text className="font-semibold text-gray-900">
@@ -126,30 +126,38 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <View className="flex-row items-center flex-wrap flex-1">
             <User size={14} color={COLORS.gray500} />
             <Text className="ml-1 text-sm text-gray-700">
-              {booking.seatNumbers?.length || 0} seat(s)
+              {booking.seatNumbers?.length || 1} seat(s)
             </Text>
             <View className="flex-row ml-2 flex-wrap">
-              {booking.seatNumbers?.map((seat, index) => (
-                <View 
-                  key={index}
-                  className="bg-gray-100 px-2 py-0.5 rounded mr-1 mb-1"
-                >
+              {booking.seatNumbers && booking.seatNumbers.length > 0 ? (
+                booking.seatNumbers.map((seat, index) => (
+                  <View
+                    key={index}
+                    className="bg-gray-100 px-2 py-0.5 rounded mr-1 mb-1"
+                  >
+                    <Text className="text-xs font-medium text-gray-700">
+                      {seat}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <View className="bg-gray-100 px-2 py-0.5 rounded mr-1">
                   <Text className="text-xs font-medium text-gray-700">
-                    {seat}
+                    Seat {booking.seatNumber || 'N/A'}
                   </Text>
                 </View>
-              ))}
+              )}
             </View>
           </View>
-          
+
           <View>
-            <Text className="text-xs text-gray-500 text-right">Total</Text>
+            <Text className="text-xs text-gray-500 text-right">Total Price</Text>
             <Text className="font-bold text-blue-600">
-              {formatCurrency(booking.totalPrice || 0)}
+              {formatCurrency(booking.totalAmount || booking.totalPrice || (trip?.price ? trip.price * (booking.seatNumbers?.length || 1) : 0))}
             </Text>
-            {booking.pricePerSeat && (
+            {trip?.price && (booking.seatNumbers?.length || 0) > 1 && (
               <Text className="text-xs text-gray-500 text-right">
-                {formatCurrency(booking.pricePerSeat)}/seat
+                {formatCurrency(trip.price)}/seat
               </Text>
             )}
           </View>

@@ -1,56 +1,57 @@
-// Authentication Routes
+// Authentication Routes (match app/auth/ and Expo Router)
 export const AUTH_ROUTES = {
-  LOGIN: '/(auth)/login',
-  REGISTER: '/(auth)/register',
-  FORGOT_PASSWORD: '/(auth)/forgot-password',
+  LOGIN: '/auth/Login',
+  REGISTER: '/auth/Register',
+  FORGOT_PASSWORD: '/auth/Forgot-Password',
+  RESET_PASSWORD: '/auth/reset-password',
 } as const;
 
-// Main App Routes
+// Main App Routes (match app/tabs/ and app/(screens)/)
 export const MAIN_ROUTES = {
-  HOME: '/(main)/home',
+  HOME: '/tabs/home',
   TRIPS: {
-    INDEX: '/(main)/trips',
-    SEARCH: '/(main)/trips/search',
-    DETAILS: '/(main)/trips/[id]',
-    SEAT_SELECTION: '/(main)/trips/seat-selection',
+    INDEX: '/tabs/trips',
+    SEARCH: '/tabs/trips/search',
+    DETAILS: '/tabs/trips/[id]',
+    SEAT_SELECTION: '/tabs/trips/seat-selection',
   },
   BOOKING: {
-    INDEX: '/(main)/booking',
-    DETAILS: '/(main)/booking/[id]',
-    CANCEL: '/(main)/booking/cancel-reschedule',
+    INDEX: '/(screens)/booking',
+    DETAILS: '/(screens)/booking/id',
+    CANCEL: '/(screens)/booking/cancel',
+    CONFIRMATION: '/(screens)/booking/confirmation',
+    PASSENGER_DETAILS: '/(screens)/booking/passenger-details',
   },
   PAYMENT: {
-    CHECKOUT: '/(main)/payment/checkout',
-    SUCCESS: '/(main)/payment/success',
-    HISTORY: '/(main)/payment/history',
+    CHECKOUT: '/(screens)/payment/checkout',
+    SUCCESS: '/(screens)/payment/success',
+    HISTORY: '/(screens)/payment/history',
   },
   TICKETS: {
-    INDEX: '/(main)/tickets',
-    DETAILS: '/(main)/tickets/[id]',
-  },
-  TRACKING: {
-    LIVE: '/(main)/tracking/live-tracking',
+    INDEX: '/tabs/tickets',
+    DETAILS: '/tabs/tickets/[id]',
+    BOOKINGS: '/tabs/tickets/bookings',
   },
   SUPPORT: {
-    CONTACT: '/(main)/support/contact',
-    FEEDBACK: '/(main)/support/feedback',
-    HELP: '/(main)/support/help',
+    INDEX: '/menu/support',
+    CONTACT: '/menu/support/contact',
+    FEEDBACK: '/menu/support/feedback',
+    HELP: '/menu/support/help',
   },
 } as const;
 
-// Profile & Settings Routes
+// Profile & Settings Routes (match app/tabs/profile and app/menu/)
 export const PROFILE_ROUTES = {
-  PROFILE: '/(main)/profile',
-  EDIT_PROFILE: '/(main)/profile/edit-profile',
-  BOOKINGS: '/(main)/profile/bookings',
-  SETTINGS: '/(main)/profile/settings',
+  PROFILE: '/tabs/profile',
+  SETTINGS: '/menu/settings',
 } as const;
 
 export const SETTINGS_ROUTES = {
-  NOTIFICATIONS: '/(main)/profile/settings/notifications',
-  LANGUAGE: '/(main)/profile/settings/language',
-  PRIVACY: '/(main)/profile/settings/privacy-security',
-  ABOUT: '/(main)/profile/settings/about',
+  INDEX: '/menu/settings',
+  NOTIFICATIONS: '/menu/settings/notifications',
+  LANGUAGE: '/menu/settings/language',
+  PRIVACY: '/menu/settings/privacy-security',
+  ABOUT: '/menu/about',
 } as const;
 
 // Navigation Constants
@@ -98,9 +99,9 @@ export const APP_CONSTANTS = {
   VERSION: '1.0.0',
   CONTACT_EMAIL: 'support@bahirdartransport.com',
   PHONE_PREFIX: '+251',
-  AUTH_PREFIX: '/(auth)',
-  MAIN_PREFIX: '/(main)',
-  PROFILE_PREFIX: '/(main)/profile',
+  AUTH_PREFIX: '/auth',
+  MAIN_PREFIX: '/tabs',
+  PROFILE_PREFIX: '/tabs/profile',
 } as const;
 
 // Default export for easy imports

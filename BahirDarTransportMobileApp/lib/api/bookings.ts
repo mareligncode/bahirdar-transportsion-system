@@ -1,79 +1,51 @@
-// lib/api/bookings.ts - Passenger Only API (Existing Backend Endpoints Only)
-import { api, API_ENDPOINTS } from '../../config/api';
-import { CreateBookingPayload } from '../../types/booking';
+// lib/api/bookings.ts
+import { apiClient } from './index';
+import { API_ENDPOINTS } from '../../config/api';
+import { Booking, BookingCreateData, ApiResponse } from '../../types';
 
-export const bookingApi = {
-  // Create new booking - POST /bookings
-  createBooking: async (bookingData: CreateBookingPayload) => {
-    console.log('📝 Creating booking:', {
-      tripId: bookingData.tripID,
-      seats: bookingData.seatNumbers.length,
-    });
-    
+export const bookingsApi = {
+  createBooking: async (bookingData: BookingCreateData): Promise<ApiResponse<Booking>> => {
     try {
-      const response = await api.post(API_ENDPOINTS.BOOKINGS.BASE, {
-        tripID: bookingData.tripID,
-        seatNumbers: bookingData.seatNumbers,
-        passengerDetails: bookingData.passengerDetails,
-        specialRequests: bookingData.specialRequests,
-      });
-      
+      const response = await apiClient.post(API_ENDPOINTS.BOOKINGS.CREATE, bookingData);
       return response.data;
-    } catch (error) {
-      console.error('❌ Booking creation failed:', error);
-      throw error;
+    } catch (error: any) {
+      throw error.response?.data || error.message;
     }
   },
 
-  // Get my bookings - GET /bookings/my-bookings (Passenger's own bookings)
-  getMyBookings: async () => {
-    console.log('📚 Fetching my bookings');
-    
+  getMyBookings: async (): Promise<ApiResponse<Booking[]>> => {
     try {
-      const response = await api.get(API_ENDPOINTS.BOOKINGS.MY_BOOKINGS);
+      const response = await apiClient.get(API_ENDPOINTS.BOOKINGS.MY_BOOKINGS);
       return response.data;
-    } catch (error) {
-      console.error('❌ Failed to fetch bookings:', error);
-      throw error;
+    } catch (error: any) {
+      throw error.response?.data || error.message;
     }
   },
 
-  // Get booking by ID - GET /bookings/:id (Passenger's own booking details)
-  getBookingById: async (bookingId: string) => {
-    console.log('🔍 Fetching booking:', bookingId);
-    
+  getBookingById: async (id: string): Promise<ApiResponse<Booking>> => {
     try {
-      const response = await api.get(API_ENDPOINTS.BOOKINGS.BY_ID(bookingId));
+      const response = await apiClient.get(API_ENDPOINTS.BOOKINGS.BY_ID(id));
       return response.data;
-    } catch (error) {
-      console.error('❌ Failed to fetch booking:', error);
-      throw error;
+    } catch (error: any) {
+      throw error.response?.data || error.message;
     }
   },
 
-  // Update booking - PUT /bookings/:id (Update own booking details)
-  updateBooking: async (bookingId: string, updateData: any) => {
-    console.log('✏️ Updating booking:', bookingId);
-    
+  cancelBooking: async (id: string): Promise<ApiResponse<null>> => {
     try {
-      const response = await api.put(API_ENDPOINTS.BOOKINGS.UPDATE(bookingId), updateData);
+      const response = await apiClient.delete(API_ENDPOINTS.BOOKINGS.DELETE(id));
       return response.data;
-    } catch (error) {
-      console.error('❌ Failed to update booking:', error);
-      throw error;
+    } catch (error: any) {
+      throw error.response?.data || error.message;
     }
   },
 
-  // Cancel booking - DELETE /bookings/:id (Backend: ✅)
-  cancelBooking: async (bookingId: string) => {
-    console.log('❌ Cancelling booking:', bookingId);
-    
+  updateBookingStatus: async (id: string, status: string, data?: any): Promise<ApiResponse<Booking>> => {
     try {
-      const response = await api.delete(API_ENDPOINTS.BOOKINGS.BY_ID(bookingId));
+      const response = await apiClient.put(API_ENDPOINTS.BOOKINGS.UPDATE(id), { status, ...data });
       return response.data;
-    } catch (error) {
-      console.error('❌ Failed to cancel booking:', error);
-      throw error;
+    } catch (error: any) {
+      throw error.response?.data || error.message;
     }
-  },
+  }
 };

@@ -2,8 +2,19 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
+import { Platform } from 'react-native';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.137.1:5000/api';
+export const getPlatformBaseUrl = (): string => {
+  let url = '';
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    url = process.env.EXPO_PUBLIC_API_URL;
+  } else {
+    url = 'http://192.168.137.1:5000/api';
+  }
+  return url;
+};
+
+const API_BASE_URL = getPlatformBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,10 +22,11 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 30000, 
+  timeout: 30000,
 });
 
-// Track refresh state
+
+
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
@@ -29,12 +41,11 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request interceptor
 api.interceptors.request.use(
   async (config) => {
     try {
       console.log(`➡️ ${config.method?.toUpperCase()} ${config.url}`);
-      
+
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -49,7 +60,6 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => {
     console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
@@ -57,22 +67,18 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    
-    // If error is not 401 or request already retried, reject
+
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
-    // Don't try to refresh for auth endpoints (prevent infinite loop)
-    if (originalRequest.url?.includes('/auth/login') || 
-        originalRequest.url?.includes('/auth/register')) {
+    if (originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register')) {
       return Promise.reject(error);
     }
 
-    // Check if we have a refresh token
     const refreshToken = await AsyncStorage.getItem('refresh_token');
-    
-    // If no refresh token, clear auth and redirect
+
     if (!refreshToken) {
       console.log('🔑 No refresh token available');
       await clearAuthData();
@@ -81,7 +87,6 @@ api.interceptors.response.use(
     }
 
     if (isRefreshing) {
-      // Queue this request
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       })
@@ -97,8 +102,7 @@ api.interceptors.response.use(
 
     try {
       console.log('🔄 Attempting to refresh token...');
-      
-      // IMPORTANT: Use direct axios instance without interceptor
+
       const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
         refreshToken,
       }, {
@@ -106,36 +110,30 @@ api.interceptors.response.use(
           'Content-Type': 'application/json',
         }
       });
-      
+
       if (response.data?.success && response.data?.data?.token) {
         const newToken = response.data.data.token;
         const newRefreshToken = response.data.data.refreshToken || refreshToken;
-        
+
         await AsyncStorage.setItem('auth_token', newToken);
         await AsyncStorage.setItem('refresh_token', newRefreshToken);
-        
-        console.log('✅ Token refreshed successfully');
-        
-        // Update authorization header
+
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        
-        // Process queued requests
+
         processQueue(null, newToken);
-        
-        // Retry original request
+
         return api(originalRequest);
       } else {
         throw new Error('Invalid refresh response');
       }
     } catch (refreshError) {
       console.error('❌ Token refresh failed:', refreshError);
-      
+
       await clearAuthData();
       processQueue(refreshError, null);
-      
-      // Only redirect for user-initiated actions
-      if (!originalRequest.url?.includes('/station/active') && 
-          !originalRequest.url?.includes('/trip')) {
+
+      if (!originalRequest.url?.includes('/station/active') &&
+        !originalRequest.url?.includes('/trip')) {
         Alert.alert(
           'Session Expired',
           'Please login again',
@@ -144,7 +142,7 @@ api.interceptors.response.use(
       } else {
         router.replace('/auth/Login');
       }
-      
+
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
@@ -168,54 +166,56 @@ export { api };
 export const API_ENDPOINTS = {
 
   AUTH: {
-    REGISTER: `${API_BASE_URL}/auth/register`,
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    LOGOUT: `${API_BASE_URL}/auth/logout`,
-    REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh-token`,
-    FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
-    VALIDATE_RESET_TOKEN: `${API_BASE_URL}/auth/validate-reset-token`,
-    RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-    VERIFY_EMAIL: `${API_BASE_URL}/auth/verify-email`,
-    
-    
-    PROFILE: `${API_BASE_URL}/auth/profile`,
-    UPDATE_PROFILE: `${API_BASE_URL}/auth/profile`, 
-    CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
-    DELETE_ACCOUNT: `${API_BASE_URL}/auth/delete-account`,
+    REGISTER: `/auth/register`,
+    LOGIN: `/auth/login`,
+    LOGOUT: `/auth/logout`,
+    REFRESH_TOKEN: `/auth/refresh-token`,
+    FORGOT_PASSWORD: `/auth/forgot-password`,
+    VALIDATE_RESET_TOKEN: `/auth/validate-reset-token`,
+    RESET_PASSWORD: `/auth/reset-password`,
+    VERIFY_EMAIL: `/auth/verify-email`,
+
+
+    PROFILE: `/auth/profile`,
+    UPDATE_PROFILE: `/auth/profile`,
+    CHANGE_PASSWORD: `/auth/change-password`,
+    DELETE_ACCOUNT: `/auth/delete-account`,
   },
-  
+
   PASSENGER: {
-    TRIPS: `${API_BASE_URL}/passenger/trips`,
-    BOOKINGS: `${API_BASE_URL}/passenger/bookings`,
-    PAYMENTS: `${API_BASE_URL}/passenger/payments`,
-    TICKETS: `${API_BASE_URL}/passenger/tickets`,
-    NOTIFICATIONS: `${API_BASE_URL}/passenger/notifications`,
-    FAVORITES: `${API_BASE_URL}/passenger/favorites`,
+    TRIPS: `/passenger/trips`,
+    BOOKINGS: `/passenger/bookings`,
+    PAYMENTS: `/passenger/payments`,
+    TICKETS: `/passenger/tickets`,
+    NOTIFICATIONS: `/passenger/notifications`,
+    FAVORITES: `/passenger/favorites`,
   },
-  
-   TRIPS: {
-    BASE: '/trip', 
+
+  TRIPS: {
+    BASE: '/trip',
     SEARCH: '/trip/search',
     BY_ID: (id: string) => `/trip/${id}`,
   },
-  
+
   BOOKINGS: {
     BASE: '/booking',
-     CREATE: '/booking/', 
-    MY_BOOKINGS: '/booking/my-bookings', 
-    BY_ID: (id: string) => `/booking/${id}`, 
+    CREATE: '/booking/',
+    MY_BOOKINGS: '/booking/my-bookings',
+    /** All bookings for a trip (seat numbers). Backend may allow passenger for seat map. */
+    TRIP_BOOKINGS: (tripId: string) => `/booking/trip/${tripId}`,
+    BY_ID: (id: string) => `/booking/${id}`,
     UPDATE: (id: string) => `/booking/${id}`,
-    DELETE: (id: string) => `/booking/${id}`, 
+    DELETE: (id: string) => `/booking/${id}`,
   },
-  
-  
+
+
   STATIONS: {
     BASE: '/station',
-     ACTIVE: '/station/active',
+    ACTIVE: '/station/active',
     BY_ID: (id: string) => `/station/${id}`,
   },
-   
-  
+
+
   VEHICLES: {
     BY_ID: (id: string) => `/vehicles/${id}`,
     GET_IMAGES: (vehicleId: string) => `/vehicles/${vehicleId}/images`,
@@ -223,13 +223,13 @@ export const API_ENDPOINTS = {
   },
 
   PAYMENTS: {
-    BASE: '/payment',
-    INITIATE: '/payment/initiate',
-    VERIFY: '/payment/verify',
+    WEBHOOK: '/payment/webhook',
+    VERIFY: (txRef: string) => `/payment/verify/${txRef}`,
+    INITIALIZE: '/payment/initialize',
+    STATUS: '/payment/status',
     HISTORY: '/payment/history',
-    BY_ID: (id: string) => `/payment/${id}`, 
+    BY_ID: (id: string) => `/payment/${id}`,
   },
-  
 
   NOTIFICATIONS: {
     BASE: '/notifications',
@@ -237,11 +237,11 @@ export const API_ENDPOINTS = {
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/mark-all-read',
   },
-   
+
   USER: {
     PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/profile', 
-    CHANGE_PASSWORD: '/user/change-password', 
+    UPDATE_PROFILE: '/user/profile',
+    CHANGE_PASSWORD: '/user/change-password',
   }
 };
 

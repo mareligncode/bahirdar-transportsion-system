@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'; 
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,17 +22,17 @@ import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
-import { 
+import {
   validateRegisterForm,
   getPasswordStrength
 } from '@/utils/validations';
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  Phone, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Mail,
+  Lock,
+  User,
+  Phone,
+  AlertCircle,
+  CheckCircle,
   ChevronDown,
   ArrowLeft,
   Eye,
@@ -43,15 +43,13 @@ import { RegisterFormData } from '@/types/auth';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Comprehensive country codes list (same as before)
 const countryCodes = [
   { code: '+251', flag: '🇪🇹', name: 'Ethiopia', minLength: 9, maxLength: 9, pattern: '9|7' },
-  // ... rest of country codes
 ];
 
 export default function Register() {
   const [isCountryOpen, setIsCountryOpen] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]); // Ethiopia
+  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -59,17 +57,16 @@ export default function Register() {
   const [searchQuery, setSearchQuery] = useState('');
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  
-  // Refs for all inputs
-const nameInputRef = useRef<TextInput>(null!);
-const emailInputRef = useRef<TextInput>(null!);
-const phoneInputRef = useRef<TextInput>(null!);
-const emergencyContactInputRef = useRef<TextInput>(null!);
-const passwordInputRef = useRef<TextInput>(null!);
-const confirmPasswordInputRef = useRef<TextInput>(null!);
-  
+
+  const nameInputRef = useRef<TextInput>(null!);
+  const emailInputRef = useRef<TextInput>(null!);
+  const phoneInputRef = useRef<TextInput>(null!);
+  const emergencyContactInputRef = useRef<TextInput>(null!);
+  const passwordInputRef = useRef<TextInput>(null!);
+  const confirmPasswordInputRef = useRef<TextInput>(null!);
+
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   const { register: registerUser, isLoading: authLoading } = useAuth();
 
   const {
@@ -98,59 +95,55 @@ const confirmPasswordInputRef = useRef<TextInput>(null!);
   const password = watch('password');
   const confirmPassword = watch('confirmPassword');
 
-  // Keyboard listeners
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
       setIsKeyboardVisible(true);
       setKeyboardOffset(e.endCoordinates.height);
     });
-    
+
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
       setIsKeyboardVisible(false);
       setKeyboardOffset(0);
     });
-    
+
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
   }, []);
 
-  // Password strength with improved logic
   const passwordStrength = useMemo(() => {
     if (!password) return null;
     return getPasswordStrength(password);
   }, [password]);
 
-  // Check if password meets all criteria
-const passwordMeetsAllCriteria = useMemo(() => {
-  if (!password) return false;
-  
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasNumbers = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-  const hasMinLength = password.length >= 8;
+  const passwordMeetsAllCriteria = useMemo(() => {
+    if (!password) return false;
 
-   console.log('Password criteria check:', {
-    password,
-    hasUpperCase,
-    hasLowerCase,
-    hasNumbers,
-    hasSpecialChar,
-    hasMinLength,
-    meetsAll: hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && hasMinLength
-  });
-    
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasMinLength = password.length >= 8;
+
+    console.log('Password criteria check:', {
+      password,
+      hasUpperCase,
+      hasLowerCase,
+      hasNumbers,
+      hasSpecialChar,
+      hasMinLength,
+      meetsAll: hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && hasMinLength
+    });
+
     return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && hasMinLength;
   }, [password]);
 
-  // Improved country search
   const filteredCountries = useMemo(() => {
     if (!searchQuery.trim()) return countryCodes;
-    
+
     const query = searchQuery.toLowerCase().trim();
-    
+
     return countryCodes.filter(country => {
       if (country.name.toLowerCase().includes(query)) return true;
       const cleanCode = country.code.replace('+', '').toLowerCase();
@@ -166,7 +159,6 @@ const passwordMeetsAllCriteria = useMemo(() => {
     setError('');
     setSuccess('');
 
-    // Validate password meets all criteria
     if (!passwordMeetsAllCriteria) {
       setError('Password must meet all security requirements');
       return;
@@ -183,16 +175,16 @@ const passwordMeetsAllCriteria = useMemo(() => {
 
     try {
       const result = await registerUser(data);
-      
-        if (result.success) {
-          setSuccess('Account created successfully! Redirecting...');
-          
-          setTimeout(() => {
-            router.replace('/tabs/home');
-          }, 2000);
-        } else {
-          throw new Error(result.message || 'Registration failed');
-        }
+
+      if (result.success) {
+        setSuccess('Account created successfully! Redirecting...');
+
+        setTimeout(() => {
+          router.replace('/tabs/home');
+        }, 2000);
+      } else {
+        throw new Error(result.message || 'Registration failed');
+      }
     } catch (err: any) {
       const errorMessage = err.message || 'Registration failed. Please try again.';
       setError(errorMessage);
@@ -201,14 +193,14 @@ const passwordMeetsAllCriteria = useMemo(() => {
 
   const handleCountrySelect = (country: any) => {
     setSelectedCountry(country);
-    
+
     if (phone) {
       const currentNumber = phone.replace(selectedCountry.code, '');
       const cleanNumber = currentNumber.replace(/\D/g, '');
       const newPhone = country.code + cleanNumber;
       setValue('phoneNumber', newPhone, { shouldValidate: true });
     }
-    
+
     setIsCountryOpen(false);
     setSearchQuery('');
   };
@@ -217,18 +209,18 @@ const passwordMeetsAllCriteria = useMemo(() => {
     const cleanText = text.replace(/\D/g, '');
     const limitedText = cleanText.slice(0, selectedCountry.maxLength);
     const fullNumber = selectedCountry.code + limitedText;
-    
+
     onChange(fullNumber);
     if (errors.phoneNumber) {
       clearErrors('phoneNumber');
     }
   };
 
-const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
-  if (scrollViewRef.current) {
-    scrollViewRef.current.scrollToEnd({ animated: true });
-  }
-};
+  const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  };
   const handleNextField = (currentRef: React.RefObject<TextInput>, nextRef: React.RefObject<TextInput>) => {
     if (nextRef.current) {
       nextRef.current.focus();
@@ -249,31 +241,30 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         className="flex-1"
       >
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
           className="flex-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          contentContainerStyle={{ 
+          contentContainerStyle={{
             flexGrow: 1,
-            paddingBottom: Platform.OS === 'ios' ? keyboardOffset + 40 : 60 
+            paddingBottom: Platform.OS === 'ios' ? keyboardOffset + 40 : 60
           }}
           automaticallyAdjustContentInsets={false}
           scrollEventThrottle={16}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View className="px-6 pt-4">
-              {/* Header */}
               <View className="mb-8">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.back()}
                   className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
                 </TouchableOpacity>
-                
+
                 <View className="items-center mb-6">
                   <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
                     <View className="w-12 h-12 bg-blue-600 rounded-lg items-center justify-center">
@@ -288,8 +279,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   </Text>
                 </View>
               </View>
-
-              {/* Success Message */}
               {success && (
                 <Card className="bg-green-50 border-green-200 mb-6">
                   <View className="flex-row items-start">
@@ -300,8 +289,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   </View>
                 </Card>
               )}
-
-              {/* Error Message */}
               {error && (
                 <Card className="bg-red-50 border-red-200 mb-6">
                   <View className="flex-row items-start">
@@ -313,15 +300,12 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   </View>
                 </Card>
               )}
-
-              {/* Personal Information */}
               <View className="mb-6">
                 <Text className="text-lg font-semibold text-gray-800 mb-4">
                   Personal Information
                 </Text>
-                
+
                 <View className="space-y-4">
-                  {/* Full Name - FIXED INPUT */}
                   <Controller
                     name="fullName"
                     control={control}
@@ -353,8 +337,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                       </View>
                     )}
                   />
-
-                  {/* Email - FIXED INPUT */}
                   <Controller
                     name="email"
                     control={control}
@@ -387,14 +369,11 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                       </View>
                     )}
                   />
-
-                  {/* Phone Number with Country Code - FIXED */}
                   <View>
                     <Text className="text-sm font-medium text-gray-700 mb-2">
                       Phone Number *
                     </Text>
                     <View className="flex-row space-x-2">
-                      {/* Country Code Selector */}
                       <View className="flex-1 max-w-[140px]">
                         <TouchableOpacity
                           onPress={() => setIsCountryOpen(true)}
@@ -405,16 +384,14 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                           <View className="flex-row items-center space-x-2">
                             <Text className="text-lg">{selectedCountry.flag}</Text>
                             <Text className="font-medium text-sm">
-                              {selectedCountry.code.length > 5 ? 
-                                selectedCountry.code.substring(0, 5) + '...' : 
+                              {selectedCountry.code.length > 5 ?
+                                selectedCountry.code.substring(0, 5) + '...' :
                                 selectedCountry.code}
                             </Text>
                           </View>
                           <ChevronDown size={16} color="#6B7280" />
                         </TouchableOpacity>
                       </View>
-
-                      {/* Phone Input - FIXED */}
                       <View className="flex-1">
                         <Controller
                           name="phoneNumber"
@@ -450,8 +427,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                       {selectedCountry.pattern ? ` starting with ${selectedCountry.pattern}` : ''}
                     </Text>
                   </View>
-
-                  {/* Emergency Contact - OPTIONAL - FIXED */}
                   <View>
                     <Text className="text-sm font-medium text-gray-700 mb-2">
                       Emergency Contact (Optional)
@@ -489,11 +464,8 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   </View>
                 </View>
               </View>
-
-              {/* Password Section */}
               <View className="mb-6">
                 <View className="space-y-4">
-                  {/* Password - FIXED INPUT */}
                   <Controller
                     name="password"
                     control={control}
@@ -512,7 +484,7 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                           onFocus={() => {
                             setTimeout(() => {
                               scrollViewRef.current?.scrollTo({
-                                y: 400, // Adjust based on your layout
+                                y: 400,
                                 animated: true,
                               });
                             }, 100);
@@ -544,74 +516,67 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                     )}
                   />
 
-                  {/* Enhanced Password Strength Indicator */}
                   {password && (
                     <View className="bg-gray-50 p-4 rounded-lg">
                       <View className="flex-row justify-between items-center mb-2">
                         <Text className="text-sm font-medium text-gray-700">
                           Password Strength
                         </Text>
-                        <Text className={`text-sm font-bold ${
-                          passwordStrength?.score === 0 ? 'text-red-600' :
-                          passwordStrength?.score === 1 ? 'text-red-500' :
-                          passwordStrength?.score === 2 ? 'text-yellow-600' :
-                          passwordStrength?.score === 3 ? 'text-yellow-500' :
-                          passwordStrength?.score === 4 ? 'text-green-500' :
-                          passwordStrength?.score === 5 ? 'text-green-600' :
-                          'text-gray-500'
-                        }`}>
+                        <Text className={`text-sm font-bold ${passwordStrength?.score === 0 ? 'text-red-600' :
+                            passwordStrength?.score === 1 ? 'text-red-500' :
+                              passwordStrength?.score === 2 ? 'text-yellow-600' :
+                                passwordStrength?.score === 3 ? 'text-yellow-500' :
+                                  passwordStrength?.score === 4 ? 'text-green-500' :
+                                    passwordStrength?.score === 5 ? 'text-green-600' :
+                                      'text-gray-500'
+                          }`}>
                           {passwordStrength?.label || 'None'}
                         </Text>
                       </View>
-                      
-                      {/* Strength bar with percentage */}
                       <View className="h-2.5 bg-gray-200 rounded-full overflow-hidden mb-3">
-                        <View 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            passwordStrength?.score === 0 ? 'bg-red-500' :
-                            passwordStrength?.score === 1 ? 'bg-red-400' :
-                            passwordStrength?.score === 2 ? 'bg-yellow-500' :
-                            passwordStrength?.score === 3 ? 'bg-yellow-400' :
-                            passwordStrength?.score === 4 ? 'bg-green-400' :
-                            'bg-green-600'
-                          }`}
+                        <View
+                          className={`h-full rounded-full transition-all duration-300 ${passwordStrength?.score === 0 ? 'bg-red-500' :
+                              passwordStrength?.score === 1 ? 'bg-red-400' :
+                                passwordStrength?.score === 2 ? 'bg-yellow-500' :
+                                  passwordStrength?.score === 3 ? 'bg-yellow-400' :
+                                    passwordStrength?.score === 4 ? 'bg-green-400' :
+                                      'bg-green-600'
+                            }`}
                           style={{ width: `${passwordStrength?.percentage || 0}%` }}
                         />
                       </View>
-                      
-                      {/* Password Requirements Checklist */}
                       <View className="space-y-2">
                         <Text className="text-xs font-medium text-gray-700 mb-1">
                           Must include:
                         </Text>
-                        
+
                         {[
-                          { 
-                            check: password.length >= 8, 
+                          {
+                            check: password.length >= 8,
                             text: 'At least 8 characters',
                             description: `${password.length}/8`,
                             required: true
                           },
-                          { 
-                            check: /[a-z]/.test(password), 
+                          {
+                            check: /[a-z]/.test(password),
                             text: 'One lowercase letter',
                             description: /[a-z]/.test(password) ? '✓' : '✗',
                             required: true
                           },
-                          { 
-                            check: /[A-Z]/.test(password), 
+                          {
+                            check: /[A-Z]/.test(password),
                             text: 'One uppercase letter',
                             description: /[A-Z]/.test(password) ? '✓' : '✗',
                             required: true
                           },
-                          { 
-                            check: /\d/.test(password), 
+                          {
+                            check: /\d/.test(password),
                             text: 'One number',
                             description: /\d/.test(password) ? '✓' : '✗',
                             required: true
                           },
-                          { 
-                            check: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), 
+                          {
+                            check: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
                             text: 'One special character',
                             description: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '✗',
                             required: true
@@ -630,8 +595,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                           </View>
                         ))}
                       </View>
-                      
-                      {/* Show special message when password is "Full" */}
                       {passwordStrength?.label === 'Full' && (
                         <View className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
                           <View className="flex-row items-center">
@@ -650,7 +613,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                     </View>
                   )}
 
-                  {/* Confirm Password - FIXED INPUT (Always Visible) */}
                   <Controller
                     name="confirmPassword"
                     control={control}
@@ -669,7 +631,7 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                           onFocus={() => {
                             setTimeout(() => {
                               scrollViewRef.current?.scrollTo({
-                                y: 500, // Adjust this value to show confirm password
+                                y: 500,
                                 animated: true,
                               });
                             }, 100);
@@ -701,36 +663,28 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   />
                 </View>
               </View>
-
-              {/* Terms and Conditions - FIXED */}
               <Controller
                 name="termsAccepted"
                 control={control}
                 render={({ field: { onChange, value } }) => (
                   <View className="mb-8">
                     <View className="flex-row items-start">
-                      {/* Checkbox */}
                       <TouchableOpacity
                         onPress={() => onChange(!value)}
                         disabled={loading}
                         activeOpacity={0.7}
                         className="mt-0.5 mr-3"
                       >
-                        <View className={`w-5 h-5 rounded border items-center justify-center ${
-                          value ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
-                        }`}>
+                        <View className={`w-5 h-5 rounded border items-center justify-center ${value ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                          }`}>
                           {value && <CheckCircle size={12} color="white" />}
                         </View>
                       </TouchableOpacity>
-                      
-                      {/* Text with separate touchable areas */}
                       <View className="flex-1">
                         <View className="flex-row flex-wrap items-center">
                           <Text className="text-sm text-gray-700 mr-1">
                             I agree to the
                           </Text>
-                          
-                          {/* Terms of Service Link */}
                           <TouchableOpacity
                             onPress={() => router.push('/terms')}
                             disabled={loading}
@@ -741,10 +695,9 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                               Terms of Service
                             </Text>
                           </TouchableOpacity>
-                          
+
                           <Text className="text-sm text-gray-700 mx-1">and</Text>
-                          
-                          {/* Privacy Policy Link */}
+
                           <TouchableOpacity
                             onPress={() => router.push('/privacy')}
                             disabled={loading}
@@ -755,12 +708,12 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                               Privacy Policy
                             </Text>
                           </TouchableOpacity>
-                          
+
                           <Text className="text-sm text-gray-700 ml-1">.*</Text>
                         </View>
                       </View>
                     </View>
-                    
+
                     {errors.termsAccepted && (
                       <Text className="text-red-500 text-xs mt-1 ml-8">
                         {errors.termsAccepted.message}
@@ -779,13 +732,11 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                 size="large"
                 className="mb-6"
                 fullWidth
-                    />
-
-              {/* Login Link */}
+              />
               <View className="pt-6 border-t border-gray-200">
                 <View className="flex-row justify-center">
                   <Text className="text-gray-600">Already have an account? </Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => router.push('/auth/Login')}
                     disabled={loading}
                     activeOpacity={0.7}
@@ -798,8 +749,6 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
           </TouchableWithoutFeedback>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Country Selection Modal with Improved Search */}
       <Modal
         visible={isCountryOpen}
         animationType="slide"
@@ -814,13 +763,12 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
           setSearchQuery('');
         }}>
           <View className="flex-1 bg-black/50 justify-end">
-            <TouchableWithoutFeedback onPress={() => {}}>
+            <TouchableWithoutFeedback onPress={() => { }}>
               <View className="bg-white rounded-t-3xl max-h-3/4">
                 <View className="p-4 border-b border-gray-200">
                   <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mb-4" />
                   <Text className="text-lg font-semibold text-center">Select Country</Text>
-                  
-                  {/* Improved Search Input */}
+
                   <View className="mt-4">
                     <View className="flex-row items-center bg-gray-50 rounded-lg px-3 py-3 border border-gray-300">
                       <Search size={20} color="#6B7280" className="mr-3" />
@@ -835,7 +783,7 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                     </View>
                   </View>
                 </View>
-                
+
                 <FlatList
                   data={filteredCountries}
                   keyExtractor={(item) => item.code + item.name}
@@ -870,7 +818,7 @@ const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
                   }
                   showsVerticalScrollIndicator={false}
                 />
-                
+
                 <TouchableOpacity
                   onPress={() => {
                     setIsCountryOpen(false);

@@ -1,123 +1,74 @@
-// store/bookingStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Trip } from '../types/trip';
-import { Booking } from '../types/booking';
+import { Booking, Trip } from '../types';
 
 interface BookingState {
-  // Current booking flow state
-  currentSearch: {
-    origin: string;
-    destination: string;
-    date: Date | null;
-    passengers?: number;
-  } | null;
-  availableTrips: Trip[];
+  bookings: Booking[];
   selectedTrip: Trip | null;
-  selectedSeats: string[];
-  
-  // Active booking
-  currentBooking: Partial<Booking> | null;
-  
-  // UI State
-  step: 'search' | 'results' | 'seats' | 'payment' | 'confirmation';
-  isLoading: boolean;
-  error: string | null;
+  selectedSeats: number[];
+  currentBooking: Booking | null;
   
   // Actions
-  setSearchData: (search: BookingState['currentSearch']) => void;
-  setAvailableTrips: (trips: Trip[]) => void;
-  selectTrip: (trip: Trip | null) => void;
-  selectSeats: (seats: string[]) => void;
-  setStep: (step: BookingState['step']) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  resetBooking: () => void;
-  clearSearch: () => void;
-  clearError: () => void;
+  setBookings: (bookings: Booking[]) => void;
+  addBooking: (booking: Booking) => void;
+  updateBooking: (id: string, updates: Partial<Booking>) => void;
+  removeBooking: (id: string) => void;
+  setSelectedTrip: (trip: Trip | null) => void;
+  setSelectedSeats: (seats: number[]) => void;
+  setCurrentBooking: (booking: Booking | null) => void;
+  clearBookingState: () => void;
 }
 
 export const useBookingStore = create<BookingState>()(
   persist(
-    (set, get) => ({
-      // Initial state
-      currentSearch: null,
-      availableTrips: [],
+    (set) => ({
+      bookings: [],
       selectedTrip: null,
       selectedSeats: [],
       currentBooking: null,
-      step: 'search',
-      isLoading: false,
-      error: null,
 
-      // Actions - WITHOUT IMMER
-      setSearchData: (search) => set({ 
-        currentSearch: search,
-        error: null // Clear error when starting new search
-      }),
-
-      setAvailableTrips: (trips) => set({ 
-        availableTrips: trips,
-        step: trips.length > 0 ? 'results' : 'search',
-        error: null // Clear error when trips loaded
-      }),
-
-      selectTrip: (trip) => set({ 
-        selectedTrip: trip,
-        step: trip ? 'seats' : 'search',
-        selectedSeats: [], // Reset seats when new trip selected
-        error: null // Clear error when trip selected
-      }),
-
-      selectSeats: (seats) => set({ 
-        selectedSeats: seats,
-        error: null // Clear error when seats selected
-      }),
-
-      setStep: (step) => set({ 
-        step,
-        error: null // Clear error when changing steps
-      }),
-
-      setLoading: (loading) => set({ 
-        isLoading: loading 
-      }),
-
-      setError: (error) => set({ 
-        error,
-        isLoading: false // Stop loading when error occurs
-      }),
-
-      clearError: () => set({ 
-        error: null 
-      }),
-
-      resetBooking: () => set({ 
-        selectedTrip: null,
-        selectedSeats: [],
-        currentBooking: null,
-        step: 'search',
-        error: null,
-        isLoading: false
-      }),
-
-      clearSearch: () => set({ 
-        currentSearch: null,
-        availableTrips: [],
-        step: 'search',
-        error: null
-      }),
+      setBookings: (bookings) => set({ bookings }),
+      
+      addBooking: (booking) => 
+        set((state) => ({ 
+          bookings: [booking, ...state.bookings] 
+        })),
+      
+      updateBooking: (id, updates) =>
+        set((state) => ({
+          bookings: state.bookings.map(booking =>
+            booking._id === id ? { ...booking, ...updates } : booking
+          ),
+          currentBooking: state.currentBooking?._id === id 
+            ? { ...state.currentBooking, ...updates }
+            : state.currentBooking
+        })),
+      
+      removeBooking: (id) =>
+        set((state) => ({
+          bookings: state.bookings.filter(booking => booking._id !== id),
+          currentBooking: state.currentBooking?._id === id ? null : state.currentBooking
+        })),
+      
+      setSelectedTrip: (trip) => set({ selectedTrip: trip }),
+      
+      setSelectedSeats: (seats) => set({ selectedSeats: seats }),
+      
+      setCurrentBooking: (booking) => set({ currentBooking: booking }),
+      
+      clearBookingState: () => set({ 
+        selectedTrip: null, 
+        selectedSeats: [], 
+        currentBooking: null 
+      })
     }),
     {
       name: 'booking-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        currentSearch: state.currentSearch,
-        selectedSeats: state.selectedSeats,
-        step: state.step,
+      partialize: (state) => ({ 
+        bookings: state.bookings 
       }),
     }
   )
 );
-

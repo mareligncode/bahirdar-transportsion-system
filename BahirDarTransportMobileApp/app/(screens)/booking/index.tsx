@@ -1,410 +1,217 @@
- // app/(screens)/booking/index.tsx
+// app/(screens)/booking/index.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  RefreshControl,
   ActivityIndicator,
-  Modal,
-  Alert,
+  RefreshControl,
+  FlatList
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ArrowLeft,
+  Bus,
+  Clock,
+  Calendar,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Receipt,
+  ChevronRight
+} from 'lucide-react-native';
 import { useBooking } from '../../../hooks/useBooking';
 import { useAuth } from '../../../hooks/useAuth';
-import { Button } from '../../../components/common/Button';
-import { EmptyState } from '../../../components/common/EmptyState';
-import { BookingCard } from '../../../components/booking/BookingCard';
-import { Booking } from '../../../types/booking';
-import { COLORS, getBookingStatusColors } from '../../../constants/colors';
+import { Booking, Trip } from '../../../types';
+import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
+import { COLORS } from '../../../constants/colors';
 
-export default function BookingListScreen() {
+export default function BookingsListScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { getMyBookings, cancelBooking, loading } = useBooking();
+  const { user, isAuthenticated } = useAuth();
+  const { bookings, fetchMyBookings, loading } = useBooking();
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [cancelModalVisible, setCancelModalVisible] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const statusFilters = [
-    { id: 'all', label: 'All', icon: 'apps-outline', color: COLORS.gray600 },
-    { id: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline', color: COLORS.booking.confirmedText },
-    { id: 'pending', label: 'Pending', icon: 'time-outline', color: COLORS.booking.pendingText },
-    { id: 'completed', label: 'Completed', icon: 'checkmark-done-circle-outline', color: COLORS.booking.completedText },
-    { id: 'cancelled', label: 'Cancelled', icon: 'close-circle-outline', color: COLORS.booking.cancelledText },
-  ];
-
-  const fetchBookings = async () => {
-    setIsLoading(true);
-    const data = await getMyBookings();
-    setBookings(data || []);
-    setIsLoading(false);
-  };
 
   useFocusEffect(
     useCallback(() => {
-      if (user) {
-        fetchBookings();
+      if (isAuthenticated) {
+        fetchMyBookings();
+      } else {
+        router.replace('/auth/Login');
       }
-    }, [user])
+    }, [isAuthenticated])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchBookings();
+    await fetchMyBookings();
     setRefreshing(false);
   };
 
-  const handleCancelBooking = async () => {
-    if (!selectedBooking) return;
+  const getTripDetails = (booking: Booking) => {
+    const trip = typeof booking.tripID === 'object' && booking.tripID !== null
+      ? booking.tripID as Trip
+      : null;
+    return trip;
+  };
 
-    setCancelling(true);
-    const success = await cancelBooking(selectedBooking._id);
-    setCancelling(false);
-    
-    if (success) {
-      setCancelModalVisible(false);
-      setSelectedBooking(null);
-      fetchBookings();
-      Alert.alert('Success', 'Booking cancelled successfully');
+  const getStatusColor = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'confirmed': return 'bg-green-100 text-green-700';
+      case 'pending': return 'bg-yellow-100 text-yellow-700';
+      case 'cancelled': return 'bg-red-100 text-red-700';
+      case 'completed': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const openCancelModal = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setCancelModalVisible(true);
+  const getStatusIcon = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'confirmed': return <CheckCircle size={14} color="#16a34a" />;
+      case 'pending': return <Clock size={14} color="#ca8a04" />;
+      case 'cancelled': return <XCircle size={14} color="#dc2626" />;
+      case 'completed': return <CheckCircle size={14} color="#2563eb" />;
+      default: return <AlertCircle size={14} color="#6b7280" />;
+    }
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    if (filterStatus === 'all') return true;
-    return booking.status?.toLowerCase() === filterStatus.toLowerCase();
-  });
+  const renderBookingCard = ({ item }: { item: Booking }) => {
+    const trip = getTripDetails(item);
+    const originName = trip?.origin?.stationName || 'Unknown';
+    const destinationName = trip?.destination?.stationName || 'Unknown';
+    const departureTime = trip?.departureTime;
+    const seatNumbers = item.seatNumber ? [item.seatNumber] : (item.seatNumbers || []);
+    const totalAmount = item.totalPrice || item.amount || 0;
+    const needsPayment = item.status?.toLowerCase() === 'pending' &&
+      (!item.paymentStatus || item.paymentStatus === 'pending');
 
-  const getActiveFilterLabel = () => {
-    const filter = statusFilters.find(f => f.id === filterStatus);
-    return filter?.label || 'All';
-  };
-
-  const getStatusSummary = () => {
-    const total = bookings.length;
-    const confirmed = bookings.filter(b => b.status === 'confirmed').length;
-    const pending = bookings.filter(b => b.status === 'pending').length;
-    const cancelled = bookings.filter(b => b.status === 'cancelled').length;
-    return { total, confirmed, pending, cancelled };
-  };
-
-  const summary = getStatusSummary();
-
-  if (!user) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 justify-center items-center px-6">
-          <View className="bg-blue-100 p-4 rounded-full mb-6">
-            <Ionicons name="ticket-outline" size={48} color={COLORS.primary} />
+      <TouchableOpacity
+        onPress={() => router.push(`/(screens)/booking/${item._id}`)}
+        activeOpacity={0.7}
+        className="bg-white mb-3 rounded-xl border border-gray-200 overflow-hidden"
+      >
+        <View className="p-4">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-row items-center gap-2 flex-1">
+              <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center">
+                <Bus size={16} color={COLORS.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="font-semibold text-gray-800">
+                  {originName} → {destinationName}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  #{item.bookingNumber || item._id?.slice(-6).toUpperCase()}
+                </Text>
+              </View>
+            </View>
+            <View className={`px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
+              <Text className="text-xs font-medium">
+                {item.status?.toUpperCase()}
+              </Text>
+            </View>
           </View>
-          <Text className="text-2xl font-bold text-gray-800 mb-2 text-center">
-            Sign in to View Bookings
-          </Text>
-          <Text className="text-gray-500 text-center mb-8">
-            Please login to view and manage your trip bookings
-          </Text>
-          <Button
-            title="Sign In"
-            onPress={() => router.push('/auth/Login')}
-            className="px-8"
-          />
+
+          <View className="flex-row items-center gap-4 mb-2">
+            <View className="flex-row items-center gap-1">
+              <Calendar size={12} color="#6b7280" />
+              <Text className="text-xs text-gray-600">
+                {departureTime ? formatDate(departureTime) : 'N/A'}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <Clock size={12} color="#6b7280" />
+              <Text className="text-xs text-gray-600">
+                {departureTime ? formatTime(departureTime) : 'N/A'}
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-1">
+              <Text className="text-xs text-gray-500">Seats:</Text>
+              <Text className="text-xs font-medium text-gray-700">
+                {seatNumbers.join(', ')}
+              </Text>
+            </View>
+            <Text className="font-bold text-blue-600">
+              {formatCurrency(totalAmount)}
+            </Text>
+          </View>
+
+          {needsPayment && (
+            <View className="mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
+              <Text className="text-yellow-700 text-xs text-center">
+                Payment required - Tap to complete
+              </Text>
+            </View>
+          )}
         </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View className="flex-1 justify-center items-center p-6">
+      <Receipt size={60} color="#d1d5db" />
+      <Text className="text-xl font-semibold text-gray-800 mt-4">
+        No Bookings Found
+      </Text>
+      <Text className="text-gray-500 text-center mt-2">
+        You haven't made any bookings yet.
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push('/tabs/trips')}
+        className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
+      >
+        <Text className="text-white font-semibold">Book a Trip</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-gray-600">Redirecting...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: COLORS.background }}>
-      {/* Header */}
-      <View className="bg-white px-4 py-4 border-b" style={{ borderColor: COLORS.border }}>
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              className="mr-3 p-2"
-            >
-              <Ionicons name="arrow-back" size={24} color={COLORS.gray800} />
-            </TouchableOpacity>
-            <View>
-              <Text className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
-                My Bookings
-              </Text>
-              <Text className="text-sm" style={{ color: COLORS.textSecondary }}>
-                {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''} found
-              </Text>
-            </View>
-          </View>
-          <View className="flex-row">
-            <TouchableOpacity 
-              onPress={onRefresh}
-              className="p-2 rounded-full mr-2"
-              style={{ backgroundColor: COLORS.gray100 }}
-              disabled={refreshing}
-            >
-              <Ionicons 
-                name="refresh" 
-                size={20} 
-                color={refreshing ? COLORS.gray400 : COLORS.gray700} 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => setFilterModalVisible(true)}
-              className="p-2 rounded-full"
-              style={{ backgroundColor: COLORS.gray100 }}
-            >
-              <Ionicons 
-                name="options-outline" 
-                size={20} 
-                color={filterStatus !== 'all' ? COLORS.primary : COLORS.gray700} 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Status Summary Cards */}
-        <View className="flex-row mt-4 space-x-3">
-          <View className="flex-1 p-3 rounded-lg" style={{ backgroundColor: COLORS.infoLight }}>
-            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>Total</Text>
-            <Text className="text-xl font-bold" style={{ color: COLORS.primary }}>{summary.total}</Text>
-          </View>
-          <View className="flex-1 p-3 rounded-lg" style={{ backgroundColor: COLORS.successLight }}>
-            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>Confirmed</Text>
-            <Text className="text-xl font-bold" style={{ color: COLORS.booking.confirmedText }}>{summary.confirmed}</Text>
-          </View>
-          <View className="flex-1 p-3 rounded-lg" style={{ backgroundColor: COLORS.warningLight }}>
-            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>Pending</Text>
-            <Text className="text-xl font-bold" style={{ color: COLORS.booking.pendingText }}>{summary.pending}</Text>
-          </View>
-        </View>
-
-        {/* Active Filter Chip */}
-        {filterStatus !== 'all' && (
-          <View className="flex-row items-center mt-3">
-            <View className="px-3 py-1.5 rounded-full flex-row items-center" style={{ backgroundColor: COLORS.primaryLight + '20' }}>
-              <Text className="text-sm mr-2" style={{ color: COLORS.primary }}>
-                Filter: {getActiveFilterLabel()}
-              </Text>
-              <TouchableOpacity onPress={() => setFilterStatus('all')}>
-                <Ionicons name="close-circle" size={18} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="px-4 py-3 bg-white border-b border-gray-200 flex-row items-center">
+        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+          <ArrowLeft size={24} color="#4b5563" />
+        </TouchableOpacity>
+        <Text className="flex-1 text-lg font-semibold text-gray-800">
+          My Bookings
+        </Text>
       </View>
 
-      {/* Bookings List */}
-      {isLoading ? (
+      {loading && !refreshing ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4" style={{ color: COLORS.textSecondary }}>Loading your bookings...</Text>
-        </View>
-      ) : filteredBookings.length === 0 ? (
-        <View className="flex-1 px-4">
-          <EmptyState
-            icon={<Ionicons name="ticket-outline" size={48} color={COLORS.gray400} />}
-            title="No Bookings Found"
-            description={
-              filterStatus !== 'all'
-                ? `You don't have any ${filterStatus} bookings. Try adjusting your filter.`
-                : "You haven't made any bookings yet. Start your journey by booking a trip!"
-            }
-            actionLabel={filterStatus !== 'all' ? "Clear Filter" : "Book a Trip"}
-            onAction={() => {
-              if (filterStatus !== 'all') {
-                setFilterStatus('all');
-              } else {
-                router.push('/tabs/trips/search');
-              }
-            }}
-          />
+          <Text className="mt-4 text-gray-600">Loading your bookings...</Text>
         </View>
       ) : (
-        <ScrollView
-          className="flex-1 px-4 pt-4"
-          showsVerticalScrollIndicator={false}
+        <FlatList
+          data={bookings}
+          renderItem={renderBookingCard}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={{ padding: 16 }}
+          ListEmptyComponent={renderEmptyState}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-        >
-          {filteredBookings.map((booking) => (
-            <BookingCard
-              key={booking._id}
-              booking={booking}
-              onViewTicket={() => {
-                router.push({
-                  pathname: '/tabs/tickets/[id]',
-                  params: { id: booking._id }
-                });
-              }}
-              onCancel={() => openCancelModal(booking)}
-            />
-          ))}
-          <View className="h-20" />
-        </ScrollView>
+          showsVerticalScrollIndicator={false}
+        />
       )}
-
-      {/* Filter Modal */}
-      <Modal
-        visible={filterModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6">
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>Filter Bookings</Text>
-              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.gray500} />
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-sm font-medium mb-3" style={{ color: COLORS.gray700 }}>
-              Booking Status
-            </Text>
-            
-            {statusFilters.map((filter) => (
-              <TouchableOpacity
-                key={filter.id}
-                onPress={() => {
-                  setFilterStatus(filter.id);
-                  setFilterModalVisible(false);
-                }}
-                className={`flex-row items-center justify-between p-4 rounded-lg mb-2`}
-                style={{ 
-                  backgroundColor: filterStatus === filter.id ? COLORS.primaryLight + '20' : COLORS.gray100,
-                  borderWidth: filterStatus === filter.id ? 1 : 0,
-                  borderColor: filterStatus === filter.id ? COLORS.primary : undefined,
-                }}
-              >
-                <View className="flex-row items-center">
-                  <View 
-                    className="p-2 rounded-full mr-3"
-                    style={{ backgroundColor: filter.color + '20' }}
-                  >
-                    <Ionicons 
-                      name={filter.icon as any} 
-                      size={20} 
-                      color={filter.color} 
-                    />
-                  </View>
-                  <View>
-                    <Text className={`font-medium ${
-                      filterStatus === filter.id ? 'text-blue-700' : 'text-gray-700'
-                    }`}>
-                      {filter.label}
-                    </Text>
-                    <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
-                      {bookings.filter(b => 
-                        filter.id === 'all' ? true : b.status === filter.id
-                      ).length} bookings
-                    </Text>
-                  </View>
-                </View>
-                {filterStatus === filter.id && (
-                  <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-
-            <Button
-              title="Apply Filter"
-              onPress={() => setFilterModalVisible(false)}
-              className="mt-4"
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Cancel Booking Modal */}
-      <Modal
-        visible={cancelModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCancelModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center px-4">
-          <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-            <View className="items-center mb-4">
-              <View className="p-3 rounded-full mb-3" style={{ backgroundColor: COLORS.dangerLight }}>
-                <Ionicons name="close-circle" size={40} color={COLORS.danger} />
-              </View>
-              <Text className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>Cancel Booking</Text>
-              <Text className="text-center mt-1" style={{ color: COLORS.textSecondary }}>
-                This action cannot be undone
-              </Text>
-            </View>
-
-            {selectedBooking && (
-              <View className="p-4 rounded-lg mb-4" style={{ backgroundColor: COLORS.gray50 }}>
-                <Text className="font-semibold" style={{ color: COLORS.textPrimary }}>
-                  {typeof selectedBooking.tripID === 'object' && selectedBooking.tripID
-                    ? `${selectedBooking.tripID?.origin?.stationName || 'Unknown'} → ${selectedBooking.tripID?.destination?.stationName || 'Unknown'}`
-                    : 'Trip details unavailable'}
-                </Text>
-                <Text className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                  {selectedBooking.tripID && typeof selectedBooking.tripID === 'object' && selectedBooking.tripID?.departureTime
-                    ? new Date(selectedBooking.tripID.departureTime).toLocaleString()
-                    : 'Date unavailable'}
-                </Text>
-                <View className="flex-row justify-between items-center mt-2 pt-2 border-t" style={{ borderColor: COLORS.border }}>
-                  <Text style={{ color: COLORS.textSecondary }}>Seat{selectedBooking.seatNumbers?.length > 1 ? 's' : ''}:</Text>
-                  <Text className="font-medium" style={{ color: COLORS.textPrimary }}>
-                    {selectedBooking.seatNumbers?.join(', ')}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between items-center mt-1">
-                  <Text style={{ color: COLORS.textSecondary }}>Refund Amount:</Text>
-                  <Text className="font-bold" style={{ color: COLORS.primary }}>
-                    ETB {selectedBooking.totalPrice || 0}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View className="flex-row space-x-3 mt-2">
-              <Button
-                title="Keep Booking"
-                onPress={() => setCancelModalVisible(false)}
-                variant="outline"
-                className="flex-1"
-              />
-              <Button
-                title={cancelling ? "Cancelling..." : "Yes, Cancel"}
-                onPress={handleCancelBooking}
-                disabled={cancelling}
-                loading={cancelling}
-                className="flex-1"
-                style={{ backgroundColor: COLORS.danger }}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Floating Action Button for New Booking */}
-      <TouchableOpacity
-        onPress={() => router.push('/tabs/trips/search')}
-        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center shadow-lg"
-        style={{ backgroundColor: COLORS.primary, elevation: 8 }}
-      >
-        <Ionicons name="add" size={30} color={COLORS.white} />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
-

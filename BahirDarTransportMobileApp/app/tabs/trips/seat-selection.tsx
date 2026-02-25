@@ -1,375 +1,279 @@
-// app/tabs/trips/seat-selection.tsx
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
+  Platform
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useLocalSearchParams, router } from 'expo-router';
-import { 
-  ChevronLeft, 
-  Bus,
-  Clock,
-  MapPin,
-  Users,
-  DollarSign,
-  CreditCard,
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ArrowLeft,
   Info,
-  Shield,
-  AlertCircle,
-  CheckCircle,
-  ArrowRight
+  Clock,
+  Bus,
+  User,
+  ChevronRight,
+  CreditCard
 } from 'lucide-react-native';
-import { useBooking } from '../../../hooks/useBooking';
-import { tripsApi } from '../../../lib/api/trips';
-import { Button } from '../../../components/common/Button';
 import SeatMap from '../../../components/booking/SeatMap';
-import { Loader } from '../../../components/common/Loader';
-import { 
-  formatDate, 
-  formatTime, 
-  formatCurrency, 
-  calculateDuration 
-} from '../../../utils/helpers';
+import { useBooking } from '../../../hooks/useBooking';
+import { useAuth } from '../../../hooks/useAuth';
+import { useTrips } from '../../../hooks/useTrips';
+import { Trip } from '../../../types';
 
 export default function SeatSelectionScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tripId, tripDetails } = useLocalSearchParams();
-  const { selectedSeats, selectSeats, loading: bookingLoading } = useBooking();
-  const [trip, setTrip] = useState<any>(null);
-  const [loadingTrip, setLoadingTrip] = useState(true);
-  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
-  const [bookingInProgress, setBookingInProgress] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
+  const {
+    selectedTrip,
+    selectedSeats,
+    selectSeats,
+    createBooking,
+    loading: bookingLoading
+  } = useBooking();
+  const { getTripById, loading: tripLoading } = useTrips();
 
-  // Reset selected seats when trip changes to prevent cross-trip contamination
+  const [trip, setTrip] = useState<Trip | null>(selectedTrip);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-    selectSeats([]);
-  }, [tripId]);
-
-  useEffect(() => {
-    loadTripDetails();
-  }, [tripId, tripDetails]);
-
-  const loadTripDetails = async () => {
-    try {
-      setLoadingTrip(true);
-      setFetchError(null);
-      
-      if (tripDetails) {
-        const parsedTrip = JSON.parse(tripDetails as string);
-        setTrip(parsedTrip);
-      } 
-      else if (tripId) {
-        const response = await tripsApi.getTripById(tripId as string);
-        const tripData = response.data?.data || response.data;
-        setTrip(tripData);
-      }
-    } catch (error) {
-      setFetchError('Failed to load trip details');
-    } finally {
-      setLoadingTrip(false);
-    }
-  };
-
-  const handleSeatSelect = (seats: string[]) => {
-    selectSeats(seats);
-  };
-
-  const handleProceedToBooking = () => {
-    if (selectedSeats.length === 0) {
-      Alert.alert('Select Seats', 'Please select at least one seat to continue');
+    if (!isAuthenticated) {
+      router.replace('/auth/Login');
       return;
     }
 
-    const totalAmount = (trip?.price || 0) * selectedSeats.length;
-    const serviceFee = 20;
-    const grandTotal = totalAmount + serviceFee;
-    
-    router.push({
-      pathname: '/(screens)/booking/passenger-details',
-      params: {
-        tripId: trip._id || trip.id,
-        selectedSeats: JSON.stringify(selectedSeats),
-        tripDetails: JSON.stringify({
-          _id: trip._id || trip.id,
-          fromStation: trip.origin?.stationName || trip.fromStation?.stationName,
-          toStation: trip.destination?.stationName || trip.toStation?.stationName,
-          price: trip.price,
-          departureTime: trip.departureTime,
-          arrivalTime: trip.arrivalTime,
-          availableSeats: trip.availableSeats,
-          totalSeats: trip.totalSeats || trip.vehicle?.totalCapacity || 40,
-          vehicle: trip.vehicle ? {
-            _id: trip.vehicle._id,
-            plateNumber: trip.vehicle.plateNumber,
-            carType: trip.vehicle.carType,
-            totalCapacity: trip.vehicle.totalCapacity
-          } : null
-        }),
-        totalAmount: grandTotal.toString(),
-        seatPrice: trip.price.toString(),
-        serviceFee: serviceFee.toString(),
+    if (!selectedTrip && id) {
+      fetchTripDetails(id);
+    } else if (selectedTrip) {
+      setTrip(selectedTrip);
+    }
+  }, [isAuthenticated, selectedTrip, id]);
+
+  const fetchTripDetails = async (tripId: string) => {
+    setLoading(true);
+    try {
+      const data = await getTripById(tripId);
+      setTrip(data);
+    } catch (error) {
+      router.canGoBack() ? router.back() : router.replace('/tabs/home');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeatSelect = (seatNumber: number) => {
+    if (selectedSeats.includes(seatNumber)) {
+      selectSeats(selectedSeats.filter(s => s !== seatNumber));
+    } else {
+      selectSeats([...selectedSeats, seatNumber]);
+    }
+    setError('');
+  };
+
+  const handleProceedToPayment = async () => {
+    if (!trip) return;
+
+    if (selectedSeats.length === 0) {
+      setError('Please select at least one seat');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const bookings = await createBooking(trip, selectedSeats);
+
+      if (bookings && bookings.length > 0) {
+        router.push({
+          pathname: '/(screens)/payment/checkout',
+          params: {
+            bookingId: bookings[0]._id,
+            seatCount: selectedSeats.length.toString()
+          }
+        });
+      } else {
+        setError('Failed to create booking. Please try again.');
+
       }
-    });
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      setError(error.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRetry = () => {
-    loadTripDetails();
-  };
-
-  // Loading state
-  if (loadingTrip) {
+  if (loading || tripLoading || !trip) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-        <View className="flex-1 items-center justify-center">
-          <Loader message="Loading seat map..." />
-        </View>
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="mt-4 text-gray-600">Loading trip details...</Text>
       </SafeAreaView>
     );
   }
 
-  // Error state
-  if (fetchError || !trip) {
-    return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
-        <View className="flex-1 items-center justify-center p-4">
-          <AlertCircle size={48} color="#ef4444" />
-          <Text className="text-lg font-semibold text-gray-900 mt-4 text-center">
-            {fetchError || 'Trip Not Found'}
-          </Text>
-          <Text className="text-gray-600 text-center mt-2">
-            {!trip ? 'The trip you\'re looking for is no longer available' : fetchError}
-          </Text>
-          <View className="flex-row mt-6 space-x-4">
-            <Button
-              title="Go Back"
-              onPress={() => router.back()}
-              variant="outline"
-              className="mr-2"
-            />
-            <Button
-              title="Retry"
-              onPress={handleRetry}
-              variant="primary"
-            />
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '';
+    }
+  };
 
-  const totalAmount = (trip.price || 0) * selectedSeats.length;
-  const serviceFee = 20;
-  const grandTotal = totalAmount + serviceFee;
-  const duration = calculateDuration(trip.departureTime, trip.arrivalTime);
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const totalPrice = (trip.price || 0) * selectedSeats.length;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
-      <StatusBar style="dark" />
-      
-      {/* Header */}
-      <View className="bg-white px-4 pb-3 border-b border-gray-200">
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-            <ChevronLeft size={24} color="#1e293b" />
-          </TouchableOpacity>
-          <View className="flex-1 ml-2">
-            <Text className="text-xl font-bold text-gray-900">
-              Select Your Seats
-            </Text>
-            <Text className="text-sm text-gray-500 mt-0.5">
-              {trip.origin?.stationName} → {trip.destination?.stationName}
-            </Text>
-          </View>
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header - Fixed at top */}
+      <View className="px-4 py-3 border-b border-gray-200 flex-row items-center bg-white">
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
+          <ArrowLeft size={24} color="#4b5563" />
+        </TouchableOpacity>
+        <Text className="flex-1 text-lg font-semibold text-gray-800">
+          Select Your Seats
+        </Text>
+        <View className="bg-blue-50 px-3 py-1 rounded-full">
+          <Text className="text-blue-600 text-sm font-medium">
+            {selectedSeats.length}/{trip.availableSeats || 0}
+          </Text>
         </View>
       </View>
 
-      {/* Scrollable Content */}
-      <ScrollView 
+      {/* Scrollable Content - Button is now inside and will scroll */}
+      <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ 
-          paddingBottom: insets.bottom + 30
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 20
         }}
       >
-        {/* Trip Summary Card */}
-        <View className="bg-white mx-4 mt-4 p-4 rounded-xl border border-gray-200 shadow-sm">
-          <View className="flex-row items-center mb-3">
-            <View className="bg-blue-100 p-2.5 rounded-full">
-              <Bus size={22} color="#3b82f6" />
-            </View>
-            <View className="ml-3 flex-1">
-              <Text className="font-bold text-gray-900 text-base">
-                {trip.origin?.stationName}
-              </Text>
-              <Text className="text-xs text-gray-500">
-                {trip.origin?.city || 'Bahir Dar'}
+        {/* Trip Summary */}
+        <View className="p-4 bg-gray-50">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-1">
+              <Text className="text-sm text-gray-500">From</Text>
+              <Text className="font-semibold text-gray-800">
+                {trip.origin?.stationName || 'Unknown'}
               </Text>
             </View>
-            <View className="px-3 py-1.5 bg-gray-100 rounded-full">
-              <Text className="text-xs font-medium text-gray-700">
-                {duration}
-              </Text>
+            <View className="mx-2">
+              <ChevronRight size={20} color="#9ca3af" />
             </View>
-          </View>
-
-          <View className="flex-row items-center ml-11 mb-3">
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-            <View className="w-10 h-0.5 bg-gray-300 mx-1" />
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-          </View>
-
-          <View className="flex-row items-center mb-4">
-            <View className="bg-red-100 p-2.5 rounded-full">
-              <MapPin size={22} color="#ef4444" />
-            </View>
-            <View className="ml-3">
-              <Text className="font-bold text-gray-900 text-base">
-                {trip.destination?.stationName}
-              </Text>
-              <Text className="text-xs text-gray-500">
-                {trip.destination?.city || 'Bahir Dar'}
+            <View className="flex-1">
+              <Text className="text-sm text-gray-500">To</Text>
+              <Text className="font-semibold text-gray-800">
+                {trip.destination?.stationName || 'Unknown'}
               </Text>
             </View>
           </View>
 
-          <View className="flex-row justify-between pt-3 border-t border-gray-100">
-            <View className="flex-row items-center">
-              <Clock size={16} color="#64748b" />
-              <Text className="ml-1.5 text-sm text-gray-700">
-                {formatTime(trip.departureTime)}
+          <View className="flex-row items-center gap-4 mt-2">
+            <View className="flex-row items-center gap-1">
+              <Clock size={14} color="#6b7280" />
+              <Text className="text-xs text-gray-600">
+                {formatDate(trip.departureTime)} • {formatTime(trip.departureTime)}
               </Text>
             </View>
-            <View className="flex-row items-center">
-              <Users size={16} color="#64748b" />
-              <Text className={`ml-1.5 text-sm font-medium ${
-                trip.availableSeats < 10 ? 'text-orange-600' : 'text-gray-700'
-              }`}>
-                {trip.availableSeats} seats left
-              </Text>
-            </View>
-            <View className="flex-row items-center">
-              <DollarSign size={16} color="#3b82f6" />
-              <Text className="ml-1.5 text-sm font-bold text-blue-600">
-                {formatCurrency(trip.price)}/seat
+            <View className="flex-row items-center gap-1">
+              <Bus size={14} color="#6b7280" />
+              <Text className="text-xs text-gray-600">
+                {trip.vehicle?.carType || 'Bus'}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Seat Map */}
-        <View className="mt-4">
-          <SeatMap
-            trip={trip}
-            bookedSeats={bookedSeats}
-            selectedSeats={selectedSeats}
-            onSeatSelect={handleSeatSelect}
-            maxSelectable={4}
-          />
-        </View>
+        <SeatMap
+          trip={trip}
+          selectedSeats={selectedSeats}
+          onSeatSelect={handleSeatSelect}
+          maxSelectable={8}
+        />
 
-        {/* Booking Information */}
-        <View className="bg-blue-50 mx-4 mt-4 p-4 rounded-xl border border-blue-200">
-          <View className="flex-row items-start">
-            <Info size={20} color="#3b82f6" />
-            <View className="flex-1 ml-3">
-              <Text className="font-semibold text-gray-900 mb-2">
-                Important Information
-              </Text>
-              <Text className="text-sm text-gray-700 mb-1.5">
-                • You can select up to 4 seats per booking
-              </Text>
-              <Text className="text-sm text-gray-700 mb-1.5">
-                • Selected seats are held for 10 minutes
-              </Text>
-              <Text className="text-sm text-gray-700 mb-1.5">
-                • Free cancellation up to 2 hours before departure
-              </Text>
-              <Text className="text-sm text-gray-700">
-                • Boarding closes 15 minutes before departure
-              </Text>
-            </View>
+        {/* Error Message */}
+        {error ? (
+          <View className="mx-4 p-3 bg-red-50 rounded-lg border border-red-200 mb-4">
+            <Text className="text-red-600 text-sm">{error}</Text>
           </View>
-        </View>
+        ) : null}
 
-        {/* Safety Features */}
-        <View className="bg-white mx-4 mt-4 p-4 rounded-xl border border-gray-200">
-          <View className="flex-row items-center mb-3">
-            <Shield size={20} color="#10b981" />
-            <Text className="ml-2 font-semibold text-gray-900">
-              Safety & Comfort
-            </Text>
-          </View>
-          <View className="flex-row flex-wrap">
-            <View className="flex-row items-center mr-4 mb-2">
-              <CheckCircle size={14} color="#10b981" />
-              <Text className="ml-1.5 text-sm text-gray-600">Professional Driver</Text>
-            </View>
-            <View className="flex-row items-center mr-4 mb-2">
-              <CheckCircle size={14} color="#10b981" />
-              <Text className="ml-1.5 text-sm text-gray-600">AC Bus</Text>
-            </View>
-            <View className="flex-row items-center mr-4 mb-2">
-              <CheckCircle size={14} color="#10b981" />
-              <Text className="ml-1.5 text-sm text-gray-600">COVID Safe</Text>
-            </View>
-            <View className="flex-row items-center mr-4 mb-2">
-              <CheckCircle size={14} color="#10b981" />
-              <Text className="ml-1.5 text-sm text-gray-600">Insurance</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View className="h-6" />
-
-        {/* Bottom Action Bar */}
-        <View className="bg-blue-50 mx-4 p-5 rounded-xl border-2 border-blue-200 shadow-lg">
-          <View className="flex-row justify-between items-center mb-4">
+        {/* Bottom Summary - Now inside ScrollView and will scroll */}
+        <View className="mx-4 mt-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <View className="flex-row justify-between items-center mb-3">
             <View>
-              <Text className="text-sm font-medium text-blue-700 mb-1">Selected Seats</Text>
-              <Text className="text-xl font-bold text-gray-900">
-                {selectedSeats.length > 0 
-                  ? selectedSeats.join(', ') 
-                  : 'None selected'
-                }
-              </Text>
+              <Text className="text-sm text-gray-500">Selected Seats</Text>
+              <View className="flex-row gap-1 mt-1">
+                {selectedSeats.length > 0 ? (
+                  selectedSeats.map((seat) => (
+                    <View key={seat} className="bg-blue-500 px-2 py-1 rounded-full">
+                      <Text className="text-white text-xs font-medium">{seat}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text className="text-gray-400 text-sm">None</Text>
+                )}
+              </View>
             </View>
             <View className="items-end">
-              <Text className="text-sm font-medium text-blue-700 mb-1">Total Amount</Text>
-              <Text className="text-3xl font-bold text-blue-600">
-                {formatCurrency(grandTotal)}
-              </Text>
-              <Text className="text-xs text-gray-600 mt-0.5">
-                + {formatCurrency(serviceFee)} service fee
+              <Text className="text-sm text-gray-500">Total Amount</Text>
+              <Text className="text-xl font-bold text-blue-600">
+                ETB {totalPrice.toLocaleString()}
               </Text>
             </View>
           </View>
 
-          <Button
-            title={bookingInProgress || bookingLoading ? 'Processing...' : 'Proceed to Payment'}
-            onPress={handleProceedToBooking}
-            loading={bookingInProgress || bookingLoading}
-            disabled={selectedSeats.length === 0 || bookingInProgress || bookingLoading}
-            icon={<CreditCard size={20} color="white" />}
-            size="large"
-            className="bg-blue-600"
-          />
-
-          <View className="flex-row items-center justify-center mt-3">
-            <ArrowRight size={14} color="#3b82f6" />
-            <Text className="text-xs text-center text-blue-600 ml-1 font-medium">
-              You'll enter passenger details next
-            </Text>
-          </View>
+          <TouchableOpacity
+            onPress={handleProceedToPayment}
+            disabled={selectedSeats.length === 0 || bookingLoading}
+            className={`
+              py-4 rounded-xl flex-row items-center justify-center
+              ${selectedSeats.length === 0 || bookingLoading
+                ? 'bg-gray-300'
+                : 'bg-blue-600'
+              }
+            `}
+          >
+            {bookingLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <CreditCard size={20} color="white" />
+                <Text className="text-white font-semibold ml-2">
+                  {selectedSeats.length === 0
+                    ? 'Select Seats to Continue'
+                    : `Proceed to Payment • ETB ${totalPrice.toLocaleString()}`}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* Extra space at bottom */}
+        {/* Extra bottom padding for comfortable scrolling */}
         <View className="h-8" />
       </ScrollView>
     </SafeAreaView>
