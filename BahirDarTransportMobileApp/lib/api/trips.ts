@@ -1,105 +1,208 @@
-import { api } from '../../config/api';
-import { API_ENDPOINTS } from '../../config/api'; // Import endpoints
-import { Trip, SearchTripParams, CreateBookingParams } from '../../types/trip';
+import { api, API_ENDPOINTS } from '../../config/api';
+import { SearchTripParams } from '../../types/trip';
 
 export const tripsApi = {
-  // Get all available trips for passengers
-  getAllTrips: async (params?: {
-    page?: number;
-    limit?: number;
+
+  searchTrips: async (params: SearchTripParams) => {
+    console.log('🔍 Searching trips with params:', params);
+    
+    try {
+      const dateOnly = params.date?.includes('T') ? params.date.split('T')[0] : params.date;
+      const response = await api.get(API_ENDPOINTS.TRIPS.SEARCH, { 
+        params: {
+          origin: params.origin,
+          destination: params.destination,
+          date: dateOnly,
+          passengers: params.passengers || 1,
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ Search failed:', error);
+      throw error;
+    }
+  },
+
+  // lib/api/trips.ts - Update getTripById
+  getTripById: async (id: string) => {
+    console.log('📡 tripsApi.getTripById called with ID:', id);
+    console.log('📡 ID type:', typeof id);
+    console.log('📡 ID length:', id?.length);
+    
+    try {
+      const url = API_ENDPOINTS.TRIPS.BY_ID(id);
+      console.log('📡 Making request to:', url);
+      
+      const response = await api.get(url);
+      console.log('✅ tripsApi.getTripById response status:', response.status);
+      console.log('✅ Response data:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ tripsApi.getTripById error:', error.message);
+      if (error.response) {
+        console.error('Error status:', error.response.status);
+        console.error('Error data:', error.response.data);
+      }
+      throw error;
+    }
+  },
+
+  getAllTrips: async (filters?: { 
+    status?: string;
     origin?: string;
     destination?: string;
     date?: string;
-    status?: string;
+    limit?: number;
+    // legacy param names
+    fromStation?: string;
+    toStation?: string;
   }) => {
-    // Default params for passengers
-    const passengerParams = {
-      limit: params?.limit || 20,
-      page: params?.page || 1,
-      status: params?.status || 'scheduled', // Default for passengers
-      ...params,
-    };
-    
-    console.log('📡 Fetching trips with params:', passengerParams);
-    
-    const response = await api.get(API_ENDPOINTS.TRIPS.BASE, { 
-      params: passengerParams 
-    });
-    return response.data;
-  },
-
-  // Search trips for passengers
-  searchTrips: async (params: SearchTripParams) => {
-    console.log('🔍 Searching trips:', params);
-    
-    const response = await api.get(API_ENDPOINTS.TRIPS.SEARCH, { 
-      params: {
-        origin: params.origin,
-        destination: params.destination,
-        date: params.date,
-        passengers: params.passengers || 1,
-        vehicleType: params.vehicleType,
-        maxPrice: params.maxPrice,
-      }
-    });
-    return response.data;
-  },
-
-  // Get single trip by ID
-  getTripById: async (id: string) => {
-    console.log('📡 Fetching trip by ID:', id);
-    
-    const response = await api.get(API_ENDPOINTS.TRIPS.BY_ID(id));
-    return response.data;
-  },
-
-  // Get booked seats for a trip
-  getTripSeats: async (tripId: string) => {
-    console.log('💺 Fetching seats for trip:', tripId);
+    console.log('📅 Fetching trips with filters:', filters);
+    const origin = filters?.origin ?? filters?.fromStation;
+    const destination = filters?.destination ?? filters?.toStation;
     
     try {
-      // Option 1: Try to get seats from bookings endpoint
+      console.log('📅 Making API request to:', API_ENDPOINTS.TRIPS.BASE);
+      console.log('📅 With params:', {
+        status: filters?.status || 'scheduled',
+        origin,
+        destination,
+        date: filters?.date,
+        limit: filters?.limit || 20,
+      });
+      
+      const response = await api.get(API_ENDPOINTS.TRIPS.BASE, {
+        params: {
+          status: filters?.status || 'scheduled',
+          origin,
+          destination,
+          date: filters?.date,
+          limit: filters?.limit || 20,
+        }
+      });
+      
+      console.log('✅ Trips API response status:', response.status);
+      console.log('✅ Response headers:', response.headers);
+      console.log('📦 RAW API RESPONSE DATA:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch trips:', error.message);
+      if (error.response) {
+        console.error('❌ Error status:', error.response.status);
+        console.error('❌ Error data:', error.response.data);
+      }
+      throw error;
+    }
+  },
+
+  getStations: async () => {
+    console.log('📍 Fetching active stations');
+    
+    try {
+      const response = await api.get(API_ENDPOINTS.STATIONS.ACTIVE);
+      console.log('📍 API Response Status:', response.status);
+      console.log('📍 Full response data:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error fetching stations:', error.message);
+      throw error;
+    }
+  },
+
+  getStationById: async (stationId: string) => {
+    console.log('📍 Fetching station:', stationId);
+    
+    try {
+      const response = await api.get(API_ENDPOINTS.STATIONS.BY_ID(stationId));
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching station:', error);
+      throw error;
+    }
+  },
+
+  getBookedSeatsForTrip: async (tripId: string) => {
+    console.log('💺 Fetching booked seats for trip:', tripId);
+    
+    try {
       const response = await api.get(API_ENDPOINTS.BOOKINGS.BASE, {
-        params: { tripId, status: 'confirmed' }
+        params: { 
+          tripId: tripId,
+          status: 'confirmed,pending' 
+        }
       });
       
       const bookings = response.data?.data || [];
-      const bookedSeats = bookings.flatMap((booking: any) => booking.seats || []);
+      const bookedSeats = bookings.flatMap((booking: any) => {
+        if (Array.isArray(booking.seatNumbers)) {
+          return booking.seatNumbers;
+        }
+        if (booking.seatNumber) {
+          return [booking.seatNumber.toString()];
+        }
+        return [];
+      });
       
-      console.log(`Found ${bookedSeats.length} booked seats`);
       return { data: { bookedSeats } };
-      
     } catch (error) {
-      console.warn('Could not fetch booked seats, using empty array');
+      console.warn('⚠️ Could not fetch booked seats:', error);
       return { data: { bookedSeats: [] } };
     }
   },
 
-  // Create booking
-  createBooking: async (data: CreateBookingParams) => {
-    console.log('📝 Creating booking:', {
-      tripId: data.tripId,
-      seats: data.seats.length,
-      passengerId: data.passengerId,
-    });
+  getVehicleById: async (vehicleId: string | { _id: string }) => {
+    console.log('🚌 Fetching vehicle:', vehicleId);
+
+    let id: string;
+    if (typeof vehicleId === 'object' && vehicleId !== null) {
+      id = vehicleId._id;
+      console.log('📦 Extracted ID from vehicle object:', id);
+    } else if (typeof vehicleId === 'string') {
+      id = vehicleId;
+    } else {
+      console.error('❌ Invalid vehicle ID format:', vehicleId);
+      throw new Error('Invalid vehicle ID format');
+    }
     
-    const response = await api.post(API_ENDPOINTS.BOOKINGS.BASE, data);
-    return response.data;
+    if (!id) {
+      console.error('❌ No vehicle ID found');
+      throw new Error('No vehicle ID provided');
+    }
+    
+    try {
+      const response = await api.get(API_ENDPOINTS.VEHICLES.BY_ID(id));
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching vehicle:', error);
+      throw error;
+    }
   },
 
-  // Get user's booking history
-  getMyBookings: async () => {
-    console.log('📚 Fetching my bookings');
+  getVehicleWithImages: async (vehicleId: string) => {
+    console.log('🚌 Fetching vehicle with images:', vehicleId);
     
-    const response = await api.get(API_ENDPOINTS.BOOKINGS.MY_BOOKINGS);
-    return response.data;
+    try {
+      const response = await api.get(API_ENDPOINTS.VEHICLES.GET_WITH_IMAGES(vehicleId));
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching vehicle with images:', error);
+      throw error;
+    }
   },
 
-  // Cancel booking
-  cancelBooking: async (bookingId: string) => {
-    console.log('❌ Canceling booking:', bookingId);
+  getVehicleImages: async (vehicleId: string) => {
+    console.log('🖼️ Fetching vehicle images:', vehicleId);
     
-    const response = await api.delete(API_ENDPOINTS.BOOKINGS.BY_ID(bookingId));
-    return response.data;
-  },
+    try {
+      const response = await api.get(API_ENDPOINTS.VEHICLES.GET_IMAGES(vehicleId));
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching vehicle images:', error);
+      throw error;
+    }
+  }
 };

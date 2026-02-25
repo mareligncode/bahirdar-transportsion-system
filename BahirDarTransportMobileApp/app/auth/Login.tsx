@@ -1,4 +1,3 @@
-// app/auth/Login.tsx - FIXED VERSION
 import React, { useState } from 'react';
 import {
   View,
@@ -10,7 +9,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +30,7 @@ import {
 import { LoginFormData } from '@/types/auth';
 
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,54 +50,55 @@ export default function Login() {
       email: '',
       password: '',
     },
-    mode: 'onChange', // Changed to onChange for immediate feedback
+    mode: 'onChange',
   });
 
   const handleLogin = async (data: LoginFormData) => {
-  clearErrors();
-  setError('');
-  setSuccess('');
-  setFieldErrors({});
+    clearErrors();
+    setError('');
+    setSuccess('');
+    setFieldErrors({});
 
-  // Use your validation function
-  const validationErrors = validateLoginForm(data);
+    // Use your validation function
+    const validationErrors = validateLoginForm(data);
 
-  if (Object.keys(validationErrors).length > 0) {
-    Object.entries(validationErrors).forEach(([field, message]) => {
-      setFormError(field as keyof LoginFormData, { message });
-      setFieldErrors(prev => ({ ...prev, [field]: message }));
-    });
-    return;
-  }
+    if (Object.keys(validationErrors).length > 0) {
+      Object.entries(validationErrors).forEach(([field, message]) => {
+        setFormError(field as keyof LoginFormData, { message });
+        setFieldErrors(prev => ({ ...prev, [field]: message }));
+      });
+      return;
+    }
 
-  try {
-    const result = await login({
-      email: data.email,
-      password: data.password
-    });
-    
-    if (result.success) {
-      setSuccess('Login successful! Redirecting...');
+    try {
+      const result = await login({
+        email: data.email,
+        password: data.password
+      });
       
-      setTimeout(() => {
-        router.replace('/main/home');
-      }, 1000);
-    } else {
-      throw new Error(result.message || 'Login failed');
+      if (result.success) {
+        setSuccess('Login successful! Redirecting...');
+        
+        setTimeout(() => {
+          router.replace('/tabs/home');
+        }, 1000);
+      } else {
+        throw new Error(result.message || 'Login failed');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+      
+      if (errorMessage.includes('email') || errorMessage.includes('not found')) {
+        setFormError('email', { message: 'Invalid email or password' });
+        setFieldErrors(prev => ({ ...prev, email: 'Invalid email or password' }));
+      } else if (errorMessage.includes('password')) {
+        setFormError('password', { message: 'Invalid email or password' });
+        setFieldErrors(prev => ({ ...prev, password: 'Invalid email or password' }));
+      }
     }
-  } catch (err: any) {
-    const errorMessage = err.message || 'Login failed. Please try again.';
-    setError(errorMessage);
-    
-    if (errorMessage.includes('email') || errorMessage.includes('not found')) {
-      setFormError('email', { message: 'Invalid email or password' });
-      setFieldErrors(prev => ({ ...prev, email: 'Invalid email or password' }));
-    } else if (errorMessage.includes('password')) {
-      setFormError('password', { message: 'Invalid email or password' });
-      setFieldErrors(prev => ({ ...prev, password: 'Invalid email or password' }));
-    }
-  }
-};
+  };
+
   // Clear errors when user starts typing
   const clearAllErrors = () => {
     setError('');
@@ -107,12 +108,18 @@ export default function Login() {
   const loading = authLoading || isSubmitting;
 
   if (loading) {
-    return <Loader message="Signing in..." />;
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="flex-1 items-center justify-center">
+          <Loader message="Signing in..." />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -120,29 +127,26 @@ export default function Login() {
           <ScrollView 
             className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            contentContainerStyle={{ 
+              paddingBottom: insets.bottom + 40 
+            }}
           >
             <View className="px-6 pt-4">
               {/* Header */}
               <View className="mb-8">
-
-<TouchableOpacity 
-  onPress={() => {
-    // Check if we can go back
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      // If at root, go to index or home
-      router.replace('/');  // Go to your index screen
-      // OR if you have a welcome screen:
-      // router.replace('/welcome');
-    }
-  }}
-  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
-  activeOpacity={0.7}
->
-  <ArrowLeft size={20} color="#3B82F6" />
-</TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace('/');
+                    }
+                  }}
+                  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  activeOpacity={0.7}
+                >
+                  <ArrowLeft size={20} color="#3B82F6" />
+                </TouchableOpacity>
                 
                 <View className="items-center mb-6">
                   <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
@@ -163,7 +167,7 @@ export default function Login() {
               {success && (
                 <Card className="bg-green-50 border-green-200 mb-6">
                   <View className="flex-row items-start">
-                    <CheckCircle size={20} color="#10B981" className="mt-0.5 mr-3" />
+                    <CheckCircle size={20} color="#10B981" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
                       <Text className="font-medium text-green-700">{success}</Text>
                     </View>
@@ -175,7 +179,7 @@ export default function Login() {
               {error && (
                 <Card className="bg-red-50 border-red-200 mb-6">
                   <View className="flex-row items-start">
-                    <AlertCircle size={20} color="#EF4444" className="mt-0.5 mr-3" />
+                    <AlertCircle size={20} color="#EF4444" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
                       <Text className="font-medium text-red-600">Login failed</Text>
                       <Text className="text-sm text-red-600 mt-1">{error}</Text>
