@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Car, Wrench } from 'lucide-react';
+import { X, Car, Wrench, User, CreditCard } from 'lucide-react';
 import api from '../../services/api'; 
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -20,6 +20,15 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
     driverID: '',
     fuelType: 'diesel',
     features: [],
+    // New owner details fields
+    ownerDetails: {
+      ownerName: '',
+      phoneNumber: '',
+      bankDetails: {
+        accountNumber: '',
+        bankName: ''
+      }
+    }
   });
   
   const [stations, setStations] = useState([]);
@@ -47,6 +56,15 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
           driverID: vehicle.driverID?._id || '',
           fuelType: vehicle.fuelType || 'diesel',
           features: vehicle.features || [],
+          // Populate owner details if they exist
+          ownerDetails: vehicle.ownerDetails || {
+            ownerName: '',
+            phoneNumber: '',
+            bankDetails: {
+              accountNumber: '',
+              bankName: ''
+            }
+          }
         });
       } else {
         resetForm();
@@ -85,6 +103,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
       driverID: '',
       fuelType: 'diesel',
       features: [],
+      ownerDetails: {
+        ownerName: '',
+        phoneNumber: '',
+        bankDetails: {
+          accountNumber: '',
+          bankName: ''
+        }
+      }
     });
   };
 
@@ -100,6 +126,29 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
         features: isChecked 
           ? [...prev.features, feature]
           : prev.features.filter(f => f !== feature)
+      }));
+    } else if (name.startsWith('owner.')) {
+      // Handle nested owner details
+      const field = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        ownerDetails: {
+          ...prev.ownerDetails,
+          [field]: value
+        }
+      }));
+    } else if (name.startsWith('bank.')) {
+      // Handle nested bank details
+      const field = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        ownerDetails: {
+          ...prev.ownerDetails,
+          bankDetails: {
+            ...prev.ownerDetails.bankDetails,
+            [field]: value
+          }
+        }
       }));
     } else {
       setFormData(prev => ({
@@ -247,7 +296,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                     <option value="">{t('vehicles.selectStation')}</option>
                     {stations.map(station => (
                       <option key={station._id} value={station._id}>
-                        {station.stationName} ({station.city})
+                        {station.stationName} ({station.location?.city || station.city})
                       </option>
                     ))}
                   </select>
@@ -360,10 +409,90 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
               </div>
             </div>
 
+            {/* Owner Details Section - NEW */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2 mb-4">
+                <User className="w-5 h-5" />
+                {t('vehicles.ownerDetails')}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('vehicles.ownerName')} *
+                  </label>
+                  <input
+                    type="text"
+                    name="owner.ownerName"
+                    value={formData.ownerDetails.ownerName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder={t('vehicles.ownerNamePlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('vehicles.ownerPhone')} *
+                  </label>
+                  <input
+                    type="tel"
+                    name="owner.phoneNumber"
+                    value={formData.ownerDetails.phoneNumber}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder={t('vehicles.ownerPhonePlaceholder')}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details Section - NEW */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2 mb-4">
+                <CreditCard className="w-5 h-5" />
+                {t('vehicles.bankDetails')}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('vehicles.bankName')} *
+                  </label>
+                  <input
+                    type="text"
+                    name="bank.bankName"
+                    value={formData.ownerDetails.bankDetails.bankName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder={t('vehicles.bankNamePlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('vehicles.accountNumber')} *
+                  </label>
+                  <input
+                    type="text"
+                    name="bank.accountNumber"
+                    value={formData.ownerDetails.bankDetails.accountNumber}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder={t('vehicles.accountNumberPlaceholder')}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Driver Assignment */}
-            <div>
+            <div className="border-t border-gray-200 pt-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('vehicles.assignDriver')} *
+                {t('vehicles.assignDriver')}
               </label>
               <select
                 name="driverID"
@@ -381,7 +510,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             </div>
 
             {/* Features */}
-            <div>
+            <div className="border-t border-gray-200 pt-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t('vehicles.vehicleFeatures')}
               </label>

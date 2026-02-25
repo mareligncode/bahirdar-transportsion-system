@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
+import NotificationBell from '../notifications/NotificationBell';
 import { useAuth } from '../../hooks/useAuth';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
 import { Menu, X } from 'lucide-react';
 
 export default function Layout({ children, showSidebar = false }) {
   const { user, isAuthenticated, loading } = useAuth();
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
@@ -18,7 +19,7 @@ export default function Layout({ children, showSidebar = false }) {
         <div className="flex flex-1 justify-center items-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">{t('loading')}</p> {/* ✅ TRANSLATED */}
+            <p className="mt-4 text-gray-600">{t('loading')}</p>
           </div>
         </div>
         <Footer />
@@ -38,7 +39,7 @@ export default function Layout({ children, showSidebar = false }) {
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="md:hidden fixed bottom-6 right-6 z-40 w-12 h-12 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-all duration-300 flex items-center justify-center"
-          aria-label={sidebarOpen ? t('close_menu') : t('open_menu')} // ✅ TRANSLATED
+          aria-label={sidebarOpen ? t('close_menu') : t('open_menu')}
         >
           {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -52,11 +53,11 @@ export default function Layout({ children, showSidebar = false }) {
               <div 
                 className="fixed inset-0 bg-black/30 z-30 md:hidden"
                 onClick={() => setSidebarOpen(false)}
-                aria-label={t('close_overlay')} // ✅ TRANSLATED
+                aria-label={t('close_overlay')}
               />
             )}
             
-            {/* Sidebar - Scrollable only on mobile */}
+            {/* Sidebar */}
             <div className={`
               ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
               md:translate-x-0 md:relative
@@ -76,6 +77,14 @@ export default function Layout({ children, showSidebar = false }) {
           </div>
         </main>
       </div>
+      
+      {/* Notification Bell - Only show for authenticated users */}
+      {isAuthenticated && (
+        <div className="fixed top-20 right-6 z-50 md:top-24 md:right-8">
+          <NotificationBell />
+        </div>
+      )}
+      
       <Footer />
     </div>
   );

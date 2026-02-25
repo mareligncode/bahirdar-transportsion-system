@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Eye, Image as ImageIcon } from 'lucide-react';
+import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Eye, Image as ImageIcon, CreditCard, Phone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import VehicleModal from './VehicleModal';
@@ -186,6 +186,9 @@ export default function Vehicles() {
             }
           }
           
+          // Extract owner details
+          const ownerDetails = vehicle.ownerDetails || {};
+          
           return {
             ...vehicle,
             stationID: stationId,
@@ -193,6 +196,14 @@ export default function Vehicles() {
               _id: driverId,
               fullName: driverName,
               phoneNumber: driverPhone
+            },
+            ownerDetails: {
+              ownerName: ownerDetails.ownerName || 'Not specified',
+              phoneNumber: ownerDetails.phoneNumber || 'Not specified',
+              bankDetails: ownerDetails.bankDetails || {
+                bankName: 'Not specified',
+                accountNumber: 'Not specified'
+              }
             }
           };
         });
@@ -323,6 +334,13 @@ export default function Vehicles() {
     } else {
       return { status: 'valid', label: 'Valid' };
     }
+  };
+
+  // Mask account number for display
+  const maskAccountNumber = (accountNumber) => {
+    if (!accountNumber || accountNumber === 'Not specified') return 'Not specified';
+    if (accountNumber.length <= 4) return '****';
+    return '****' + accountNumber.slice(-4);
   };
 
   // Pagination calculations
@@ -511,6 +529,9 @@ export default function Vehicles() {
                           Driver Assignment
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Owner Details
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Maintenance & Insurance
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -537,6 +558,13 @@ export default function Vehicles() {
                                   <div className="text-sm text-gray-500">
                                     {carTypeLabels[vehicle.carType] || vehicle.carType} • {vehicle.year}
                                   </div>
+                                  {/* Image indicator */}
+                                  {vehicle.images && vehicle.images.length > 0 && (
+                                    <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                      <ImageIcon className="w-3 h-3" />
+                                      {vehicle.images.length} image(s)
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -560,10 +588,34 @@ export default function Vehicles() {
                                   </span>
                                 </div>
                                 {vehicle.driverID?.phoneNumber && (
-                                  <div className="text-sm text-gray-600">
+                                  <div className="text-sm text-gray-600 flex items-center gap-1">
+                                    <Phone className="w-3 h-3" />
                                     {vehicle.driverID.phoneNumber}
                                   </div>
                                 )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <span className="font-medium">
+                                    {vehicle.ownerDetails.ownerName}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Phone className="w-3 h-3" />
+                                  {vehicle.ownerDetails.phoneNumber}
+                                </div>
+                                <div className="mt-1 pt-1 border-t border-gray-100">
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <CreditCard className="w-3 h-3 text-gray-400" />
+                                    <span className="font-medium">{vehicle.ownerDetails.bankDetails.bankName}:</span>
+                                    <span className="text-gray-600">
+                                      {maskAccountNumber(vehicle.ownerDetails.bankDetails.accountNumber)}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
