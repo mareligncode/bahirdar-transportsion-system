@@ -45,6 +45,11 @@ export const changeUserRole = async (req, res) => {
                 });
             }
             userToUpdate.licenseNumber = licenseNumber;
+            
+            //leul
+
+
+        if (req.body.stationID) userToUpdate.stationID = req.body.stationID;
         }
 
         if (newRole === 'station_admin') {
@@ -224,12 +229,15 @@ export const toggleUserStatus = async (req, res) => {
                 });
             }
 
-            if (userToUpdate.stationID !== req.user.stationID) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Cannot manage users from other stations'
-                });
-            }
+
+            //leul
+
+            // if (userToUpdate.stationID !== req.user.stationID) {
+            //     return res.status(403).json({
+            //         success: false,
+            //         message: 'Cannot manage users from other stations'
+            //     });
+            // }
         }
 
         if (userToUpdate.email === process.env.SUPER_ADMIN_EMAIL) {

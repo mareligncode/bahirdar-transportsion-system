@@ -134,8 +134,8 @@ export const initializePayment = async (req, res) => {
             last_name: user.fullName.split(' ').slice(1).join(' ') || 'User',
             // phone_number: formattedPhone,
             tx_ref: tx_ref,
-            callback_url: `${process.env.BASE_URL}/api/payment/verify/${tx_ref}`,
-            return_url: `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingId}`,
+            callback_url: `${process.env.BASE_URL}/api/payment/webhook`,
+            return_url: `${process.env.BASE_URL}/api/payment/verify/${tx_ref}`,
             customization: {
                 title: 'BD Transport', // 13 characters
                 description: description // Clean description
@@ -280,7 +280,7 @@ export const initializePayment = async (req, res) => {
         } catch (notificationError) {
             console.error(` Failed to send booking confirmation notification:`, notificationError.message);
         }
-// end of notification
+        // end of notification
         // Update booking with payment reference
         booking.paymentID = payment._id;
         booking.paymentStatus = 'pending';
@@ -314,7 +314,7 @@ export const initializePayment = async (req, res) => {
 export const verifyPayment = async (req, res) => {
     try {
         const { tx_ref } = req.params;
-        const io = req.app.get('io'); 
+        const io = req.app.get('io');
         const payment = await Payment.findOne({ gatewayTransactionID: tx_ref })
             .populate('bookingID')
             .populate('passengerID');
@@ -326,15 +326,22 @@ export const verifyPayment = async (req, res) => {
             });
         }
         if (payment.paymentStatus === 'success' || payment.paymentStatus === 'failed' || payment.paymentStatus === 'cancelled') {
+            const bookingIdStr = payment.bookingID?._id || payment.bookingID;
+            const redirectUrl = payment.paymentStatus === 'success'
+                ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
+                : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_${payment.paymentStatus}`;
+
+            if (req.headers.accept?.includes('text/html')) {
+                return res.redirect(redirectUrl);
+            }
+
             return res.json({
                 success: payment.paymentStatus === 'success',
                 message: `Payment already ${payment.paymentStatus}`,
                 data: {
                     payment,
                     booking: payment.bookingID,
-                    redirectUrl: payment.paymentStatus === 'success'
-                        ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&success=true`
-                        : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&error=payment_${payment.paymentStatus}`
+                    redirectUrl
                 }
             });
         }
@@ -407,7 +414,7 @@ export const verifyPayment = async (req, res) => {
 
         const booking = payment.bookingID;
         if (booking) {
-            booking.paymentStatus = newPaymentStatus;
+            booking.paymentStatus = newPaymentStatus === 'success' ? 'paid' : newPaymentStatus;
             if (newPaymentStatus === 'success') {
                 booking.status = 'confirmed';
                 booking.checkedIn = false; // Reset for new confirmed booking
@@ -487,16 +494,18 @@ export const verifyPayment = async (req, res) => {
             });
         }
 
+        const bookingIdStr = payment.bookingID?._id || payment.bookingID;
+
         // Return response
         if (req.headers.accept?.includes('text/html')) {
             // For browser redirect
             let redirectUrl;
             if (newPaymentStatus === 'success') {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&success=true`;
+                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`;
             } else if (newPaymentStatus === 'failed' || newPaymentStatus === 'cancelled') {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&error=payment_failed`;
+                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`;
             } else {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&status=${newPaymentStatus}`;
+                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`;
             }
 
             return res.redirect(redirectUrl);
@@ -514,10 +523,10 @@ export const verifyPayment = async (req, res) => {
                 payment,
                 booking,
                 redirectUrl: newPaymentStatus === 'success'
-                    ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&success=true`
+                    ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
                     : newPaymentStatus === 'failed' || newPaymentStatus === 'cancelled'
-                        ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&error=payment_failed`
-                        : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${payment.bookingID}&status=${newPaymentStatus}`
+                        ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`
+                        : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`
             }
         });
 
@@ -592,13 +601,22 @@ export const getPaymentStatus = async (req, res) => {
 
         // For station admin, only allow payments from their station
         if (req.user.role === 'station_admin') {
+            // Find station managed by this admin
+            const station = await Station.findOne({ manager: req.user._id });
+            if (!station) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'No station assigned to this admin'
+                });
+            }
+
             // We'll need to join with booking and trip to check station
             const payment = await Payment.findOne(query)
                 .populate({
                     path: 'bookingID',
                     populate: {
                         path: 'tripID',
-                        match: { station: req.user.stationID }
+                        match: { station: station._id }
                     }
                 });
 
@@ -753,7 +771,7 @@ export const handleWebhook = async (req, res) => {
         // Update booking status
         const booking = await Booking.findById(payment.bookingID);
         if (booking) {
-            booking.paymentStatus = payment.paymentStatus;
+            booking.paymentStatus = payment.paymentStatus === 'success' ? 'paid' : payment.paymentStatus;
             if (payment.paymentStatus === 'success') {
                 booking.status = 'confirmed';
             }
