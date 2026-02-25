@@ -1,101 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   Container,
   Box,
   Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  Paper,
   Button,
   Alert,
   Snackbar,
   CircularProgress,
-  Paper,
-  Chip,
   Fade,
-  Fab
+  Zoom,
+  useTheme,
+  alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
+  Search as SearchIcon,
+  DirectionsBus,
+  Payment as PaymentIcon,
   ArrowBack,
-  SafetyCheck,
-  TrendingUp,
-  Schedule,
-  ElectricCar
+  Refresh,
+  CheckCircle,
+  Error as ErrorIcon
 } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import api from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from '../../hooks/useTranslation';
+import SeatSelection from '../../components/passenger/SeatSelection';
 import TripSearch from '../../components/passenger/TripSearch';
 import TripResults from '../../components/passenger/TripResults';
-import SeatSelection from '../../components/passenger/SeatSelection';
-import { useTranslation } from '../../hooks/useTranslation';
+import PaymentButton from '../../components/passenger/PaymentButton';
+import toast from 'react-hot-toast';
 
-const BookTrip = () => {
+const steps = ['Search Trips', 'Select Trip', 'Choose Seats', 'Payment'];
+
+export default function BookTrip() {
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { tripId } = useParams();
+  const theme = useTheme();
   const queryParams = new URLSearchParams(location.search);
-  
-  const initialOrigin = queryParams.get('origin') || '';
-  const initialDestination = queryParams.get('destination') || '';
-  const initialDate = queryParams.get('date') ? new Date(queryParams.get('date')) : null;
 
+  // State
+  const [activeStep, setActiveStep] = useState(0);
+  const [stations, setStations] = useState([]);
   const [searchData, setSearchData] = useState({
-    origin: initialOrigin,
-    destination: initialDestination,
-    date: initialDate,
+    origin: queryParams.get('origin') || '',
+    destination: queryParams.get('destination') || '',
+    date: queryParams.get('date') ? new Date(queryParams.get('date')) : null,
   });
   const [availableTrips, setAvailableTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const [createdBookings, setCreatedBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [stations, setStations] = useState([]);
-  const [step, setStep] = useState('search');
-  const [viewMode, setViewMode] = useState('grid');
-  
-  const [notification, setNotification] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [error, setError] = useState(null);
 
   // Fetch stations on mount
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        await fetchStations();
-        
-        if (initialOrigin && initialDestination && initialDate) {
-          handleSearch({
-            origin: initialOrigin,
-            destination: initialDestination,
-            date: initialDate
-          });
-        }
-      } catch (error) {
-        console.error('Initialization error:', error);
-      }
-    };
-    
-    initializeData();
+    fetchStations();
   }, []);
+
+  // Fetch trip details if tripId is provided
+  useEffect(() => {
+    if (tripId) {
+      fetchTripDetails(tripId);
+    }
+  }, [tripId]);
+
+  // Check authentication
+  useEffect(() => {
+    if (!isAuthenticated && activeStep > 0) {
+      toast.error(t('Please login to continue'));
+      navigate('/login');
+    }
+  }, [isAuthenticated, activeStep, navigate, t]);
 
   const fetchStations = async () => {
     try {
       const response = await api.get('/api/station/active');
-      setStations(response.data.stations || []);
+      const stationsData = response.data?.stations || response.data?.data?.stations || [];
+      setStations(stationsData);
     } catch (error) {
       console.error('Error fetching stations:', error);
-      showNotification(t('Failed to load stations'), 'error');
+      toast.error(t('Failed to load stations'));
     }
   };
 
-  const handleSearch = async (searchParams) => {
+  const fetchTripDetails = async (id) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/trip/${id}`);
+      
+      const trip = response.data?.data || response.data;
+      if (trip) {
+        setSelectedTrip(trip);
+        setActiveStep(2); // Go to seat selection
+      }
+    } catch (error) {
+      console.error('Error fetching trip:', error);
+      toast.error(error.response?.data?.message || t('Failed to load trip details'));
+      navigate('/passenger/book-trip');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = useCallback(async (searchParams) => {
     if (!searchParams.origin || !searchParams.destination || !searchParams.date) {
-      showNotification(t('Please fill all search fields'), 'error');
+      toast.error(t('Please fill all search fields'));
       return;
     }
 
-    setSearchData(searchParams);
     setSearching(true);
-    setAvailableTrips([]);
+    setError(null);
 
     try {
       const params = {
@@ -105,415 +139,420 @@ const BookTrip = () => {
       };
 
       const response = await api.get('/api/trip/search', { params });
-      
+
       let trips = [];
-      if (response.data.success && Array.isArray(response.data.data)) {
+      if (response.data?.data) {
         trips = response.data.data;
-      } else if (Array.isArray(response.data.data)) {
-        trips = response.data.data;
-      } else if (Array.isArray(response.data.trips)) {
-        trips = response.data.trips;
       } else if (Array.isArray(response.data)) {
         trips = response.data;
       }
-      
+
       setAvailableTrips(trips);
-      setStep('results');
-      
+
       if (trips.length === 0) {
-        showNotification(t('No trips found for your search criteria'), 'info');
+        toast.info(t('No trips found for your search criteria'));
       } else {
-        showNotification(t('Found {{count}} trip', { count: trips.length }) + (trips.length > 1 ? 's' : ''), 'success');
+        toast.success(t('Found {{count}} trips', { count: trips.length }));
       }
+      
+      setActiveStep(1); // Move to results step
     } catch (error) {
       console.error('Search error:', error);
       const errorMessage = error.response?.data?.message || t('Failed to search trips');
-      showNotification(errorMessage, 'error');
-      setAvailableTrips([]);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSearching(false);
     }
-  };
+  }, [t]);
 
-  const handleTripSelect = (trip) => {
+  const handleTripSelect = useCallback((trip) => {
     if (trip.availableSeats === 0) {
-      showNotification(t('This trip is sold out. Please select another trip.'), 'error');
+      toast.error(t('This trip is sold out'));
       return;
     }
     setSelectedTrip(trip);
     setSelectedSeats([]);
-    setStep('seats');
-  };
+    setActiveStep(2); // Move to seat selection
+    navigate(`/passenger/book-trip/${trip._id}`, { replace: true });
+  }, [t, navigate]);
 
-  const handleSeatsSelected = (seats) => {
+  const handleSeatSelection = useCallback((seats) => {
+    console.log('Selected seats (numbers):', seats); // Debug log
     setSelectedSeats(seats);
-  };
+  }, []);
 
-  const handleProceedToPayment = async () => {
+  const handleProceedToPayment = useCallback(async () => {
     if (!selectedTrip || selectedSeats.length === 0) {
-      showNotification(t('Please select at least one seat'), 'error');
+      toast.error(t('Please select at least one seat'));
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error(t('Please login to continue'));
+      navigate('/login');
       return;
     }
 
     setBookingLoading(true);
+    setPaymentDialogOpen(true);
 
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        showNotification(t('Please login to continue'), 'error');
-        setTimeout(() => navigate('/login'), 1500);
-        return;
-      }
-
-      const user = JSON.parse(userStr);
+      console.log('Creating bookings for seats:', selectedSeats); // Debug log
       
-      const bookingData = {
-        tripID: selectedTrip._id,
-        passengerID: user._id,
-        seatNumbers: selectedSeats,
-        bookingDate: new Date().toISOString(),
-        totalPrice: selectedTrip.price * selectedSeats.length,
-        notes: '',
-        status: 'pending'
-      };
-
-      const response = await api.post('/api/booking', bookingData);
-
-      if (response.data.success) {
-        showNotification(t('🎉 Booking successful! Redirecting to bookings...'), 'success');
+      // Create bookings for each selected seat
+      const bookingPromises = selectedSeats.map(async (seatNumber) => {
+        // Ensure seatNumber is a number
+        const seatNum = parseInt(seatNumber, 10);
         
-        setTimeout(() => {
-          setSelectedTrip(null);
-          setSelectedSeats([]);
-          setStep('search');
-          navigate('/passenger/bookings');
-        }, 2000);
+        const bookingData = {
+          tripID: selectedTrip._id,
+          seatNumber: seatNum, // Now guaranteed to be a number
+          passengerDetails: {
+            fullName: user.fullName,
+            phoneNumber: user.phoneNumber,
+            email: user.email,
+            emergencyContact: user.emergencyContact || ''
+          }
+        };
+
+        console.log('Sending booking data:', bookingData); // Debug log
+
+        const response = await api.post('/api/booking', bookingData);
+        return response.data?.data || response.data;
+      });
+
+      const bookings = await Promise.all(bookingPromises);
+      
+      console.log('Bookings created:', bookings); // Debug log
+      setCreatedBookings(bookings);
+      toast.success(t('{{count}} seat(s) booked successfully!', { count: selectedSeats.length }));
+
+      // If only one booking, proceed directly to payment
+      if (bookings.length === 1) {
+        setActiveStep(3);
       } else {
-        showNotification(response.data.message || t('Booking failed'), 'error');
+        // For multiple bookings, show payment step
+        setActiveStep(3);
       }
     } catch (error) {
       console.error('Booking error:', error);
-      const errorMessage = error.response?.data?.message || t('Failed to book trip');
-      showNotification(errorMessage, 'error');
+      console.error('Error details:', error.response?.data); // Debug log
+      
+      let errorMessage = t('Failed to create booking');
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      toast.error(errorMessage);
+      setPaymentDialogOpen(false);
+      setPaymentStatus('failed');
     } finally {
       setBookingLoading(false);
     }
-  };
+  }, [selectedTrip, selectedSeats, isAuthenticated, user, t, navigate]);
 
-  const showNotification = (message, severity = 'success') => {
-    setNotification({
-      open: true,
-      message,
-      severity
-    });
-  };
+  const handlePaymentSuccess = useCallback(() => {
+    setPaymentStatus('success');
+    toast.success(t('Payment completed successfully!'));
+    
+    // Get the first booking ID to show in confirmation
+    const bookingId = createdBookings[0]?._id;
+    
+    // Redirect to booking confirmation page
+    setTimeout(() => {
+      navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
+    }, 1500);
+  }, [navigate, createdBookings]);
 
-  const handleCloseNotification = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
+  const handlePaymentError = useCallback((error) => {
+    console.error('Payment error in BookTrip:', error);
+    setPaymentStatus('failed');
+    toast.error(error || t('Payment failed'));
+  }, [t]);
+
+  const handleBack = useCallback(() => {
+    if (activeStep === 1) {
+      setActiveStep(0);
+      navigate('/passenger/book-trip', { replace: true });
+    } else if (activeStep === 2) {
+      setActiveStep(1);
+      setSelectedTrip(null);
+      setSelectedSeats([]);
+      setCreatedBookings([]);
+      navigate('/passenger/book-trip', { replace: true });
+    } else if (activeStep === 3) {
+      setActiveStep(2);
+      setPaymentDialogOpen(false);
+      setPaymentStatus(null);
     }
-    setNotification(prev => ({ ...prev, open: false }));
+  }, [activeStep, navigate]);
+
+  const handleNewSearch = () => {
+    setActiveStep(0);
+    setSelectedTrip(null);
+    setSelectedSeats([]);
+    setCreatedBookings([]);
+    setAvailableTrips([]);
+    setSearchData({ origin: '', destination: '', date: null });
+    setPaymentStatus(null);
+    navigate('/passenger/book-trip', { replace: true });
   };
 
-  const goBack = () => {
-    switch(step) {
-      case 'results':
-        setStep('search');
-        break;
-      case 'seats':
-        setStep('results');
-        setSelectedTrip(null);
-        setSelectedSeats([]);
-        break;
-      default:
-        navigate('/passenger');
+  const handleClosePaymentDialog = () => {
+    setPaymentDialogOpen(false);
+    if (paymentStatus === 'success') {
+      const bookingId = createdBookings[0]?._id;
+      navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
+    } else {
+      setPaymentStatus(null);
     }
   };
 
-  const renderHeroSection = () => (
-    <Box sx={{
-      textAlign: 'center',
-      padding: '60px 20px 40px',
-      background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
-      borderRadius: '0 0 30px 30px',
-      color: 'white',
-      marginBottom: '40px',
-      boxShadow: '0 4px 20px rgba(30, 64, 175, 0.15)'
-    }}>
-      <Typography variant="h2" sx={{ 
-        fontWeight: 700, 
-        fontSize: { xs: '2rem', md: '3rem' },
-        marginBottom: '16px',
-        letterSpacing: '-0.5px'
-      }} gutterBottom>
-        {t('Find Your Perfect Ride')}
-      </Typography>
-      <Typography variant="h5" sx={{ 
-        fontWeight: 400,
-        marginBottom: '30px',
-        opacity: 0.9,
-        fontSize: { xs: '1rem', md: '1.2rem' },
-        maxWidth: '600px',
-        marginLeft: 'auto',
-        marginRight: 'auto'
-      }} gutterBottom>
-        {t('Comfortable, safe, and affordable travel across Ethiopia')}
-      </Typography>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        gap: '16px', 
-        flexWrap: 'wrap',
-        marginTop: '30px'
-      }}>
-        <Chip icon={<SafetyCheck />} label={t('Safe Travel')} sx={{ 
-          background: 'rgba(255, 255, 255, 0.15)',
-          color: 'white',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          fontWeight: 500,
-          '& .MuiChip-icon': { color: 'white' }
-        }} />
-        <Chip icon={<TrendingUp />} label={t('Best Prices')} sx={{ 
-          background: 'rgba(255, 255, 255, 0.15)',
-          color: 'white',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          fontWeight: 500,
-          '& .MuiChip-icon': { color: 'white' }
-        }} />
-        <Chip icon={<Schedule />} label={t('On Time')} sx={{ 
-          background: 'rgba(255, 255, 255, 0.15)',
-          color: 'white',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          fontWeight: 500,
-          '& .MuiChip-icon': { color: 'white' }
-        }} />
-        <Chip icon={<ElectricCar />} label={t('Modern Fleet')} sx={{ 
-          background: 'rgba(255, 255, 255, 0.15)',
-          color: 'white',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          fontWeight: 500,
-          '& .MuiChip-icon': { color: 'white' }
-        }} />
-      </Box>
-    </Box>
-  );
-
-  const renderStepContent = () => {
-    switch(step) {
-      case 'search':
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
         return (
-          <Fade in={true} timeout={800}>
-            <Box>
-              {renderHeroSection()}
-              
-              <Paper elevation={0} sx={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '32px',
-                margin: '-40px auto 40px',
-                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
-                position: 'relative',
-                zIndex: 10,
-                maxWidth: '1000px',
-                border: '1px solid #e2e8f0'
+          <TripSearch
+            stations={stations}
+            initialData={searchData}
+            onSearch={handleSearch}
+            loading={searching}
+          />
+        );
+      
+      case 1:
+        return (
+          <TripResults
+            trips={availableTrips}
+            searchData={searchData}
+            stations={stations}
+            onTripSelect={handleTripSelect}
+            onBack={handleBack}
+            loading={searching}
+          />
+        );
+      
+      case 2:
+        return selectedTrip ? (
+          <SeatSelection
+            trip={selectedTrip}
+            selectedSeats={selectedSeats}
+            onSeatSelect={handleSeatSelection}
+            onProceedToPayment={handleProceedToPayment}
+            onBack={handleBack}
+            loading={bookingLoading}
+            maxSeats={8}
+          />
+        ) : null;
+      
+      case 3:
+        const totalAmount = selectedTrip?.price * selectedSeats.length;
+        const firstBookingId = createdBookings[0]?._id;
+
+        return (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+              {t('Complete Payment')}
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              {t('You have {{count}} booking(s) to pay for.', { count: selectedSeats.length })}
+            </Typography>
+            
+            {/* Booking Summary */}
+            <Box sx={{ 
+              my: 4, 
+              p: 3, 
+              bgcolor: alpha(theme.palette.primary.main, 0.02),
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <Typography variant="h3" sx={{ 
+                fontWeight: 700, 
+                color: theme.palette.primary.main,
+                mb: 1
               }}>
-                <TripSearch 
-                  stations={stations}
-                  initialData={searchData}
-                  onSearch={handleSearch}
-                />
-              </Paper>
-            </Box>
-          </Fade>
-        );
-
-      case 'results':
-        return (
-          <Fade in={true} timeout={800}>
-            <Box>
-              <TripResults
-                trips={availableTrips}
-                loading={searching}
-                searchData={searchData}
-                stations={stations}
-                onTripSelect={handleTripSelect}
-                onBack={goBack}
-                viewMode={viewMode}
-              />
-            </Box>
-          </Fade>
-        );
-
-      case 'seats':
-        if (!selectedTrip) {
-          return (
-            <Box sx={{ textAlign: 'center', padding: '80px', color: '#64748b' }}>
-              <Typography variant="h4">{t('Trip Not Found')}</Typography>
-              <Typography>{t('Please go back and select another trip.')}</Typography>
-            </Box>
-          );
-        }
-
-        return (
-          <Fade in={true} timeout={800}>
-            <Container maxWidth="xl">
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" sx={{ 
-                  fontWeight: 700, 
-                  mb: '8px', 
-                  color: '#1e293b'
-                }} gutterBottom>
-                  {t('Complete Your Booking')}
-                </Typography>
-                <Paper elevation={1} sx={{ 
-                  p: 3, 
-                  mb: 4, 
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  border: '1px solid #bae6fd'
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {selectedTrip.origin?.stationName} → {selectedTrip.destination?.stationName}
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        {new Date(selectedTrip.departureTime).toLocaleDateString(t('locale'), {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })} • {new Date(selectedTrip.departureTime).toLocaleTimeString(t('locale'), {hour: '2-digit', minute:'2-digit'})}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e40af' }}>
-                        ${selectedTrip.price} <Typography component="span" variant="body2" color="text.secondary">{t('per seat')}</Typography>
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('{{count}} seats available', { count: selectedTrip.availableSeats })}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              </Box>
+                ETB {totalAmount.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedSeats.length} {t('seat(s)')} × ETB {selectedTrip?.price.toLocaleString()}
+              </Typography>
               
-              <SeatSelection
-                trip={selectedTrip}
-                selectedSeats={selectedSeats}
-                onSeatsSelected={handleSeatsSelected}
-                onProceedToPayment={handleProceedToPayment}
-              />
-            </Container>
-          </Fade>
-        );
+              {/* Selected Seats - Now showing numbers */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: 1, 
+                mt: 2,
+                flexWrap: 'wrap'
+              }}>
+                {selectedSeats.map((seat, index) => (
+                  <Typography
+                    key={index}
+                    variant="caption"
+                    sx={{
+                      bgcolor: theme.palette.primary.main,
+                      color: 'white',
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: '16px',
+                      fontWeight: 600
+                    }}
+                  >
+                    Seat {seat}
+                  </Typography>
+                ))}
+              </Box>
+            </Box>
 
+            {/* Payment Button */}
+            {firstBookingId ? (
+              <PaymentButton
+                bookingId={firstBookingId}
+                amount={totalAmount}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                fullWidth
+                size="large"
+              />
+            ) : (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                {t('No booking found. Please go back and try again.')}
+              </Alert>
+            )}
+
+            {/* Back Button */}
+            <Button
+              variant="text"
+              onClick={handleBack}
+              startIcon={<ArrowBack />}
+              sx={{ mt: 2 }}
+            >
+              {t('Back to Seat Selection')}
+            </Button>
+          </Paper>
+        );
+      
       default:
         return null;
     }
   };
 
-return (
-  <Container maxWidth="xl" sx={{ 
-    padding: '0 !important', 
-    maxWidth: '1400px !important', 
-    minHeight: '100vh', 
-    background: '#f8fafc',
-    position: 'relative'
-  }}>
-    {/* Back Button - Absolute positioned at bottom right */}
-    {step !== 'search' && (
-      <Fab
-        onClick={goBack}
-        sx={{
-          position: 'absolute',
-          bottom: '30px',
-          right: '30px',
-          zIndex: 9999,
-          background: '#3b82f6',
-          color: 'white',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          '&:hover': {
-            background: '#2563eb',
-            transform: 'scale(1.1)',
-            transition: 'all 0.2s ease'
-          },
-          width: '56px',
-          height: '56px'
-        }}
-        aria-label={t('back')}
-      >
-        <ArrowBack />
-      </Fab>
-    )}
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography sx={{ mt: 2 }}>{t('Loading...')}</Typography>
+      </Container>
+    );
+  }
 
-    {/* Main Content */}
-    <Box sx={{ 
-      padding: { xs: '16px', md: '24px' },
-      minHeight: '100vh',
-      pb: '100px'
-    }}>
-      {renderStepContent()}
-    </Box>
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
+          {t('Book Your Trip')}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t('Find and book your next journey with Bahir Dar Transport System')}
+        </Typography>
+      </Box>
 
-      {/* Loading Overlay for Booking */}
-      {bookingLoading && (
-        <Box sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 2000
-        }}>
-          <Box sx={{
-            backgroundColor: 'white',
-            padding: '32px',
-            borderRadius: '16px',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-          }}>
-            <CircularProgress size={60} sx={{ mb: 3 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {t('Processing your booking...')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {t('Please wait while we confirm your seats')}
-            </Typography>
-          </Box>
+      {/* Stepper */}
+      <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{t(label)}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {/* Main Content */}
+      <Fade in={true} timeout={500}>
+        <Box>
+          {getStepContent(activeStep)}
+        </Box>
+      </Fade>
+
+      {/* New Search Button (visible after step 0) */}
+      {activeStep > 0 && (
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={handleNewSearch}
+            startIcon={<SearchIcon />}
+            sx={{ borderRadius: '8px' }}
+          >
+            {t('Start New Search')}
+          </Button>
         </Box>
       )}
 
-      {/* Notification */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      {/* Payment Processing Dialog */}
+      <Dialog 
+        open={paymentDialogOpen && activeStep !== 3} 
+        onClose={handleClosePaymentDialog}
+        maxWidth="xs"
+        fullWidth
       >
-        <Alert 
-          onClose={handleCloseNotification} 
-          severity={notification.severity}
-          sx={{ 
-            borderRadius: '8px', 
-            fontWeight: 500,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-          }}
-          elevation={6}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
+        <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>
+          {paymentStatus === 'success' ? t('Payment Successful') : 
+           paymentStatus === 'failed' ? t('Payment Failed') : 
+           t('Processing Payment')}
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', pb: 3 }}>
+          {!paymentStatus ? (
+            <>
+              <CircularProgress size={60} sx={{ mb: 2 }} />
+              <Typography>
+                {bookingLoading ? t('Creating your booking...') : t('Redirecting to payment...')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {t('Please do not close this window')}
+              </Typography>
+            </>
+          ) : paymentStatus === 'success' ? (
+            <>
+              <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                {t('Payment Successful!')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('Your booking has been confirmed.')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                {t('Redirecting to confirmation page...')}
+              </Typography>
+            </>
+          ) : (
+            <>
+              <ErrorIcon color="error" sx={{ fontSize: 60, mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1, color: '#ef4444' }}>
+                {t('Payment Failed')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('Please try again or contact support.')}
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        {paymentStatus && (
+          <DialogActions sx={{ pb: 3, px: 3 }}>
+            <Button 
+              onClick={handleClosePaymentDialog} 
+              variant="contained" 
+              fullWidth
+              color={paymentStatus === 'success' ? 'success' : 'primary'}
+            >
+              {paymentStatus === 'success' ? t('View Confirmation') : t('Close')}
+            </Button>
+          </DialogActions>
+        )}
+      </Dialog>
     </Container>
   );
-};
-
-export default BookTrip;
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Eye, Image as ImageIcon } from 'lucide-react';
+import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Eye, Image as ImageIcon, CreditCard, Phone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import VehicleModal from './VehicleModal';
@@ -44,81 +44,61 @@ export default function Vehicles() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // SIMPLIFIED: Get station admin's assigned station directly from user profile
+  // Get user profile
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/api/auth/profile');
+      if (response.data.success) {
+        setUserProfile(response.data.data.user);
+        return response.data.data.user;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  };
+
+  // Get station admin's assigned station
   const fetchStationAdminStation = async () => {
     try {
       // Get user profile first
-      const profileRes = await api.get('/api/auth/profile');
+      const user = await fetchUserProfile();
       
-      if (!profileRes.data.success) {
+      if (!user) {
         toast.error('Failed to fetch user profile');
         return null;
       }
-      
-      const user = profileRes.data.data.user;
-      setUserProfile(user);
       
       if (user.role !== 'station_admin') {
         toast.error('Only station admins can access this page');
         return null;
       }
       
-      // IMPORTANT: User model has stationID field (string)
+      // IMPORTANT: User model has stationID field
       if (!user.stationID) {
         toast.error('You are not assigned to any station. Please contact super admin.');
         return null;
       }
       
-      // For station admin, we don't actually need to fetch the station details
-      // The vehicle endpoints will automatically filter by stationID
-      // We can create a station object from the user's stationID for display purposes
+      // Create basic station object from user's stationID
       const stationObject = {
         _id: user.stationID,
-        stationName: user.stationName || 'Your Station',
-        stationCode: user.stationCode || user.stationID,
-        city: user.city || 'Unknown'
+        stationName: 'Your Station',
+        stationCode: user.stationID.toString().substring(0, 8),
+        city: 'Unknown'
       };
       
-      // Try to fetch real station details if possible, but don't fail if we can't
+      // Try to fetch real station details
       try {
-        // Check if stationID is a valid ObjectId
-        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(user.stationID);
-        
-        if (isValidObjectId) {
-          const stationRes = await api.get(`/api/station/${user.stationID}`);
-          if (stationRes.data.station) {
-            return stationRes.data.station;
-          }
-        }
-        
-        // If direct fetch fails, try to get from stations list
-        const stationsRes = await api.get('/api/station');
-        
-        // Check different response structures
-        let stations = [];
-        if (stationsRes.data.stations) {
-          stations = stationsRes.data.stations;
-        } else if (stationsRes.data.data?.stations) {
-          stations = stationsRes.data.data.stations;
-        } else if (Array.isArray(stationsRes.data)) {
-          stations = stationsRes.data;
-        }
-        
-        // Find station by ID or stationCode
-        const assignedStation = stations.find(station => 
-          station._id === user.stationID || 
-          station.stationCode === user.stationID ||
-          station._id?.toString() === user.stationID?.toString()
-        );
-        
-        if (assignedStation) {
-          return assignedStation;
+        const stationRes = await api.get(`/api/station/${user.stationID}`);
+        if (stationRes.data.station) {
+          return stationRes.data.station;
         }
       } catch (stationError) {
-        console.warn('Could not fetch station details, using basic station object:', stationError);
+        console.warn('Could not fetch station details, using basic station object');
       }
       
-      // Return basic station object with the ID we have
       return stationObject;
       
     } catch (error) {
@@ -133,104 +113,129 @@ export default function Vehicles() {
     }
   };
 
-const fetchVehicles = async () => {
-  try {
-    setLoading(true);
-    
-    const station = await fetchStationAdminStation();
-    
-    if (!station) {
-      setVehicles([]);
-      setTotalItems(0);
-      setStats({ total: 0, active: 0, maintenance: 0, totalCapacity: 0, available: 0, onTrip: 0 });
-      setLoading(false);
-      return;
-    }
-    
-    setCurrentUserStation(station);
-    
-    const response = await api.get('/api/vehicles');
-    
-    if (response.data.success) {
-      let vehiclesData = [];
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
       
-      if (response.data.data && response.data.data.vehicles) {
-        vehiclesData = response.data.data.vehicles;
-      } else if (response.data.vehicles) {
-        vehiclesData = response.data.vehicles;
-      } else if (Array.isArray(response.data.data)) {
-        vehiclesData = response.data.data;
+      const station = await fetchStationAdminStation();
+      
+      if (!station) {
+        setVehicles([]);
+        setTotalItems(0);
+        setStats({ total: 0, active: 0, maintenance: 0, totalCapacity: 0, available: 0, onTrip: 0 });
+        setLoading(false);
+        return;
       }
       
-      // CRITICAL FIX: Normalize vehicle objects to include stationID for permission checks
-      vehiclesData = vehiclesData.map(vehicle => {
-        // Extract station ID from populated station object
-        let stationId = null;
-        if (vehicle.stationID) {
-          stationId = vehicle.stationID;
-        } else if (vehicle.station) {
-          if (typeof vehicle.station === 'object') {
-            stationId = vehicle.station._id || vehicle.station;
-          } else {
-            stationId = vehicle.station;
-          }
+      setCurrentUserStation(station);
+      
+      // Fetch vehicles - backend automatically filters by stationID
+      const response = await api.get('/api/vehicles');
+      console.log('Vehicles API response:', response.data);
+      
+      if (response.data.success) {
+        let vehiclesData = [];
+        
+        // Extract vehicles from different response structures
+        if (response.data.data && response.data.data.vehicles) {
+          vehiclesData = response.data.data.vehicles;
+        } else if (response.data.vehicles) {
+          vehiclesData = response.data.vehicles;
+        } else if (Array.isArray(response.data.data)) {
+          vehiclesData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          vehiclesData = response.data;
         }
         
-        // Extract driver ID from populated driver object
-        let driverId = null;
-        if (vehicle.driverID) {
-          driverId = vehicle.driverID;
-        } else if (vehicle.driver) {
-          if (typeof vehicle.driver === 'object') {
-            driverId = vehicle.driver._id || vehicle.driver;
-          } else {
-            driverId = vehicle.driver;
-          }
-        }
+        console.log('Raw vehicles data:', vehiclesData);
         
-        return {
-          ...vehicle,
-          // Add normalized stationID for permission checks
-          stationID: stationId,
-          // Keep original station object for display
-          station: vehicle.station,
-          // Normalize driverID
-          driverID: driverId,
-          driver: vehicle.driver
-        };
-      });
+        // Normalize vehicle objects
+        vehiclesData = vehiclesData.map(vehicle => {
+          // Extract station ID
+          let stationId = null;
+          if (vehicle.stationID) {
+            stationId = typeof vehicle.stationID === 'object' 
+              ? vehicle.stationID._id || vehicle.stationID 
+              : vehicle.stationID;
+          } else if (vehicle.station) {
+            stationId = typeof vehicle.station === 'object'
+              ? vehicle.station._id || vehicle.station
+              : vehicle.station;
+          }
+          
+          // Extract driver info
+          let driverId = null;
+          let driverName = null;
+          let driverPhone = null;
+          
+          if (vehicle.driverID) {
+            if (typeof vehicle.driverID === 'object') {
+              driverId = vehicle.driverID._id;
+              driverName = vehicle.driverID.fullName;
+              driverPhone = vehicle.driverID.phoneNumber;
+            } else {
+              driverId = vehicle.driverID;
+            }
+          } else if (vehicle.driver) {
+            if (typeof vehicle.driver === 'object') {
+              driverId = vehicle.driver._id;
+              driverName = vehicle.driver.fullName;
+              driverPhone = vehicle.driver.phoneNumber;
+            } else {
+              driverId = vehicle.driver;
+            }
+          }
+          
+          // Extract owner details
+          const ownerDetails = vehicle.ownerDetails || {};
+          
+          return {
+            ...vehicle,
+            stationID: stationId,
+            driverID: {
+              _id: driverId,
+              fullName: driverName,
+              phoneNumber: driverPhone
+            },
+            ownerDetails: {
+              ownerName: ownerDetails.ownerName || 'Not specified',
+              phoneNumber: ownerDetails.phoneNumber || 'Not specified',
+              bankDetails: ownerDetails.bankDetails || {
+                bankName: 'Not specified',
+                accountNumber: 'Not specified'
+              }
+            }
+          };
+        });
+        
+        console.log('✅ Normalized vehicles:', vehiclesData);
+        
+        setVehicles(vehiclesData);
+        setTotalItems(vehiclesData.length);
+        calculateStats(vehiclesData);
+      } else {
+        toast.error(response.data.message || 'Failed to fetch vehicles');
+        setVehicles([]);
+        setTotalItems(0);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to fetch vehicles';
       
-      console.log('✅ Vehicles loaded with stationIDs:', vehiclesData.map(v => ({
-        plate: v.plateNumber,
-        stationID: v.stationID
-      })));
+      if (error.response?.status === 403) {
+        toast.error('You do not have permission to view vehicles');
+      } else if (error.response?.status === 401) {
+        toast.error('Session expired. Please login again');
+      } else {
+        toast.error(errorMsg);
+      }
       
-      setVehicles(vehiclesData);
-      setTotalItems(vehiclesData.length);
-      calculateStats(vehiclesData);
-    } else {
-      toast.error(response.data.message || 'Failed to fetch vehicles');
       setVehicles([]);
       setTotalItems(0);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching vehicles:', error);
-    const errorMsg = error.response?.data?.message || 'Failed to fetch vehicles';
-    
-    if (error.response?.status === 403) {
-      toast.error('You do not have permission to view vehicles');
-    } else if (error.response?.status === 401) {
-      toast.error('Session expired. Please login again');
-    } else {
-      toast.error(errorMsg);
-    }
-    
-    setVehicles([]);
-    setTotalItems(0);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchVehicles();
@@ -273,23 +278,10 @@ const fetchVehicles = async () => {
     setShowModal(true);
   };
 
-const handleViewImages = (vehicle) => {
-  // Ensure vehicle has stationID for permission checking
-  const vehicleWithStationId = {
-    ...vehicle,
-    // If stationID doesn't exist, try to extract from station object
-    stationID: vehicle.stationID || vehicle.station?._id || vehicle.station || currentUserStation?._id
+  const handleViewImages = (vehicle) => {
+    setSelectedVehicle(vehicle);
+    setShowImagesModal(true);
   };
-  
-  console.log('📸 Opening images modal for vehicle:', {
-    id: vehicleWithStationId._id,
-    plate: vehicleWithStationId.plateNumber,
-    stationID: vehicleWithStationId.stationID
-  });
-  
-  setSelectedVehicle(vehicleWithStationId);
-  setShowImagesModal(true);
-};
 
   const handleStatusUpdate = async (vehicle, status) => {
     try {
@@ -342,6 +334,13 @@ const handleViewImages = (vehicle) => {
     } else {
       return { status: 'valid', label: 'Valid' };
     }
+  };
+
+  // Mask account number for display
+  const maskAccountNumber = (accountNumber) => {
+    if (!accountNumber || accountNumber === 'Not specified') return 'Not specified';
+    if (accountNumber.length <= 4) return '****';
+    return '****' + accountNumber.slice(-4);
   };
 
   // Pagination calculations
@@ -530,6 +529,9 @@ const handleViewImages = (vehicle) => {
                           Driver Assignment
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Owner Details
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Maintenance & Insurance
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -556,6 +558,13 @@ const handleViewImages = (vehicle) => {
                                   <div className="text-sm text-gray-500">
                                     {carTypeLabels[vehicle.carType] || vehicle.carType} • {vehicle.year}
                                   </div>
+                                  {/* Image indicator */}
+                                  {vehicle.images && vehicle.images.length > 0 && (
+                                    <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                      <ImageIcon className="w-3 h-3" />
+                                      {vehicle.images.length} image(s)
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -579,10 +588,34 @@ const handleViewImages = (vehicle) => {
                                   </span>
                                 </div>
                                 {vehicle.driverID?.phoneNumber && (
-                                  <div className="text-sm text-gray-600">
+                                  <div className="text-sm text-gray-600 flex items-center gap-1">
+                                    <Phone className="w-3 h-3" />
                                     {vehicle.driverID.phoneNumber}
                                   </div>
                                 )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <span className="font-medium">
+                                    {vehicle.ownerDetails.ownerName}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Phone className="w-3 h-3" />
+                                  {vehicle.ownerDetails.phoneNumber}
+                                </div>
+                                <div className="mt-1 pt-1 border-t border-gray-100">
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <CreditCard className="w-3 h-3 text-gray-400" />
+                                    <span className="font-medium">{vehicle.ownerDetails.bankDetails.bankName}:</span>
+                                    <span className="text-gray-600">
+                                      {maskAccountNumber(vehicle.ownerDetails.bankDetails.accountNumber)}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -767,7 +800,7 @@ const handleViewImages = (vehicle) => {
         />
       )}
 
-      {/* Vehicle Images Modal - UPDATED with userStation prop */}
+      {/* Vehicle Images Modal */}
       {showImagesModal && selectedVehicle && (
         <VehicleImagesModal
           isOpen={showImagesModal}

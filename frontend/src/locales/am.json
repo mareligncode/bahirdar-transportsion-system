@@ -1441,7 +1441,17 @@
   "Boarding": "መሳፈር",
   "Ongoing": "በመካሄድ ላይ",
   "Delayed": "የዘገየ",
-  "Update Status": "ሁኔታ አዘምን"
+  "Update Status": "ሁኔታ አዘምን",
+      "ownerDetails": "የባለቤት ዝርዝሮች",
+    "ownerName": "የባለቤት ስም",
+    "ownerNamePlaceholder": "ሙሉ ስም ያስገቡ",
+    "ownerPhone": "የባለቤት ስልክ ቁጥር",
+    "ownerPhonePlaceholder": "ስልክ ቁጥር ያስገቡ",
+    "bankDetails": "የባንክ ዝርዝሮች",
+    "bankName": "የባንክ ስም",
+    "bankNamePlaceholder": "የባንክ ስም ያስገቡ",
+    "accountNumber": "የባንክ አካውንት ቁጥር",
+    "accountNumberPlaceholder": "የአካውንት ቁጥር ያስገቡ"
 
 
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Car, Wrench } from 'lucide-react';
+import { X, Car, Wrench, User, CreditCard } from 'lucide-react';
 import api from '../../services/api'; 
 import { toast } from 'react-hot-toast';
 
@@ -17,6 +17,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
     driverID: '',
     fuelType: 'diesel',
     features: [],
+    ownerDetails: {
+      ownerName: '',
+      phoneNumber: '',
+      bankDetails: {
+        accountNumber: '',
+        bankName: ''
+      }
+    }
   });
   
   const [stations, setStations] = useState([]);
@@ -24,6 +32,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [showOwnerDetails, setShowOwnerDetails] = useState(false);
 
   const carTypes = ['coaster', 'bus', 'minibus', 'aba dulla', 'van', 'other'];
   const fuelTypes = ['diesel', 'petrol', 'electric', 'hybrid'];
@@ -58,78 +67,104 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
     }
   }, [isOpen, initialized]);
 
-// Set form data when vehicle or stations data is available
-useEffect(() => {
-  if (isOpen) {
-    if (vehicle) {
-      // EDIT MODE - FIXED: Extract stationID from multiple possible locations
-      let stationID = '';
-      
-      if (vehicle.stationID) {
-        stationID = typeof vehicle.stationID === 'object' 
-          ? vehicle.stationID._id || vehicle.stationID 
-          : vehicle.stationID;
-      } else if (vehicle.station) {
-        stationID = typeof vehicle.station === 'object' 
-          ? vehicle.station._id || vehicle.station 
-          : vehicle.station;
+  // Set form data when vehicle or stations data is available
+  useEffect(() => {
+    if (isOpen) {
+      if (vehicle) {
+        // EDIT MODE - Extract stationID from multiple possible locations
+        let stationID = '';
+        
+        if (vehicle.stationID) {
+          stationID = typeof vehicle.stationID === 'object' 
+            ? vehicle.stationID._id || vehicle.stationID 
+            : vehicle.stationID;
+        } else if (vehicle.station) {
+          stationID = typeof vehicle.station === 'object' 
+            ? vehicle.station._id || vehicle.station 
+            : vehicle.station;
+        }
+        
+        // Extract driverID from multiple possible locations
+        let driverID = '';
+        if (vehicle.driverID) {
+          driverID = typeof vehicle.driverID === 'object' 
+            ? vehicle.driverID._id || vehicle.driverID 
+            : vehicle.driverID;
+        } else if (vehicle.driver) {
+          driverID = typeof vehicle.driver === 'object' 
+            ? vehicle.driver._id || vehicle.driver 
+            : vehicle.driver;
+        }
+
+        // Extract owner details if they exist
+        const ownerDetails = vehicle.ownerDetails || {
+          ownerName: '',
+          phoneNumber: '',
+          bankDetails: {
+            accountNumber: '',
+            bankName: ''
+          }
+        };
+        
+        setFormData({
+          plateNumber: vehicle.plateNumber || '',
+          carType: vehicle.carType || 'coaster',
+          totalCapacity: vehicle.totalCapacity || '',
+          stationID: stationID,
+          make: vehicle.make || '',
+          model: vehicle.model || '',
+          year: vehicle.year || new Date().getFullYear(),
+          color: vehicle.color || 'white',
+          insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
+          driverID: driverID,
+          fuelType: vehicle.fuelType || 'diesel',
+          features: vehicle.features || [],
+          ownerDetails: ownerDetails
+        });
+
+        // Show owner details section if they exist
+        if (ownerDetails.ownerName || ownerDetails.phoneNumber || 
+            ownerDetails.bankDetails?.accountNumber || ownerDetails.bankDetails?.bankName) {
+          setShowOwnerDetails(true);
+        }
+      } else {
+        // CREATE MODE - Use station from props or user profile
+        let defaultStationID = '';
+        
+        if (userStation?._id) {
+          defaultStationID = userStation._id;
+        } else if (userProfile?.stationID) {
+          defaultStationID = userProfile.stationID;
+        } else if (stations.length > 0) {
+          defaultStationID = stations[0]?._id || '';
+        }
+        
+        setFormData({
+          plateNumber: '',
+          carType: 'coaster',
+          totalCapacity: '',
+          stationID: defaultStationID,
+          make: '',
+          model: '',
+          year: new Date().getFullYear(),
+          color: 'white',
+          insuranceExpiry: '',
+          driverID: '',
+          fuelType: 'diesel',
+          features: [],
+          ownerDetails: {
+            ownerName: '',
+            phoneNumber: '',
+            bankDetails: {
+              accountNumber: '',
+              bankName: ''
+            }
+          }
+        });
+        setShowOwnerDetails(false);
       }
-      
-      // Extract driverID from multiple possible locations
-      let driverID = '';
-      if (vehicle.driverID) {
-        driverID = typeof vehicle.driverID === 'object' 
-          ? vehicle.driverID._id || vehicle.driverID 
-          : vehicle.driverID;
-      } else if (vehicle.driver) {
-        driverID = typeof vehicle.driver === 'object' 
-          ? vehicle.driver._id || vehicle.driver 
-          : vehicle.driver;
-      }
-      
-      setFormData({
-        plateNumber: vehicle.plateNumber || '',
-        carType: vehicle.carType || 'coaster',
-        totalCapacity: vehicle.totalCapacity || '',
-        stationID: stationID,
-        make: vehicle.make || '',
-        model: vehicle.model || '',
-        year: vehicle.year || new Date().getFullYear(),
-        color: vehicle.color || 'white',
-        insuranceExpiry: vehicle.insuranceExpiry ? formatDateForInput(vehicle.insuranceExpiry) : '',
-        driverID: driverID,
-        fuelType: vehicle.fuelType || 'diesel',
-        features: vehicle.features || [],
-      });
-    } else {
-      // CREATE MODE - Use station from props or user profile
-      let defaultStationID = '';
-      
-      if (userStation?._id) {
-        defaultStationID = userStation._id;
-      } else if (userProfile?.stationID) {
-        defaultStationID = userProfile.stationID;
-      } else if (stations.length > 0) {
-        defaultStationID = stations[0]?._id || '';
-      }
-      
-      setFormData({
-        plateNumber: '',
-        carType: 'coaster',
-        totalCapacity: '',
-        stationID: defaultStationID,
-        make: '',
-        model: '',
-        year: new Date().getFullYear(),
-        color: 'white',
-        insuranceExpiry: '',
-        driverID: '',
-        fuelType: 'diesel',
-        features: [],
-      });
     }
-  }
-}, [isOpen, vehicle, stations, userStation, userProfile]);
+  }, [isOpen, vehicle, stations, userStation, userProfile]);
 
   // Format date for input field
   const formatDateForInput = (dateString) => {
@@ -166,8 +201,11 @@ useEffect(() => {
         usersData = usersRes.data.data;
       }
       
+      // Filter only active drivers
       const driversData = usersData
-        .filter(user => user.role === 'driver' && user.isActive === true);
+        .filter(user => user && user.role === 'driver' && user.isActive === true);
+      
+      console.log('Available drivers:', driversData);
       setDrivers(driversData);
 
     } catch (error) {
@@ -189,6 +227,31 @@ useEffect(() => {
           ? [...prev.features, feature]
           : prev.features.filter(f => f !== feature)
       }));
+    } else if (name.startsWith('ownerDetails.')) {
+      // Handle nested owner details fields
+      const fieldPath = name.split('.');
+      if (fieldPath.length === 2) {
+        // ownerDetails.field
+        setFormData(prev => ({
+          ...prev,
+          ownerDetails: {
+            ...prev.ownerDetails,
+            [fieldPath[1]]: value
+          }
+        }));
+      } else if (fieldPath.length === 3) {
+        // ownerDetails.bankDetails.field
+        setFormData(prev => ({
+          ...prev,
+          ownerDetails: {
+            ...prev.ownerDetails,
+            bankDetails: {
+              ...prev.ownerDetails.bankDetails,
+              [fieldPath[2]]: value
+            }
+          }
+        }));
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -211,6 +274,16 @@ useEffect(() => {
       return;
     }
 
+    // Validate owner details for new vehicles
+    if (!vehicle) {
+      const { ownerDetails } = formData;
+      if (!ownerDetails.ownerName || !ownerDetails.phoneNumber || 
+          !ownerDetails.bankDetails.accountNumber || !ownerDetails.bankDetails.bankName) {
+        toast.error('All owner details are required for new vehicles');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       
@@ -227,6 +300,7 @@ useEffect(() => {
         insuranceExpiry: formData.insuranceExpiry,
         fuelType: formData.fuelType,
         features: formData.features,
+        ownerDetails: formData.ownerDetails
       };
 
       // Add driverID only if selected
@@ -261,6 +335,8 @@ useEffect(() => {
         toast.error('Invalid station selected');
       } else if (errorMsg.includes('driverID') || errorMsg.includes('driver')) {
         toast.error('Invalid driver selected');
+      } else if (errorMsg.includes('owner') || errorMsg.includes('Owner')) {
+        toast.error('Please provide all owner details');
       } else if (errorMsg.includes('permission') || error.response?.status === 403) {
         toast.error('You do not have permission to perform this action');
       } else if (error.response?.status === 401) {
@@ -277,7 +353,7 @@ useEffect(() => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
         {/* Fixed Header */}
         <div className="flex-shrink-0 bg-white border-b rounded-t-lg">
           <div className="flex items-center justify-between p-6">
@@ -535,8 +611,104 @@ useEffect(() => {
               </p>
             </div>
 
+            {/* Owner Details Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Owner Details
+                </h3>
+                {!vehicle && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOwnerDetails(!showOwnerDetails)}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    {showOwnerDetails ? 'Hide Owner Details' : 'Add Owner Details'}
+                  </button>
+                )}
+              </div>
+
+              {(showOwnerDetails || vehicle) && (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-3">
+                    All owner details are required for vehicle registration
+                  </p>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Owner Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="ownerDetails.ownerName"
+                      value={formData.ownerDetails.ownerName}
+                      onChange={handleChange}
+                      required={!vehicle}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Owner Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      name="ownerDetails.phoneNumber"
+                      value={formData.ownerDetails.phoneNumber}
+                      onChange={handleChange}
+                      required={!vehicle}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="+251912345678"
+                    />
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h4 className="text-md font-medium text-gray-800 flex items-center gap-2 mb-3">
+                      <CreditCard className="w-4 h-4" />
+                      Bank Details
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="ownerDetails.bankDetails.bankName"
+                          value={formData.ownerDetails.bankDetails.bankName}
+                          onChange={handleChange}
+                          required={!vehicle}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="Commercial Bank of Ethiopia"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Account Number *
+                        </label>
+                        <input
+                          type="text"
+                          name="ownerDetails.bankDetails.accountNumber"
+                          value={formData.ownerDetails.bankDetails.accountNumber}
+                          onChange={handleChange}
+                          required={!vehicle}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="1000001234567"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Features */}
-            <div>
+            <div className="border-t pt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Vehicle Features
               </label>

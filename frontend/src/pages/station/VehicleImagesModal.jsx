@@ -32,65 +32,89 @@ export default function VehicleImagesModal({ isOpen, onClose, vehicle, userStati
   const fetchVehicleImages = async () => {
     try {
       setLoading(true);
+      
+      // First check if images are already in the vehicle object
+      if (vehicle.images && vehicle.images.length > 0) {
+        setImages(vehicle.images);
+        setLoading(false);
+        return;
+      }
+      
+      // If not, fetch from the images endpoint
       const response = await api.get(`/api/vehicles/${vehicle._id}/images`);
       
       if (response.data.success) {
-        setImages(response.data.data.images || []);
-      } else {
-        toast.error('Failed to load images');
-        setImages([]);
+        let imagesData = [];
+        if (response.data.data?.images) {
+          imagesData = response.data.data.images;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          imagesData = response.data.data;
+        } else if (response.data.images) {
+          imagesData = response.data.images;
+        }
+        setImages(imagesData || []);
       }
     } catch (error) {
       console.error('Error fetching vehicle images:', error);
       toast.error('Failed to load vehicle images');
-      setImages([]);
     } finally {
       setLoading(false);
     }
   };
 
-const checkStationPermission = () => {
-  // EXACTLY what your backend does
-  if (userProfile?.role === 'station_admin') {
-    // Get vehicle.stationID.toString() - EXACT match to backend
-    const vehicleStationId = vehicle.stationID?.toString();
+  const checkStationPermission = () => {
+    if (userProfile?.role === 'super_admin') return true;
     
-    // Get user.stationID?.toString() - EXACT match to backend
-    const userStationId = userProfile?.stationID?.toString();
-    
-    // EXACT same comparison as your backend
-    if (vehicleStationId?.toString() !== userStationId?.toString()) {
-      return false; // 403 - Access denied
+    if (userProfile?.role === 'station_admin') {
+      let vehicleStationId = null;
+      
+      if (vehicle.stationID) {
+        vehicleStationId = typeof vehicle.stationID === 'object' 
+          ? vehicle.stationID._id?.toString() || vehicle.stationID.toString()
+          : vehicle.stationID.toString();
+      }
+      
+      const userStationId = userProfile?.stationID?.toString();
+      return vehicleStationId === userStationId;
     }
-    return true; // Permission granted
-  }
-  
-  // Super admin check
-  if (userProfile?.role === 'super_admin') {
-    return true;
-  }
-  
-  return false;
-};
+    
+    return false;
+  };
 
   const handleFileUpload = async (e) => {
-    const files = e.target.files;
+    const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    // Check permission before uploading
     if (!checkStationPermission()) {
       toast.error('You can only upload images to vehicles from your own station');
       e.target.value = '';
       return;
     }
 
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append('images', files[i]);
+    // Validate file types and sizes
+    const validFiles = files.filter(file => {
+      const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(file.type);
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      
+      if (!isValidType) toast.error(`${file.name} is not a valid image type`);
+      if (!isValidSize) toast.error(`${file.name} exceeds 10MB limit`);
+      
+      return isValidType && isValidSize;
+    });
+
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
     }
+
+    const formData = new FormData();
+    validFiles.forEach(file => {
+      formData.append('images', file);
+    });
 
     try {
       setUploading(true);
+      
       const response = await api.post(
         `/api/vehicles/${vehicle._id}/upload-images`,
         formData,
@@ -102,18 +126,15 @@ const checkStationPermission = () => {
       );
 
       if (response.data.success) {
-        toast.success(`${files.length} image(s) uploaded successfully`);
+        toast.success(`${validFiles.length} image(s) uploaded successfully`);
         fetchVehicleImages();
       }
     } catch (error) {
-      console.error('Error uploading images:', error);
-      
-      // Handle specific error messages
-      if (error.response?.status === 403) {
-        toast.error('You can only upload images to vehicles from your own station');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to upload images');
-      }
+      console.error('Upload error:', error);
+      const errorMsg = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      'Failed to upload images';
+      toast.error(errorMsg);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -121,50 +142,35 @@ const checkStationPermission = () => {
   };
 
   const handleSetPrimary = async (imageUrl) => {
-    // Check permission before setting primary
     if (!checkStationPermission()) {
-      toast.error('You can only modify images for vehicles from your own station');
+      toast.error('Permission denied');
       return;
     }
 
     try {
-      await api.post(`/api/vehicles/${vehicle._id}/set-primary-image`, {
-        imageUrl
-      });
+      await api.post(`/api/vehicles/${vehicle._id}/set-primary-image`, { imageUrl });
       toast.success('Primary image set successfully');
       fetchVehicleImages();
     } catch (error) {
-      console.error('Error setting primary image:', error);
-      
-      if (error.response?.status === 403) {
-        toast.error('You can only modify images for vehicles from your own station');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to set primary image');
-      }
+      toast.error(error.response?.data?.message || 'Failed to set primary image');
     }
   };
 
   const handleDeleteImage = async (imageUrl) => {
-    // Check permission before deleting
     if (!checkStationPermission()) {
-      toast.error('You can only delete images from vehicles in your own station');
+      toast.error('Permission denied');
       return;
     }
 
     if (!window.confirm('Are you sure you want to delete this image?')) return;
 
     try {
-      await api.delete(`/api/vehicles/${vehicle._id}/images/${encodeURIComponent(imageUrl)}`);
+      const encodedUrl = encodeURIComponent(imageUrl);
+      await api.delete(`/api/vehicles/${vehicle._id}/images/${encodedUrl}`);
       toast.success('Image deleted successfully');
       fetchVehicleImages();
     } catch (error) {
-      console.error('Error deleting image:', error);
-      
-      if (error.response?.status === 403) {
-        toast.error('You can only delete images from vehicles in your own station');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to delete image');
-      }
+      toast.error(error.response?.data?.message || 'Failed to delete image');
     }
   };
 
@@ -184,29 +190,26 @@ const checkStationPermission = () => {
 
   if (!isOpen || !vehicle) return null;
 
+  const hasPermission = checkStationPermission();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b rounded-t-lg">
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-primary-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Vehicle Images: {vehicle.plateNumber}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {vehicle.make} {vehicle.model} • {vehicle.carType}
+        <div className="flex-shrink-0 p-6 border-b">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Vehicle Images: {vehicle.plateNumber}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {vehicle.make} {vehicle.model} • {vehicle.carType}
+              </p>
+              {!hasPermission && userProfile?.role === 'station_admin' && (
+                <p className="text-xs text-red-600 mt-1">
+                  ⚠️ You don't have permission to modify images for this vehicle
                 </p>
-                {!checkStationPermission() && userProfile?.role === 'station_admin' && (
-                  <p className="text-xs text-red-600 mt-1">
-                    ⚠️ You don't have permission to modify images for this vehicle
-                  </p>
-                )}
-              </div>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -217,20 +220,20 @@ const checkStationPermission = () => {
           </div>
         </div>
 
-        {/* Upload Section - Only show if user has permission */}
-        {checkStationPermission() && (
-          <div className="border-b p-4 bg-gray-50">
+        {/* Upload Section */}
+        {hasPermission && (
+          <div className="p-4 bg-gray-50 border-b">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">
-                  Upload vehicle images (JPEG, PNG, GIF up to 10MB)
+                  Upload vehicle images (JPEG, PNG, GIF, WebP up to 10MB)
                 </p>
                 <p className="text-xs text-gray-500">
                   First uploaded image will be set as primary by default
                 </p>
               </div>
               <div>
-                <label className="btn-primary flex items-center gap-2 cursor-pointer">
+                <label className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2 cursor-pointer">
                   {uploading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -244,7 +247,7 @@ const checkStationPermission = () => {
                   )}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                     multiple
                     onChange={handleFileUpload}
                     disabled={uploading}
@@ -260,14 +263,14 @@ const checkStationPermission = () => {
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+              <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
             </div>
           ) : images.length === 0 ? (
             <div className="text-center py-12">
               <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No images uploaded</h3>
               <p className="text-gray-600">
-                {checkStationPermission() 
+                {hasPermission 
                   ? 'Upload images to display them here'
                   : 'This vehicle has no images'}
               </p>
@@ -276,7 +279,7 @@ const checkStationPermission = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {images.map((image, index) => (
                 <div 
-                  key={image.url || index}
+                  key={image._id || image.publicId || index}
                   className="relative group border rounded-lg overflow-hidden bg-gray-100 hover:shadow-lg transition-shadow"
                 >
                   {/* Image */}
@@ -316,7 +319,7 @@ const checkStationPermission = () => {
                     </div>
                   )}
 
-                  {/* Action Buttons - Only show delete/set-primary if user has permission */}
+                  {/* Action Buttons */}
                   <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => {
@@ -338,7 +341,7 @@ const checkStationPermission = () => {
                     >
                       <Download className="w-4 h-4" />
                     </button>
-                    {checkStationPermission() && !image.isPrimary && (
+                    {hasPermission && !image.isPrimary && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -350,7 +353,7 @@ const checkStationPermission = () => {
                         <Check className="w-4 h-4" />
                       </button>
                     )}
-                    {checkStationPermission() && (
+                    {hasPermission && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -370,12 +373,12 @@ const checkStationPermission = () => {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t p-4 bg-gray-50">
+        <div className="flex-shrink-0 p-4 border-t bg-gray-50">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600">
               {images.length} image{images.length !== 1 ? 's' : ''} • 
               {images.filter(img => img.isPrimary).length === 0 && ' No primary image set'}
-            </div>
+            </span>
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -386,10 +389,10 @@ const checkStationPermission = () => {
         </div>
       </div>
 
-      {/* Image Preview Modal */}
+      {/* Preview Modal */}
       {selectedImage && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-          <div className="relative max-w-4xl w-full max-h-[90vh]">
+          <div className="relative max-w-4xl w-full">
             <button
               onClick={() => {
                 setSelectedImage(null);
@@ -405,6 +408,10 @@ const checkStationPermission = () => {
                 src={previewImage}
                 alt="Preview"
                 className="w-full h-auto max-h-[70vh] object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Found';
+                }}
               />
               
               <div className="p-4 bg-white border-t">
@@ -423,7 +430,7 @@ const checkStationPermission = () => {
                     >
                       Download
                     </button>
-                    {checkStationPermission() && !selectedImage.isPrimary && (
+                    {hasPermission && !selectedImage.isPrimary && (
                       <button
                         onClick={() => {
                           handleSetPrimary(selectedImage.url);

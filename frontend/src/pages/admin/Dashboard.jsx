@@ -14,12 +14,12 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon
 } from '@mui/icons-material';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ ADD THIS
+import { useTranslation } from '../../hooks/useTranslation';
 
 const Dashboard = () => {
-  const { t } = useTranslation(); // ✅ ADD THIS
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState(null);
@@ -37,7 +37,6 @@ const Dashboard = () => {
   });
   
   const [userRoles, setUserRoles] = useState([]);
-  const [activityData, setActivityData] = useState([]);
   const [vehicleStatus, setVehicleStatus] = useState([]);
 
   const fetchDashboardData = async () => {
@@ -104,18 +103,6 @@ const Dashboard = () => {
         { name: t('maintenance'), value: vehicleStatusCounts.maintenance, color: '#f44336' },
         { name: t('inactive'), value: vehicleStatusCounts.inactive, color: '#9e9e9e' }
       ]);
-      
-      // Prepare activity data (last 7 days - mock for now)
-      const activity = [
-        { day: t('mon'), users: 12, trips: 8, bookings: 15 },
-        { day: t('tue'), users: 19, trips: 12, bookings: 21 },
-        { day: t('wed'), users: 15, trips: 9, bookings: 18 },
-        { day: t('thu'), users: 25, trips: 16, bookings: 30 },
-        { day: t('fri'), users: 22, trips: 14, bookings: 25 },
-        { day: t('sat'), users: 18, trips: 10, bookings: 20 },
-        { day: t('sun'), users: 10, trips: 5, bookings: 12 }
-      ];
-      setActivityData(activity);
       
       // Set overall stats
       setStats({
@@ -297,7 +284,7 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Charts Section - Full Width Vertical Layout */}
+      {/* Charts Section */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         
         {/* User Roles Distribution */}
@@ -361,29 +348,6 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Weekly Activity */}
-        <Card elevation={3}>
-          <CardHeader
-            title={t('weekly_activity')}
-            subheader={t('last_7_days_overview')}
-          />
-          <Divider />
-          <CardContent sx={{ height: 400 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="users" fill="#8884d8" name={t('new_users')} />
-                <Bar dataKey="trips" fill="#82ca9d" name={t('new_trips')} />
-                <Bar dataKey="bookings" fill="#ffc658" name={t('bookings')} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </Box>
 
       {/* Quick Actions */}
@@ -400,7 +364,7 @@ const Dashboard = () => {
                 fullWidth
                 variant="contained"
                 color="primary"
-                href="/admin/users"
+                href="/admin/AllUsers"
                 startIcon={<PeopleIcon />}
               >
                 {t('manage_users')}
