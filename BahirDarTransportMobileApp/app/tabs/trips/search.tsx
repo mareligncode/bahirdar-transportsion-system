@@ -73,8 +73,8 @@ export default function SearchScreen() {
     }
 
     const passengersNum = parseInt(formData.passengers);
-    if (isNaN(passengersNum) || passengersNum < 1) {
-      Alert.alert('Validation Error', 'Please enter a valid number of passengers');
+    if (isNaN(passengersNum) || passengersNum < 1 || passengersNum > 4) {
+      Alert.alert('Validation Error', 'Please enter a valid number of passengers (1-4)');
       return;
     }
 
@@ -146,11 +146,13 @@ export default function SearchScreen() {
     return station ? station.label.split(' (')[0] : '';
   };
 
+  const tabBarHeight = 60 + insets.bottom;
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       
-      {/* Header - pt-4 removed because SafeAreaView handles top padding */}
+      {/* Header */}
       <View className="bg-white px-4 pb-3 border-b border-gray-200">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
@@ -171,7 +173,7 @@ export default function SearchScreen() {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ 
-            paddingBottom: insets.bottom + 80, // Add bottom padding for tab bar (60px tab bar + 20px extra)
+            paddingBottom: tabBarHeight,
           }}
         >
           {/* Hero Banner */}
@@ -351,7 +353,7 @@ export default function SearchScreen() {
             </View>
           )}
 
-          {/* Travel Tips - Now visible */}
+          {/* Travel Tips */}
           <View className="mt-6 px-4 mb-6">
             <Text className="text-lg font-semibold text-gray-900 mb-3">
               Travel Tips
@@ -379,8 +381,6 @@ export default function SearchScreen() {
               </View>
             </View>
           </View>
-
-          {Platform.OS === 'ios' && insets.bottom === 0 && <View className="h-4" />}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

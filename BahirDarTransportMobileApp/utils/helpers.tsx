@@ -72,11 +72,19 @@ export const formatDateTime = (date: Date | string): string => {
 };
 
 /**
- * Format currency (ETB)
+ * Format currency (ETB) - Keep existing but enhance
  */
 export const formatCurrency = (amount: number): string => {
-  if (amount === undefined || amount === null) return 'ETB 0.00';
+  if (amount === undefined || amount === null || isNaN(amount)) return 'ETB 0.00';
   return `ETB ${amount.toFixed(2)}`;
+};
+
+/**
+ * Format currency without symbol (for calculations)
+ */
+export const formatCurrencyRaw = (amount: number): string => {
+  if (amount === undefined || amount === null || isNaN(amount)) return '0.00';
+  return amount.toFixed(2);
 };
 
 /**
@@ -128,6 +136,164 @@ export const getStatusColor = (status: string) => {
     default:
       return { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' };
   }
+};
+
+/**
+ * MAP PAYMENT STATUS - THIS IS THE MISSING FUNCTION
+ * Maps API payment status strings to the strict PaymentStatus type
+ */
+export const mapPaymentStatus = (status: string): 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'refunded' | 'disputed' => {
+  const statusMap: Record<string, 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'refunded' | 'disputed'> = {
+    'pending': 'pending',
+    'processing': 'processing',
+    'success': 'success',
+    'paid': 'success',
+    'completed': 'success',
+    'failed': 'failed',
+    'cancelled': 'cancelled',
+    'refunded': 'refunded',
+    'disputed': 'disputed',
+  };
+  
+  const normalizedStatus = status?.toLowerCase() || 'pending';
+  return statusMap[normalizedStatus] || 'pending';
+};
+
+/**
+ * Get payment status display configuration
+ */
+export const getPaymentStatusConfig = (status: string): { 
+  label: string; 
+  color: string; 
+  bgColor: string; 
+  icon: string;
+  borderColor: string;
+} => {
+  const configs: Record<string, any> = {
+    pending: {
+      label: 'Pending',
+      color: '#f59e0b',
+      bgColor: '#fef3c7',
+      borderColor: '#fcd34d',
+      icon: '⏳'
+    },
+    processing: {
+      label: 'Processing',
+      color: '#3b82f6',
+      bgColor: '#dbeafe',
+      borderColor: '#93c5fd',
+      icon: '🔄'
+    },
+    success: {
+      label: 'Success',
+      color: '#10b981',
+      bgColor: '#d1fae5',
+      borderColor: '#6ee7b7',
+      icon: '✅'
+    },
+    paid: {
+      label: 'Paid',
+      color: '#10b981',
+      bgColor: '#d1fae5',
+      borderColor: '#6ee7b7',
+      icon: '✅'
+    },
+    failed: {
+      label: 'Failed',
+      color: '#ef4444',
+      bgColor: '#fee2e2',
+      borderColor: '#fca5a5',
+      icon: '❌'
+    },
+    cancelled: {
+      label: 'Cancelled',
+      color: '#6b7280',
+      bgColor: '#f3f4f6',
+      borderColor: '#d1d5db',
+      icon: '🚫'
+    },
+    refunded: {
+      label: 'Refunded',
+      color: '#8b5cf6',
+      bgColor: '#ede9fe',
+      borderColor: '#c4b5fd',
+      icon: '↩️'
+    },
+    disputed: {
+      label: 'Disputed',
+      color: '#ec4899',
+      bgColor: '#fce7f3',
+      borderColor: '#f9a8d4',
+      icon: '⚠️'
+    }
+  };
+  
+  return configs[status?.toLowerCase()] || {
+    label: status || 'Unknown',
+    color: '#6b7280',
+    bgColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+    icon: '❓'
+  };
+};
+
+/**
+ * Check if payment is successful
+ */
+export const isPaymentSuccessful = (status: string): boolean => {
+  return ['success', 'paid'].includes(status?.toLowerCase());
+};
+
+/**
+ * Check if payment is pending
+ */
+export const isPaymentPending = (status: string): boolean => {
+  return ['pending', 'processing'].includes(status?.toLowerCase());
+};
+
+/**
+ * Check if payment failed
+ */
+export const isPaymentFailed = (status: string): boolean => {
+  return ['failed', 'cancelled'].includes(status?.toLowerCase());
+};
+
+/**
+ * Check if payment is refunded
+ */
+export const isPaymentRefunded = (status: string): boolean => {
+  return status?.toLowerCase() === 'refunded';
+};
+
+/**
+ * Check if payment is in final state (won't change)
+ */
+export const isPaymentFinal = (status: string): boolean => {
+  return ['success', 'failed', 'cancelled', 'refunded'].includes(status?.toLowerCase());
+};
+
+/**
+ * Get payment method icon name
+ */
+export const getPaymentMethodIcon = (method: string): string => {
+  const icons: Record<string, string> = {
+    'mobile_money': 'smartphone',
+    'card': 'credit-card',
+    'cash': 'wallet',
+  };
+  return icons[method] || 'credit-card';
+};
+
+/**
+ * Format payment method for display
+ */
+export const formatPaymentMethod = (method: string): string => {
+  const methods: Record<string, string> = {
+    'mobile_money': 'Mobile Money',
+    'card': 'Card Payment',
+    'cash': 'Pay at Station',
+  };
+  return methods[method] || method || 'Unknown';
 };
 
 /**
@@ -231,6 +397,22 @@ export const calculateTotalPrice = (pricePerSeat: number, numberOfSeats: number,
 };
 
 /**
+ * Calculate service fee
+ */
+export const calculateServiceFee = (amount: number, percentage: number = 0.02): number => {
+  return amount * percentage;
+};
+
+/**
+ * Format payment reference
+ */
+export const formatPaymentReference = (ref: string): string => {
+  if (!ref) return 'N/A';
+  if (ref.length <= 8) return ref;
+  return `...${ref.slice(-8)}`;
+};
+
+/**
  * Get relative time (e.g., "in 2 hours", "tomorrow")
  */
 export const getRelativeTime = (date: Date | string): string => {
@@ -288,4 +470,24 @@ export const groupBy = <T,>(array: T[], key: keyof T): Record<string, T[]> => {
     result[groupKey].push(currentValue);
     return result;
   }, {} as Record<string, T[]>);
+};
+
+/**
+ * Safe JSON parse
+ */
+export const safeJsonParse = <T,>(json: string, fallback: T): T => {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+/**
+ * Generate random transaction reference
+ */
+export const generateTxRef = (prefix: string = 'TXN'): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 10);
+  return `${prefix}-${timestamp}-${random}`;
 };

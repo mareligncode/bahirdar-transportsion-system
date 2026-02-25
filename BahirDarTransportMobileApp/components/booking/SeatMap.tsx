@@ -1,312 +1,328 @@
-// components/booking/SeatMap.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Crown, Armchair, Info, AlertCircle } from 'lucide-react-native';
 import { COLORS, getSeatColors } from '../../constants/colors';
-import { Trip } from '../../types/trip';
 import { tripsApi } from '../../lib/api/trips';
+import { Trip } from '../../types';
 
 interface SeatMapProps {
-  trip: any; 
-  selectedSeats: string[];
-  onSeatSelect: (seats: string[]) => void;
+  trip: Trip;
+  selectedSeats: number[];
+  onSeatSelect: (seatNumber: number) => void;
   maxSelectable?: number;
-  bookedSeats?: string[]; 
+  bookedSeats?: string[];
 }
 
-export default function SeatMap({ 
-  trip, 
-  selectedSeats, 
-  onSeatSelect, 
-  maxSelectable = 4,
-  bookedSeats: externalBookedSeats 
+export default function SeatMap({
+  trip,
+  selectedSeats,
+  onSeatSelect,
+  maxSelectable = 8,
+  bookedSeats: externalBookedSeats
 }: SeatMapProps) {
-  const insets = useSafeAreaInsets();
-  const [bookedSeats, setBookedSeats] = useState<string[]>(externalBookedSeats || []);
-  const [seatLayout, setSeatLayout] = useState<any[]>([]);
+  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalSeats = useMemo(() => {
-    if (!trip) return 0;
-    
-    console.log('🔍 Checking trip for seat count:', trip);
-    
-    const possibleSeatCount = 
-      trip.totalSeats || 
-      trip.vehicle?.totalCapacity ||
-      trip.capacity ||              
-      trip.seatCount ||            
-      trip.maxSeats ||              
-      trip.seats?.length ||       
-      trip.availableSeats + (bookedSeats?.length || 0) || 
-      (trip as any).vehicle?.capacity || 
-      (trip as any).vehicle?.seats ||    
-      (trip as any).bus?.capacity ||     
-      (trip as any).bus?.totalSeats ||    
-      40; 
-    
-    return possibleSeatCount;
-  }, [trip, bookedSeats]);
+  // Convert selectedSeats (number[]) to string[] for comparison
+  const selectedSeatsStr = useMemo(() =>
+    selectedSeats.map(seat => seat.toString()),
+    [selectedSeats]
+  );
 
+  // Use exact vehicle seat count from trip
+  const totalSeats = useMemo(() => {
+    if (!trip) return 40;
+
+    // Try to get total seats from various possible locations
+    const raw =
+      trip.totalSeats ??
+      trip.vehicle?.totalCapacity ??
+      trip.vehicleID?.totalCapacity ??
+      40; // Default fallback
+
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 40;
+  }, [trip]);
+
+  // Generate seat layout: vehicle seat numbers 1 to totalSeats
+  const seatLayout = useMemo(() => {
+    if (totalSeats <= 0) return [];
+    const columns = 4;
+    const layout: { id: string; number: string; status: string }[][] = [];
+
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum += columns) {
+      const row: { id: string; number: string; status: string }[] = [];
+      for (let col = 0; col < columns && seatNum + col <= totalSeats; col++) {
+        const id = String(seatNum + col);
+        const status = bookedSeats.includes(id)
+          ? 'booked'
+          : selectedSeatsStr.includes(id)
+            ? 'selected'
+            : 'available';
+        row.push({ id, number: id, status });
+      }
+      if (row.length > 0) layout.push(row);
+    }
+    return layout;
+  }, [totalSeats, bookedSeats, selectedSeatsStr]);
+
+  // Initialize booked seats from props or fetch
   useEffect(() => {
-    if (externalBookedSeats) {
-      setBookedSeats(externalBookedSeats);
+    if (externalBookedSeats !== undefined) {
+      setBookedSeats(Array.isArray(externalBookedSeats) ? externalBookedSeats : []);
     } else if (trip?._id) {
       fetchBookedSeats();
     }
-  }, [trip?._id]);
-
-  useEffect(() => {
-    if (totalSeats > 0) {
-      generateSeatLayout();
-    }
-  }, [bookedSeats, selectedSeats, totalSeats]);
+  }, [trip?._id, externalBookedSeats]);
 
   const fetchBookedSeats = async () => {
     if (!trip?._id) return;
-    
+
     setLoading(true);
+    setError(null);
     try {
       const response = await tripsApi.getBookedSeatsForTrip(trip._id);
-      const seats = response?.data?.bookedSeats || [];
-      setBookedSeats(seats);
+      // Handle different response structures
+      const seats = response?.data?.bookedSeats || response?.bookedSeats || [];
+      setBookedSeats(seats.map((seat: any) => seat.toString()));
     } catch (error) {
-      console.log('⚠️ Could not load booked seats');
+      console.log('⚠️ Could not load booked seats', error);
+      setError('Failed to load seat availability');
       setBookedSeats([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateSeatLayout = () => {
-    const columns = 4; // Default 4 columns
-    const rows = Math.ceil(totalSeats / columns);
-    const columnsArray = ['A', 'B', 'C', 'D'];
-    
-    const layout = [];
-    let seatCounter = 0;
-    
-    for (let i = 1; i <= rows; i++) {
-      const row = [];
-      for (let j = 0; j < columnsArray.length; j++) {
-        seatCounter++;
-        if (seatCounter <= totalSeats) {
-          const seatNumber = `${i}${columnsArray[j]}`;
-          row.push({
-            id: seatNumber,
-            number: seatNumber,
-            row: i.toString(),
-            column: columnsArray[j],
-            status: getSeatStatus(seatNumber),
-          });
-        }
-      }
-      if (row.length > 0) {
-        layout.push(row);
-      }
-    }
-    
-    setSeatLayout(layout);
-  };
-
-  const getSeatStatus = (seatId: string): 'available' | 'selected' | 'booked' | 'driver' => {
+  const getSeatStatus = useCallback((seatId: string): 'available' | 'selected' | 'booked' => {
     if (bookedSeats.includes(seatId)) return 'booked';
-    if (selectedSeats.includes(seatId)) return 'selected';
+    if (selectedSeatsStr.includes(seatId)) return 'selected';
     return 'available';
-  };
+  }, [bookedSeats, selectedSeatsStr]);
 
-  const handleSeatPress = (seatId: string) => {
+  const handleSeatPress = useCallback((seatId: string) => {
+    const seatNumber = parseInt(seatId, 10);
     const status = getSeatStatus(seatId);
-    if (status === 'booked') return;
-    
-    if (selectedSeats.includes(seatId)) {
-      onSeatSelect(selectedSeats.filter(s => s !== seatId));
+
+    if (status === 'booked') {
+      Alert.alert('Seat Unavailable', 'This seat is already booked.');
+      return;
+    }
+
+    if (status === 'selected') {
+      // Remove seat
+      onSeatSelect(seatNumber);
     } else {
+      // Add seat if under max limit
       if (selectedSeats.length >= maxSelectable) {
-        alert(`You can only select up to ${maxSelectable} seats`);
+        Alert.alert(
+          'Maximum Seats Reached',
+          `You can only select up to ${maxSelectable} seats per booking.`
+        );
         return;
       }
-      onSeatSelect([...selectedSeats, seatId]);
+      onSeatSelect(seatNumber);
     }
-  };
+  }, [selectedSeats, maxSelectable, getSeatStatus, onSeatSelect]);
 
-  const getSeatStyle = (seatId: string) => {
+  const getSeatStyle = useCallback((seatId: string) => {
     const status = getSeatStatus(seatId);
     const colors = getSeatColors(status);
     return {
       backgroundColor: colors.bg,
       borderColor: colors.border,
     };
-  };
+  }, [getSeatStatus]);
 
-  const getSeatTextColor = (seatId: string) => {
+  const getSeatTextColor = useCallback((seatId: string) => {
     const status = getSeatStatus(seatId);
     const colors = getSeatColors(status);
     return colors.text;
-  };
+  }, [getSeatStatus]);
 
-  const getSeatIconColor = (seatId: string) => {
+  const getSeatIconColor = useCallback((seatId: string) => {
     const status = getSeatStatus(seatId);
-    if (status === 'selected') return COLORS.white;
-    if (status === 'booked') return COLORS.gray400;
-    return COLORS.gray600;
-  };
+    const colors = getSeatColors(status);
+    return colors.text;
+  }, [getSeatStatus]);
+
+  const driverColors = getSeatColors('driver');
+  const availableColors = getSeatColors('available');
+  const selectedColors = getSeatColors('selected');
+  const bookedColors = getSeatColors('booked');
 
   if (!trip) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['bottom', 'left', 'right']}>
-        <View className="flex-1 items-center justify-center p-8">
-          <AlertCircle size={48} color="#ef4444" />
-          <Text className="text-lg font-semibold text-gray-900 mt-4">No Trip Data</Text>
-        </View>
-      </SafeAreaView>
+      <View className="p-8 items-center justify-center">
+        <AlertCircle size={48} color={COLORS.danger} />
+        <Text className="text-lg font-semibold mt-4" style={{ color: COLORS.textPrimary }}>
+          No Trip Data
+        </Text>
+      </View>
     );
   }
 
+  // Calculate booked count
+  const bookedCount = bookedSeats.length;
+  const availableCount = totalSeats - bookedCount;
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['bottom', 'left', 'right']}>
-      <ScrollView 
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-      >
-        <View className="bg-white mx-4 mt-2 p-4 rounded-xl">
-          
-          {/* Driver Section */}
-          <View className="items-center mb-6">
-            <View 
-              className="w-20 h-20 rounded-full items-center justify-center border-2"
-              style={{ 
-                backgroundColor: getSeatColors('driver').bg,
-                borderColor: getSeatColors('driver').border 
-              }}
-            >
-              <Crown size={32} color="#10b981" />
-            </View>
-            <Text className="text-sm font-medium text-gray-600 mt-2">Driver</Text>
+    <View style={{ backgroundColor: COLORS.background }}>
+      <View className="mx-4 mt-2 p-4 rounded-xl" style={{ backgroundColor: COLORS.cardBackground }}>
+
+        {/* Driver Section */}
+        <View className="items-center mb-6">
+          <View
+            className="w-20 h-20 rounded-full items-center justify-center border-2"
+            style={{ backgroundColor: driverColors.bg, borderColor: driverColors.border }}
+          >
+            <Crown size={32} color={COLORS.accent} />
           </View>
+          <Text className="text-sm font-medium mt-2" style={{ color: COLORS.textSecondary }}>
+            Driver
+          </Text>
+        </View>
 
-          {/* Front Doors */}
-          <View className="flex-row justify-between mb-6">
-            <View className="bg-gray-200 px-4 py-2 rounded-lg">
-              <Text className="text-xs font-medium text-gray-700">FRONT DOOR</Text>
-            </View>
-            <View className="bg-gray-200 px-4 py-2 rounded-lg">
-              <Text className="text-xs font-medium text-gray-700">FRONT DOOR</Text>
-            </View>
-          </View>
-
-          {/* Seat Layout */}
-          <View className="items-center">
-            {seatLayout.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} className="flex-row justify-between mb-2 w-full">
-                <View className="flex-row">
-                  {row.slice(0, 2).map((seat: any) => (
-                    <TouchableOpacity
-                      key={seat.id}
-                      onPress={() => handleSeatPress(seat.id)}
-                      disabled={seat.status === 'booked'}
-                      className={`
-                        w-14 h-14 mx-1 rounded-lg border-2 items-center justify-center
-                        ${seat.status === 'booked' ? 'opacity-50' : ''}
-                      `}
-                      style={getSeatStyle(seat.id)}
-                    >
-                      <Armchair size={20} color={getSeatIconColor(seat.id)} />
-                      <Text 
-                        className="text-xs mt-1"
-                        style={{ color: getSeatTextColor(seat.id) }}
-                      >
-                        {seat.id}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Aisle */}
-                <View className="w-8" />
-
-                {/* Right side seats */}
-                <View className="flex-row">
-                  {row.slice(2, 4).map((seat: any) => (
-                    <TouchableOpacity
-                      key={seat.id}
-                      onPress={() => handleSeatPress(seat.id)}
-                      disabled={seat.status === 'booked'}
-                      className={`
-                        w-14 h-14 mx-1 rounded-lg border-2 items-center justify-center
-                        ${seat.status === 'booked' ? 'opacity-50' : ''}
-                      `}
-                      style={getSeatStyle(seat.id)}
-                    >
-                      <Armchair size={20} color={getSeatIconColor(seat.id)} />
-                      <Text 
-                        className="text-xs mt-1"
-                        style={{ color: getSeatTextColor(seat.id) }}
-                      >
-                        {seat.id}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Back Doors */}
-          <View className="flex-row justify-between mt-6">
-            <View className="bg-gray-200 px-4 py-2 rounded-lg">
-              <Text className="text-xs font-medium text-gray-700">BACK DOOR</Text>
-            </View>
-            <View className="bg-gray-200 px-4 py-2 rounded-lg">
-              <Text className="text-xs font-medium text-gray-700">BACK DOOR</Text>
-            </View>
-          </View>
-
-          {/* Legend */}
-          <View className="flex-row justify-center mt-6 pt-4 border-t border-gray-200">
-            <View className="flex-row items-center mx-3">
-              <View className="w-4 h-4 rounded-sm mr-2 border-2 bg-white border-gray-300" />
-              <Text className="text-xs text-gray-600">Available</Text>
-            </View>
-            <View className="flex-row items-center mx-3">
-              <View className="w-4 h-4 rounded-sm mr-2 border-2 bg-blue-600 border-blue-800" />
-              <Text className="text-xs text-gray-600">Selected</Text>
-            </View>
-            <View className="flex-row items-center mx-3">
-              <View className="w-4 h-4 rounded-sm mr-2 border-2 bg-gray-200 border-gray-400" />
-              <Text className="text-xs text-gray-600">Booked</Text>
-            </View>
-          </View>
-
-          {/* Seat Info */}
-          <View className="flex-row items-center justify-between mt-4 pt-2">
-            <View className="flex-row items-center">
-              <Info size={16} color="#3b82f6" />
-              <Text className="ml-2 text-xs text-gray-600">
-                Total {totalSeats} seats • {bookedSeats.length} booked
-              </Text>
-            </View>
-            <Text className="text-xs font-medium text-blue-600">
-              {selectedSeats.length} of {maxSelectable} selected
+        {/* Front Doors */}
+        <View className="flex-row justify-between mb-6">
+          <View className="px-4 py-2 rounded-lg" style={{ backgroundColor: COLORS.gray200 }}>
+            <Text className="text-xs font-medium" style={{ color: COLORS.gray700 }}>
+              FRONT DOOR
             </Text>
           </View>
-
-          {loading && (
-            <View className="mt-4 py-2">
-              <Text className="text-xs text-center text-gray-500">
-                Loading seat availability...
-              </Text>
-            </View>
-          )}
+          <View className="px-4 py-2 rounded-lg" style={{ backgroundColor: COLORS.gray200 }}>
+            <Text className="text-xs font-medium" style={{ color: COLORS.gray700 }}>
+              FRONT DOOR
+            </Text>
+          </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        {/* Seat Layout */}
+        <View className="items-center">
+          {seatLayout.map((row, rowIndex) => (
+            <View key={`row-${rowIndex}`} className="flex-row justify-between mb-2 w-full">
+              <View className="flex-row">
+                {row.slice(0, 2).map((seat: any) => (
+                  <TouchableOpacity
+                    key={seat.id}
+                    onPress={() => handleSeatPress(seat.id)}
+                    disabled={seat.status === 'booked'}
+                    className="w-14 h-14 mx-1 rounded-lg items-center justify-center border-2"
+                    style={[
+                      getSeatStyle(seat.id),
+                      seat.status === 'booked' && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Armchair size={20} color={getSeatIconColor(seat.id)} />
+                    <Text className="text-xs mt-1 font-medium" style={{ color: getSeatTextColor(seat.id) }}>
+                      {seat.id}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Aisle */}
+              <View className="w-8" />
+
+              {/* Right side seats */}
+              <View className="flex-row">
+                {row.slice(2, 4).map((seat: any) => (
+                  <TouchableOpacity
+                    key={seat.id}
+                    onPress={() => handleSeatPress(seat.id)}
+                    disabled={seat.status === 'booked'}
+                    className="w-14 h-14 mx-1 rounded-lg items-center justify-center border-2"
+                    style={[
+                      getSeatStyle(seat.id),
+                      seat.status === 'booked' && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Armchair size={20} color={getSeatIconColor(seat.id)} />
+                    <Text className="text-xs mt-1 font-medium" style={{ color: getSeatTextColor(seat.id) }}>
+                      {seat.id}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Back Doors */}
+        <View className="flex-row justify-between mt-6">
+          <View className="px-4 py-2 rounded-lg" style={{ backgroundColor: COLORS.gray200 }}>
+            <Text className="text-xs font-medium" style={{ color: COLORS.gray700 }}>
+              BACK DOOR
+            </Text>
+          </View>
+          <View className="px-4 py-2 rounded-lg" style={{ backgroundColor: COLORS.gray200 }}>
+            <Text className="text-xs font-medium" style={{ color: COLORS.gray700 }}>
+              BACK DOOR
+            </Text>
+          </View>
+        </View>
+
+        {/* Legend */}
+        <View className="flex-row justify-center mt-6 pt-4 flex-wrap" style={{ borderTopWidth: 1, borderTopColor: COLORS.border }}>
+          <View className="flex-row items-center mx-3 mb-2">
+            <View className="w-5 h-5 rounded mr-2 border-2" style={{
+              backgroundColor: availableColors.bg,
+              borderColor: availableColors.border
+            }} />
+            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
+              Available ({availableCount})
+            </Text>
+          </View>
+          <View className="flex-row items-center mx-3 mb-2">
+            <View className="w-5 h-5 rounded mr-2 border-2" style={{
+              backgroundColor: selectedColors.bg,
+              borderColor: selectedColors.border
+            }} />
+            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
+              Selected ({selectedSeats.length})
+            </Text>
+          </View>
+          <View className="flex-row items-center mx-3 mb-2">
+            <View className="w-5 h-5 rounded mr-2 border-2 opacity-70" style={{
+              backgroundColor: bookedColors.bg,
+              borderColor: bookedColors.border
+            }} />
+            <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
+              Booked ({bookedCount})
+            </Text>
+          </View>
+        </View>
+
+        {/* Seat Info */}
+        <View className="flex-row items-center justify-between mt-4 pt-2">
+          <View className="flex-row items-center">
+            <Info size={16} color={COLORS.primary} />
+            <Text className="ml-2 text-xs" style={{ color: COLORS.textSecondary }}>
+              Total {totalSeats} seats • {bookedCount} booked • {availableCount} available
+            </Text>
+          </View>
+          <Text className="text-xs font-medium" style={{ color: COLORS.primary }}>
+            {selectedSeats.length} of {maxSelectable} selected
+          </Text>
+        </View>
+
+        {loading && (
+          <View className="mt-4 py-2">
+            <Text className="text-xs text-center" style={{ color: COLORS.textTertiary }}>
+              Loading seat availability...
+            </Text>
+          </View>
+        )}
+
+        {error && (
+          <View className="mt-4 py-2 px-3 bg-red-50 rounded-lg">
+            <Text className="text-xs text-center text-red-600">
+              {error}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }

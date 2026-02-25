@@ -1,54 +1,57 @@
+export interface Station {
+  _id: string;
+  stationName: string;
+  city: string;
+  location?: string;
+  contactPhone?: string;
+}
+
+export interface StationOption {
+  value: string;
+  label: string;
+  fullLabel: string;
+  city?: string;
+  location?: string;
+}
+
+export interface Vehicle {
+  _id: string;
+  plateNumber: string;
+  carType: string;
+  totalCapacity: number;
+  features?: string[];
+  images?: string[];
+  color?: string; // Add this for compatibility
+}
+
+export interface Driver {
+  _id: string;
+  fullName: string;
+  phoneNumber?: string; // This exists
+  profilePicture?: string;
+  rating?: number;
+  yearsOfExperience?: number;
+  licenseNumber?: string; // Add for compatibility
+}
+
 export interface Trip {
-  _id: string; 
+  _id: string;
   id?: string;
-  origin: {
-    _id: string;
-    stationName: string;
-    city: string;
-    location?: string;
-  };
-  destination: {
-    _id: string;
-    stationName: string;
-    city: string;
-    location?: string;
-  };
+  tripNumber?: string;
+  origin: Station;
+  destination: Station;
   departureTime: string;
   arrivalTime: string;
-  vehicle: {
-    _id: string;
-    plateNumber: string;
-    carType: string;
-    totalCapacity: number;
-    color?: string;
-  };
-  
-  driver: {
-    _id: string;
-    fullName: string;
-    phoneNumber?: string;
-    licenseNumber?: string;
-    yearsOfExperience?: number;
-  };
+  vehicle: Vehicle;
+  vehicleID?: Vehicle; // Add for backward compatibility
+  driver: Driver;
   price: number;
   availableSeats: number;
   totalSeats: number;
-  station:{
-    _id: string;
-    stationName: string;
-    location?: string;
-  };
-  routePoints?: string[];
   estimatedDuration?: string;
   notes?: string;
   tripStatus: 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled';
   isActive: boolean;
-  createdBy?: {
-    _id: string;
-    fullName: string;
-  };
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface SearchTripParams {
@@ -60,51 +63,14 @@ export interface SearchTripParams {
   maxPrice?: number;
 }
 
-export interface CreateBookingParams {
-  tripId: string;
-  seats: string[];
-  passengerId: string;
-  passengerName?: string;
-  passengerPhone?: string;
-  specialRequests?: string;
-}
-
-export interface Booking {
-  id: string;
-  tripId: string;
-  passengerId: string;
-  seats: string[];
-  totalAmount: number;
-  bookingStatus: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  bookingDate: string;
-  trip: Trip;
-  qrCode?: string;
-  ticketNumber: string;
-}
-
 export interface TripSearchResponse {
   success: boolean;
   data?: Trip[];
   message?: string;
-  trips?: Trip[];
-}
-export interface Station {
-  _id: string;
-  stationName: string;
-  city: string;
-  location?: string;
-  contactPhone?: string;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
-export interface StationOption {
-  value: string;
-  label: string;
-  fullLabel: string;
-  city?: string;
-  location?: string;
+export interface TripDetailsResponse {
+  success: boolean;
+  data?: Trip;
+  message?: string;
 }
-

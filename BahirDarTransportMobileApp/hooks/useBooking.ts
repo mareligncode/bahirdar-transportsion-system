@@ -1,185 +1,227 @@
-// hooks/useBooking.ts - Remove the searchTrips function entirely
-
-import { useState } from 'react';
-import { router } from 'expo-router';
-import { Alert } from 'react-native';
+import { useState, useCallback } from 'react';
+import { bookingsApi } from '../lib/api/bookings';
 import { useBookingStore } from '../store/bookingStore';
-import { bookingApi } from '../lib/api/bookings';
 import { useAuth } from './useAuth';
-import { CreateBookingPayload } from '../types/booking';
+import { Booking, BookingCreateData, Trip } from '../types';
+import { useToast } from '../components/common/Toast';
 
 export const useBooking = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { showToast } = useToast();
+
   const {
+    bookings,
     selectedTrip,
     selectedSeats,
-    selectTrip,
-    selectSeats,
-    resetBooking,
+    currentBooking,
+    setBookings,
+    addBooking,
+    setSelectedTrip,
+    setSelectedSeats,
+    setCurrentBooking,
+    clearBookingState
   } = useBookingStore();
 
-  // ============ CREATE BOOKING ============
-  const createBooking = async () => {
-    if (!selectedTrip) {
-      Alert.alert('Error', 'No trip selected');
-      throw new Error('No trip selected');
-    }
-    
-    if (selectedSeats.length === 0) {
-      Alert.alert('Error', 'Please select at least one seat');
-      throw new Error('No seats selected');
-    }
-
-    if (!user?._id) {
-      Alert.alert('Error', 'Please login to continue');
-      router.push('/auth/Login');
-      throw new Error('User not authenticated');
-    }
-
-    // Get trip ID safely
-    const tripId = selectedTrip._id || selectedTrip.id;
-    if (!tripId) {
-      Alert.alert('Error', 'Invalid trip ID');
-      throw new Error('Invalid trip ID');
-    }
-
-    // Calculate total price with validation
-    const pricePerSeat = selectedTrip.price || 0;
-    if (pricePerSeat <= 0) {
-      Alert.alert('Error', 'Invalid trip price');
-      throw new Error('Invalid trip price');
-    }
-    
-    const totalPrice = selectedSeats.length * pricePerSeat;
+  const fetchMyBookings = useCallback(async (): Promise<void> => {
+    if (!user) return;
 
     setLoading(true);
+    setError(null);
+
     try {
-      const bookingData: CreateBookingPayload = {
-        tripID: tripId,
-        seatNumbers: selectedSeats,
-        passengerDetails: {
-          fullName: user.fullName || '',
-          phoneNumber: user.phoneNumber || '',
-          email: user.email || '',
-        },
-      };
-
-      const response = await bookingApi.createBooking(bookingData);
-
-      if (response.data?.success || response.success) {
-        const bookingData = response.data?.data || response.data;
-        Alert.alert(
-          'Booking Successful! 🎉',
-          `Your booking has been created.\nBooking #${bookingData?.bookingNumber || bookingData?._id?.slice(-6).toUpperCase() || ''}\nTotal: ETB ${totalPrice}`,
-          [
-            {
-              text: 'View My Bookings',
-              onPress: () => {
-                resetBooking();
-                router.push('/tabs/profile/bookings');
-              }
-            },
-            {
-              text: 'Done',
-              style: 'cancel'
-            }
-          ]
-        );
-        return bookingData;
-      } else {
-        throw new Error(response.data?.message || 'Booking creation failed');
+      const response = await bookingsApi.getMyBookings();
+      if (response.success) {
+        setBookings(response.data);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to book trip';
-      Alert.alert('Booking Failed', errorMessage);
-      throw err;
+      setError(err.message || 'Failed to fetch bookings');
+      showToast(err.message || 'Failed to fetch bookings', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, setBookings, showToast]);
 
-  // ============ CANCEL BOOKING ============
-  const cancelBooking = async (bookingId: string, reason?: string) => {
+  const createBooking = useCallback(async (trip: Trip, seatNumbers: number[]): Promise<Booking[] | null> => {
+    if (!user) {
+      showToast('Please login to continue', 'error');
+      return null;
+    }
+
     setLoading(true);
-    try {
-      const response = await bookingApi.cancelBooking(bookingId);
+    setError(null);
 
-      if (response.data?.success || response.success) {
-        Alert.alert('Success', 'Booking cancelled successfully');
+    try {
+      const bookingsCreated: Booking[] = [];
+
+      for (const seatNumber of seatNumbers) {
+        const bookingData: BookingCreateData = {
+          tripID: trip._id,
+          seatNumber,
+          passengerDetails: {
+            fullName: user.fullName || '',
+            phoneNumber: user.phoneNumber || '',
+            email: user.email || '',
+            emergencyContact: user.emergencyContact || ''
+          }
+        };
+
+        const response = await bookingsApi.createBooking(bookingData);
+
+        if (response.success && response.data) {
+          bookingsCreated.push(response.data);
+        }
+      }
+
+      if (bookingsCreated.length > 0) {
+        // Add to store
+        bookingsCreated.forEach(booking => addBooking(booking));
+
+        // Set current booking for payment
+        setCurrentBooking(bookingsCreated[0]);
+
+        showToast(`${bookingsCreated.length} seat(s) booked successfully!`, 'success');
+
+        return bookingsCreated;
+      }
+
+      return null;
+    } catch (err: any) {
+      setError(err.message || 'Failed to create booking');
+      showToast(err.message || 'Failed to create booking', 'error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, addBooking, setCurrentBooking, showToast]);
+
+  const cancelBooking = useCallback(async (bookingId: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await bookingsApi.cancelBooking(bookingId);
+
+      if (response.success) {
+        // Update in store
+        setBookings(
+          bookings.map(booking =>
+            booking._id === bookingId
+              ? { ...booking, status: 'cancelled' as const }
+              : booking
+          )
+        );
+
+        // Also update current booking if it's the one being cancelled
+        if (currentBooking?._id === bookingId) {
+          setCurrentBooking({ ...currentBooking, status: 'cancelled' as const });
+        }
+
+        showToast('Booking cancelled successfully', 'success');
         return true;
       }
       return false;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to cancel booking';
-      Alert.alert('Error', errorMessage);
+      setError(err.message || 'Failed to cancel booking');
+      showToast(err.message || 'Failed to cancel booking', 'error');
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [bookings, currentBooking, setBookings, setCurrentBooking, showToast]);
 
-  // ============ GET MY BOOKINGS ============
-  const getMyBookings = async () => {
+  const getBookingById = useCallback(async (id: string): Promise<Booking | null> => {
     setLoading(true);
+    setError(null);
+
     try {
-      const response = await bookingApi.getMyBookings();
-      
-      let bookings = [];
-      if (response?.data?.data) {
-        bookings = response.data.data;
-      } else if (Array.isArray(response?.data)) {
-        bookings = response.data;
-      } else if (response?.data) {
-        bookings = response.data;
+      const response = await bookingsApi.getBookingById(id);
+
+      if (response.success && response.data) {
+        setCurrentBooking(response.data);
+        return response.data;
       }
-      
-      return bookings;
+      return null;
     } catch (err: any) {
-      console.error('Error fetching bookings:', err);
+      setError(err.message || 'Failed to fetch booking');
+      showToast(err.message || 'Failed to fetch booking', 'error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [setCurrentBooking, showToast]);
+
+  const selectTrip = useCallback((trip: Trip | null) => {
+    setSelectedTrip(trip);
+  }, [setSelectedTrip]);
+
+  const selectSeats = useCallback((seats: number[]) => {
+    setSelectedSeats(seats);
+  }, [setSelectedSeats]);
+
+  const clearBooking = useCallback(() => {
+    clearBookingState();
+  }, [clearBookingState]);
+
+  const canCancelBooking = useCallback((booking: Booking): boolean => {
+    const cancellableStatuses = ['pending', 'confirmed'];
+    if (!cancellableStatuses.includes(booking.status?.toLowerCase())) {
+      return false;
+    }
+
+    // Handle case where tripID might be a string or object
+    let departureTime: Date | null = null;
+
+    if (booking.tripID && typeof booking.tripID === 'object') {
+      departureTime = booking.tripID.departureTime
+        ? new Date(booking.tripID.departureTime)
+        : null;
+    }
+
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+    return departureTime ? departureTime > twoHoursFromNow : false;
+  }, []);
+
+  const getMyBookings = useCallback(async (): Promise<Booking[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await bookingsApi.getMyBookings();
+      if (response.success) {
+        setBookings(response.data);
+        return response.data;
+      }
+      return [];
+    } catch (err: any) {
+      const message = err.message || 'Failed to fetch bookings';
+      setError(message);
       return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [setBookings]);
 
-  // ============ GET BOOKING BY ID ============
-  const getBookingById = async (bookingId: string) => {
-    setLoading(true);
-    try {
-      const response = await bookingApi.getBookingById(bookingId);
-      
-      let booking = null;
-      if (response?.data?.data) {
-        booking = response.data.data;
-      } else if (response?.data) {
-        booking = response.data;
-      }
-      
-      return booking;
-    } catch (err: any) {
-      Alert.alert('Error', 'Failed to load booking details');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ============ RETURN ALL METHODS ============
   return {
     // State
+    bookings,
     selectedTrip,
     selectedSeats,
+    currentBooking,
     loading,
-    
-    // Actions - Core Booking
-    selectTrip,
-    selectSeats,
+    error,
+
+    // Actions
+    fetchMyBookings,
+    getMyBookings,
     createBooking,
     cancelBooking,
-    getMyBookings,
     getBookingById,
-    resetBooking,
+    selectTrip,
+    selectSeats,
+    clearBooking,
+    canCancelBooking
   };
 };

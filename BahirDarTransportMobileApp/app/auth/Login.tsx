@@ -18,10 +18,10 @@ import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { validateLoginForm } from '@/utils/validations';
-import { 
-  Mail, 
-  Lock, 
-  AlertCircle, 
+import {
+  Mail,
+  Lock,
+  AlertCircle,
   CheckCircle,
   ArrowLeft,
   Eye,
@@ -35,7 +35,7 @@ export default function Login() {
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  
+
   const { login, isLoading: authLoading } = useAuth();
 
   const {
@@ -59,7 +59,6 @@ export default function Login() {
     setSuccess('');
     setFieldErrors({});
 
-    // Use your validation function
     const validationErrors = validateLoginForm(data);
 
     if (Object.keys(validationErrors).length > 0) {
@@ -75,10 +74,10 @@ export default function Login() {
         email: data.email,
         password: data.password
       });
-      
+
       if (result.success) {
         setSuccess('Login successful! Redirecting...');
-        
+
         setTimeout(() => {
           router.replace('/tabs/home');
         }, 1000);
@@ -88,7 +87,7 @@ export default function Login() {
     } catch (err: any) {
       const errorMessage = err.message || 'Login failed. Please try again.';
       setError(errorMessage);
-      
+
       if (errorMessage.includes('email') || errorMessage.includes('not found')) {
         setFormError('email', { message: 'Invalid email or password' });
         setFieldErrors(prev => ({ ...prev, email: 'Invalid email or password' }));
@@ -99,7 +98,6 @@ export default function Login() {
     }
   };
 
-  // Clear errors when user starts typing
   const clearAllErrors = () => {
     setError('');
     setFieldErrors({});
@@ -124,17 +122,16 @@ export default function Login() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
-          <ScrollView 
+          <ScrollView
             className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ 
-              paddingBottom: insets.bottom + 40 
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + 40
             }}
           >
             <View className="px-6 pt-4">
-              {/* Header */}
               <View className="mb-8">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => {
                     if (router.canGoBack()) {
                       router.back();
@@ -147,7 +144,7 @@ export default function Login() {
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
                 </TouchableOpacity>
-                
+
                 <View className="items-center mb-6">
                   <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
                     <View className="w-12 h-12 bg-blue-600 rounded-lg items-center justify-center">
@@ -163,7 +160,6 @@ export default function Login() {
                 </View>
               </View>
 
-              {/* Success Message */}
               {success && (
                 <Card className="bg-green-50 border-green-200 mb-6">
                   <View className="flex-row items-start">
@@ -175,7 +171,6 @@ export default function Login() {
                 </Card>
               )}
 
-              {/* Error Message */}
               {error && (
                 <Card className="bg-red-50 border-red-200 mb-6">
                   <View className="flex-row items-start">
@@ -188,7 +183,6 @@ export default function Login() {
                 </Card>
               )}
 
-              {/* Login Form */}
               <View className="mb-6">
                 <Controller
                   name="email"
@@ -251,9 +245,7 @@ export default function Login() {
                     </View>
                   )}
                 />
-
-                {/* Forgot Password Link */}
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.push('/auth/Forgot-Password')}
                   className="self-end mb-6"
                   activeOpacity={0.7}
@@ -264,7 +256,6 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
 
-              {/* Submit Button */}
               <Button
                 title="Sign In"
                 onPress={handleSubmit(handleLogin)}
@@ -275,12 +266,10 @@ export default function Login() {
                 className="mb-6"
                 fullWidth
               />
-
-              {/* Register Link */}
               <View className="pt-6 border-t border-gray-200">
                 <View className="flex-row justify-center">
                   <Text className="text-gray-600">Don't have an account? </Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => router.push('/auth/Register')}
                     disabled={loading}
                     activeOpacity={0.7}

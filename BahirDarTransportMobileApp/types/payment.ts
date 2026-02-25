@@ -1,54 +1,87 @@
-export interface PaymentMethod {
-  id: string;
-  type: 'chapa' | 'telebirr' | 'card' | 'bank';
-  name: string;
-  icon: string;
-  isActive: boolean;
-}
+// types/payment.ts
+
+import { Booking } from './booking';
+import { User } from './auth';
+
+// Define a single, consistent PaymentStatus type
+export type PaymentStatus = 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'refunded';
 
 export interface Payment {
-  id: string;
-  bookingId: string;
+  _id: string;
+  bookingID: string | Booking;
+  passengerID: string | User;
   amount: number;
-  currency: 'ETB';
-  method: string;
-  status: 'pending' | 'success' | 'failed' | 'cancelled';
-  transactionId?: string;
-  referenceNumber?: string;
+  currency: string;
+  paymentMethod: 'mobile_money' | 'card' | 'cash';
+  paymentGateway: 'chapa' | 'cash';
+  paymentStatus: PaymentStatus; // Use the type alias
+  gatewayTransactionID?: string;
+  chapaReference?: string;
+  checkoutUrl?: string;
   paymentDate?: string;
+  verifiedAt?: string;
+  refundAmount?: number;
+  refundedAt?: string;
+  reasonForFailure?: string;
   metadata?: Record<string, any>;
+  gatewayResponse?: Record<string, any>;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface PaymentIntent {
-  id: string;
-  amount: number;
-  currency: string;
-  clientSecret?: string;
-  paymentMethods: PaymentMethod[];
-}
-
-export interface ChapaPaymentData {
-  amount: number;
-  currency: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  txRef: string;
-  callbackUrl?: string;
+export interface PaymentInitializeData {
+  bookingId: string;
+  paymentMethod?: 'mobile_money' | 'card' | 'cash';
   returnUrl?: string;
 }
 
-export interface TelebirrPaymentData {
-  amount: number;
-  subject: string;
-  outTradeNo: string;
-  timeoutExpress: string;
-  notifyUrl?: string;
-  returnUrl?: string;
+export interface PaymentInitializeRequest {
+  bookingId: string;
+  paymentMethod?: 'mobile_money' | 'card' | 'cash';
 }
-export interface PaymentVerification {
-  payment_id: string;
-  transaction_id: string;
+
+export interface PaymentInitializeResponse {
+  success: boolean;
+  message: string;
+  data: {
+    checkoutUrl: string;
+    paymentId: string;
+    bookingId: string;
+    amount: number;
+    tx_ref: string;
+    paymentStatus: string;
+  };
+}
+
+export interface PaymentVerifyResponse {
+  success: boolean;
+  message: string;
+  data: {
+    payment: Payment;
+    booking: Booking;
+    redirectUrl: string;
+  };
+}
+
+export interface PaymentHistoryResponse {
+  success: boolean;
+  data: Payment[];
+  summary: {
+    totalPayments: number;
+    successfulPayments: number;
+    totalAmountSpent: number;
+  };
+}
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  data: Payment;
+}
+
+export interface PaymentFilters {
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
 }

@@ -12,6 +12,7 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { Trip } from '../../types/trip';
+import { COLORS } from '@/constants/colors';
 
 interface TripCardProps {
   trip: Trip;
@@ -84,7 +85,7 @@ export const TripCard: React.FC<TripCardProps> = ({
         <View className="flex-1">
           <View className="flex-row items-center mb-2">
             <View className="bg-blue-100 p-2 rounded-full mr-3">
-              <Bus size={20} color="#3b82f6" />
+              <Bus size={20} color={COLORS.primary} />
             </View>
             <Text className="text-lg font-bold text-gray-900 flex-1">
               {trip.origin?.stationName}
@@ -95,7 +96,7 @@ export const TripCard: React.FC<TripCardProps> = ({
             <View className="flex-row items-center">
               <View className="w-2 h-2 bg-gray-300 rounded-full" />
               <View className="w-10 h-0.5 bg-gray-300 mx-1" />
-              <ChevronRight size={16} color="#94a3b8" />
+              <ChevronRight size={16} color={COLORS.gray400} />
               <View className="w-10 h-0.5 bg-gray-300 mx-1" />
               <View className="w-2 h-2 bg-gray-300 rounded-full" />
             </View>
@@ -104,7 +105,7 @@ export const TripCard: React.FC<TripCardProps> = ({
 
           <View className="flex-row items-center mt-2">
             <View className="bg-red-100 p-2 rounded-full mr-3">
-              <MapPin size={20} color="#ef4444" />
+              <MapPin size={20} color={COLORS.danger} />
             </View>
             <Text className="text-lg font-bold text-gray-900">
               {trip.destination?.stationName}
@@ -127,7 +128,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <View className="flex-1">
             <Text className="text-xs text-gray-500 mb-1">Departure</Text>
             <View className="flex-row items-center">
-              <Clock size={16} color="#3b82f6" />
+              <Clock size={16} color={COLORS.primary} />
               <Text className="ml-1.5 font-semibold text-gray-900">
                 {new Date(trip.departureTime).toLocaleTimeString([], { 
                   hour: '2-digit', 
@@ -155,7 +156,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <View className="flex-1 items-end">
             <Text className="text-xs text-gray-500 mb-1">Arrival</Text>
             <View className="flex-row items-center">
-              <Clock size={16} color="#64748b" />
+              <Clock size={16} color={COLORS.gray500} />
               <Text className="ml-1.5 font-semibold text-gray-900">
                 {new Date(trip.arrivalTime).toLocaleTimeString([], { 
                   hour: '2-digit', 
@@ -189,7 +190,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           </View>
           
           <View className="flex-row items-center">
-            <Shield size={14} color="#10b981" />
+            <Shield size={14} color={COLORS.secondary} />
             <Text className="text-xs text-green-600 ml-1">Safe Travel</Text>
           </View>
         </View>
@@ -215,7 +216,7 @@ export const TripCard: React.FC<TripCardProps> = ({
       {/* Notes */}
       {trip.notes && (
         <View className="mt-3 bg-blue-50 p-3 rounded-lg flex-row items-start">
-          <AlertCircle size={16} color="#3b82f6" />
+          <AlertCircle size={16} color={COLORS.primary} />
           <Text className="ml-2 text-xs text-blue-700 flex-1">
             {trip.notes}
           </Text>

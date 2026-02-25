@@ -184,3 +184,48 @@ export const formatDate = (dateString: string): string => {
     minute: '2-digit',
   }).format(date);
 };
+
+// Add to utils/validations.tsx
+export const validatePassengerDetails = (data: {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  emergencyContact?: string;
+}): Record<string, string> => {
+  const errors: Record<string, string> = {};
+
+  // Full Name validation
+  if (!data.fullName.trim()) {
+    errors.fullName = 'Full name is required';
+  } else if (data.fullName.trim().length < 3) {
+    errors.fullName = 'Name must be at least 3 characters';
+  }
+
+  // Phone Number validation
+  const phoneDigits = data.phoneNumber.replace(/\D/g, '');
+  if (!data.phoneNumber.trim()) {
+    errors.phoneNumber = 'Phone number is required';
+  } else if (phoneDigits.length < 9) {
+    errors.phoneNumber = 'Enter a valid 9-digit phone number';
+  } else if (!/^[+25179]/.test(phoneDigits)) {
+    errors.phoneNumber = 'Ethiopian numbers must start with 7 or 9';
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!data.email.trim()) {
+    errors.email = 'Email is required';
+  } else if (!emailRegex.test(data.email)) {
+    errors.email = 'Enter a valid email address';
+  }
+
+  // Emergency Contact (optional)
+  if (data.emergencyContact && data.emergencyContact.trim()) {
+    const emergencyDigits = data.emergencyContact.replace(/\D/g, '');
+    if (emergencyDigits.length < 9) {
+      errors.emergencyContact = 'Emergency contact must be a valid phone number';
+    }
+  }
+
+  return errors;
+};
