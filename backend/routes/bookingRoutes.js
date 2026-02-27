@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     createBooking,
+    createBatchBooking,
     getAllBookings,
     getBookingById,
     updateBooking,
@@ -19,6 +20,7 @@ router.use(protect);
 // Passenger routes
 router.get('/my-bookings', authorize(['passenger']), getPassengerBookings);
 router.post('/', authorize(['passenger']), createBooking);
+router.post('/batch', authorize(['passenger']), createBatchBooking);
 router.get('/:id', authorize(['passenger', 'driver', 'station_admin', 'super_admin']), getBookingById);
 router.put('/:id', authorize(['passenger', 'station_admin', 'super_admin']), updateBooking);
 router.delete('/:id', authorize(['passenger', 'station_admin', 'super_admin']), deleteBooking);
