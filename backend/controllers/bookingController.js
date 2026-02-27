@@ -4,6 +4,7 @@ import Vehicle from '../models/Vehicle.js';
 import User from '../models/Users.js';
 import Station from '../models/Station.js';
 import NotificationService from '../services/notificationService.js';
+import mongoose from 'mongoose';
 
 export const createBooking = async (req, res) => {
     try {
@@ -748,6 +749,171 @@ export const getTripBookings = async (req, res) => {
             success: false,
             message: 'Error fetching trip bookings',
             error: error.message
+        });
+    }
+};
+
+export const createBatchBooking = async (req, res) => {
+    try {
+        const { tripID, seats, specialRequests, passengerDetails } = req.body;
+        
+        // Validate required fields
+        if (!tripID || !seats || !Array.isArray(seats) || seats.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Trip ID and seats array are required'
+            });
+        }
+
+        if (seats.length > 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'Maximum 10 seats can be booked at once'
+            });
+        }
+        
+        // Validate trip and availability
+        const trip = await Trip.findById(tripID);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: 'Trip not found'
+            });
+        }
+
+        if (trip.tripStatus !== 'scheduled' && trip.tripStatus !== 'boarding') {
+            return res.status(400).json({
+                success: false,
+                message: 'Trip is not available for booking'
+            });
+        }
+
+        if (trip.availableSeats < seats.length) {
+            return res.status(400).json({
+                success: false,
+                message: `Not enough seats available. Requested: ${seats.length}, Available: ${trip.availableSeats}`
+            });
+        }
+        
+        // Validate seat numbers and check availability
+        const seatNumbers = seats.map(s => s.seatNumber);
+        
+        // Check seat number range
+        for (const seat of seats) {
+            if (seat.seatNumber < 1 || seat.seatNumber > trip.totalSeats) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Seat number ${seat.seatNumber} is invalid. Must be between 1 and ${trip.totalSeats}`
+                });
+            }
+        }
+
+        // Check for duplicate seat numbers in the request
+        const uniqueSeats = new Set(seatNumbers);
+        if (uniqueSeats.size !== seatNumbers.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Duplicate seat numbers found in the request'
+            });
+        }
+        
+        // Check seat availability for all requested seats
+        const existingBookings = await Booking.find({
+            tripID,
+            seatNumber: { $in: seatNumbers },
+            status: { $in: ['pending', 'confirmed'] }
+        });
+        
+        if (existingBookings.length > 0) {
+            const bookedSeats = existingBookings.map(b => b.seatNumber);
+            return res.status(400).json({
+                success: false,
+                message: `Seats ${bookedSeats.join(', ')} are already booked`
+            });
+        }
+        
+        // Create all bookings
+        const bookings = [];
+        for (const seat of seats) {
+            const booking = new Booking({
+                passengerID: req.user.id,
+                tripID,
+                vehicleID: trip.vehicle,
+                seatNumber: seat.seatNumber,
+                specialRequests: seat.specialRequests || specialRequests,
+                passengerDetails: passengerDetails || {
+                    fullName: req.user.fullName,
+                    phoneNumber: req.user.phoneNumber,
+                    email: req.user.email,
+                    emergencyContact: req.user.emergencyContact
+                },
+                createdBy: req.user.id
+            });
+            await booking.save();
+            bookings.push(booking);
+        }
+        
+        // Update trip available seats
+        trip.availableSeats -= seats.length;
+        await trip.save();
+        
+        // Send booking confirmation notifications for all bookings
+        try {
+            for (const booking of bookings) {
+                const notificationData = {
+                    userID: req.user.id,
+                    title: 'Multiple Seats Booked Successfully',
+                    message: `Your bookings ${bookings.map(b => b.bookingNumber).join(', ')} have been created successfully. Please proceed to payment to confirm your reservations.`,
+                    type: 'booking_confirmation',
+                    channel: 'all',
+                    priority: 'medium',
+                    metadata: {
+                        userName: req.user.fullName,
+                        bookings: bookings.map(b => ({
+                            bookingNumber: b.bookingNumber,
+                            ticketNumber: b.ticketNumber,
+                            seatNumber: b.seatNumber
+                        })),
+                        trip: {
+                            tripNumber: trip.tripNumber,
+                            origin: trip.origin?.stationName,
+                            destination: trip.destination?.stationName,
+                            departureTime: trip.departureTime,
+                            arrivalTime: trip.arrivalTime
+                        },
+                        vehicle: {
+                            plateNumber: trip.vehicle?.plateNumber,
+                            carType: trip.vehicle?.carType
+                        },
+                        actionURL: `${process.env.CLIENT_URL}/dashboard/bookings`,
+                        actionText: 'View Bookings'
+                    }
+                };
+
+                await NotificationService.createNotification(notificationData);
+            }
+        } catch (notificationError) {
+            console.error('Failed to send batch booking confirmation notifications:', notificationError);
+        }
+        
+        // Populate and return all bookings
+        const populatedBookings = await Booking.find({ _id: { $in: bookings.map(b => b._id) } })
+            .populate('passengerID', 'fullName phoneNumber email')
+            .populate('tripID', 'tripNumber origin destination departureTime arrivalTime price')
+            .populate('vehicleID', 'plateNumber carType totalCapacity')
+            .populate('createdBy', 'fullName');
+
+        res.status(201).json({
+            success: true,
+            message: `${seats.length} seats booked successfully`,
+            data: populatedBookings
+        });
+        
+    } catch (error) {
+        console.error('Create batch booking error:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message
         });
     }
 };

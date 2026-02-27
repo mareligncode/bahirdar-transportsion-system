@@ -337,6 +337,7 @@ export const forgotPassword = async (req, res) => {
         user.passwordResetToken = resetTokenHash;
         user.passwordResetExpires = resetTokenExpiry;
         user.passwordResetAttempts = 0;
+        user.stationID = null; // Add this line to fix the validation error
         await user.save();
 
         // Send reset email
