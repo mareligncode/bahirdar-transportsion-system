@@ -101,11 +101,30 @@ export const initializePayment = async (req, res) => {
             });
         }
 
+        // Check if this booking is part of a batch booking
+        const batchBookings = await Booking.find({
+            tripID: booking.tripID,
+            passengerID: userId,
+            paymentStatus: { $in: ['pending', null, ''] },
+            status: { $in: ['pending', 'confirmed'] },
+            _id: { $ne: bookingId }
+        });
+
+        const isBatchBooking = batchBookings.length > 0;
+        
+        // Use batchTotalPrice if available (for batch bookings), otherwise calculate normally
+        let amount;
+        if (isBatchBooking) {
+            amount = booking.batchTotalPrice || (trip.price * (batchBookings.length + 1));
+        } else {
+            // For single bookings, charge just the trip price
+            amount = trip.price;
+        }
+
         // const formattedPhone = '+251911111111'; 
         // console.log('📱 Using test phone:', formattedPhone);
 
         const tx_ref = `CHAPA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const amount = trip.price;
 
         const originStation = trip.origin?.stationName || 'Origin';
         const destStation = trip.destination?.stationName || 'Destination';
