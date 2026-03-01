@@ -832,7 +832,9 @@ export const createBatchBooking = async (req, res) => {
             });
         }
         
-        // Create all bookings
+        // Calculate total amount for all seats
+        const totalAmount = trip.price * seats.length;
+        
         const bookings = [];
         for (const seat of seats) {
             const booking = new Booking({
@@ -847,6 +849,8 @@ export const createBatchBooking = async (req, res) => {
                     email: req.user.email,
                     emergencyContact: req.user.emergencyContact
                 },
+                totalPrice: trip.price, // Individual booking price
+                batchTotalPrice: totalAmount, // Total price for all seats in batch
                 createdBy: req.user.id
             });
             await booking.save();

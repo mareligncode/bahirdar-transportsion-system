@@ -61,6 +61,14 @@ const bookingSchema = new mongoose.Schema({
         enum: ['pending', 'paid', 'failed', 'cancelled', 'refunded'],
         default: 'pending'
     },
+    totalPrice: {
+        type: Number,
+        default: 0
+    },
+    batchTotalPrice: {
+        type: Number,
+        default: 0
+    },
     //new
     checkedIn: {
         type: Boolean,
