@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  TouchableWithoutFeedback,
+  Animated,
+  Dimensions,
+  FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Card, 
-  Badge, 
-  EmptyState, 
-  Button, 
-  Loader 
+import { useTrips } from '@/hooks/useTrips';
+import { useBooking } from '@/hooks/useBooking';
+import { usePayment } from '@/hooks/usePayment';
+import { CustomDrawerContent } from '@/components/layout/CustomDrawerContent';
+import {
+  Card,
+  Badge,
+  EmptyState,
+  Button,
+  Loader
 } from '@/components/common';
-import { ScreenLayout } from '@/components/layout';
 import {
   Calendar,
   Ticket,
@@ -37,107 +45,143 @@ import {
   ChevronRight,
   Sparkles,
   Shield,
+  Menu,
+  Star,
+  Award,
+  Gift,
+  Timer,
+  Wallet,
+  Percent,
+  Zap,
+  Compass,
+  Coffee,
+  Wifi,
+  Thermometer,
+  Battery,
 } from 'lucide-react-native';
+import { Trip } from '@/types/trip';
+import { Booking } from '@/types';
+import { APP_CONSTANTS } from '@/constants/routes';
+import { COLORS } from '@/constants/colors';
 
-// Define types for the data
-interface Trip {
-  id: string;
-  from: string;
-  to: string;
-  departureTime: string;
-  price: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
-  seats: string[];
-  vehicleType: string;
-  busNumber: string;
-  date: string;
-}
+const { width } = Dimensions.get('window');
+const MENU_WIDTH = width * 0.75;
 
-interface PassengerStats {
-  upcomingTrips: number;
-  totalSpent: number;
-  completedTrips: number;
-  nextTripDate: Date | null;
-}
+const getTripFromBooking = (booking: Booking): Trip | null => {
+  if (!booking.tripID) return null;
+  return typeof booking.tripID === 'object' && booking.tripID !== null
+    ? booking.tripID as Trip
+    : null;
+};
+
+const getBadgeVariant = (status: string): 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary' => {
+  switch (status?.toLowerCase()) {
+    case 'confirmed':
+    case 'success':
+      return 'success';
+    case 'pending':
+    case 'warning':
+      return 'warning';
+    case 'cancelled':
+    case 'error':
+      return 'error';
+    case 'info':
+      return 'info';
+    default:
+      return 'primary';
+  }
+};
 
 export default function PassengerDashboard() {
+  const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { trips, loading: tripsLoading, fetchAllTrips } = useTrips();
+  const { bookings, fetchMyBookings, loading: bookingsLoading } = useBooking();
+  const { payments, getPaymentHistory } = usePayment();
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([]);
-  const [passengerStats, setPassengerStats] = useState<PassengerStats>({
-    upcomingTrips: 0,
-    totalSpent: 0,
-    completedTrips: 0,
-    nextTripDate: null,
-  });
+  const [popularRoutes, setPopularRoutes] = useState<Trip[]>([]);
+  const [totalSpent, setTotalSpent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Mock data
-  const mockTrips: Trip[] = [
-    {
-      id: '1',
-      from: 'Bahir Dar',
-      to: 'Addis Ababa',
-      departureTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      price: 1200,
-      status: 'confirmed',
-      seats: ['A1', 'A2'],
-      vehicleType: 'luxury_bus',
-      busNumber: 'BD-101',
-      date: 'Today',
-    },
-    {
-      id: '2',
-      from: 'Bahir Dar',
-      to: 'Gondar',
-      departureTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      price: 350,
-      status: 'confirmed',
-      seats: ['B3'],
-      vehicleType: 'minibus',
-      busNumber: 'BD-205',
-      date: 'Tomorrow',
-    },
-  ];
+  const [showWelcome, setShowWelcome] = useState(true);
+  const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.replace('/auth/login');
+      router.replace('/auth/Login');
     }
   }, [isAuthenticated, authLoading]);
 
   useEffect(() => {
-    fetchPassengerData();
+    if (isAuthenticated) {
+      fetchUserData();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (menuVisible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -MENU_WIDTH,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [menuVisible]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 5000);
+    return () => clearTimeout(timer);
   }, []);
 
-  const fetchPassengerData = async () => {
+  const fetchUserData = async () => {
     try {
       setLoading(true);
-      
-      setUpcomingTrips(mockTrips);
-      
-      // Calculate statistics
-      const totalSpent = mockTrips.reduce((sum, trip) => 
-        sum + (trip.price * trip.seats.length), 0
+      await Promise.all([
+        fetchMyBookings(),
+        getPaymentHistory(),
+        fetchAllTrips({ limit: 10 })
+      ]);
+      const userBookingsList = bookings.filter(b =>
+        (typeof b.passengerID === 'string' && b.passengerID === user?._id) ||
+        (typeof b.passengerID === 'object' && b.passengerID?._id === user?._id)
       );
-      
-      const nextTrip = mockTrips.length > 0 
-        ? new Date(mockTrips[0].departureTime)
-        : null;
-      
-      const stats: PassengerStats = {
-        upcomingTrips: mockTrips.length,
-        totalSpent: totalSpent,
-        completedTrips: 5,
-        nextTripDate: nextTrip,
-      };
-      
-      setPassengerStats(stats);
+      setUserBookings(userBookingsList);
+
+      const spent = payments
+        ?.filter(p => p.paymentStatus === 'success')
+        .reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      setTotalSpent(spent);
+
+      const now = new Date();
+      const upcoming = trips
+        .filter(trip =>
+          new Date(trip.departureTime) > now &&
+          trip.tripStatus === 'scheduled' &&
+          (trip.availableSeats ?? 0) > 0
+        )
+        .slice(0, 5);
+      setUpcomingTrips(upcoming);
+
+      const popular = trips
+        .filter(trip => (trip.availableSeats ?? 0) > 5)
+        .slice(0, 5);
+      setPopularRoutes(popular);
 
     } catch (error) {
-      console.error('Failed to fetch passenger data:', error);
-      setError('Failed to load dashboard data. Please try again.');
+      console.error('Failed to fetch user data:', error);
+      setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -145,158 +189,333 @@ export default function PassengerDashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchPassengerData();
-    setTimeout(() => setRefreshing(false), 1000);
+    await fetchUserData();
+    setRefreshing(false);
   };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'No upcoming trips';
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    if (hour < 12) return 'Good Morning ☀️';
+    if (hour < 18) return 'Good Afternoon 🌤️';
+    return 'Good Evening 🌙';
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true,
-    });
+    try {
+      return new Date(dateString).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `ETB ${amount.toLocaleString('en-ET')}`;
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (date.toDateString() === today.toDateString()) return 'Today';
+      if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
   };
 
-  const getStatusColor = (status: string): { bg: string; text: string } => {
-    const colors = {
-      confirmed: { bg: 'bg-green-100', text: 'text-green-800' },
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800' },
-      completed: { bg: 'bg-blue-100', text: 'text-blue-800' },
-    };
-    return colors[status as keyof typeof colors] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+  const formatDateTime = (dateString: string) => {
+    return `${formatDate(dateString)} at ${formatTime(dateString)}`;
   };
 
-  const getVehicleIcon = (vehicleType: string): string => {
-    const icons: Record<string, string> = {
-      luxury_bus: '🚌',
-      coaster: '🚎',
-      minibus: '🚐',
-    };
-    return icons[vehicleType] || '🚗';
+  const formatCurrency = (amount: number) => `ETB ${amount.toLocaleString()}`;
+
+  const navigationActions = {
+    bookTrip: () => router.push('/tabs/trips/search'),
+    myBookings: () => router.push('/(screens)/booking'),
+    paymentHistory: () => router.push('/(screens)/payment/history'),
+    helpCenter: () => router.push('/menu/support/help'),
+    notifications: () => router.push('/(screens)/notification'),
+    profile: () => router.push('/tabs/profile'),
+
+    viewTrip: (tripId: string) => router.push(`/tabs/trips/${tripId}`),
+    searchTrips: () => router.push('/tabs/trips/search'),
+    viewAllTrips: () => router.push('/tabs/trips'),
+
+    viewBooking: (bookingId: string) => router.push(`/(screens)/booking/${bookingId}`),
+    payNow: (bookingId: string) => router.push({
+      pathname: '/(screens)/payment/checkout',
+      params: { bookingId }
+    }),
+    viewBookingConfirmation: (bookingId: string) => router.push({
+      pathname: '/(screens)/booking/confirmation',
+      params: { bookingId }
+    }),
+    paymentSuccess: (bookingId: string) => router.push({
+      pathname: '/(screens)/payment/success',
+      params: { bookingId }
+    }),
+
+    settings: () => router.push('/menu/settings'),
+    about: () => router.push('/menu/about'),
+    contact: () => router.push('/menu/support/contact'),
+    feedback: () => router.push('/menu/support/feedback'),
   };
 
   const quickActions = [
     {
-      title: 'Book New Trip',
-      description: 'Find and book your next journey',
+      title: 'Book Trip',
+      description: 'Find your next journey',
       icon: PlusCircle,
-      route: '/tabs/trips',
+      onPress: navigationActions.bookTrip,
       bgColor: 'bg-blue-500',
     },
     {
-      title: 'Booking History',
-      description: 'See all your past trips',
+      title: 'My Bookings',
+      description: 'View all your trips',
       icon: History,
-      route: '/tabs/tickets',
+      onPress: navigationActions.myBookings,
       bgColor: 'bg-green-500',
     },
     {
-      title: 'Payment Methods',
-      description: 'Manage your payment options',
+      title: 'Payments',
+      description: 'History & pending',
       icon: CreditCard,
-      route: '/(screens)/payment/methods',
+      onPress: navigationActions.paymentHistory,
       bgColor: 'bg-purple-500',
     },
     {
-      title: 'Help Center',
-      description: 'Get assistance and support',
+      title: 'Help',
+      description: 'Support & FAQs',
       icon: HelpCircle,
-      route: '/(screens)/support/help',
+      onPress: navigationActions.helpCenter,
       bgColor: 'bg-pink-500',
     },
   ];
 
+  const featureActions = [
+    {
+      title: 'Search Trips',
+      icon: Search,
+      onPress: navigationActions.searchTrips,
+      color: '#3b82f6',
+    },
+    {
+      title: 'Popular Routes',
+      icon: Compass,
+      onPress: navigationActions.viewAllTrips,
+      color: '#10b981',
+    },
+    {
+      title: 'Special Offers',
+      icon: Percent,
+      onPress: navigationActions.bookTrip,
+      color: '#f59e0b',
+    },
+    {
+      title: 'Quick Book',
+      icon: Zap,
+      onPress: navigationActions.bookTrip,
+      color: '#8b5cf6',
+    },
+  ];
+  const now = new Date();
+
+  const activeBookings = userBookings.filter(b => {
+    if (b.status !== 'confirmed') return false;
+    const trip = getTripFromBooking(b);
+    return trip && new Date(trip.departureTime) > now;
+  }).length;
+
+  const pendingCount = userBookings.filter(b =>
+    b.status === 'pending' && (!b.paymentStatus || b.paymentStatus === 'pending')
+  ).length;
+
+  const completedCount = userBookings.filter(b => {
+    if (b.status === 'completed') return true;
+    const trip = getTripFromBooking(b);
+    return trip && new Date(trip.departureTime) < now;
+  }).length;
+
   const stats = [
     {
       icon: Calendar,
-      value: passengerStats.upcomingTrips.toString(),
-      label: 'Upcoming Trips',
-      color: '#3B82F6',
-      route: '/tabs/tickets',
+      value: activeBookings.toString(),
+      label: 'Active',
+      color: COLORS.primary,
+      onPress: navigationActions.myBookings,
     },
     {
-      icon: Ticket,
-      value: formatCurrency(passengerStats.totalSpent),
+      icon: Timer,
+      value: pendingCount.toString(),
+      label: 'Pending',
+      color: COLORS.warning,
+      onPress: navigationActions.paymentHistory,
+    },
+    {
+      icon: Award,
+      value: completedCount.toString(),
+      label: 'Completed',
+      color: COLORS.success,
+      onPress: navigationActions.myBookings,
+    },
+    {
+      icon: Wallet,
+      value: formatCurrency(totalSpent),
       label: 'Total Spent',
-      color: '#10B981',
-      route: '/(screens)/payment/history',
-    },
-    {
-      icon: Car,
-      value: passengerStats.completedTrips.toString(),
-      label: 'Completed Trips',
-      color: '#8B5CF6',
-      route: '/tabs/tickets',
-    },
-    {
-      icon: Clock,
-      value: formatDate(passengerStats.nextTripDate?.toISOString() || null),
-      label: 'Next Trip',
-      color: '#F59E0B',
-      route: upcomingTrips.length > 0 ? `/tabs/tickets/${upcomingTrips[0].id}` : '/tabs/trips',
+      color: COLORS.accent,
+      onPress: navigationActions.paymentHistory,
     },
   ];
 
+  const amenities = [
+    { icon: Wifi, label: 'Free WiFi', color: '#3b82f6' },
+    { icon: Coffee, label: 'Refreshments', color: '#10b981' },
+    { icon: Thermometer, label: 'AC', color: '#f59e0b' },
+    { icon: Battery, label: 'Charging', color: '#8b5cf6' },
+  ];
+
   const HeaderRightActions = () => (
-    <View className="flex-row items-center space-x-2">
+    <View className="flex-row items-center gap-3">
       <TouchableOpacity
-        onPress={() => router.push('/(screens)/notification')}
+        onPress={navigationActions.notifications}
         className="relative"
         activeOpacity={0.7}
       >
         <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
-          <Bell size={20} color="#3B82F6" />
+          <Bell size={20} color={COLORS.primary} />
         </View>
         <View className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white" />
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         onPress={() => {
           logout();
-          router.replace('/auth/login');
+          router.replace('/auth/Login');
         }}
         className="w-10 h-10 bg-red-100 rounded-full items-center justify-center"
         activeOpacity={0.7}
       >
-        <LogOut size={20} color="#EF4444" />
+        <LogOut size={20} color={COLORS.danger} />
       </TouchableOpacity>
     </View>
   );
 
-  if (loading || authLoading) {
+  const CustomHeader = () => (
+    <View className="bg-white px-4 pb-4 border-b border-gray-200">
+      <View className="flex-row justify-between items-center">
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            className="mr-3 p-2 -ml-2"
+            activeOpacity={0.7}
+          >
+            <Menu size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+
+          <View>
+            <Text className="text-2xl font-bold" style={{ color: COLORS.primary }}>
+              {APP_CONSTANTS.APP_NAME}
+            </Text>
+          </View>
+        </View>
+        <HeaderRightActions />
+      </View>
+
+      <View className="mt-4">
+        <Text className="text-3xl font-bold text-gray-900">
+          {getGreeting()}
+        </Text>
+        <Text className="text-lg text-gray-600 mt-1">
+          {user?.fullName?.split(' ')[0] || 'Passenger'}! 👋
+        </Text>
+      </View>
+      {showWelcome && pendingCount > 0 && (
+        <View className="mt-4 bg-yellow-50 p-3 rounded-xl border border-yellow-200">
+          <Text className="text-yellow-700 text-sm">
+            ⚠️ You have {pendingCount} pending payment{pendingCount !== 1 ? 's' : ''}. Complete them to confirm your bookings.
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderUpcomingTripCard = ({ item }: { item: Trip }) => {
+    const availableSeats = item.availableSeats ?? 0;
+
+    return (
+      <TouchableOpacity
+        onPress={() => navigationActions.viewTrip(item._id)}
+        activeOpacity={0.9}
+        className="mr-4 w-72"
+      >
+        <Card className="border border-gray-200 overflow-hidden">
+          <View className="bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1 flex-row items-center">
+            <Sparkles size={14} color="white" />
+            <Text className="text-white text-xs font-medium ml-1">Featured Trip</Text>
+          </View>
+
+          <View className="p-4">
+            <View className="flex-row items-center mb-3">
+              <View className="bg-blue-100 p-2 rounded-full mr-3">
+                <Car size={20} color={COLORS.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="font-bold text-gray-900" numberOfLines={1}>
+                  {item.origin?.stationName}
+                </Text>
+                <View className="flex-row items-center my-1">
+                  <View className="w-1 h-1 bg-gray-300 rounded-full" />
+                  <View className="w-8 h-0.5 bg-gray-300 mx-1" />
+                  <ArrowRight size={12} color={COLORS.textTertiary} />
+                  <View className="w-8 h-0.5 bg-gray-300 mx-1" />
+                  <View className="w-1 h-1 bg-gray-300 rounded-full" />
+                </View>
+                <Text className="font-bold text-gray-900" numberOfLines={1}>
+                  {item.destination?.stationName}
+                </Text>
+              </View>
+            </View>
+
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center">
+                <Calendar size={14} color={COLORS.textSecondary} />
+                <Text className="text-xs text-gray-600 ml-1">
+                  {formatDate(item.departureTime)}
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Clock size={14} color={COLORS.textSecondary} />
+                <Text className="text-xs text-gray-600 ml-1">
+                  {formatTime(item.departureTime)}
+                </Text>
+              </View>
+            </View>
+
+            <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
+              <View>
+                <Text className="text-xs text-gray-500">From</Text>
+                <Text className="text-lg font-bold text-blue-600">
+                  {formatCurrency(item.price || 0)}
+                </Text>
+              </View>
+              <Badge
+                text={`${availableSeats} seats`}
+                variant={availableSeats > 5 ? 'success' : 'warning'}
+              />
+            </View>
+          </View>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading || authLoading || bookingsLoading) {
     return (
       <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 items-center justify-center">
-          <Loader message="Loading passenger dashboard..." />
-        </View>
+        <Loader message="Loading your dashboard..." fullScreen />
       </SafeAreaView>
     );
   }
@@ -304,325 +523,220 @@ export default function PassengerDashboard() {
   if (error) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
-        <ScreenLayout
-          showHeader={true}
-          headerTitle="Passenger Dashboard"
-          showBackButton={false}
-          className="flex-1"
-        >
-          <View className="flex-1 items-center justify-center px-4">
-            <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
-              <AlertCircle size={32} color="#DC2626" />
-            </View>
-            <Text className="text-lg font-semibold text-gray-800 mb-2 text-center">
-              Error Loading Dashboard
-            </Text>
-            <Text className="text-gray-600 mb-4 text-center">{error}</Text>
-            <Button
-              title="Try Again"
-              onPress={fetchPassengerData}
-              variant="primary"
-              className="mt-4"
-            />
-          </View>
-        </ScreenLayout>
+        <CustomHeader />
+        <View className="flex-1 justify-center items-center px-6">
+          <AlertCircle size={48} color={COLORS.danger} />
+          <Text className="text-lg font-semibold text-gray-900 mt-4 text-center">
+            Oops! Something went wrong
+          </Text>
+          <Text className="text-gray-600 text-center mt-2 mb-6">{error}</Text>
+          <Button title="Try Again" onPress={fetchUserData} variant="primary" />
+        </View>
       </SafeAreaView>
     );
   }
 
-  const safeUser = user || { fullName: 'Passenger', _id: 'guest-id' };
-  const userName = safeUser.fullName?.split(' ')[0] || 'Passenger';
-  const userId = safeUser._id?.slice(-8) || 'N/A';
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <ScreenLayout
-        showHeader={true}
-        headerTitle={`${getGreeting()}, ${userName}`}
-        showBackButton={false}
-        rightAction={<HeaderRightActions />}
-        className="flex-1"
-        showBottomTab={true}
+      <CustomHeader />
+
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="none"
+        onRequestClose={() => setMenuVisible(false)}
       >
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerClassName="pb-6"
-        >
-          {/* Welcome Section */}
-          <View className="px-4 pt-4">
-            <Text className="text-gray-600 text-sm mb-2">
-              Here's what's happening with your trips today
+        <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
+          <View className="flex-1 bg-black/50">
+            <Animated.View
+              style={{
+                transform: [{ translateX: slideAnim }],
+                width: MENU_WIDTH,
+                height: '100%',
+                backgroundColor: 'white',
+              }}
+            >
+              <CustomDrawerContent onClose={() => setMenuVisible(false)} />
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      >
+        <View className="px-4 mt-4">
+          <TouchableOpacity
+            onPress={navigationActions.searchTrips}
+            className="bg-white p-4 rounded-xl flex-row items-center border border-gray-200 shadow-sm"
+            activeOpacity={0.8}
+          >
+            <Search size={20} color={COLORS.textSecondary} />
+            <Text className="text-gray-500 ml-3 flex-1">
+              Where would you like to go?
             </Text>
-          </View>
-
-          {/* Passenger Info */}
-          <View className="px-4 mb-4">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg">
-                <User size={14} color="#2563EB" />
-                <Text className="text-sm font-medium text-blue-700">
-                  Passenger ID: {userId}
-                </Text>
-              </View>
+            <View className="bg-blue-100 px-3 py-1 rounded-full">
+              <Text className="text-blue-600 text-xs font-medium">Search</Text>
             </View>
-          </View>
-
-          {/* Search Bar */}
-          <View className="px-4 mb-4">
-            <TouchableOpacity
-              onPress={() => router.push('/tabs/trips')}
-              className="bg-white p-4 rounded-xl flex-row items-center border border-gray-200"
-              activeOpacity={0.8}
-            >
-              <Search size={20} color="#6B7280" />
-              <Text className="text-gray-500 ml-3 flex-1">
-                Search destinations, buses, routes...
-              </Text>
-              <ChevronRight size={20} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Stats Overview */}
-          <View className="px-4 mb-6">
-            <Text className="text-lg font-bold text-gray-900 mb-4">Dashboard Overview</Text>
-            <View className="flex-row flex-wrap -mx-1">
-              {stats.map((stat, index) => (
-                <TouchableOpacity
-                  key={index}
-                  className="w-1/2 px-1 mb-3"
-                  onPress={() => router.push(stat.route)}
-                  activeOpacity={0.7}
-                >
-                  <Card className="border border-gray-200">
-                    <View className="flex-row items-center p-3">
-                      <View 
-                        className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                        style={{ backgroundColor: `${stat.color}20` }}
-                      >
-                        <stat.icon size={20} color={stat.color} />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-xl font-bold text-gray-900" numberOfLines={1}>
-                          {stat.value}
-                        </Text>
-                        <Text className="text-gray-600 text-sm mt-1">{stat.label}</Text>
-                      </View>
-                    </View>
-                  </Card>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Upcoming Trips */}
-          <View className="px-4 mb-6">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-bold text-gray-900">Upcoming Trips</Text>
-              <TouchableOpacity onPress={() => router.push('/tabs/tickets')}>
-                <Text className="text-sm text-blue-600">View All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {upcomingTrips.length === 0 ? (
-              <Card className="py-8 border border-gray-200">
-                <EmptyState
-                 icon={<MapPin size={48} color="#9CA3AF" />}
-                  title="No Upcoming Trips"
-                  description="You don't have any trips scheduled yet."
-                  buttonText="Book Your First Trip"
-                  onButtonPress={() => router.push('/tabs/trips')}
-                />
-              </Card>
-            ) : (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerClassName="pr-4"
+          </TouchableOpacity>
+        </View>
+        <View className="px-4 mt-4">
+          <View className="flex-row flex-wrap -mx-1">
+            {stats.map((stat, index) => (
+              <TouchableOpacity
+                key={index}
+                className="w-1/4 px-1"
+                onPress={stat.onPress}
+                activeOpacity={0.7}
               >
-                {upcomingTrips.map((trip) => {
-                  const statusColor = getStatusColor(trip.status);
-                  return (
-                    <Card
-                      key={trip.id}
-                      onPress={() => router.push(`/tabs/tickets/${trip.id}`)}
-                      className="w-80 mr-4 border border-gray-200"
-                    >
-                      <View className="p-4">
-                        <View className="flex-row items-start justify-between mb-3">
-                          <View className="flex-row items-start gap-2 flex-1">
-                            <Text className="text-2xl">{getVehicleIcon(trip.vehicleType)}</Text>
-                            <View className="flex-1">
-                              <Text className="font-semibold text-lg text-gray-900">
-                                {trip.from} → {trip.to}
-                              </Text>
-                              <View className="flex-row items-center gap-3 mt-1">
-                                <View className="flex-row items-center gap-1">
-                                  <Calendar size={14} color="#6B7280" />
-                                  <Text className="text-sm text-gray-600">
-                                    {new Date(trip.departureTime).toLocaleDateString()}
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center gap-1">
-                                  <Clock size={14} color="#6B7280" />
-                                  <Text className="text-sm text-gray-600">
-                                    {formatTime(trip.departureTime)}
-                                  </Text>
-                                </View>
-                              </View>
-                            </View>
-                          </View>
-                          <Badge
-                            text={trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
-                            variant={trip.status === 'confirmed' ? 'success' : 'warning'}
-                            className={statusColor.bg}
-                            textClassName={statusColor.text}
-                          />
-                        </View>
-                        
-                        <View className="flex-row items-center justify-between">
-                          <View className="flex-row flex-wrap gap-2">
-                            <Text className="text-sm text-gray-600">
-                              Seats: {trip.seats.join(', ')}
-                            </Text>
-                            <Text className="text-sm text-gray-600">
-                              Bus: {trip.busNumber}
-                            </Text>
-                          </View>
-                          <View className="items-end">
-                            <Text className="text-xl font-bold text-gray-900">
-                              {formatCurrency(trip.price * trip.seats.length)}
-                            </Text>
-                            <Text className="text-sm text-gray-600">
-                              {trip.seats.length} seat{trip.seats.length !== 1 ? 's' : ''} × {formatCurrency(trip.price)}
-                            </Text>
-                          </View>
-                        </View>
-                        
-                        <View className="flex-row gap-2 mt-4">
-                          <Button
-                            title="View Details"
-                            onPress={() => router.push(`/tabs/tickets/${trip.id}`)}
-                            variant="secondary"
-                            size="small"
-                            className="flex-1"
-                          />
-                          <Button
-                            title="Check In"
-                            onPress={() => router.push(`/tabs/tickets/${trip.id}/checkin`)}
-                            variant="primary"
-                            size="small"
-                            className="flex-1"
-                          />
-                        </View>
-                      </View>
-                    </Card>
-                  );
-                })}
-              </ScrollView>
-            )}
+                <Card className="border border-gray-200 p-2 items-center">
+                  <View
+                    className="w-10 h-10 rounded-full items-center justify-center mb-1"
+                    style={{ backgroundColor: `${stat.color}15` }}
+                  >
+                    <stat.icon size={20} color={stat.color} />
+                  </View>
+                  <Text className="text-base font-bold text-gray-900">
+                    {stat.value}
+                  </Text>
+                  <Text className="text-xs text-gray-600 text-center">
+                    {stat.label}
+                  </Text>
+                </Card>
+              </TouchableOpacity>
+            ))}
           </View>
-
-          {/* Quick Actions */}
-          <View className="px-4 mb-6">
-            <Text className="text-lg font-bold text-gray-900 mb-4">Quick Actions</Text>
-            <View className="flex-row flex-wrap -mx-1">
-              {quickActions.map((action, index) => (
-                <TouchableOpacity
-                  key={index}
-                  className="w-1/2 px-1 mb-3"
-                  onPress={() => router.push(action.route)}
-                  activeOpacity={0.8}
+        </View>
+        <View className="px-4 mt-6">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {featureActions.map((action, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={action.onPress}
+                className="mr-3 items-center"
+                activeOpacity={0.7}
+              >
+                <View
+                  className="w-14 h-14 rounded-full items-center justify-center mb-1"
+                  style={{ backgroundColor: `${action.color}20` }}
                 >
-                  <Card className="border border-gray-200">
-                    <View className="p-4">
-                      <View className="flex-row items-center">
-                        <View className={`w-12 h-12 rounded-full ${action.bgColor} items-center justify-center mr-3`}>
-                          <action.icon size={24} color="white" />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="font-semibold text-gray-800 mb-1">
-                            {action.title}
-                          </Text>
-                          <Text className="text-sm text-gray-600">
-                            {action.description}
-                          </Text>
-                        </View>
-                        <ChevronRight size={16} color="#9CA3AF" />
-                      </View>
-                    </View>
-                  </Card>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Development Note */}
-          <View className="px-4 mb-6">
-            <Card className="bg-blue-50 border border-blue-200">
-              <View className="flex-row items-start p-4">
-                <AlertCircle size={20} color="#2563EB" />
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-blue-800">Development Note</Text>
-                  <Text className="text-blue-700 text-sm mt-1">
-                    Trip booking APIs are not yet implemented. This dashboard currently shows mock data.
-                  </Text>
+                  <action.icon size={24} color={action.color} />
                 </View>
-              </View>
-            </Card>
-          </View>
-
-          {/* Promotional Banner */}
-          <View className="px-4 mb-6">
-            <TouchableOpacity
-              onPress={() => router.push('/tabs/trips?promo=firsttrip')}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4"
-              activeOpacity={0.9}
-            >
-              <View className="flex-row items-center">
-                <Sparkles size={24} color="white" />
-                <View className="ml-4 flex-1">
-                  <Text className="text-white text-lg font-bold">First Trip Special!</Text>
-                  <Text className="text-white/90 mt-1">
-                    Get 15% off on your first booking
-                  </Text>
-                </View>
-                <TrendingUp size={24} color="white" />
-              </View>
-              <View className="flex-row items-center mt-4">
-                <Text className="text-white font-semibold">Book Now</Text>
-                <ArrowRight size={16} color="white" className="ml-2" />
-              </View>
+                <Text className="text-xs text-gray-600">{action.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        <View className="px-4 mt-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-bold text-gray-900">
+              🔥 Popular Trips
+            </Text>
+            <TouchableOpacity onPress={navigationActions.viewAllTrips}>
+              <Text className="text-sm text-blue-600">View All</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Safety Reminder */}
-          <View className="px-4 mb-6">
-            <Card className="bg-blue-50 border border-blue-200">
-              <View className="p-4">
-                <View className="flex-row items-start">
-                  <Shield size={24} color="#3B82F6" />
-                  <View className="ml-3 flex-1">
-                    <Text className="font-bold text-gray-900">Travel Safety Tips</Text>
-                    <Text className="text-gray-600 mt-2">
-                      Always verify your bus number, driver details, and wear your mask. Your safety is our priority.
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => router.push('/(screens)/support/help?topic=safety')}
-                  className="mt-4"
-                >
-                  <Text className="text-blue-600 font-semibold">Read Safety Guidelines →</Text>
-                </TouchableOpacity>
-              </View>
+          {upcomingTrips.length > 0 ? (
+            <FlatList
+              data={upcomingTrips}
+              renderItem={renderUpcomingTripCard}
+              keyExtractor={(item) => item._id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: 16 }}
+            />
+          ) : (
+            <Card className="border border-gray-200 p-6 items-center">
+              <MapPin size={32} color={COLORS.textTertiary} />
+              <Text className="text-gray-600 text-center mt-2">
+                No trips available at the moment
+              </Text>
             </Card>
+          )}
+        </View>
+        <View className="px-4 mt-6">
+          <Text className="text-lg font-bold text-gray-900 mb-3">
+            ✨ Onboard Amenities
+          </Text>
+          <View className="flex-row flex-wrap">
+            {amenities.map((item, index) => (
+              <View key={index} className="w-1/4 items-center mb-4">
+                <View
+                  className="w-12 h-12 rounded-full items-center justify-center mb-1"
+                  style={{ backgroundColor: `${item.color}20` }}
+                >
+                  <item.icon size={20} color={item.color} />
+                </View>
+                <Text className="text-xs text-gray-600">{item.label}</Text>
+              </View>
+            ))}
           </View>
-        </ScrollView>
-      </ScreenLayout>
+        </View>
+        <View className="px-4 mt-6">
+          <Text className="text-lg font-bold text-gray-900 mb-3">
+            🚀 Quick Actions
+          </Text>
+          <View className="flex-row flex-wrap -mx-1">
+            {quickActions.map((action, index) => (
+              <TouchableOpacity
+                key={index}
+                className="w-1/2 px-1 mb-2"
+                onPress={action.onPress}
+                activeOpacity={0.8}
+              >
+                <Card className="border border-gray-200 p-3">
+                  <View className="flex-row items-center">
+                    <View className={`w-10 h-10 rounded-full ${action.bgColor} items-center justify-center mr-2`}>
+                      <action.icon size={18} color="white" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-semibold text-gray-900 text-sm">
+                        {action.title}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {action.description}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View className="px-4 mt-6">
+          <TouchableOpacity
+            onPress={navigationActions.bookTrip}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4"
+            activeOpacity={0.9}
+          >
+            <View className="flex-row items-center">
+              <Gift size={24} color="white" />
+              <View className="ml-3 flex-1">
+                <Text className="text-white font-bold text-lg">First Trip Special!</Text>
+                <Text className="text-white/90 text-sm">Get 15% off your first booking</Text>
+              </View>
+              <ArrowRight size={20} color="white" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View className="px-4 mt-6 mb-8">
+          <Card className="bg-green-50 border border-green-200">
+            <View className="p-3 flex-row items-center">
+              <Shield size={20} color={COLORS.success} />
+              <Text className="ml-2 text-sm text-gray-700 flex-1">
+                🛡️ Your safety is our priority. All vehicles are sanitized.
+              </Text>
+            </View>
+          </Card>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

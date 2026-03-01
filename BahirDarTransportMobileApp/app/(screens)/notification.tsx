@@ -3,17 +3,18 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-
 import { router } from 'expo-router';
 import { ScreenLayout } from '@/components/layout';
 import { Card, EmptyState, Loader, Badge, Button } from '@/components/common';
-import { 
-  Bell, 
-  Trash2, 
-  Calendar, 
-  CreditCard, 
+import {
+  Bell,
+  Trash2,
+  Calendar,
+  CreditCard,
   AlertCircle,
   Ticket,
   MapPin,
   CheckCircle,
   XCircle,
-  CheckCheck
+  CheckCheck,
+  LucideIcon
 } from 'lucide-react-native';
 
 const MOCK_NOTIFICATIONS = [
@@ -39,7 +40,7 @@ const MOCK_NOTIFICATIONS = [
     icon: CreditCard,
     color: '#3B82F6',
     bgColor: 'bg-blue-100',
-    action: '/(screens)/payment/history',
+    action: '/payment/history',
   },
   {
     id: '3',
@@ -63,7 +64,7 @@ const MOCK_NOTIFICATIONS = [
     icon: MapPin,
     color: '#8B5CF6',
     bgColor: 'bg-purple-100',
-    action: '/(screens)/tracking/live-tracking',
+    action: '/tracking/live-tracking',
   },
   {
     id: '5',
@@ -84,49 +85,49 @@ export default function NotificationScreen() {
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const unreadCount = notifications.filter(n => !n.isRead).length;
-  
+
   const fetchNotifications = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
     }, 500);
   };
-  
+
   useEffect(() => {
     fetchNotifications();
   }, []);
-  
+
   const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
+    setNotifications(notifications.map(n =>
       n.id === id ? { ...n, isRead: true } : n
     ));
   };
-  
+
   const deleteNotification = (id: string) => {
     setNotifications(notifications.filter(n => n.id !== id));
   };
-  
+
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
   };
-  
+
   const clearAll = () => {
     setNotifications([]);
   };
-  
-  const filteredNotifications = activeTab === 'unread' 
+
+  const filteredNotifications = activeTab === 'unread'
     ? notifications.filter(n => !n.isRead)
     : notifications;
-  
+
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
-  
+
   const getNotificationBadge = (type: string) => {
     switch (type) {
       case 'booking':
@@ -141,11 +142,11 @@ export default function NotificationScreen() {
         return <Badge text="Notification" variant="secondary" size="small" />;
     }
   };
-  
+
   if (loading) {
     return <Loader message="Loading notifications..." />;
   }
-  
+
   return (
     <ScreenLayout
       showHeader={true}
@@ -170,7 +171,7 @@ export default function NotificationScreen() {
       showBottomTab={false}
     >
       {/* Tabs */}
-      <Card variant="outline" className="mx-4 mt-4 p-0">
+      <Card className="mx-4 mt-4 p-0 border border-gray-300">
         <View className="flex-row">
           <TouchableOpacity
             className={`flex-1 py-3 rounded-l-lg ${activeTab === 'all' ? 'bg-blue-50' : 'bg-white'}`}
@@ -180,15 +181,15 @@ export default function NotificationScreen() {
               <Text className={`font-medium ${activeTab === 'all' ? 'text-blue-600' : 'text-gray-600'}`}>
                 All
               </Text>
-              <Badge 
-                text={notifications.length.toString()} 
-                variant={activeTab === 'all' ? 'primary' : 'secondary'} 
+              <Badge
+                text={notifications.length.toString()}
+                variant={activeTab === 'all' ? 'primary' : 'secondary'}
                 size="small"
                 className="mt-1"
               />
             </View>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             className={`flex-1 py-3 rounded-r-lg ${activeTab === 'unread' ? 'bg-blue-50' : 'bg-white'}`}
             onPress={() => setActiveTab('unread')}
@@ -197,9 +198,9 @@ export default function NotificationScreen() {
               <Text className={`font-medium ${activeTab === 'unread' ? 'text-blue-600' : 'text-gray-600'}`}>
                 Unread
               </Text>
-              <Badge 
-                text={unreadCount.toString()} 
-                variant={unreadCount > 0 ? 'danger' : 'secondary'} 
+              <Badge
+                text={unreadCount.toString()}
+                variant={unreadCount > 0 ? 'danger' : 'secondary'}
                 size="small"
                 className="mt-1"
               />
@@ -207,8 +208,8 @@ export default function NotificationScreen() {
           </TouchableOpacity>
         </View>
       </Card>
-      
-      <ScrollView 
+
+      <ScrollView
         className="flex-1"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -225,12 +226,20 @@ export default function NotificationScreen() {
               >
                 <View className="flex-row items-start">
                   <View className={`w-12 h-12 rounded-full ${notification.bgColor} items-center justify-center mr-3`}>
-                    {notification.type === 'booking' && <Ticket size={24} color={notification.color} />}
-                    {notification.type === 'payment' && <CreditCard size={24} color={notification.color} />}
-                    {notification.type === 'alert' && <AlertCircle size={24} color={notification.color} />}
-                    {notification.type === 'tracking' && <MapPin size={24} color={notification.color} />}
+                    {notification.type === 'booking' && (
+                      <Ticket size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'payment' && (
+                      <CreditCard size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'alert' && (
+                      <AlertCircle size={24} color={notification.color} />
+                    )}
+                    {notification.type === 'tracking' && (
+                      <MapPin size={24} color={notification.color} />
+                    )}
                   </View>
-                  
+
                   <View className="flex-1">
                     <View className="flex-row justify-between items-start mb-1">
                       <Text className="font-bold text-gray-800">{notification.title}</Text>
@@ -238,15 +247,15 @@ export default function NotificationScreen() {
                         <Badge text="New" variant="danger" size="small" />
                       )}
                     </View>
-                    
+
                     <Text className="text-gray-600 text-sm mb-2">{notification.message}</Text>
-                    
+
                     <View className="flex-row justify-between items-center">
                       <View className="flex-row items-center">
                         {getNotificationBadge(notification.type)}
                         <Text className="text-gray-400 text-xs ml-2">{notification.time}</Text>
                       </View>
-                      
+
                       <View className="flex-row space-x-2">
                         {!notification.isRead && (
                           <TouchableOpacity
@@ -274,7 +283,7 @@ export default function NotificationScreen() {
             icon={Bell}
             title={activeTab === 'unread' ? "No unread notifications" : "No notifications yet"}
             description={
-              activeTab === 'unread' 
+              activeTab === 'unread'
                 ? "You're all caught up! No unread notifications."
                 : "Check back later for updates about your trips and bookings."
             }

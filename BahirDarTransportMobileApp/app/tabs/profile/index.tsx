@@ -1,199 +1,197 @@
-import React from 'react';
+// app/tabs/profile/index.tsx
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { ScreenLayout } from '@/components/layout/ScreenLayout';
 import { 
   User,
-  Ticket,
-  Settings,
+  Mail,
+  Phone,
   LogOut,
-  ChevronRight,
-  Shield,
-  HelpCircle,
-  Info,
-  CreditCard,
-  Bell,
-  Globe,
-  Calendar,
-  Map,
-  Car
+  Edit2,
+  Check,
+  X,
 } from 'lucide-react-native';
+import { Input } from '@/components/common/Input';
+import { COLORS } from '@/constants/colors';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile, loading } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: user?.fullName || '',
+    phoneNumber: user?.phoneNumber || '',
+  });
 
-  const menuItems = [
-    {
-      icon: User,
-      title: 'Edit Profile',
-      description: 'Update your personal information',
-      route: '/(screens)/profile/edit-profile',
-      color: 'bg-blue-100',
-    },
-    {
-      icon: Calendar,
-      title: 'My Bookings',
-      description: 'View and manage your bookings',
-      route: '/(screens)/booking',
-      color: 'bg-green-100',
-    },
-    {
-      icon: Car,
-      title: 'My Rides',
-      description: 'Tickets and trip history',
-      route: '../tickets', // Tab 2
-      color: 'bg-teal-100',
-    },
-    {
-      icon: Map,
-      title: 'Live Tracking',
-      description: 'Track your bus in real-time',
-      route: '/(screens)/tracking', // Screen
-      color: 'bg-purple-100',
-    },
-    {
-      icon: CreditCard,
-      title: 'Payment History',
-      description: 'View your transactions',
-      route: '/(screens)/payment/history',
-      color: 'bg-indigo-100',
-    },
-    {
-      icon: Settings,
-      title: 'Settings',
-      description: 'App preferences and settings',
-      route: '/(screens)/settings',
-      color: 'bg-purple-100',
-    },
-    {
-      icon: Bell,
-      title: 'Notifications',
-      description: 'Manage notification preferences',
-      route: '/(screens)/settings/notifications',
-      color: 'bg-yellow-100',
-    },
-    {
-      icon: Globe,
-      title: 'Language',
-      description: 'Change app language',
-      route: '/(screens)/settings/language',
-      color: 'bg-indigo-100',
-    },
-    {
-      icon: Shield,
-      title: 'Privacy & Security',
-      description: 'Manage your privacy settings',
-      route: '/(screens)/settings/privacy-security',
-      color: 'bg-red-100',
-    },
-    {
-      icon: HelpCircle,
-      title: 'Help & Support',
-      description: 'Get help and support',
-      route: '/(screens)/support/help',
-      color: 'bg-pink-100',
-    },
-    {
-      icon: Info,
-      title: 'About',
-      description: 'App information and version',
-      route: '/(screens)/settings/about',
-      color: 'bg-gray-100',
-    },
-  ];
+  const handleSave = async () => {
+    if (!formData.fullName.trim()) {
+      Alert.alert('Error', 'Name cannot be empty');
+      return;
+    }
+    
+    const result = await updateProfile(formData);
+    if (result?.success) {
+      setIsEditing(false);
+    }
+  };
 
   const handleLogout = async () => {
-    await logout();
-    router.replace('/');
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          onPress: async () => {
+            await logout();
+          },
+          style: 'destructive'
+        }
+      ]
+    );
   };
 
   return (
-    <ScreenLayout
-      showHeader={true}
-      headerTitle="My Profile"
-      showBackButton={false}
-      className="bg-gray-50"
-      showBottomTab={true} // Show bottom tab
-    >
-      <ScrollView 
-        className="flex-1" 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        {/* Profile Header */}
-        <View className="px-6 pt-6 pb-6 bg-white">
-          <View className="flex-row items-center">
-            <View className="w-20 h-20 bg-blue-100 rounded-full items-center justify-center mr-4">
-              <Text className="text-blue-600 font-bold text-2xl">
-                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-              </Text>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <StatusBar style="dark" />
+      
+      {/* Header - NO MENU BUTTON, only title and edit button */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-xl font-bold text-gray-900">My Profile</Text>
+          {!isEditing ? (
+            <TouchableOpacity
+              onPress={() => setIsEditing(true)}
+              className="p-2"
+            >
+              <Edit2 size={20} color="#3b82f6" />
+            </TouchableOpacity>
+          ) : (
+            <View className="flex-row">
+              <TouchableOpacity
+                onPress={() => {
+                  setIsEditing(false);
+                  setFormData({
+                    fullName: user?.fullName || '',
+                    phoneNumber: user?.phoneNumber || '',
+                  });
+                }}
+                className="mr-2"
+              >
+                <X size={20} color="#ef4444" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSave} disabled={loading}>
+                <Check size={20} color="#10b981" />
+              </TouchableOpacity>
             </View>
-            
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-gray-800">
-                {user?.fullName || 'User'}
-              </Text>
-              <Text className="text-gray-600 mt-1">
-                {user?.email || 'user@example.com'}
-              </Text>
-              <Text className="text-gray-500 text-sm mt-2">
-                {user?.phoneNumber || 'No phone number'}
-              </Text>
-            </View>
+          )}
+        </View>
+      </View>
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Profile Avatar */}
+        <View className="items-center mt-8">
+          <View className="w-24 h-24 bg-blue-100 rounded-full items-center justify-center border-4 border-white shadow-md">
+            <Text className="text-blue-600 font-bold text-3xl">
+              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+            </Text>
           </View>
         </View>
 
-        {/* Menu Items */}
-        <View className="px-6 py-6">
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => router.push(item.route as any)}
-              className="mb-3"
-              activeOpacity={0.7}
-            >
-              <View className="bg-white p-4 rounded-xl border border-gray-200">
-                <View className="flex-row items-center">
-                  <View className={`w-12 h-12 rounded-full ${item.color} items-center justify-center mr-4`}>
-                    <item.icon size={24} color="#3B82F6" />
-                  </View>
-                  
-                  <View className="flex-1">
-                    <Text className="font-semibold text-gray-800">
-                      {item.title}
-                    </Text>
-                    <Text className="text-gray-600 text-sm mt-1">
-                      {item.description}
-                    </Text>
-                  </View>
-                  
-                  <ChevronRight size={20} color="#9CA3AF" />
+        {/* Profile Information */}
+        <View className="bg-white mx-4 mt-6 p-5 rounded-xl border border-gray-200">
+          <Text className="text-lg font-semibold text-gray-800 mb-4">
+            Personal Information
+          </Text>
+
+          {!isEditing ? (
+            // View Mode
+            <View className="space-y-4">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                  <User size={20} color="#3b82f6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm text-gray-500">Full Name</Text>
+                  <Text className="text-base font-medium text-gray-900">
+                    {user?.fullName || 'Not set'}
+                  </Text>
                 </View>
               </View>
-            </TouchableOpacity>
-          ))}
+
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                  <Mail size={20} color="#10b981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm text-gray-500">Email Address</Text>
+                  <Text className="text-base font-medium text-gray-900">
+                    {user?.email || 'Not set'}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-3">
+                  <Phone size={20} color="#8b5cf6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm text-gray-500">Phone Number</Text>
+                  <Text className="text-base font-medium text-gray-900">
+                    {user?.phoneNumber || 'Not set'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            // Edit Mode
+            <View className="space-y-4">
+              <Input
+                label="Full Name"
+                value={formData.fullName}
+                onChangeText={(text) => setFormData({ ...formData, fullName: text })}
+                placeholder="Enter your full name"
+                leftIcon={<User size={20} color="#6b7280" />}
+              />
+              
+              <Input
+                label="Phone Number"
+                value={formData.phoneNumber}
+                onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                leftIcon={<Phone size={20} color="#6b7280" />}
+              />
+              
+              <Text className="text-xs text-gray-500 mt-2">
+                Email cannot be changed. Contact support if needed.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Logout Button */}
-        <View className="px-6 py-8">
+        <View className="mx-4 mt-8 mb-8">
           <TouchableOpacity
             onPress={handleLogout}
-            className="bg-red-50 py-4 rounded-xl items-center flex-row justify-center"
-            activeOpacity={0.7}
+            className="bg-red-50 py-4 rounded-xl items-center flex-row justify-center border border-red-200"
           >
-            <LogOut size={20} color="#EF4444" className="mr-2" />
-            <Text className="text-red-600 font-semibold text-lg">
+            <LogOut size={20} color="#ef4444" />
+            <Text className="text-red-600 font-semibold text-lg ml-2">
               Logout
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </ScreenLayout>
+    </SafeAreaView>
   );
 }

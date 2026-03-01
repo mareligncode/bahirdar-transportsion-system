@@ -11,7 +11,7 @@ import {
   Keyboard,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,6 @@ import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Mail, ArrowLeft, CheckCircle, ExternalLink, Smartphone, Info } from 'lucide-react-native';
 
-// Zod Validation Schema
 const forgotPasswordSchema = z.object({
   email: z.string()
     .email('Please enter a valid email address')
@@ -32,10 +31,11 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPassword() {
+  const insets = useSafeAreaInsets();
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { forgotPassword: forgotPasswordFn } = useAuth();
 
   const {
@@ -49,34 +49,27 @@ export default function ForgotPassword() {
     },
   });
 
-const handleForgotPassword = async (data: ForgotPasswordFormData) => {
-  setLoading(true);
-  setSubmittedEmail(data.email);
-  
-  try {
-    console.log('📱 Forgot password request for:', data.email);
-    
-    // 🟢🟢🟢 SHOW SUCCESS SCREEN IMMEDIATELY 🟢🟢🟢
-    // Don't await - let it happen in the background
-    forgotPasswordFn(data.email)
-      .then(result => {
-        console.log('✅ Background API call completed:', result);
-      })
-      .catch(error => {
-        console.error('❌ Background API call failed (user already sees success):', error);
-      });
-    
-    // Show success screen immediately without waiting
-    setSubmitted(true);
-    
-  } catch (error: any) {
-    console.error('❌ Forgot password error:', error);
-    // Still show success screen
-    setSubmitted(true);
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleForgotPassword = async (data: ForgotPasswordFormData) => {
+    setLoading(true);
+    setSubmittedEmail(data.email);
+
+    try {
+
+      forgotPasswordFn(data.email)
+        .then(result => {
+        })
+        .catch(error => {
+        });
+
+      setSubmitted(true);
+
+    } catch (error: any) {
+
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openEmailApp = () => {
     Linking.openURL('mailto:').catch(() => {
@@ -89,24 +82,33 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
   };
 
   if (loading) {
-    return <Loader message="Sending reset instructions..." />;
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="flex-1 items-center justify-center">
+          <Loader message="Sending reset instructions..." />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (submitted) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <ScrollView 
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: insets.bottom + 40
+          }}
         >
           <View className="flex-1 items-center justify-center px-6 py-8">
-            {/* Success Icon */}
+
             <View className="items-center mb-8">
               <View className="w-24 h-24 bg-green-100 rounded-full items-center justify-center mb-4">
                 <CheckCircle size={48} color="#10B981" />
               </View>
-              
+
               <Text className="text-2xl font-bold text-gray-900 text-center">
                 Check Your Email
               </Text>
@@ -118,7 +120,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
               </Text>
             </View>
 
-            {/* Mobile App Instructions - PRIORITY */}
             <View className="w-full bg-blue-50 rounded-xl p-5 mb-6 border border-blue-100">
               <View className="flex-row items-center mb-3">
                 <Smartphone size={20} color="#3B82F6" />
@@ -126,7 +127,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   📱 Mobile App Users
                 </Text>
               </View>
-              
+
               <View className="space-y-3">
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
@@ -136,7 +137,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                     Open your email app
                   </Text>
                 </View>
-                
+
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
                     <Text className="text-blue-800 font-bold text-sm">2</Text>
@@ -145,7 +146,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                     Find email from <Text className="font-bold">"Bahir Dar Transport System"</Text>
                   </Text>
                 </View>
-                
+
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
                     <Text className="text-blue-800 font-bold text-sm">3</Text>
@@ -154,7 +155,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                     Tap <Text className="font-bold">"Open App to Reset Password"</Text> button
                   </Text>
                 </View>
-                
+
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
                     <Text className="text-blue-800 font-bold text-sm">4</Text>
@@ -165,7 +166,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                 </View>
               </View>
 
-              {/* Expo Go Note */}
               <View className="mt-4 pt-3 border-t border-blue-200">
                 <View className="flex-row items-center">
                   <Info size={16} color="#3B82F6" />
@@ -176,7 +176,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
               </View>
             </View>
 
-            {/* Desktop/Web Fallback */}
             <View className="w-full bg-gray-50 rounded-xl p-5 mb-6">
               <Text className="text-gray-700 font-bold text-lg mb-3">
                 💻 Using Desktop?
@@ -189,7 +188,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
               </Text>
             </View>
 
-            {/* Action Buttons - FIXED: Removed icon prop */}
             <View className="w-full space-y-3">
               <TouchableOpacity
                 onPress={openEmailApp}
@@ -200,7 +198,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   📧 Open Email App
                 </Text>
               </TouchableOpacity>
-              
+
               <Button
                 title="← Back to Login"
                 onPress={handleBackToLogin}
@@ -210,9 +208,8 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
               />
             </View>
 
-            {/* Didn't receive email? */}
             <View className="mt-8 w-full">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setSubmitted(false)}
                 className="items-center"
               >
@@ -220,7 +217,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   Didn't receive email? Try again
                 </Text>
               </TouchableOpacity>
-              
+
               <Text className="text-gray-400 text-xs text-center mt-4">
                 Check spam folder • Link expires in 15 minutes
               </Text>
@@ -233,27 +230,30 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
-          <ScrollView 
-            className="flex-1" 
+          <ScrollView
+            className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: insets.bottom + 40
+            }}
           >
             <View className="px-6 pt-4 pb-8">
-              {/* Header with Back Button */}
+
               <View className="mb-8">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.back()}
                   className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
                 </TouchableOpacity>
-                
+
                 <View>
                   <Text className="text-3xl font-bold text-blue-600 mb-2">
                     Reset Password
@@ -264,7 +264,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                 </View>
               </View>
 
-              {/* Form */}
               <View className="space-y-6">
                 <Controller
                   name="email"
@@ -286,7 +285,7 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                         leftIcon={<Mail size={20} color="#6B7280" />}
                         className="bg-gray-50"
                       />
-                      
+
                       <View className="flex-row items-center mt-2">
                         <Info size={14} color="#6B7280" />
                         <Text className="text-gray-500 text-xs ml-1">
@@ -297,7 +296,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   )}
                 />
 
-                {/* Info Box */}
                 <View className="bg-blue-50 p-4 rounded-lg mt-2">
                   <Text className="text-blue-800 font-semibold mb-2">
                     📱 How it works:
@@ -313,7 +311,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   </Text>
                 </View>
 
-                {/* Submit Button */}
                 <Button
                   title="Send Reset Instructions"
                   onPress={handleSubmit(handleForgotPassword)}
@@ -325,13 +322,12 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   fullWidth
                 />
 
-                {/* Back to Login Link */}
                 <View className="mt-8 pt-6 border-t border-gray-200">
                   <View className="flex-row justify-center items-center">
                     <Text className="text-gray-600">
                       Remember your password?{' '}
                     </Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => router.back()}
                       activeOpacity={0.7}
                     >
@@ -342,7 +338,6 @@ const handleForgotPassword = async (data: ForgotPasswordFormData) => {
                   </View>
                 </View>
 
-                {/* Help Link */}
                 <TouchableOpacity className="items-center mt-4">
                   <Text className="text-gray-400 text-sm">
                     Need help? Contact Support

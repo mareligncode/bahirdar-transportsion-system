@@ -10,12 +10,12 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { api } from '@/config/api';
+import { authAPI } from '@/lib/api/auth';
 import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -37,6 +37,7 @@ const resetPasswordSchema = z.object({
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPassword() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,11 +63,10 @@ export default function ResetPassword() {
 
   const password = watch('password');
 
-  // Extract token from params
   useEffect(() => {
     const extractToken = () => {
       console.log('🔐 Reset password params:', params);
-      
+
       if (params.token) {
         setToken(params.token as string);
       } else {
@@ -78,8 +78,6 @@ export default function ResetPassword() {
 
     extractToken();
   }, [params]);
-
-  // Validate token on component mount
   useEffect(() => {
     const validateToken = async () => {
       if (!token) {
@@ -89,21 +87,19 @@ export default function ResetPassword() {
       }
 
       try {
-        const response = await api.post('/auth/validate-reset-token', { token });
+        const result = await authAPI.validateResetToken(token);
 
-        if (response.data.success) {
+        if (result.valid) {
           setTokenValid(true);
           setError('');
         } else {
           setTokenValid(false);
-          setError(response.data.message || 'Invalid or expired reset token');
+          setError(result.message || 'Invalid or expired reset token');
         }
       } catch (err: any) {
         console.error('❌ Token validation error:', err);
         setTokenValid(false);
-        const errorMessage = err.response?.data?.message || 
-                            err.response?.data?.error || 
-                            'Failed to validate reset token';
+        const errorMessage = err.message || 'Failed to validate reset token';
         setError(errorMessage);
       } finally {
         setValidatingToken(false);
@@ -125,27 +121,22 @@ export default function ResetPassword() {
         throw new Error('Reset token is missing');
       }
 
-      const response = await api.post('/auth/reset-password', { 
-        token, 
-        newPassword: data.password 
-      });
+      const result = await authAPI.resetPassword(token, data.password);
 
-      setSuccess(response.data.message || 'Password has been reset successfully');
-      
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.replace('/auth/Login');
-      }, 3000);
-      
+      if (result.success) {
+        setSuccess(result.message || 'Password has been reset successfully');
+        setTimeout(() => {
+          router.replace('/auth/Login');
+        }, 3000);
+      } else {
+        setError(result.message || 'Failed to reset password');
+      }
+
     } catch (err: any) {
-      console.error('❌ Reset password error:', err);
-      
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          err.message || 
-                          'Something went wrong. Please try again.';
+
+      const errorMessage = err.message || 'Something went wrong. Please try again.';
       setError(errorMessage);
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
@@ -154,14 +145,14 @@ export default function ResetPassword() {
 
   const getPasswordStrength = (password: string) => {
     if (!password) return { strength: 0, label: '', color: '#EF4444', width: 0 };
-    
+
     let strength = 0;
     if (password.length >= 6) strength++;
     if (/[a-z]/.test(password)) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
     if (/[^a-zA-Z0-9]/.test(password)) strength++;
-    
+
     const strengthMap = {
       0: { label: 'Very Weak', color: '#EF4444' },
       1: { label: 'Weak', color: '#F59E0B' },
@@ -170,9 +161,9 @@ export default function ResetPassword() {
       4: { label: 'Strong', color: '#10B981' },
       5: { label: 'Very Strong', color: '#10B981' }
     };
-    
+
     const width = (strength / 5) * 100;
-    
+
     return {
       strength,
       label: strengthMap[strength as keyof typeof strengthMap]?.label || '',
@@ -183,10 +174,9 @@ export default function ResetPassword() {
 
   const strength = getPasswordStrength(password || '');
 
-  // Loading state
   if (validatingToken) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
           <View className="items-center">
             <View className="w-16 h-16 bg-gray-200 rounded-full mb-4 animate-pulse" />
@@ -196,11 +186,9 @@ export default function ResetPassword() {
       </SafeAreaView>
     );
   }
-
-  // Invalid token state
   if (!tokenValid) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center mb-8">
             <View className="w-20 h-20 bg-red-100 rounded-full items-center justify-center mb-4">
@@ -225,11 +213,9 @@ export default function ResetPassword() {
       </SafeAreaView>
     );
   }
-
-  // Success state
   if (success) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center">
             <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
@@ -256,32 +242,32 @@ export default function ResetPassword() {
       </SafeAreaView>
     );
   }
-
-  // Main form
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
-          <ScrollView 
-            className="flex-1" 
+          <ScrollView
+            className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: insets.bottom + 20
+            }}
             keyboardShouldPersistTaps="handled"
           >
             <View className="px-6 pt-4">
-              {/* Header */}
               <View className="mb-8">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.back()}
                   className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
                 </TouchableOpacity>
-                
+
                 <View className="items-center mb-4">
                   <View className="w-20 h-20 bg-blue-100 rounded-full items-center justify-center mb-4">
                     <View className="w-16 h-16 bg-blue-600 rounded-lg items-center justify-center">
@@ -296,8 +282,6 @@ export default function ResetPassword() {
                   </Text>
                 </View>
               </View>
-
-              {/* Error Message */}
               {error ? (
                 <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex-row items-start">
                   <AlertCircle size={20} color="#DC2626" style={{ marginTop: 2 }} />
@@ -308,9 +292,7 @@ export default function ResetPassword() {
                 </View>
               ) : null}
 
-              {/* Form */}
               <View className="space-y-6">
-                {/* New Password */}
                 <Controller
                   name="password"
                   control={control}
@@ -332,8 +314,8 @@ export default function ResetPassword() {
                         leftIcon={<Lock size={20} color="#9CA3AF" />}
                         rightIcon={
                           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            {showPassword ? 
-                              <EyeOff size={20} color="#6B7280" /> : 
+                            {showPassword ?
+                              <EyeOff size={20} color="#6B7280" /> :
                               <Eye size={20} color="#6B7280" />
                             }
                           </TouchableOpacity>
@@ -341,8 +323,6 @@ export default function ResetPassword() {
                         className="bg-white border border-gray-300"
                         editable={!loading}
                       />
-                      
-                      {/* Password Strength Indicator */}
                       {value ? (
                         <View className="mt-2">
                           <View className="flex-row justify-between mb-1">
@@ -354,12 +334,12 @@ export default function ResetPassword() {
                             </Text>
                           </View>
                           <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <View 
-                              style={{ 
+                            <View
+                              style={{
                                 width: `${strength.width}%`,
                                 backgroundColor: strength.color,
                                 height: '100%'
-                              }} 
+                              }}
                             />
                           </View>
                           <Text className="text-xs text-gray-500 mt-2">
@@ -374,8 +354,6 @@ export default function ResetPassword() {
                     </View>
                   )}
                 />
-
-                {/* Confirm Password */}
                 <Controller
                   name="confirmPassword"
                   control={control}
@@ -397,8 +375,8 @@ export default function ResetPassword() {
                         leftIcon={<Lock size={20} color="#9CA3AF" />}
                         rightIcon={
                           <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                            {showConfirmPassword ? 
-                              <EyeOff size={20} color="#6B7280" /> : 
+                            {showConfirmPassword ?
+                              <EyeOff size={20} color="#6B7280" /> :
                               <Eye size={20} color="#6B7280" />
                             }
                           </TouchableOpacity>
@@ -409,8 +387,6 @@ export default function ResetPassword() {
                     </View>
                   )}
                 />
-
-                {/* Password Requirements */}
                 <View className="bg-blue-50 p-4 rounded-lg">
                   <Text className="text-blue-800 font-semibold mb-2">
                     Password Requirements:
@@ -433,8 +409,6 @@ export default function ResetPassword() {
                     </Text>
                   </View>
                 </View>
-
-                {/* Submit Button */}
                 <Button
                   title={loading ? 'Resetting...' : 'Reset Password'}
                   onPress={handleSubmit(handleResetPassword)}
@@ -445,9 +419,7 @@ export default function ResetPassword() {
                   fullWidth
                   className="mt-4"
                 />
-
-                {/* Request New Link */}
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.replace('/auth/Forgot-Password')}
                   className="mt-6 py-4"
                   disabled={loading}

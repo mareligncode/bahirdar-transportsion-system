@@ -25,5 +25,15 @@
   "super_admin": "Super Admin",
   "station_admin": "Station Admin",
   "driver": "Driver",
-  "passenger": "Passenger"
+  "passenger": "Passenger",
+      "ownerDetails": "Owner Details",
+    "ownerName": "Owner Name",
+    "ownerNamePlaceholder": "Enter owner's full name",
+    "ownerPhone": "Owner Phone",
+    "ownerPhonePlaceholder": "Enter owner's phone number",
+    "bankDetails": "Bank Details",
+    "bankName": "Bank Name",
+    "bankNamePlaceholder": "Enter bank name",
+    "accountNumber": "Account Number",
+    "accountNumberPlaceholder": "Enter account number"
 }

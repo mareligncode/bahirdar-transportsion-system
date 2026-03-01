@@ -1,3 +1,4 @@
+// app/tabs/_layout.tsx
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,14 +8,12 @@ import { BottomTab } from '@/components/layout/BottomTab';
 export default function TabsLayout() {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
 
-  // Show loader while checking auth
   if (authLoading) {
     return <Loader message="Loading..." />;
   }
 
-  // Redirect will be handled by app/_layout.tsx, but we can add a fallback
   if (!isAuthenticated) {
-    return null; // app/_layout.tsx will redirect
+    return null;
   }
 
   return (
@@ -23,40 +22,39 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            display: 'none', // We use our custom BottomTab component
+            display: 'none',
           },
         }}
       >
-        {/* Tab Screens */}
-        <Tabs.Screen 
-          name="home/index" 
+        {/* Home has its own drawer layout - using index path for file-based routing */}
+        <Tabs.Screen
+          name="home/index"
           options={{
             title: 'Home',
+            href: '/tabs/home',
           }}
         />
-        <Tabs.Screen 
-          name="trips/index" 
+        <Tabs.Screen
+          name="trips"
           options={{
             title: 'Trips',
+            href: '/tabs/trips',
           }}
         />
-        <Tabs.Screen 
-          name="tickets/index" 
+        <Tabs.Screen
+          name="tickets/index"
           options={{
             title: 'Tickets',
+            href: '/tabs/tickets',
           }}
         />
-        <Tabs.Screen 
-          name="profile/index" 
+        <Tabs.Screen
+          name="profile/index"
           options={{
             title: 'Profile',
+            href: '/tabs/profile',
           }}
         />
-
-        {/* Add missing tab screens if they exist */}
-        <Tabs.Screen name="trips/search" />
-        <Tabs.Screen name="trips/[id]" />
-        <Tabs.Screen name="tickets/[id]" />
       </Tabs>
       <BottomTab />
     </>

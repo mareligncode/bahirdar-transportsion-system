@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
 
@@ -48,7 +48,7 @@ export function Toast({
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (show) {
       // Animate in
       Animated.parallel([
@@ -121,3 +121,49 @@ export function Toast({
     </Animated.View>
   );
 }
+
+// Toast Manager Hook
+export const useToast = () => {
+  const [toast, setToast] = useState<{
+    message: string;
+    type: ToastType;
+    show: boolean;
+  }>({
+    message: '',
+    type: 'info',
+    show: false,
+  });
+
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    setToast({ message, type, show: true });
+  }, []);
+
+  const hideToast = useCallback(() => {
+    setToast(prev => ({ ...prev, show: false }));
+  }, []);
+
+  return {
+    toast,
+    showToast,
+    hideToast,
+  };
+};
+
+// Toast Provider Component
+export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
+  const { toast, hideToast } = useToast();
+
+  return (
+    <>
+      {children}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+          show={toast.show}
+        />
+      )}
+    </>
+  );
+};

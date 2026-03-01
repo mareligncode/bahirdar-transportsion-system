@@ -12,8 +12,8 @@ interface HeaderProps {
   className?: string;
 }
 
-export function Header({ 
-  title, 
+export function Header({
+  title,
   showBackButton = false,
   onBackPress,
   rightAction,
@@ -26,14 +26,14 @@ export function Header({
     if (onBackPress) {
       onBackPress();
     } else {
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/tabs/home');
     }
   };
 
   return (
     <View className={`bg-white ${Platform.OS === 'android' ? 'pt-6' : 'pt-2'} pb-4 px-4 border-b border-gray-200 ${className}`}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
           {showBackButton && (
@@ -45,7 +45,7 @@ export function Header({
               <ArrowLeft size={20} color="#374151" />
             </TouchableOpacity>
           )}
-          
+
           <View className="flex-1">
             <Text className="text-xl font-bold text-gray-900" numberOfLines={1}>
               {title}

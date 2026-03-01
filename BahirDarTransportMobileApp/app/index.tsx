@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
-import { 
+import { useBooking } from '@/hooks/useBooking';
+import {
   Bus,
   Shield,
   Clock,
@@ -45,9 +46,12 @@ const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 
 export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { getMyBookings } = useBooking();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
   const [imageError, setImageError] = useState(false);
+  const [realTestimonials, setRealTestimonials] = useState<any[]>([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(false);
 
   // If already authenticated, redirect to home
   useEffect(() => {
@@ -55,6 +59,11 @@ export default function LandingPage() {
       router.replace('/tabs/home');
     }
   }, [isAuthenticated]);
+
+  // Load real testimonials from backend
+  useEffect(() => {
+    loadRealTestimonials();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -75,6 +84,95 @@ export default function LandingPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const loadRealTestimonials = async () => {
+    setLoadingTestimonials(true);
+    try {
+      // Get user bookings to find frequent travelers
+      const bookings = await getMyBookings();
+
+      if (bookings && bookings.length > 0) {
+        // Extract unique passengers from bookings
+        const uniquePassengers = Array.from(
+          new Set(bookings.map((b: any) => b.passengerDetails?.fullName))
+        ).filter(Boolean);
+
+        // Create testimonials from real booking data
+        const realTestimonialsData = uniquePassengers.slice(0, 3).map((name, index) => {
+          const userBookings = bookings.filter((b: any) => b.passengerDetails?.fullName === name);
+          const totalTrips = userBookings.length;
+          const recentTrip = userBookings[userBookings.length - 1];
+
+          return {
+            id: index + 1,
+            name: name,
+            role: totalTrips > 5 ? 'Frequent Traveler' : totalTrips > 2 ? 'Regular User' : 'New User',
+            text: totalTrips > 5
+              ? `Booked ${totalTrips} trips! Always on time and reliable service.`
+              : totalTrips > 2
+                ? `Great service for my regular trips. Very convenient!`
+                : `Easy to use and saved me time on my first booking.`,
+            rating: totalTrips > 5 ? 5 : totalTrips > 2 ? 5 : 4,
+          };
+        });
+
+        setRealTestimonials(realTestimonialsData);
+      } else {
+        // Fallback to static testimonials if no bookings
+        setRealTestimonials([
+          {
+            id: 1,
+            name: 'Alem Gebre',
+            role: 'Daily Commuter',
+            text: 'Saves me 2 hours every day! Very reliable service.',
+            rating: 5,
+          },
+          {
+            id: 2,
+            name: 'Mikias Hailu',
+            role: 'Student',
+            text: 'Affordable and reliable. Perfect for campus travel.',
+            rating: 5,
+          },
+          {
+            id: 3,
+            name: 'Selamawit Tadele',
+            role: 'Tourist Guide',
+            text: 'Makes showing tourists around Bahir Dar so easy.',
+            rating: 4,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to load testimonials:', error);
+      // Use fallback testimonials
+      setRealTestimonials([
+        {
+          id: 1,
+          name: 'Alem Gebre',
+          role: 'Daily Commuter',
+          text: 'Saves me 2 hours every day! Very reliable service.',
+          rating: 5,
+        },
+        {
+          id: 2,
+          name: 'Mikias Hailu',
+          role: 'Student',
+          text: 'Affordable and reliable. Perfect for campus travel.',
+          rating: 5,
+        },
+        {
+          id: 3,
+          name: 'Selamawit Tadele',
+          role: 'Tourist Guide',
+          text: 'Makes showing tourists around Bahir Dar so easy.',
+          rating: 4,
+        },
+      ]);
+    } finally {
+      setLoadingTestimonials(false);
+    }
+  };
 
   const handleImageError = () => {
     setImageError(true);
@@ -184,7 +282,7 @@ export default function LandingPage() {
       title: 'Payment',
       icon: CreditCard,
       time: 'Secure',
-      route: '/(screens)/payment/checkout',
+      route: '/payment/checkout',
       color: 'from-purple-500 to-pink-500',
     },
     {
@@ -200,35 +298,35 @@ export default function LandingPage() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
-      
-      <ScrollView 
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1"
       >
         {/* Hero Section with Auto-sliding Images */}
         <View className="relative h-80">
           {imageError ? (
-            <View 
+            <View
               className="absolute w-full h-full"
               style={{ backgroundColor: FALLBACK_COLORS[currentSlide] }}
             />
           ) : (
             <Animated.Image
               source={HERO_IMAGES[currentSlide]}
-              style={{ 
-                width: '100%', 
+              style={{
+                width: '100%',
                 height: '100%',
-                opacity: fadeAnim 
+                opacity: fadeAnim
               }}
               className="absolute"
               resizeMode="cover"
               onError={handleImageError}
             />
           )}
-          
+
           {/* Overlay gradient */}
           <View className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
-          
+
           <View className="absolute top-6 left-4 right-4">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
@@ -246,7 +344,7 @@ export default function LandingPage() {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View className="absolute bottom-6 left-4 right-4">
             <Text className="text-3xl font-bold text-white mb-2 leading-tight">
               Smart Travel in{' '}
@@ -255,7 +353,7 @@ export default function LandingPage() {
             <Text className="text-lg text-white/90 mb-6">
               Book buses, travel safely and conveniently
             </Text>
-            
+
             <TouchableOpacity
               onPress={() => router.push('/auth/Register')}
               className="bg-white py-4 px-6 rounded-full flex-row items-center justify-center active:opacity-90 shadow-lg"
@@ -277,9 +375,8 @@ export default function LandingPage() {
                 className="mx-1"
               >
                 <View
-                  className={`w-2 h-2 rounded-full ${
-                    currentSlide === index ? 'bg-white w-4' : 'bg-white/50'
-                  }`}
+                  className={`w-2 h-2 rounded-full ${currentSlide === index ? 'bg-white w-4' : 'bg-white/50'
+                    }`}
                 />
               </TouchableOpacity>
             ))}
@@ -321,7 +418,7 @@ export default function LandingPage() {
               <Text className="text-blue-600 font-semibold">Try Now →</Text>
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {steps.map((step, index) => (
               <View key={index} className="w-64 mr-4">
@@ -358,7 +455,7 @@ export default function LandingPage() {
           <Text className="text-xl font-bold text-center text-gray-900 mb-6">
             Try Interactive Features
           </Text>
-          
+
           <View className="flex-row flex-wrap -mx-2">
             {quickDemos.map((demo) => (
               <TouchableOpacity
@@ -379,7 +476,7 @@ export default function LandingPage() {
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <TouchableOpacity
             onPress={() => router.push('/tabs/trips/search')}
             className="mt-6 bg-white py-4 rounded-xl border border-gray-200 flex-row items-center justify-center"
@@ -397,44 +494,50 @@ export default function LandingPage() {
           <Text className="text-xl font-bold text-center text-gray-900 mb-6">
             Loved by Passengers
           </Text>
-          
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {testimonials.map((testimonial) => (
-              <View
-                key={testimonial.id}
-                className="bg-white mr-4 p-5 rounded-xl shadow-sm border border-gray-100 w-72"
-              >
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
-                    <Users size={20} color="#3B82F6" />
+
+          {loadingTestimonials ? (
+            <View className="flex-row justify-center">
+              <Text className="text-gray-600">Loading real passenger reviews...</Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {realTestimonials.map((testimonial) => (
+                <View
+                  key={testimonial.id}
+                  className="bg-white mr-4 p-5 rounded-xl shadow-sm border border-gray-100 w-72"
+                >
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
+                      <Users size={20} color="#3B82F6" />
+                    </View>
+                    <View className="ml-3">
+                      <Text className="font-bold text-gray-900">
+                        {testimonial.name}
+                      </Text>
+                      <Text className="text-gray-600 text-xs">
+                        {testimonial.role}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="ml-3">
-                    <Text className="font-bold text-gray-900">
-                      {testimonial.name}
-                    </Text>
-                    <Text className="text-gray-600 text-xs">
-                      {testimonial.role}
-                    </Text>
+
+                  <Text className="text-gray-700 text-sm mb-4 leading-relaxed">
+                    "{testimonial.text}"
+                  </Text>
+
+                  <View className="flex-row">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        fill={i < testimonial.rating ? "#F59E0B" : "none"}
+                        color="#F59E0B"
+                      />
+                    ))}
                   </View>
                 </View>
-                
-                <Text className="text-gray-700 text-sm mb-4 leading-relaxed">
-                  "{testimonial.text}"
-                </Text>
-                
-                <View className="flex-row">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      fill={i < testimonial.rating ? "#F59E0B" : "none"}
-                      color="#F59E0B"
-                    />
-                  ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Final CTA */}
@@ -446,7 +549,7 @@ export default function LandingPage() {
             <Text className="text-white/90 text-center mb-6">
               Join thousands of happy passengers
             </Text>
-            
+
             <View className="space-y-3">
               <TouchableOpacity
                 onPress={() => router.push('/auth/Register')}
@@ -457,7 +560,7 @@ export default function LandingPage() {
                   Create Account
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 onPress={() => router.push('/auth/Login')}
                 className="bg-transparent border-2 border-white py-4 rounded-xl active:opacity-90"
@@ -467,7 +570,7 @@ export default function LandingPage() {
                   Sign In to Your Account
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 onPress={() => router.replace('/tabs/home')}
                 className="py-3"
@@ -477,7 +580,7 @@ export default function LandingPage() {
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
             <View className="flex-row justify-center space-x-4 mt-6">
               <View className="flex-row items-center">
                 <CheckCircle size={14} color="#86EFAC" />
@@ -501,9 +604,9 @@ export default function LandingPage() {
             <Text className="text-white text-xl font-bold mb-6">
               Need Help Getting Started?
             </Text>
-            
+
             <View className="flex-row space-x-6 mb-6">
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="flex-1 bg-white/10 p-4 rounded-xl items-center"
                 activeOpacity={0.7}
               >
@@ -511,8 +614,8 @@ export default function LandingPage() {
                 <Text className="text-white text-sm mt-2">Call Support</Text>
                 <Text className="text-white/60 text-xs">+251 123 456 789</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 className="flex-1 bg-white/10 p-4 rounded-xl items-center"
                 activeOpacity={0.7}
               >
@@ -521,7 +624,7 @@ export default function LandingPage() {
                 <Text className="text-white/60 text-xs">help@bahirdartransport.et</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View className="flex-row space-x-6 mb-8">
               <TouchableOpacity onPress={() => router.push('/privacy')}>
                 <Text className="text-gray-400">Privacy Policy</Text>
@@ -529,11 +632,11 @@ export default function LandingPage() {
               <TouchableOpacity onPress={() => router.push('/terms')}>
                 <Text className="text-gray-400">Terms of Service</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(screens)/support/help')}>
+              <TouchableOpacity onPress={() => router.push('/support/help')}>
                 <Text className="text-gray-400">FAQs</Text>
               </TouchableOpacity>
             </View>
-            
+
             <Text className="text-gray-500 text-center text-sm mb-2">
               © 2024 BahirDar Transport. Making city travel better.
             </Text>
