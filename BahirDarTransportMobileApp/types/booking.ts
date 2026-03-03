@@ -1,8 +1,7 @@
 // types/booking.ts
-
-import { Trip } from './trip';
+import { Trip, Vehicle } from './trip';
 import { User } from './auth';
-import { PaymentStatus } from './payment'; // Import from payment
+import { PaymentStatus } from './payment';
 
 export interface PassengerDetails {
   fullName: string;
@@ -14,34 +13,51 @@ export interface PassengerDetails {
 }
 
 // Booking status type
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'refunded';
+export type BookingPaymentStatus = 'pending' | 'success' | 'failed' | 'cancelled' | 'refunded';
 
 export interface Booking {
   _id: string;
-  bookingNumber: string;
+  bookingNumber?: string;
   ticketNumber?: string;
-  passengerID: User | string;
-  tripID: Trip | string;
-  seatNumber: number;
-  seatNumbers?: number[];
-  totalPrice: number;
-  totalAmount?: number;
-  amount?: number;
-  pricePerSeat: number;
+  passengerID: string | User;
+  tripID: string | Trip;
+  vehicleID?: string | Vehicle;
+  seatNumber?: number; // Keep for backward compatibility
+  seatNumbers?: number[]; // Add for multi-seat support
+  totalPrice?: number; // Total amount for all seats
+  amount?: number; // Legacy field
+  pricePerSeat?: number; // Price per individual seat
   status: BookingStatus;
-  paymentStatus?: PaymentStatus; // Use the imported type
-  paymentID?: string;
+  paymentStatus?: BookingPaymentStatus;
   paymentMethod?: string;
-  bookingDate: string;
-  createdAt: string;
-  updatedAt: string;
-  passengerDetails?: PassengerDetails;
+  paymentReference?: string;
+  bookingDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
   specialRequests?: string;
+  passengerDetails?: {
+    fullName: string;
+    phoneNumber: string;
+    email: string;
+    emergencyContact?: string;
+  };
   checkedIn?: boolean;
   checkedInAt?: string;
   cancellationReason?: string;
   refundAmount?: number;
-  qrCode?: string;
+  createdBy?: string | User;
+  
+  // New fields for group bookings
+  isGroupBooking?: boolean;
+  groupBookingId?: string;
+  groupTicketNumber?: string;
+  seatCount?: number;
+  batchTotalPrice?: number;
+  checkedInSeats?: Array<{
+    seatNumber: number;
+    checkedInAt: string;
+  }>;
 }
 
 export interface BookingCreateData {
@@ -49,6 +65,8 @@ export interface BookingCreateData {
   seatNumber: number;
   passengerDetails: PassengerDetails;
   specialRequests?: string;
+  isTemporaryReservation?: boolean;
+  reservationExpiry?: string;
 }
 
 export interface BookingResponse {

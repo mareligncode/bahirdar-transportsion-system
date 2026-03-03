@@ -22,7 +22,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bahirdartransport.app",
       "associatedDomains": [
-        "applinks:192.168.137.1",
+        "applinks:10.161.142.191",
         "applinks:localhost"
       ],
       "infoPlist": {
@@ -55,25 +55,25 @@
           "data": [
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
@@ -106,13 +106,13 @@
           "data": [
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
+              "host": "10.161.142.191",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             },
@@ -154,7 +154,7 @@
     "scheme": "bahirdartransport",
     "extra": {
       "router": {
-        "origin": "https://192.168.137.1:8081"
+        "origin": "https://10.161.142.191:8081"
       }
     }
   }

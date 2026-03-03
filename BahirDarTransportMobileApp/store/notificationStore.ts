@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Notification, NotificationPreferences } from '../types/notification';
+import { getMyBookings } from '../lib/api/bookings';
 
 interface NotificationState {
   notifications: Notification[];
@@ -24,197 +25,176 @@ interface NotificationActions {
   clearAllNotifications: () => void;
 }
 
-// const defaultPreferences: NotificationPreferences = {
-//  bookingUpdates: true,
-//   paymentUpdates: true,
-//   tripUpdates: true,
-//   promotions: true,
-//   pushEnabled: true,
-//   emailEnabled: true,
-// };
+const defaultPreferences: NotificationPreferences = {
+  booking_updates: true,
+  payment_updates: true,
+  trip_updates: true,
+  promotions: true,
+  push_enabled: true,
+  email_enabled: true,
+};
 
-// const initialState: NotificationState = {
-//   notifications: [],
-//   unreadCount: 0,
-//   preferences: defaultPreferences,
-//   isLoading: false,
-//   error: null,
-// };
+export const useNotificationStore = create<NotificationState & NotificationActions>()(
+  persist(
+    (set, get) => ({
+      notifications: [],
+      unreadCount: 0,
+      preferences: defaultPreferences,
+      isLoading: false,
+      error: null,
 
-// // ✅ Make sure this is exported as useNotificationStore
-// export const useNotificationStore = create<NotificationState & NotificationActions>()(
-//   persist(
-//     (set, get) => ({
-//       ...initialState,
-
-//       fetchNotifications: async (unreadOnly = false) => {
-//         set({ isLoading: true, error: null });
-
-//         try {
-//           // TODO: Replace with actual API call
-//           // For now, use mock data
-//           const mockNotifications: Notification[] = [
-//             {
-//               id: '1',
-//               userId: 'user1',
-//               title: 'Booking Confirmed',
-//               message: 'Your trip from Bahir Dar to Addis Ababa has been confirmed',
-//               type: 'booking',
-//               isRead: false,
-//               createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-//             },
-//             {
-//               id: '2',
-//               userId: 'user1',
-//               title: 'Payment Successful',
-//               message: 'Your payment of 450 ETB has been processed',
-//               type: 'payment',
-//               isRead: true,
-//               createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-//             },
-//             {
-//               id: '3',
-//               userId: 'user1',
-//               title: 'System Update',
-//               message: 'New features added to the app. Update now!',
-//               type: 'system',
-//               isRead: false,
-//               createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-//             },
-//           ];
-
-//           const filteredNotifications = unreadOnly
-//             ? mockNotifications.filter(n => !n.isRead)
-//             : mockNotifications;
-
-//           const unreadCount = filteredNotifications.filter(n => !n.isRead).length;
-
-//           set({
-//             notifications: filteredNotifications,
-//             unreadCount,
-//             isLoading: false,
-//           });
-//         } catch (error: any) {
-//           set({
-//             error: error.message || 'Failed to fetch notifications',
-//             isLoading: false,
-//           });
-//         }
-//       },
-
-//       markAsRead: async (notificationId: string) => {
-//         try {
-//           const { notifications, unreadCount } = get();
-//           const updatedNotifications = notifications.map(notification =>
-//             notification.id === notificationId
-//               ? { ...notification, isRead: true }
-//               : notification
-//           );
-
-//           const newUnreadCount = Math.max(0, unreadCount - 1);
-
-//           set({
-//             notifications: updatedNotifications,
-//             unreadCount: newUnreadCount,
-//           });
-//         } catch (error: any) {
-//           console.error('Error marking notification as read:', error);
-//         }
-//       },
-
-//       markAllAsRead: async () => {
-//         try {
-//           const { notifications } = get();
-//           const updatedNotifications = notifications.map(notification => ({
-//             ...notification,
-//             isRead: true,
-//           }));
-
-//           set({
-//             notifications: updatedNotifications,
-//             unreadCount: 0,
-//           });
-//         } catch (error: any) {
-//           console.error('Error marking all notifications as read:', error);
-//         }
-//       },
-
-//       deleteNotification: async (notificationId: string) => {
-//         try {
-//           const { notifications, unreadCount } = get();
-//           const notificationToDelete = notifications.find(n => n.id === notificationId);
+      fetchNotifications: async (unreadOnly?: boolean) => {
+        set({ isLoading: true, error: null });
+        try {
+          // Get real bookings to generate notifications from
+          const bookingsResponse = await getMyBookings();
           
-//           const updatedNotifications = notifications.filter(
-//             notification => notification.id !== notificationId
-//           );
+          if (bookingsResponse.success && bookingsResponse.data) {
+            // Generate notifications from real booking data
+            const notifications: Notification[] = bookingsResponse.data.map((booking: any, index: number) => ({
+              id: `notification_${booking._id}`,
+              type: 'booking',
+              title: 'Booking Confirmed',
+              message: `Your booking for seat ${booking.seatNumber || booking.seatNumbers?.join(', ')} has been confirmed.`,
+              is_read: false,
+              created_at: booking.createdAt || new Date().toISOString(),
+              data: {
+                bookingId: booking._id,
+                tripId: booking.tripID,
+                seatNumber: booking.seatNumber,
+                seatNumbers: booking.seatNumbers,
+              }
+            }));
 
-//           const newUnreadCount = notificationToDelete?.isRead 
-//             ? unreadCount 
-//             : Math.max(0, unreadCount - 1);
+            set({ 
+              notifications: unreadOnly ? notifications : notifications.filter((n: any) => !n.is_read),
+              unreadCount: notifications.filter((n: any) => !n.is_read).length 
+            });
+          }
+        } catch (error: any) {
+          console.error('Error fetching notifications:', error);
+          set({ error: error.message || 'Failed to fetch notifications' });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
 
-//           set({
-//             notifications: updatedNotifications,
-//             unreadCount: newUnreadCount,
-//           });
-//         } catch (error: any) {
-//           console.error('Error deleting notification:', error);
-//         }
-//       },
-
-//       fetchPreferences: async () => {
-//         try {
-//           // TODO: Replace with actual API call
-//           set({ preferences: defaultPreferences });
-//         } catch (error: any) {
-//           console.error('Error fetching notification preferences:', error);
-//         }
-//       },
-
-//       updatePreferences: async (preferences: Partial<NotificationPreferences>) => {
-//         try {
-//           const currentPreferences = get().preferences;
-//           const updatedPreferences = { ...currentPreferences, ...preferences };
+      markAsRead: async (notificationId: string) => {
+        try {
+          const { notifications, unreadCount } = get();
+          const notification = notifications.find((n: any) => n.id === notificationId);
           
-//           set({ preferences: updatedPreferences });
-//         } catch (error: any) {
-//           console.error('Error updating notification preferences:', error);
-//         }
-//       },
+          if (notification) {
+            const updatedNotifications = notifications.map((n: any) =>
+              n.id === notificationId ? { ...n, is_read: true } : n
+            );
 
-//       addNotification: (notification: Notification) => {
-//         const { notifications, unreadCount } = get();
-//         const newUnreadCount = notification.isRead ? unreadCount : unreadCount + 1;
+            const newUnreadCount = Math.max(0, unreadCount - 1);
+
+            set({
+              notifications: updatedNotifications,
+              unreadCount: newUnreadCount,
+            });
+          }
+        } catch (error: any) {
+          console.error('Error marking notification as read:', error);
+        }
+      },
+
+      markAllAsRead: async () => {
+        try {
+          const { notifications } = get();
+          const updatedNotifications = notifications.map((notification: any) => ({
+            ...notification,
+            is_read: true,
+          }));
+
+          set({
+            notifications: updatedNotifications,
+            unreadCount: 0,
+          });
+        } catch (error: any) {
+          console.error('Error marking all notifications as read:', error);
+        }
+      },
+
+      deleteNotification: async (notificationId: string) => {
+        try {
+          const { notifications, unreadCount } = get();
+          const notificationToDelete = notifications.find((n: any) => n.id === notificationId);
+          
+          if (notificationToDelete) {
+            const updatedNotifications = notifications.filter(
+              (notification: any) => notification.id !== notificationId
+            );
+
+            const newUnreadCount = notificationToDelete?.is_read 
+              ? unreadCount 
+              : Math.max(0, unreadCount - 1);
+
+            set({
+              notifications: updatedNotifications,
+              unreadCount: newUnreadCount,
+            });
+          }
+        } catch (error: any) {
+          console.error('Error deleting notification:', error);
+        }
+      },
+
+      fetchPreferences: async () => {
+        try {
+          set({ preferences: defaultPreferences });
+        } catch (error: any) {
+          console.error('Error fetching notification preferences:', error);
+        }
+      },
+
+      updatePreferences: async (preferences: Partial<NotificationPreferences>) => {
+        try {
+          const currentPreferences = get().preferences;
+          const updatedPreferences = { ...currentPreferences, ...preferences };
+          
+          set({ preferences: updatedPreferences });
+        } catch (error: any) {
+          console.error('Error updating notification preferences:', error);
+        }
+      },
+
+      addNotification: (notification: Notification) => {
+        const { notifications, unreadCount } = get();
+        const newUnreadCount = (notification as any).is_read ? unreadCount : unreadCount + 1;
         
-//         set({
-//           notifications: [notification, ...notifications],
-//           unreadCount: newUnreadCount,
-//         });
-//       },
+        set({
+          notifications: [notification, ...notifications],
+          unreadCount: newUnreadCount,
+        });
+      },
 
-//       clearError: () => {
-//         set({ error: null });
-//       },
+      clearError: () => {
+        set({ error: null });
+      },
 
-//       clearAllNotifications: () => {
-//         set({
-//           notifications: [],
-//           unreadCount: 0,
-//         });
-//       },
-//     }),
-//     {
-//       name: 'notification-storage',
-//       storage: createJSONStorage(() => AsyncStorage),
-//       partialize: (state) => ({
-//         preferences: state.preferences,
-//       }),
-//     }
-//   )
-// );
+      clearAllNotifications: () => {
+        set({
+          notifications: [],
+          unreadCount: 0,
+        });
+      },
+    }),
+    {
+      name: 'notification-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        preferences: state.preferences,
+      }),
+    }
+  )
+);
 
-// // ✅ Export selectors for better performance
-// export const useNotifications = () => useNotificationStore((state) => state.notifications);
-// export const useUnreadCount = () => useNotificationStore((state) => state.unreadCount);
-// export const useNotificationPreferences = () => useNotificationStore((state) => state.preferences);
-// export const useNotificationLoading = () => useNotificationStore((state) => state.isLoading);
-// export const useNotificationError = () => useNotificationStore((state) => state.error);
+// ✅ Export selectors for better performance
+export const useNotifications = () => useNotificationStore((state) => state.notifications);
+export const useUnreadCount = () => useNotificationStore((state) => state.unreadCount);
+export const useNotificationPreferences = () => useNotificationStore((state) => state.preferences);
+export const useNotificationLoading = () => useNotificationStore((state) => state.isLoading);
+export const useNotificationError = () => useNotificationStore((state) => state.error);

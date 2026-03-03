@@ -1,11 +1,19 @@
 import '../global.css';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View, Platform, LogBox } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+
+// Suppress non-fatal SDK 54+ development warnings
+LogBox.ignoreLogs(['Unable to activate keep awake']);
 import { Loader } from '@/components/common/Loader';
 import { storage } from '@/lib/storage';
 import * as Linking from 'expo-linking';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent splash screen from auto-hiding before auth is checked
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -90,44 +98,21 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  // Check storage on initial load
+  // Initial storage check removed (redundant with AuthStore)
+
   useEffect(() => {
-    const checkStorage = async () => {
+    if (isLoading) return;
+
+    // Hide splash screen once loading is complete
+    const hideAsync = async () => {
       try {
-        const accessToken = await storage.getToken();
-        const userData = await storage.getUser();
-        const isLoggedIn = await storage.isLoggedIn();
-
-        console.log('🔍 Storage check:', {
-          hasAccessToken: !!accessToken,
-          hasUserData: !!userData,
-          isLoggedIn
-        });
-
-        setIsCheckingStorage(false);
-      } catch (error) {
-        console.error('❌ Storage check error:', error);
-        setIsCheckingStorage(false);
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        console.warn('SplashScreen.hideAsync error:', e);
       }
     };
+    hideAsync();
 
-    checkStorage();
-  }, []);
-
-  useEffect(() => {
-    console.log('📍 Layout: Routing check', {
-      isAuthenticated,
-      isLoading,
-      isCheckingStorage,
-      segments,
-    });
-
-    if (isLoading || isCheckingStorage) {
-      console.log('⏳ Layout: Waiting for auth initialization...');
-      return;
-    }
-
-    // Convert segments to array and access safely
     const segmentsArray = segments as string[];
     const currentRoute = segmentsArray[0] || 'index';
 
@@ -142,106 +127,89 @@ export default function RootLayout() {
     const isIndexRoute = currentRoute === 'index' || currentRoute === '';
     const isPublicRoute = isIndexRoute || ['privacy', 'terms'].includes(currentRoute);
 
-    console.log('📍 Layout: Decision data:', {
-      currentRoute,
-      isNestedAuthRoute,
-      isResetPasswordRoute,
-      isAuthenticated,
-      isAuthRoute,
-      isTabsRoute,
-      isScreensRoute,
-      isIndexRoute,
-      isPublicRoute
-    });
-
     // ALWAYS allow reset password route - NO AUTH REQUIRED
-    if (isResetPasswordRoute) {
-      console.log('✅ Layout: Allowed (reset password route - public)');
-      return;
-    }
+    if (isResetPasswordRoute) return;
 
     // User is NOT authenticated
     if (!isAuthenticated) {
-      console.log('👤 Layout: User NOT authenticated');
-
-      // If trying to access protected routes, redirect to login
       if (isTabsRoute || isScreensRoute) {
-        console.log('🚫 Layout: Redirecting to login (unauthenticated + protected route)');
         router.replace('/auth/Login');
         return;
       }
 
-      // If on auth or public pages, stay there
-      if (isAuthRoute || isPublicRoute) {
-        console.log('✅ Layout: Allowed (unauthenticated on auth/public)');
-        return;
-      }
+      if (isAuthRoute || isPublicRoute) return;
 
-      // Default: go to index
-      console.log('➡️ Layout: Default redirect to index');
       router.replace('/');
       return;
     }
 
     // User IS authenticated
-    console.log('👤 Layout: User IS authenticated');
-
-    // If on auth pages, redirect to home tab
-    if (isAuthRoute) {
-      console.log('🏠 Layout: Redirecting to home (authenticated on auth)');
+    if (isAuthRoute || isIndexRoute) {
       router.replace('/tabs/home');
       return;
     }
+  }, [isAuthenticated, isLoading]);
 
-    // If on index, redirect to home tab
-    if (isIndexRoute) {
-      console.log('🏠 Layout: Redirecting to home (authenticated on index)');
-      router.replace('/tabs/home');
-      return;
-    }
-
-    // All other routes are OK
-    console.log('✅ Layout: Allowed (authenticated on protected route)');
-
-  }, [isAuthenticated, isLoading, segments, isCheckingStorage]);
-
-  // Show loader while checking
-  if (isLoading || isCheckingStorage) {
+  if (isLoading) {
     return <Loader message="Loading..." />;
   }
 
+  const content = (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* Public / Root */}
+      <Stack.Screen name="index" />
+      <Stack.Screen name="privacy" />
+      <Stack.Screen name="terms" />
+
+      {/* Auth Screens */}
+      <Stack.Screen name="auth/Login" />
+      <Stack.Screen name="auth/Register" />
+      <Stack.Screen name="auth/Forgot-Password" />
+      <Stack.Screen name="auth/reset-password" />
+
+      {/* Tabs (Main App Navigation) */}
+      <Stack.Screen
+        name="tabs"
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+        }}
+      />
+
+      {/* Screens (Modal/Stack screens) */}
+      <Stack.Screen
+        name="(screens)"
+        options={{
+          animation: 'slide_from_bottom',
+          presentation: 'modal',
+        }}
+      />
+    </Stack>
+  );
+
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Public / Root */}
-        <Stack.Screen name="index" />
-        <Stack.Screen name="privacy" />
-        <Stack.Screen name="terms" />
-
-        {/* Auth Screens */}
-        <Stack.Screen name="auth/Login" />
-        <Stack.Screen name="auth/Register" />
-        <Stack.Screen name="auth/Forgot-Password" />
-        <Stack.Screen name="auth/reset-password" />
-
-        {/* Tabs (Main App Navigation) */}
-        <Stack.Screen
-          name="tabs"
-          options={{
-            animation: 'slide_from_right',
-            gestureEnabled: true,
-          }}
-        />
-
-        {/* Screens (Modal/Stack screens) */}
-        <Stack.Screen
-          name="(screens)"
-          options={{
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }}
-        />
-      </Stack>
+      {Platform.OS === 'web' ? (
+        <View style={{
+          flex: 1,
+          backgroundColor: '#F3F4F6', // gray-100
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <View style={{
+            width: '100%',
+            maxWidth: 480,
+            height: '100%',
+            backgroundColor: 'white',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden',
+          }}>
+            {content}
+          </View>
+        </View>
+      ) : (
+        content
+      )}
     </SafeAreaProvider>
   );
 }

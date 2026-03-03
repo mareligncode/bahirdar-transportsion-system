@@ -2,11 +2,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  Bus, 
-  Clock, 
-  MapPin, 
-  Users, 
+import {
+  Bus,
+  Clock,
+  MapPin,
+  Users,
   ChevronRight,
   AlertCircle,
   Shield,
@@ -20,10 +20,10 @@ interface TripCardProps {
   compact?: boolean;
 }
 
-export const TripCard: React.FC<TripCardProps> = ({ 
-  trip, 
+export const TripCard: React.FC<TripCardProps> = ({
+  trip,
   onSelect,
-  compact = false 
+  compact = false
 }) => {
 
   const getAvailabilityColor = (available: number, total: number) => {
@@ -35,29 +35,29 @@ export const TripCard: React.FC<TripCardProps> = ({
   };
 
   const handlePress = () => {
-    
+
     const tripId = trip._id;
-    
+
     const isAvailable = trip.availableSeats > 0 && trip.tripStatus === 'scheduled';
-    
+
     if (!isAvailable) {
       Alert.alert('Not Available', 'This trip is fully booked or unavailable.');
       return;
     }
-    
+
     if (!tripId) {
       Alert.alert('Error', 'Invalid trip data - missing ID');
       return;
     }
-    
+
     const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(tripId);
-    
+
     if (tripId === 'index' || !isValidMongoId) {
       console.error('❌ Invalid trip ID:', tripId);
       Alert.alert('Error', 'Invalid trip data. Please try searching again.');
       return;
     }
-    
+
     if (onSelect) {
       onSelect(trip);
     } else {
@@ -68,8 +68,8 @@ export const TripCard: React.FC<TripCardProps> = ({
     }
   };
 
-  const isAvailable = trip.availableSeats > 0 && trip.tripStatus === 'scheduled';
-  const duration = '2h 30m'; 
+  const isAvailable = trip.availableSeats > 0 && (trip.tripStatus === 'scheduled' || trip.tripStatus === 'boarding');
+  const duration = '2h 30m';
   const availabilityColor = getAvailabilityColor(trip.availableSeats, trip.totalSeats || 50);
 
   return (
@@ -91,7 +91,7 @@ export const TripCard: React.FC<TripCardProps> = ({
               {trip.origin?.stationName}
             </Text>
           </View>
-          
+
           <View className="ml-10">
             <View className="flex-row items-center">
               <View className="w-2 h-2 bg-gray-300 rounded-full" />
@@ -115,8 +115,8 @@ export const TripCard: React.FC<TripCardProps> = ({
 
         <View className={`px-3 py-1.5 rounded-full ${availabilityColor}`}>
           <Text className="text-xs font-semibold">
-            {trip.availableSeats === 0 
-              ? 'Sold Out' 
+            {trip.availableSeats === 0
+              ? 'Sold Out'
               : `${trip.availableSeats} seats`}
           </Text>
         </View>
@@ -130,8 +130,8 @@ export const TripCard: React.FC<TripCardProps> = ({
             <View className="flex-row items-center">
               <Clock size={16} color={COLORS.primary} />
               <Text className="ml-1.5 font-semibold text-gray-900">
-                {new Date(trip.departureTime).toLocaleTimeString([], { 
-                  hour: '2-digit', 
+                {new Date(trip.departureTime).toLocaleTimeString([], {
+                  hour: '2-digit',
                   minute: '2-digit',
                   hour12: true,
                 })}
@@ -158,8 +158,8 @@ export const TripCard: React.FC<TripCardProps> = ({
             <View className="flex-row items-center">
               <Clock size={16} color={COLORS.gray500} />
               <Text className="ml-1.5 font-semibold text-gray-900">
-                {new Date(trip.arrivalTime).toLocaleTimeString([], { 
-                  hour: '2-digit', 
+                {new Date(trip.arrivalTime).toLocaleTimeString([], {
+                  hour: '2-digit',
                   minute: '2-digit',
                   hour12: true,
                 })}
@@ -188,7 +188,7 @@ export const TripCard: React.FC<TripCardProps> = ({
               {trip.vehicle?.plateNumber || ''}
             </Text>
           </View>
-          
+
           <View className="flex-row items-center">
             <Shield size={14} color={COLORS.secondary} />
             <Text className="text-xs text-green-600 ml-1">Safe Travel</Text>

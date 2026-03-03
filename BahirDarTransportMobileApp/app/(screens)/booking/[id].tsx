@@ -1,5 +1,5 @@
 // app/(screens)/booking/[id].tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   ActivityIndicator,
   Alert,
   Share,
-  Platform,
-  RefreshControl
+  RefreshControl,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   Bus,
@@ -29,14 +31,13 @@ import {
   AlertCircle,
   Share2,
   Copy,
-  ChevronRight,
   Ticket,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react-native';
 import { useBooking } from '../../../hooks/useBooking';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../components/common/Toast';
-import { Booking, Trip, Station, Vehicle, Driver } from '../../../types';
+import { Booking, Trip, Station, Vehicle } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { COLORS } from '../../../constants/colors';
 
@@ -52,11 +53,31 @@ export default function BookingDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   useEffect(() => {
     if (id) {
       fetchBooking();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (booking) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [booking]);
 
   const fetchBooking = async () => {
     const data = await getBookingById(id);
@@ -67,6 +88,7 @@ export default function BookingDetailScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await fetchBooking();
     setRefreshing(false);
   };
@@ -75,44 +97,72 @@ export default function BookingDetailScreen() {
     const code = booking?.bookingNumber || booking?._id?.slice(-6).toUpperCase() || '';
     await Clipboard.setStringAsync(code);
     setCopySuccess(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => setCopySuccess(false), 2000);
-    showToast('Booking code copied to clipboard!', 'success');
+    showToast('Booking code copied!', 'success');
   };
 
   const handleShare = async () => {
     if (!booking) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     const trip = (booking.tripID || {}) as Trip;
     const origin = (trip.origin || {}) as Station;
     const destination = (trip.destination || {}) as Station;
     const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
-    const seatNumbers = booking.seatNumber ? [booking.seatNumber] : (booking.seatNumbers || []);
+    const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
     const totalAmount = booking.totalPrice || booking.amount || 0;
 
-    const message = `🚌 Bahir Dar Transport - Booking Details\n\n` +
-      `From: ${origin.stationName || 'Origin'}\n` +
-      `To: ${destination.stationName || 'Destination'}\n` +
-      `Date: ${departureTime ? formatDate(departureTime) : 'N/A'}\n` +
-      `Time: ${departureTime ? formatTime(departureTime) : 'N/A'}\n` +
-      `Seat: ${seatNumbers.join(', ')}\n` +
-      `Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
-      `Amount: ${formatCurrency(totalAmount)}\n` +
-      `Status: ${booking.status?.toUpperCase() || 'PENDING'}`;
+    const message = `🚌 *Bahir Dar Transport - Booking Details*\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `*From:* ${origin.stationName || 'Origin'}\n` +
+      `*To:* ${destination.stationName || 'Destination'}\n` +
+      `*Date:* ${departureTime ? departureTime.toLocaleDateString() : 'N/A'}\n` +
+      `*Time:* ${departureTime ? departureTime.toLocaleTimeString() : 'N/A'}\n` +
+      `*Seat:* ${seatNumbers.join(', ')}\n` +
+      `*Booking #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
+      `*Amount:* ${formatCurrency(totalAmount)}\n` +
+      `*Status:* ${booking.status?.toUpperCase() || 'PENDING'}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `Thank you for choosing Bahir Dar Transport System!`;
 
     try {
-      await Share.share({
-        message,
-        title: 'Booking Details'
-      });
+      await Share.share({ message, title: 'Booking Details' });
     } catch (error) {
       console.error('Share error:', error);
     }
   };
 
   const handleCancelBooking = () => {
+    if (!booking) return;
+
+    const tripData = (booking.tripID || {}) as Trip;
+    const originData = (tripData.origin || {}) as Station;
+    const destData = (tripData.destination || {}) as Station;
+
+    let dateStr = 'N/A';
+    if (tripData.departureTime) {
+      try {
+        const d = new Date(tripData.departureTime);
+        dateStr = d.toLocaleString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch (e) { }
+    }
+
+    const amount = booking.totalPrice || booking.amount || 0;
+
+    const message =
+      `Are you sure you want to cancel this booking?\n\n` +
+      `${originData.stationName || 'Unknown'} → ${destData.stationName || 'Unknown'}\n` +
+      `${dateStr}\n\n` +
+      `Refund Amount: ETB ${amount.toLocaleString()}`;
+
     Alert.alert(
       'Cancel Booking',
-      'Are you sure you want to cancel this booking? This action cannot be undone.',
+      message,
       [
         { text: 'Keep Booking', style: 'cancel' },
         {
@@ -120,10 +170,13 @@ export default function BookingDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             setCancelling(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             const success = await cancelBooking(id);
             setCancelling(false);
             if (success) {
-              await fetchBooking();
+              showToast('Booking cancelled successfully! Seat(s) released.', 'success');
+              // Navigate back to booking list since the booking will be deleted
+              router.replace('/(screens)/booking');
             }
           }
         }
@@ -132,6 +185,7 @@ export default function BookingDetailScreen() {
   };
 
   const handleMakePayment = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/(screens)/payment/checkout',
       params: {
@@ -143,40 +197,48 @@ export default function BookingDetailScreen() {
 
   const handleViewTicket = () => {
     if (booking) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push(`/tabs/tickets/${booking._id}`);
     }
   };
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-600">Loading booking details...</Text>
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text className="mt-4 text-gray-600 font-medium">Loading booking details...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (!booking) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="p-4">
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}>
-            <ArrowLeft size={24} color="#4b5563" />
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="px-4 py-3">
+          <TouchableOpacity
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}
+            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+          >
+            <ArrowLeft size={20} color="#4b5563" />
           </TouchableOpacity>
         </View>
         <View className="flex-1 justify-center items-center p-6">
-          <XCircle size={60} color="#ef4444" />
-          <Text className="text-xl font-semibold text-gray-800 mt-4">
+          <View className="bg-red-100 w-20 h-20 rounded-full items-center justify-center mb-4">
+            <XCircle size={40} color="#ef4444" />
+          </View>
+          <Text className="text-2xl font-bold text-gray-800 mt-4">
             Booking Not Found
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
-            The booking you're looking for doesn't exist or you don't have permission to view it.
+          <Text className="text-gray-500 text-center mt-2 text-base">
+            The booking you're looking for doesn't exist.
           </Text>
           <TouchableOpacity
             onPress={() => router.push('/(screens)/booking')}
-            className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
+            className="mt-8 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold">View My Bookings</Text>
+            <Text className="text-white font-semibold text-base">View My Bookings</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -194,279 +256,230 @@ export default function BookingDetailScreen() {
   const vehicle = (trip.vehicle || {}) as Vehicle;
   const origin = (trip.origin || {}) as Station;
   const destination = (trip.destination || {}) as Station;
-  const driver = (trip.driver || {}) as Driver;
-  const seatNumbers = booking.seatNumber ? [booking.seatNumber] : (booking.seatNumbers || []);
+  const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
   const totalAmount = booking.totalPrice || booking.amount || 0;
 
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return 'Invalid date';
-    }
+  const getStatusConfig = () => {
+    if (isConfirmed) return { color: '#16a34a', bg: 'bg-green-50', border: 'border-green-200', icon: CheckCircle, text: 'CONFIRMED' };
+    if (isPending) return { color: '#ca8a04', bg: 'bg-yellow-50', border: 'border-yellow-200', icon: Clock, text: 'PENDING' };
+    if (isCancelled) return { color: '#dc2626', bg: 'bg-red-50', border: 'border-red-200', icon: XCircle, text: 'CANCELLED' };
+    if (isCompleted) return { color: '#2563eb', bg: 'bg-blue-50', border: 'border-blue-200', icon: CheckCircle, text: 'COMPLETED' };
+    return { color: '#6b7280', bg: 'bg-gray-50', border: 'border-gray-200', icon: AlertCircle, text: 'UNKNOWN' };
   };
 
+  const statusConfig = getStatusConfig();
+  const StatusIcon = statusConfig.icon;
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-4 py-3 bg-white border-b border-gray-200 flex-row items-center">
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
-          <ArrowLeft size={24} color="#4b5563" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-lg font-semibold text-gray-800">
-          Booking Details
-        </Text>
-        <TouchableOpacity onPress={handleShare} className="p-2">
-          <Share2 size={20} color="#4b5563" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+      <LinearGradient
+        colors={isConfirmed ? ['#16a34a', '#15803d'] :
+          isPending ? ['#ca8a04', '#854d0e'] :
+            isCancelled ? ['#dc2626', '#991b1b'] :
+              ['#1e40af', '#3b82f6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        className="px-4 py-3"
+      >
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}
+            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+          >
+            <ArrowLeft size={20} color="white" />
+          </TouchableOpacity>
+          <Text className="flex-1 text-center text-xl font-bold text-white">
+            Booking Details
+          </Text>
+          <TouchableOpacity
+            onPress={handleShare}
+            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+          >
+            <Share2 size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        <View className="mt-3 flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <View className="bg-white/20 p-2 rounded-full mr-3">
+              <StatusIcon size={20} color="white" />
+            </View>
+            <View>
+              <Text className="text-white text-xs opacity-80">Booking Status</Text>
+              <Text className="text-white font-bold text-lg">{statusConfig.text}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={handleCopyCode}
+            className="bg-white/20 px-3 py-2 rounded-lg flex-row items-center"
+          >
+            <Copy size={14} color="white" />
+            <Text className="text-white text-xs ml-1 font-medium">
+              {booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {copySuccess && (
+          <Text className="text-white text-xs mt-1 text-center bg-black/20 py-1 rounded">
+            Copied to clipboard!
+          </Text>
+        )}
+      </LinearGradient>
 
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
         }
       >
-        {/* Status Banner */}
-        <View className={`p-4 ${isConfirmed ? 'bg-green-50' : isPending ? 'bg-yellow-50' : isCancelled ? 'bg-red-50' : 'bg-gray-50'}`}>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-2">
-              {isConfirmed && <CheckCircle size={20} color="#16a34a" />}
-              {isPending && <Clock size={20} color="#ca8a04" />}
-              {isCancelled && <XCircle size={20} color="#dc2626" />}
-              {isCompleted && <CheckCircle size={20} color="#2563eb" />}
-              <View>
-                <Text className={`font-semibold ${isConfirmed ? 'text-green-700' :
-                  isPending ? 'text-yellow-700' :
-                    isCancelled ? 'text-red-700' :
-                      'text-gray-700'
-                  }`}>
-                  {booking.status?.toUpperCase()}
-                </Text>
-                <Text className="text-xs text-gray-500">
-                  Booking #{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={handleCopyCode} className="p-2">
-              <Copy size={16} color="#6b7280" />
-            </TouchableOpacity>
-          </View>
-          {copySuccess && (
-            <Text className="text-xs text-green-600 mt-1">Copied to clipboard!</Text>
-          )}
-        </View>
-
-        {/* Main Booking Card */}
-        <View className="m-4 bg-white rounded-2xl overflow-hidden border border-gray-200">
-          {/* Route Header */}
-          <View className="p-4 bg-blue-50 border-b border-blue-100">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-1 items-center">
-                <Text className="text-xs text-gray-500">From</Text>
-                <Text className="font-bold text-gray-800 text-center">
-                  {origin.stationName || 'N/A'}
-                </Text>
-                {origin.city && (
-                  <Text className="text-xs text-gray-500">{origin.city}</Text>
-                )}
-              </View>
-              <View className="px-4">
-                <Bus size={24} color={COLORS.primary} />
-              </View>
-              <View className="flex-1 items-center">
-                <Text className="text-xs text-gray-500">To</Text>
-                <Text className="font-bold text-gray-800 text-center">
-                  {destination.stationName || 'N/A'}
-                </Text>
-                {destination.city && (
-                  <Text className="text-xs text-gray-500">{destination.city}</Text>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Timeline */}
-          <View className="p-4 border-b border-gray-200">
-            <View className="flex-row gap-4">
-              <View className="flex-1">
-                <View className="flex-row items-center gap-1 mb-1">
-                  <Clock size={14} color={COLORS.primary} />
-                  <Text className="text-xs text-gray-500">Departure</Text>
-                </View>
-                <Text className="font-semibold text-gray-800">
-                  {formatDateTime(trip.departureTime)}
-                </Text>
-              </View>
-              <View className="flex-1">
-                <View className="flex-row items-center gap-1 mb-1">
-                  <Clock size={14} color="#10b981" />
-                  <Text className="text-xs text-gray-500">Arrival</Text>
-                </View>
-                <Text className="font-semibold text-gray-800">
-                  {formatDateTime(trip.arrivalTime)}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Details */}
-          <View className="p-4 gap-4">
-            {/* Seat Info */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm text-gray-500">Seat Number(s)</Text>
-              <View className="flex-row gap-1">
-                {seatNumbers.map((seat: number, index: number) => (
-                  <View key={index} className="bg-blue-500 px-3 py-1 rounded-full">
-                    <Text className="text-white text-sm font-bold">{seat}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Vehicle Info */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm text-gray-500">Vehicle</Text>
-              <Text className="font-medium text-gray-800">
-                {vehicle.carType || 'Bus'} • {vehicle.plateNumber || 'N/A'}
-              </Text>
-            </View>
-
-            {/* Driver Info */}
-            {driver.fullName && (
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [
+              { translateY: slideAnim },
+            ]
+          }}
+          className="mx-4 mt-4"
+        >
+          <View className="bg-white rounded-2xl overflow-hidden shadow-lg">
+            <LinearGradient
+              colors={['#3b82f6', '#1e40af']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="p-4"
+            >
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm text-gray-500">Driver</Text>
-                <Text className="font-medium text-gray-800">
-                  {driver.fullName}
-                </Text>
+                <View className="flex-1 items-center">
+                  <Text className="text-white text-xs opacity-80">From</Text>
+                  <Text className="text-white font-bold text-lg text-center">
+                    {origin.stationName || 'N/A'}
+                  </Text>
+                </View>
+                <View className="px-4">
+                  <View className="bg-white/20 p-2 rounded-full">
+                    <Bus size={24} color="white" />
+                  </View>
+                </View>
+                <View className="flex-1 items-center">
+                  <Text className="text-white text-xs opacity-80">To</Text>
+                  <Text className="text-white font-bold text-lg text-center">
+                    {destination.stationName || 'N/A'}
+                  </Text>
+                </View>
               </View>
-            )}
+            </LinearGradient>
 
-            {/* Passenger Details */}
-            <View className="mt-2 pt-2 border-t border-gray-200">
-              <Text className="text-sm font-medium text-gray-700 mb-2">
-                Passenger Details
-              </Text>
-              <View className="gap-2">
-                <View className="flex-row items-center gap-2">
-                  <User size={14} color="#6b7280" />
-                  <Text className="text-sm text-gray-600">
-                    {booking.passengerDetails?.fullName || user?.fullName}
+            <View className="p-4 border-b border-gray-100">
+              <View className="flex-row justify-between">
+                <View className="items-center flex-1">
+                  <View className="bg-blue-100 w-10 h-10 rounded-full items-center justify-center mb-2">
+                    <Clock size={20} color={COLORS.primary} />
+                  </View>
+                  <Text className="text-xs text-gray-500">Departure</Text>
+                  <Text className="font-bold text-gray-800 text-sm mt-1">
+                    {formatTime(trip.departureTime)}
+                  </Text>
+                  <Text className="text-xs text-gray-500">
+                    {formatDate(trip.departureTime)}
                   </Text>
                 </View>
-                <View className="flex-row items-center gap-2">
-                  <Phone size={14} color="#6b7280" />
-                  <Text className="text-sm text-gray-600">
-                    {booking.passengerDetails?.phoneNumber || user?.phoneNumber}
+                <View className="items-center flex-1">
+                  <View className="bg-green-100 w-10 h-10 rounded-full items-center justify-center mb-2">
+                    <Clock size={20} color="#10b981" />
+                  </View>
+                  <Text className="text-xs text-gray-500">Arrival</Text>
+                  <Text className="font-bold text-gray-800 text-sm mt-1">
+                    {formatTime(trip.arrivalTime)}
                   </Text>
-                </View>
-                <View className="flex-row items-center gap-2">
-                  <Mail size={14} color="#6b7280" />
-                  <Text className="text-sm text-gray-600">
-                    {booking.passengerDetails?.email || user?.email}
+                  <Text className="text-xs text-gray-500">
+                    {formatDate(trip.arrivalTime)}
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Payment Info */}
-            <View className="mt-2 pt-2 border-t border-gray-200">
-              <Text className="text-sm font-medium text-gray-700 mb-2">
-                Payment Information
-              </Text>
-              <View className="flex-row justify-between items-center">
-                <View className="flex-row items-center gap-2">
-                  <CreditCard size={14} color="#6b7280" />
+            <View className="p-4">
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center">
+                  <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-3">
+                    <MapPin size={16} color={COLORS.primary} />
+                  </View>
+                  <Text className="text-sm font-medium text-gray-700">Seat Number(s)</Text>
+                </View>
+                <View className="flex-row gap-1">
+                  {seatNumbers.map((seat: number, index: number) => (
+                    <View key={index} className="bg-blue-500 px-4 py-2 rounded-lg shadow-sm">
+                      <Text className="text-white text-base font-bold">{seat}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View className="bg-blue-50 p-4 rounded-xl">
+                <Text className="text-sm font-bold text-gray-700 mb-3">Payment Information</Text>
+                <View className="flex-row justify-between items-center mb-2">
                   <Text className="text-sm text-gray-600">Status</Text>
-                </View>
-                <View className={`px-2 py-1 rounded-full ${booking.paymentStatus === 'success' ? 'bg-green-100' :
-                  booking.paymentStatus === 'pending' ? 'bg-yellow-100' :
-                    'bg-gray-100'
-                  }`}>
-                  <Text className={`text-xs font-medium ${booking.paymentStatus === 'success' ? 'text-green-700' :
-                    booking.paymentStatus === 'pending' ? 'text-yellow-700' :
-                      'text-gray-700'
+                  <View className={`px-3 py-1 rounded-full ${booking.paymentStatus === 'success' ? 'bg-green-100' :
+                      booking.paymentStatus === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
                     }`}>
-                    {booking.paymentStatus?.toUpperCase() || 'PENDING'}
-                  </Text>
+                    <Text className={`text-xs font-bold ${booking.paymentStatus === 'success' ? 'text-green-700' :
+                        booking.paymentStatus === 'pending' ? 'text-yellow-700' : 'text-gray-700'
+                      }`}>
+                      {(booking.paymentStatus || 'PENDING').toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-blue-200">
+                  <Text className="text-base font-bold text-gray-800">Total Amount</Text>
+                  <View className="items-end">
+                    <Text className="text-2xl font-bold text-blue-600">
+                      {formatCurrency(totalAmount)}
+                    </Text>
+                    {seatNumbers.length > 1 && (
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {seatNumbers.length} seats × {formatCurrency(totalAmount / seatNumbers.length)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               </View>
-              {booking.paymentMethod && (
-                <View className="flex-row justify-between items-center mt-2">
-                  <Text className="text-sm text-gray-500">Method</Text>
-                  <Text className="text-sm font-medium">
-                    {booking.paymentMethod}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Total Amount */}
-            <View className="mt-2 pt-2 border-t border-gray-200">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-base font-medium text-gray-700">
-                  Total Amount
-                </Text>
-                <Text className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(totalAmount)}
-                </Text>
-              </View>
-              {seatNumbers.length > 1 && (
-                <Text className="text-xs text-gray-500 text-right mt-1">
-                  {seatNumbers.length} seats × {formatCurrency(totalAmount / seatNumbers.length)}
-                </Text>
-              )}
             </View>
           </View>
+        </Animated.View>
 
-          {/* Footer */}
-          <View className="p-3 bg-gray-50 border-t border-gray-200">
-            <Text className="text-xs text-gray-400 text-center">
-              Booked on: {formatDateTime(booking.bookingDate || booking.createdAt)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View className="px-4 pb-4 gap-3">
-          {/* Payment Button for Pending Bookings */}
+        <View className="px-4 pb-8 gap-3">
           {needsPayment && (
             <TouchableOpacity
               onPress={handleMakePayment}
-              className="flex-row items-center justify-center py-4 bg-yellow-500 rounded-xl gap-2"
+              className="mt-4 bg-yellow-500 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
             >
               <CreditCard size={20} color="white" />
-              <Text className="font-semibold text-white">Complete Payment Now</Text>
+              <Text className="font-bold text-white text-lg ml-2">Complete Payment Now</Text>
             </TouchableOpacity>
           )}
 
-          {/* View Ticket Button - Only for confirmed/completed bookings */}
           {(isConfirmed || isCompleted) && (
             <TouchableOpacity
               onPress={handleViewTicket}
-              className="flex-row items-center justify-center py-4 bg-blue-600 rounded-xl gap-2"
+              className="mt-4 bg-blue-600 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
             >
               <Ticket size={20} color="white" />
-              <Text className="font-semibold text-white">View Ticket</Text>
+              <Text className="font-bold text-white text-lg ml-2">View Ticket</Text>
             </TouchableOpacity>
           )}
 
-          {/* Cancel Button */}
           {canCancel && !isCancelled && (
             <TouchableOpacity
               onPress={handleCancelBooking}
               disabled={cancelling}
-              className={`flex-row items-center justify-center py-3 bg-red-500 rounded-xl gap-2 ${cancelling ? 'opacity-50' : ''
+              className={`mt-3 bg-red-500 py-3 rounded-xl flex-row items-center justify-center ${cancelling ? 'opacity-50' : ''
                 }`}
             >
               {cancelling ? (
@@ -474,20 +487,20 @@ export default function BookingDetailScreen() {
               ) : (
                 <>
                   <XCircle size={20} color="white" />
-                  <Text className="font-medium text-white">Cancel Booking</Text>
+                  <Text className="font-medium text-white text-base ml-2">Cancel Booking</Text>
                 </>
               )}
             </TouchableOpacity>
           )}
 
-          {/* Cancelled Message */}
           {isCancelled && (
-            <View className="p-4 bg-red-50 rounded-xl border border-red-200 flex-row items-center gap-2">
-              <AlertTriangle size={20} color="#dc2626" />
-              <Text className="flex-1 text-red-700 text-sm">
-                This booking has been cancelled.
-                {booking.cancellationReason && ` Reason: ${booking.cancellationReason}`}
-              </Text>
+            <View className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
+              <View className="flex-row items-center gap-2">
+                <AlertTriangle size={20} color="#dc2626" />
+                <Text className="flex-1 text-red-700 text-sm font-medium">
+                  This booking has been cancelled.
+                </Text>
+              </View>
             </View>
           )}
         </View>
