@@ -1,3 +1,4 @@
+// config/api.ts
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -9,12 +10,13 @@ export const getPlatformBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
-    url = 'http://192.168.137.1:5000/api';
+    // Use your actual backend IP address
+    url = 'http://10.161.142.191:5000/api';
   }
   return url;
 };
 
-const API_BASE_URL = getPlatformBaseUrl();
+export const API_BASE_URL = getPlatformBaseUrl(); // Make sure this is exported
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -24,8 +26,6 @@ const api = axios.create({
   },
   timeout: 30000,
 });
-
-
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
@@ -45,6 +45,10 @@ api.interceptors.request.use(
   async (config) => {
     try {
       console.log(`➡️ ${config.method?.toUpperCase()} ${config.url}`);
+
+      if (config.method?.toUpperCase() === 'DELETE') {
+        console.log('🗑️ DELETE request triggered from:', new Error().stack);
+      }
 
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
@@ -164,7 +168,6 @@ export const clearAuthData = async () => {
 export { api };
 
 export const API_ENDPOINTS = {
-
   AUTH: {
     REGISTER: `/auth/register`,
     LOGIN: `/auth/login`,
@@ -174,8 +177,6 @@ export const API_ENDPOINTS = {
     VALIDATE_RESET_TOKEN: `/auth/validate-reset-token`,
     RESET_PASSWORD: `/auth/reset-password`,
     VERIFY_EMAIL: `/auth/verify-email`,
-
-
     PROFILE: `/auth/profile`,
     UPDATE_PROFILE: `/auth/profile`,
     CHANGE_PASSWORD: `/auth/change-password`,
@@ -200,21 +201,20 @@ export const API_ENDPOINTS = {
   BOOKINGS: {
     BASE: '/booking',
     CREATE: '/booking/',
+    BATCH: '/booking/batch',
     MY_BOOKINGS: '/booking/my-bookings',
-    /** All bookings for a trip (seat numbers). Backend may allow passenger for seat map. */
     TRIP_BOOKINGS: (tripId: string) => `/booking/trip/${tripId}`,
+    BOOKED_SEATS: (tripId: string) => `/booking/trip/${tripId}/booked-seats`,
     BY_ID: (id: string) => `/booking/${id}`,
     UPDATE: (id: string) => `/booking/${id}`,
     DELETE: (id: string) => `/booking/${id}`,
   },
-
 
   STATIONS: {
     BASE: '/station',
     ACTIVE: '/station/active',
     BY_ID: (id: string) => `/station/${id}`,
   },
-
 
   VEHICLES: {
     BY_ID: (id: string) => `/vehicles/${id}`,
@@ -245,11 +245,9 @@ export const API_ENDPOINTS = {
   }
 };
 
-
 export const getFullUrl = (endpoint: string) => {
   return `${API_BASE_URL}${endpoint}`;
 };
-
 
 export const API_CONFIG = {
   baseURL: API_BASE_URL,

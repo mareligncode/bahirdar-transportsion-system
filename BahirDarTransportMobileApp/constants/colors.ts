@@ -25,8 +25,8 @@ export const COLORS = {
     availableBorder: '#d1d5db',
     selected: '#10b981',
     selectedBorder: '#059669',
-    booked: '#e5e7eb',
-    bookedBorder: '#9ca3af',
+    booked: '#fecaca', // Light red color for fade red effect
+    bookedBorder: '#f87171', // Darker red border for visibility
     driver: '#fef3c7',
     driverBorder: '#f59e0b',
   },

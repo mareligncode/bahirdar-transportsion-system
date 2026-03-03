@@ -1,308 +1,198 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
-import { ScreenLayout } from '@/components/layout';
-import { Card, EmptyState, Loader, Badge, Button } from '@/components/common';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Bell,
-  Trash2,
-  Calendar,
+  Check,
+  Clock,
   CreditCard,
-  AlertCircle,
-  Ticket,
-  MapPin,
-  CheckCircle,
-  XCircle,
-  CheckCheck,
-  LucideIcon
+  User,
 } from 'lucide-react-native';
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    type: 'booking',
-    title: 'Booking Confirmed',
-    message: 'Your trip to Gondar has been confirmed. Seat: A12',
-    time: '10 min ago',
-    isRead: false,
-    icon: Ticket,
-    color: '#10B981',
-    bgColor: 'bg-green-100',
-    action: '/tabs/tickets/1',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payment Successful',
-    message: 'Your payment of 250 ETB was processed for trip BD-101',
-    time: '1 hour ago',
-    isRead: true,
-    icon: CreditCard,
-    color: '#3B82F6',
-    bgColor: 'bg-blue-100',
-    action: '/payment/history',
-  },
-  {
-    id: '3',
-    type: 'alert',
-    title: 'Bus Delay Alert',
-    message: 'Bus BD-101 is delayed by 15 minutes. New departure: 08:45 AM',
-    time: '2 hours ago',
-    isRead: false,
-    icon: AlertCircle,
-    color: '#F59E0B',
-    bgColor: 'bg-yellow-100',
-    action: '/tabs/trips/1',
-  },
-  {
-    id: '4',
-    type: 'tracking',
-    title: 'Live Tracking Started',
-    message: 'Your bus to Addis Ababa is now being tracked. ETA: 6:30 PM',
-    time: '1 day ago',
-    isRead: true,
-    icon: MapPin,
-    color: '#8B5CF6',
-    bgColor: 'bg-purple-100',
-    action: '/tracking/live-tracking',
-  },
-  {
-    id: '5',
-    type: 'booking',
-    title: 'Booking Reminder',
-    message: 'Your trip to Debre Markos departs tomorrow at 07:00 AM',
-    time: '2 days ago',
-    isRead: true,
-    icon: Calendar,
-    color: '#EC4899',
-    bgColor: 'bg-pink-100',
-    action: '/tabs/tickets/2',
-  },
-];
+import { useNotificationStore } from '../../store/notificationStore';
+import { useToast } from '../../components/common/Toast';
+import * as Haptics from 'expo-haptics';
+import { Notification } from '../../types/notification';
 
 export default function NotificationScreen() {
+  const { notifications, unreadCount, isLoading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { showToast } = useToast();
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const fetchNotifications = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
-  };
 
   useEffect(() => {
     fetchNotifications();
   }, []);
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, isRead: true } : n
-    ));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const filteredNotifications = activeTab === 'unread'
-    ? notifications.filter(n => !n.isRead)
-    : notifications;
-
-  const onRefresh = () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    fetchNotifications().finally(() => setRefreshing(false));
   };
 
-  const getNotificationBadge = (type: string) => {
-    switch (type) {
-      case 'booking':
-        return <Badge text="Booking" variant="success" size="small" />;
-      case 'payment':
-        return <Badge text="Payment" variant="primary" size="small" />;
-      case 'alert':
-        return <Badge text="Alert" variant="warning" size="small" />;
-      case 'tracking':
-        return <Badge text="Tracking" variant="info" size="small" />;
-      default:
-        return <Badge text="Notification" variant="secondary" size="small" />;
-    }
+  const handleMarkAsRead = (notificationId: string) => {
+    markAsRead(notificationId);
+    showToast('Notification marked as read', 'success');
   };
 
-  if (loading) {
-    return <Loader message="Loading notifications..." />;
-  }
+  const handleMarkAllAsRead = () => {
+    markAllAsRead();
+    showToast('All notifications marked as read', 'success');
+  };
+
+  const handleDeleteNotification = (notificationId: string) => {
+    Alert.alert(
+      'Delete Notification',
+      'Are you sure you want to delete this notification?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteNotification(notificationId);
+            showToast('Notification deleted', 'success');
+          },
+        },
+      ]
+    );
+  };
+
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const getIcon = () => {
+      switch (item.type) {
+        case 'booking':
+          return <Check size={20} color="#10b981" />;
+        case 'payment':
+          return <CreditCard size={20} color="#f59e0b" />;
+        case 'trip':
+          return <Clock size={20} color="#3b82f6" />;
+        case 'system':
+          return <Bell size={20} color="#ef4444" />;
+        case 'promotion':
+          return <User size={20} color="#8b5cf6" />;
+        default:
+          return <Bell size={20} color="#6b7280" />;
+      }
+    };
+
+    const getTimeAgo = (dateString: string) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      if (diffInDays > 0) {
+        return `${diffInDays}d ago`;
+      } else if (diffInHours > 0) {
+        return `${diffInHours}h ago`;
+      } else {
+        return 'Just now';
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleMarkAsRead(item.id)}
+        className={`mx-4 p-4 bg-white rounded-xl border ${
+          item.is_read ? 'border-gray-200' : 'border-blue-200 bg-blue-50'
+        }`}
+      >
+        <View className="flex-row items-start space-x-3">
+          {getIcon()}
+          <View className="flex-1">
+            <Text className="font-semibold text-gray-900 text-base">
+              {item.title}
+            </Text>
+            <Text className="text-gray-600 text-sm mt-1">
+              {item.message}
+            </Text>
+            <Text className="text-gray-400 text-xs mt-1">
+              {getTimeAgo(item.created_at)}
+            </Text>
+          </View>
+          {!item.is_read && (
+            <View className="w-2 h-2 bg-blue-500 rounded-full" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <ScreenLayout
-      showHeader={true}
-      headerTitle="Notifications"
-      showBackButton={true}
-      rightAction={
-        <View className="flex-row items-center space-x-4">
-          {unreadCount > 0 && (
-            <TouchableOpacity onPress={markAllAsRead} className="flex-row items-center">
-              <CheckCheck size={18} color="#3B82F6" />
-              <Text className="text-blue-600 font-medium ml-1">Mark all</Text>
-            </TouchableOpacity>
-          )}
-          {notifications.length > 0 && (
-            <TouchableOpacity onPress={clearAll}>
-              <Trash2 size={20} color="#EF4444" />
-            </TouchableOpacity>
-          )}
-        </View>
-      }
-      className="bg-gray-50"
-      showBottomTab={false}
-    >
-      {/* Tabs */}
-      <Card className="mx-4 mt-4 p-0 border border-gray-300">
-        <View className="flex-row">
-          <TouchableOpacity
-            className={`flex-1 py-3 rounded-l-lg ${activeTab === 'all' ? 'bg-blue-50' : 'bg-white'}`}
-            onPress={() => setActiveTab('all')}
-          >
-            <View className="items-center">
-              <Text className={`font-medium ${activeTab === 'all' ? 'text-blue-600' : 'text-gray-600'}`}>
-                All
-              </Text>
-              <Badge
-                text={notifications.length.toString()}
-                variant={activeTab === 'all' ? 'primary' : 'secondary'}
-                size="small"
-                className="mt-1"
-              />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`flex-1 py-3 rounded-r-lg ${activeTab === 'unread' ? 'bg-blue-50' : 'bg-white'}`}
-            onPress={() => setActiveTab('unread')}
-          >
-            <View className="items-center">
-              <Text className={`font-medium ${activeTab === 'unread' ? 'text-blue-600' : 'text-gray-600'}`}>
-                Unread
-              </Text>
-              <Badge
-                text={unreadCount.toString()}
-                variant={unreadCount > 0 ? 'danger' : 'secondary'}
-                size="small"
-                className="mt-1"
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </Card>
-
-      <ScrollView
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        {filteredNotifications.length > 0 ? (
-          <View className="p-4 space-y-3">
-            {filteredNotifications.map((notification) => (
-              <Card
-                key={notification.id}
-                onPress={() => router.push(notification.action as any)}
-                className={`${notification.isRead ? 'opacity-80' : ''}`}
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-1">
+        {/* Header */}
+        <View className="bg-blue-600 px-4 py-3 flex-row justify-between items-center">
+          <Text className="text-white font-semibold text-lg">Notifications</Text>
+          <View className="flex-row space-x-4">
+            <TouchableOpacity
+              onPress={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-lg ${
+                activeTab === 'all' ? 'bg-white' : 'bg-blue-500'
+              }`}
+            >
+              <Text
+                className={`font-medium ${
+                  activeTab === 'all' ? 'text-blue-600' : 'text-white'
+                }`}
               >
-                <View className="flex-row items-start">
-                  <View className={`w-12 h-12 rounded-full ${notification.bgColor} items-center justify-center mr-3`}>
-                    {notification.type === 'booking' && (
-                      <Ticket size={24} color={notification.color} />
-                    )}
-                    {notification.type === 'payment' && (
-                      <CreditCard size={24} color={notification.color} />
-                    )}
-                    {notification.type === 'alert' && (
-                      <AlertCircle size={24} color={notification.color} />
-                    )}
-                    {notification.type === 'tracking' && (
-                      <MapPin size={24} color={notification.color} />
-                    )}
-                  </View>
+                All ({notifications.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('unread')}
+              className={`px-4 py-2 rounded-lg ${
+                activeTab === 'unread' ? 'bg-white' : 'bg-blue-500'
+              }`}
+            >
+              <Text
+                className={`font-medium ${
+                  activeTab === 'unread' ? 'text-blue-600' : 'text-white'
+                }`}
+              >
+                Unread ({unreadCount})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-                  <View className="flex-1">
-                    <View className="flex-row justify-between items-start mb-1">
-                      <Text className="font-bold text-gray-800">{notification.title}</Text>
-                      {!notification.isRead && (
-                        <Badge text="New" variant="danger" size="small" />
-                      )}
-                    </View>
-
-                    <Text className="text-gray-600 text-sm mb-2">{notification.message}</Text>
-
-                    <View className="flex-row justify-between items-center">
-                      <View className="flex-row items-center">
-                        {getNotificationBadge(notification.type)}
-                        <Text className="text-gray-400 text-xs ml-2">{notification.time}</Text>
-                      </View>
-
-                      <View className="flex-row space-x-2">
-                        {!notification.isRead && (
-                          <TouchableOpacity
-                            onPress={() => markAsRead(notification.id)}
-                            className="p-1"
-                          >
-                            <CheckCircle size={18} color="#10B981" />
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          onPress={() => deleteNotification(notification.id)}
-                          className="p-1"
-                        >
-                          <XCircle size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </Card>
-            ))}
+        {/* Content */}
+        {isLoading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#3b82f6" />
+          </View>
+        ) : notifications.length === 0 ? (
+          <View className="flex-1 justify-center items-center px-8">
+            <Bell size={48} color="#9ca3af" />
+            <Text className="text-gray-500 text-center mt-4 text-base">
+              No notifications yet
+            </Text>
+            <Text className="text-gray-400 text-center mt-2 text-sm">
+              Your booking confirmations and updates will appear here
+            </Text>
           </View>
         ) : (
-          <EmptyState
-            icon={Bell}
-            title={activeTab === 'unread' ? "No unread notifications" : "No notifications yet"}
-            description={
-              activeTab === 'unread'
-                ? "You're all caught up! No unread notifications."
-                : "Check back later for updates about your trips and bookings."
+          <FlatList
+            data={activeTab === 'unread' ? notifications.filter(n => !n.is_read) : notifications}
+            renderItem={renderNotification}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
             }
-            buttonText="Refresh"
-            onButtonPress={fetchNotifications}
-          >
-            {activeTab === 'all' && notifications.length === 0 && (
-              <View className="mt-4">
-                <Button
-                  title="Book Your First Trip"
-                  onPress={() => router.push('/tabs/trips')}
-                  variant="outline"
-                  className="mt-2"
-                />
-              </View>
-            )}
-          </EmptyState>
+          />
         )}
-      </ScrollView>
-    </ScreenLayout>
+      </View>
+    </SafeAreaView>
   );
 }

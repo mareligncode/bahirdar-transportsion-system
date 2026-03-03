@@ -9,6 +9,7 @@ export interface User {
   fullName?: string; // Added for compatibility
   phoneNumber: string;
   stationId?: string;
+  role: 'passenger' | 'driver' | 'station_admin' | 'super_admin' | string;
   isActive: boolean;
   profileImage?: string;
   emergencyContact?: string; // Added
@@ -250,7 +251,7 @@ export interface UseAuthReturn {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
-  
+
   // Actions
   register: (data: RegisterFormData) => Promise<AuthMutationResult>;
   login: (credentials: LoginCredentials) => Promise<AuthMutationResult>;
@@ -258,7 +259,7 @@ export interface UseAuthReturn {
   forgotPassword: (email: string) => Promise<ApiResponse>;
   checkAuth: () => Promise<boolean>;
   clearError: () => void;
-  
+
   // Mutation status
   isRegistering: boolean;
   isLoggingIn: boolean;

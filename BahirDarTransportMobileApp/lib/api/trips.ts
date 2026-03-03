@@ -38,7 +38,7 @@ export const tripsApi = {
     }
   },
 
-  getAllTrips: async (filters?: {
+  getAllTrips: async (filters: {
     status?: string;
     origin?: string;
     destination?: string;
@@ -46,7 +46,7 @@ export const tripsApi = {
     limit?: number;
     fromStation?: string;
     toStation?: string;
-  }) => {
+  } = {}): Promise<any> => {
     console.log('📅 Fetching trips with filters:', filters);
     const origin = filters?.origin ?? filters?.fromStation;
     const destination = filters?.destination ?? filters?.toStation;
@@ -54,17 +54,16 @@ export const tripsApi = {
     try {
       const response = await apiClient.get(API_ENDPOINTS.TRIPS.BASE, {
         params: {
-          status: filters?.status || 'scheduled',
+          status: filters?.status,
           origin,
           destination,
           date: filters?.date,
-          limit: filters?.limit || 20,
-        }
+          limit: filters?.limit,
+        },
       });
-
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch trips:', error.message);
+      console.error('❌ Failed to fetch trips:', error.response?.data || error.message);
       throw error;
     }
   },

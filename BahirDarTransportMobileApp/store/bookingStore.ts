@@ -1,3 +1,4 @@
+// store/bookingStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,11 +9,9 @@ interface BookingState {
   selectedTrip: Trip | null;
   selectedSeats: number[];
   currentBooking: Booking | null;
-  
-  // Actions
   setBookings: (bookings: Booking[]) => void;
   addBooking: (booking: Booking) => void;
-  updateBooking: (id: string, updates: Partial<Booking>) => void;
+  updateBooking: (id: string, booking: Partial<Booking>) => void;
   removeBooking: (id: string) => void;
   setSelectedTrip: (trip: Trip | null) => void;
   setSelectedSeats: (seats: number[]) => void;
@@ -29,46 +28,46 @@ export const useBookingStore = create<BookingState>()(
       currentBooking: null,
 
       setBookings: (bookings) => set({ bookings }),
-      
-      addBooking: (booking) => 
-        set((state) => ({ 
-          bookings: [booking, ...state.bookings] 
-        })),
-      
-      updateBooking: (id, updates) =>
-        set((state) => ({
-          bookings: state.bookings.map(booking =>
-            booking._id === id ? { ...booking, ...updates } : booking
-          ),
-          currentBooking: state.currentBooking?._id === id 
-            ? { ...state.currentBooking, ...updates }
-            : state.currentBooking
-        })),
-      
-      removeBooking: (id) =>
-        set((state) => ({
-          bookings: state.bookings.filter(booking => booking._id !== id),
-          currentBooking: state.currentBooking?._id === id ? null : state.currentBooking
-        })),
-      
+
+      addBooking: (booking) => set((state) => ({
+        bookings: [booking, ...state.bookings]
+      })),
+
+      updateBooking: (id, updatedBooking) => set((state) => ({
+        bookings: state.bookings.map((booking) =>
+          booking._id === id ? { ...booking, ...updatedBooking } : booking
+        ),
+        currentBooking: state.currentBooking?._id === id
+          ? { ...state.currentBooking, ...updatedBooking }
+          : state.currentBooking
+      })),
+
+      removeBooking: (id) => set((state) => ({
+        bookings: state.bookings.filter((booking) => booking._id !== id),
+        currentBooking: state.currentBooking?._id === id ? null : state.currentBooking
+      })),
+
       setSelectedTrip: (trip) => set({ selectedTrip: trip }),
-      
+
       setSelectedSeats: (seats) => set({ selectedSeats: seats }),
-      
+
       setCurrentBooking: (booking) => set({ currentBooking: booking }),
-      
-      clearBookingState: () => set({ 
-        selectedTrip: null, 
-        selectedSeats: [], 
-        currentBooking: null 
+
+      clearBookingState: () => set({
+        selectedTrip: null,
+        selectedSeats: [],
+        currentBooking: null
       })
     }),
     {
       name: 'booking-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ 
-        bookings: state.bookings 
-      }),
+      partialize: (state) => ({
+        bookings: state.bookings,
+        selectedTrip: state.selectedTrip,
+        selectedSeats: state.selectedSeats,
+        currentBooking: state.currentBooking
+      })
     }
   )
 );

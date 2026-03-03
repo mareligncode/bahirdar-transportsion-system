@@ -1,17 +1,10 @@
+// hooks/usePayment.ts
 import { useState, useCallback } from 'react';
 import { paymentsApi } from '../lib/api/payments';
 import { usePaymentStore } from '../store/paymentStore';
 import { useAuth } from './useAuth';
-import {
-  Payment,
-  PaymentStatus,
-  PaymentInitializeData,
-  PaymentInitializeResponse
-} from '../types';
 import { useToast } from '../components/common/Toast';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { router } from 'expo-router';
+import { Payment, PaymentStatus, PaymentVerifyResult } from '../types';
 
 export const usePayment = () => {
   const [loading, setLoading] = useState(false);
@@ -23,58 +16,16 @@ export const usePayment = () => {
     payments,
     currentPayment,
     setPayments,
+    addPayment,
     setCurrentPayment,
-    updatePaymentStatus
+    clearPaymentState
   } = usePaymentStore();
-
-  const verifyPayment = useCallback(async (bookingId: string): Promise<Payment | null> => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await paymentsApi.getPaymentStatus({ bookingId });
-
-      if (response.success && response.data) {
-        const payment = response.data;
-
-        // Update store with proper type
-        updatePaymentStatus(payment._id, payment.paymentStatus);
-
-        if (payment.paymentStatus === 'success') {
-          showToast('Payment successful!', 'success');
-
-          // Navigate to confirmation
-          router.push({
-            pathname: '/(screens)/booking/confirmation',
-            params: { bookingId, success: 'true' }
-          });
-        } else if (payment.paymentStatus === 'failed') {
-          showToast('Payment failed. Please try again.', 'error');
-        } else if (payment.paymentStatus === 'processing') {
-          showToast('Payment is being processed...', 'info');
-        } else if (payment.paymentStatus === 'cancelled') {
-          showToast('Payment was cancelled', 'warning');
-        }
-
-        return payment;
-      }
-
-      return null;
-    } catch (err: any) {
-      setError(err.message || 'Failed to verify payment');
-      showToast(err.message || 'Failed to verify payment', 'error');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [updatePaymentStatus, showToast]);
 
   const initializePayment = useCallback(async (
     bookingId: string,
     amount: number,
-    paymentMethod: string = 'mobile_money',
-    returnUrl?: string
-  ): Promise<PaymentInitializeResponse['data'] | null> => {
+    method: 'mobile_money' | 'card' | 'cash' = 'mobile_money'
+  ): Promise<{ checkoutUrl: string; txRef: string; amount: number } | null> => {
     if (!user) {
       showToast('Please login to continue', 'error');
       return null;
@@ -84,45 +35,109 @@ export const usePayment = () => {
     setError(null);
 
     try {
-      const data: PaymentInitializeData = {
-        bookingId,
-        paymentMethod: paymentMethod as 'mobile_money' | 'card' | 'cash',
-        returnUrl
-      };
-
-      const response = await paymentsApi.initializePayment(data);
+      console.log('💰 Initializing payment for booking:', bookingId, 'amount:', amount, 'method:', method);
+      
+      const response = await paymentsApi.initializePayment(bookingId, method);
 
       if (response.success && response.data) {
-        const { checkoutUrl, paymentId, bookingId: returnedBookingId, amount: responseAmount, tx_ref, paymentStatus } = response.data;
-
-        const paymentData: Payment = {
-          _id: paymentId,
-          bookingID: returnedBookingId,
-          passengerID: user._id,
-          amount: amount || responseAmount,
-          currency: 'ETB',
-          paymentMethod: paymentMethod as 'mobile_money' | 'card' | 'cash',
-          paymentGateway: 'chapa',
-          paymentStatus: (paymentStatus as PaymentStatus) || 'pending',
+        const { checkoutUrl, tx_ref, amount: backendAmount } = response.data;
+        
+        console.log('✅ Payment initialized successfully with tx_ref:', tx_ref);
+        
+        return {
           checkoutUrl,
-          gatewayTransactionID: tx_ref,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          txRef: tx_ref,
+          amount: backendAmount || amount
         };
-
-        setCurrentPayment(paymentData);
-        return response.data;
       }
-
+      
+      showToast('Failed to initialize payment', 'error');
       return null;
     } catch (err: any) {
-      setError(err.message || 'Failed to initialize payment');
-      showToast(err.message || 'Failed to initialize payment', 'error');
+      console.error('❌ Initialize payment error:', err);
+      const message = err.response?.data?.message || err.message || 'Failed to initialize payment';
+      setError(message);
+      showToast(message, 'error');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [user, setCurrentPayment, showToast, verifyPayment]);
+  }, [user, showToast]);
+
+  const verifyPayment = useCallback(async (txRef: string): Promise<PaymentVerifyResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('🔍 Verifying payment with txRef:', txRef);
+      
+      const response = await paymentsApi.verifyPayment(txRef);
+
+      console.log('📥 Verify payment response:', response);
+
+      // Check if we have payment data in the response
+      if (response.data?.payment) {
+        const { payment, booking, redirectUrl } = response.data;
+        
+        console.log('✅ Payment verified successfully:', payment.paymentStatus);
+        
+        // Add payment to store
+        addPayment(payment);
+        setCurrentPayment(payment);
+        
+        if (payment.paymentStatus === 'success') {
+          showToast('Payment confirmed!', 'success');
+        } else if (payment.paymentStatus === 'processing') {
+          showToast('Payment is still processing', 'info');
+        } else {
+          showToast(`Payment status: ${payment.paymentStatus}`, 'info');
+        }
+        
+        return {
+          payment,
+          booking,
+          redirectUrl,
+          success: true,
+          paymentStatus: payment.paymentStatus
+        };
+      } 
+      
+      // If no payment data but response.success is true
+      if (response.success) {
+        console.log('✅ Payment verification successful (no payment data)');
+        showToast('Payment verified successfully!', 'success');
+        return {
+          payment: null,
+          booking: null,
+          success: true
+        };
+      }
+      
+      // If verification failed
+      console.log('❌ Payment verification failed');
+      return {
+        payment: null,
+        booking: null,
+        success: false,
+        message: response.message || 'Payment verification failed'
+      };
+      
+    } catch (err: any) {
+      console.error('❌ Verify payment error:', err);
+      const message = err.response?.data?.message || err.message || 'Failed to verify payment';
+      setError(message);
+      
+      // Don't show toast for every error, as it might be called automatically
+      return {
+        payment: null,
+        booking: null,
+        success: false,
+        message
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [addPayment, setCurrentPayment, showToast]);
 
   const getPaymentHistory = useCallback(async (): Promise<Payment[]> => {
     setLoading(true);
@@ -131,41 +146,80 @@ export const usePayment = () => {
     try {
       const response = await paymentsApi.getPaymentHistory();
 
-      if (response.success) {
+      if (response.success && response.data) {
         setPayments(response.data);
         return response.data;
       }
-
+      
       return [];
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch payment history');
-      showToast(err.message || 'Failed to fetch payment history', 'error');
+      const message = err.response?.data?.message || err.message || 'Failed to fetch payment history';
+      setError(message);
+      showToast(message, 'error');
       return [];
     } finally {
       setLoading(false);
     }
   }, [setPayments, showToast]);
 
-  const retryPayment = useCallback(async (bookingId: string, amount: number) => {
-    return initializePayment(bookingId, amount);
-  }, [initializePayment]);
+  const checkPaymentStatus = useCallback(async (bookingId: string): Promise<PaymentStatus | null> => {
+    setLoading(true);
+    setError(null);
 
-  const clearCurrentPayment = useCallback(() => {
-    setCurrentPayment(null);
-  }, [setCurrentPayment]);
+    try {
+      const response = await paymentsApi.getPaymentStatus(bookingId);
+
+      if (response.success && response.data) {
+        return response.data.paymentStatus;
+      }
+      
+      return null;
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'Failed to check payment status';
+      setError(message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getPaymentById = useCallback(async (id: string): Promise<Payment | null> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await paymentsApi.getPaymentById(id);
+
+      if (response.success && response.data) {
+        setCurrentPayment(response.data);
+        return response.data;
+      }
+      
+      return null;
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.message || 'Failed to fetch payment';
+      setError(message);
+      showToast(message, 'error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [setCurrentPayment, showToast]);
+
+  const clearPayment = useCallback(() => {
+    clearPaymentState();
+  }, [clearPaymentState]);
 
   return {
-    // State
     payments,
     currentPayment,
     loading,
     error,
-
-    // Actions
     initializePayment,
     verifyPayment,
     getPaymentHistory,
-    retryPayment,
-    clearCurrentPayment
+    checkPaymentStatus,
+    getPaymentById,
+    clearPayment
   };
 };
