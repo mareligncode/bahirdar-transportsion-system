@@ -14,7 +14,7 @@ export interface Payment {
   currency: string;
   paymentMethod: 'mobile_money' | 'card' | 'cash';
   paymentGateway: 'chapa' | 'cash';
-  paymentStatus: PaymentStatus; // Use the type alias
+  paymentStatus: PaymentStatus;
   gatewayTransactionID?: string;
   chapaReference?: string;
   checkoutUrl?: string;
@@ -61,6 +61,16 @@ export interface PaymentVerifyResponse {
     booking: Booking;
     redirectUrl: string;
   };
+}
+
+// Add a more flexible response type for cases where the backend returns different structures
+export interface PaymentVerifyResult {
+  payment: Payment | null;
+  booking: Booking | null;
+  redirectUrl?: string;
+  paymentStatus?: string;
+  success: boolean;
+  message?: string;
 }
 
 export interface PaymentHistoryResponse {

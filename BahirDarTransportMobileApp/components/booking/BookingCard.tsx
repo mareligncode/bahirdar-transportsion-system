@@ -153,7 +153,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <View>
             <Text className="text-xs text-gray-500 text-right">Total Price</Text>
             <Text className="font-bold text-blue-600">
-              {formatCurrency(booking.totalAmount || booking.totalPrice || (trip?.price ? trip.price * (booking.seatNumbers?.length || 1) : 0))}
+              {formatCurrency(booking.totalPrice || booking.amount || (trip?.price ? trip.price * (booking.seatNumbers?.length || 1) : 0))}
             </Text>
             {trip?.price && (booking.seatNumbers?.length || 0) > 1 && (
               <Text className="text-xs text-gray-500 text-right">

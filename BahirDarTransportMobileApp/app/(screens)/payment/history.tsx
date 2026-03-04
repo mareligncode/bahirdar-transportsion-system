@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+// app/(screens)/payment/history.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  FlatList
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   CreditCard,
@@ -16,19 +18,36 @@ import {
   XCircle,
   Clock,
   AlertCircle,
-  Receipt
+  Receipt,
+  Calendar,
+  Filter
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { usePayment } from '../../../hooks/usePayment';
+import { useAuth } from '../../../hooks/useAuth';
 import { Payment, Booking, Trip } from '../../../types';
+import { formatCurrency } from '../../../utils/helpers';
+import { COLORS } from '../../../constants/colors';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { user, isAuthenticated } = useAuth();
   const { payments, getPaymentHistory, loading } = usePayment();
-  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'success' | 'pending' | 'failed'>('all');
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        fetchHistory();
+      } else {
+        router.replace('/auth/Login');
+      }
+    }, [isAuthenticated])
+  );
 
   const fetchHistory = async () => {
     await getPaymentHistory();
@@ -36,6 +55,7 @@ export default function PaymentHistoryScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await fetchHistory();
     setRefreshing(false);
   };
@@ -61,12 +81,13 @@ export default function PaymentHistoryScreen() {
       case 'success':
         return <CheckCircle size={20} color="#16a34a" />;
       case 'pending':
-        return <Clock size={20} color="#ca8a04" />;
       case 'processing':
-        return <Clock size={20} color="#3b82f6" />;
+        return <Clock size={20} color="#ca8a04" />;
       case 'failed':
       case 'cancelled':
         return <XCircle size={20} color="#dc2626" />;
+      case 'refunded':
+        return <Receipt size={20} color="#6b7280" />;
       default:
         return <AlertCircle size={20} color="#6b7280" />;
     }
@@ -74,23 +95,33 @@ export default function PaymentHistoryScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'success': return 'text-green-600 bg-green-50';
-      case 'pending': return 'text-yellow-600 bg-yellow-50';
-      case 'processing': return 'text-blue-600 bg-blue-50';
+      case 'success': return 'bg-green-100 text-green-700';
+      case 'pending':
+      case 'processing': return 'bg-yellow-100 text-yellow-700';
       case 'failed':
-      case 'cancelled': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'cancelled': return 'bg-red-100 text-red-700';
+      case 'refunded': return 'bg-gray-100 text-gray-700';
+      default: return 'bg-gray-100 text-gray-700';
     }
   };
 
-  // Helper function to safely get booking details
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status) {
+      case 'success': return 'bg-green-50 border-green-200';
+      case 'pending':
+      case 'processing': return 'bg-yellow-50 border-yellow-200';
+      case 'failed':
+      case 'cancelled': return 'bg-red-50 border-red-200';
+      case 'refunded': return 'bg-gray-50 border-gray-200';
+      default: return 'bg-gray-50 border-gray-200';
+    }
+  };
+
   const getBookingDetails = (payment: Payment) => {
-    // Check if bookingID is an object or a string
     const booking = typeof payment.bookingID === 'object' && payment.bookingID !== null
       ? payment.bookingID as Booking
       : null;
 
-    // If booking exists and tripID is an object, get trip details
     const trip = booking && typeof booking.tripID === 'object' && booking.tripID !== null
       ? booking.tripID as Trip
       : null;
@@ -98,18 +129,25 @@ export default function PaymentHistoryScreen() {
     return { booking, trip };
   };
 
-  const renderPaymentItem = (payment: Payment) => {
-    const { booking, trip } = getBookingDetails(payment);
+  const getFilteredPayments = () => {
+    if (filter === 'all') return payments;
+    return payments.filter(p => p.paymentStatus === filter);
+  };
 
-    // Safely access properties with optional chaining
+  const renderPaymentItem = ({ item }: { item: Payment }) => {
+    const { booking, trip } = getBookingDetails(item);
+
     const originName = trip?.origin?.stationName || 'N/A';
     const destinationName = trip?.destination?.stationName || 'N/A';
     const bookingId = booking?._id;
+    const statusColors = getStatusColor(item.paymentStatus);
+    const badgeStyle = getStatusBadgeStyle(item.paymentStatus);
 
     return (
       <TouchableOpacity
-        key={payment._id}
+        key={item._id}
         onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           if (bookingId) {
             router.push({
               pathname: '/(screens)/booking/confirmation',
@@ -118,99 +156,211 @@ export default function PaymentHistoryScreen() {
           }
         }}
         disabled={!bookingId}
-        className="bg-white p-4 mb-3 rounded-xl border border-gray-200"
+        className="bg-white p-4 mb-3 rounded-xl border border-gray-200 shadow-sm"
       >
-        <View className="flex-row justify-between items-start mb-2">
+        <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
-            <Text className="font-semibold text-gray-800">
+            <Text className="font-semibold text-gray-800 text-base">
               {originName} → {destinationName}
             </Text>
-            <Text className="text-xs text-gray-500 mt-1">
-              {formatDate(payment.createdAt)}
-            </Text>
+            <View className="flex-row items-center mt-1">
+              <Calendar size={12} color="#6b7280" />
+              <Text className="text-xs text-gray-500 ml-1">
+                {formatDate(item.createdAt)}
+              </Text>
+            </View>
           </View>
-          <View className={`px-2 py-1 rounded-full flex-row items-center gap-1 ${getStatusColor(payment.paymentStatus)}`}>
-            {getStatusIcon(payment.paymentStatus)}
-            <Text className="text-xs font-medium">
-              {payment.paymentStatus?.toUpperCase()}
+          <View className={`px-3 py-1.5 rounded-full border ${badgeStyle} flex-row items-center gap-1.5`}>
+            {getStatusIcon(item.paymentStatus)}
+            <Text className={`text-xs font-medium ${statusColors.split(' ')[1]}`}>
+              {item.paymentStatus?.toUpperCase()}
             </Text>
           </View>
         </View>
 
         <View className="flex-row justify-between items-center mt-2 pt-2 border-t border-gray-100">
-          <View className="flex-row items-center gap-1">
+          <View className="flex-row items-center gap-2">
             <CreditCard size={14} color="#6b7280" />
             <Text className="text-xs text-gray-500">
-              {payment.paymentMethod || 'Mobile Money'}
+              {item.paymentMethod === 'mobile_money' ? 'Mobile Money' : 
+               item.paymentMethod === 'card' ? 'Card' : 'Cash'}
             </Text>
           </View>
-          <Text className="font-bold text-blue-600">
-            ETB {payment.amount?.toLocaleString()}
+          <Text className="font-bold text-blue-600 text-lg">
+            {formatCurrency(item.amount)}
           </Text>
         </View>
 
-        {payment.gatewayTransactionID && (
-          <Text className="text-xs text-gray-400 mt-1">
-            Ref: {payment.gatewayTransactionID.slice(-8)}
+        {item.gatewayTransactionID && (
+          <Text className="text-xs text-gray-400 mt-2">
+            Ref: {item.gatewayTransactionID}
           </Text>
         )}
       </TouchableOpacity>
     );
   };
 
-  const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center p-6">
-      <Receipt size={60} color="#d1d5db" />
-      <Text className="text-xl font-semibold text-gray-800 mt-4">
-        No Payment History
-      </Text>
-      <Text className="text-gray-500 text-center mt-2">
-        You haven't made any payments yet. Book a trip to get started!
-      </Text>
-      <TouchableOpacity
-        onPress={() => router.push('/tabs/trips')}
-        className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
-      >
-        <Text className="text-white font-semibold">Book a Trip</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderHeader = () => {
+    const filteredPayments = getFilteredPayments();
+    const totalSpent = filteredPayments
+      .filter(p => p.paymentStatus === 'success')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return (
+      <View>
+        <LinearGradient
+          colors={['#1e40af', '#3b82f6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          className="px-4 pt-2 pb-6"
+        >
+          <View className="flex-row items-center justify-between mb-4">
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+            >
+              <ArrowLeft size={20} color="white" />
+            </TouchableOpacity>
+            <Text className="text-2xl font-bold text-white">Payments</Text>
+            <View className="w-10" />
+          </View>
+
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-blue-100 text-sm">Total Spent</Text>
+              <Text className="text-white text-3xl font-bold">
+                {formatCurrency(totalSpent)}
+              </Text>
+            </View>
+            <View className="bg-white/20 px-4 py-2 rounded-full">
+              <Text className="text-white font-medium">
+                {filteredPayments.length} transactions
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Filter Chips */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          className="px-4 py-3 bg-white border-b border-gray-100"
+        >
+          <View className="flex-row gap-2">
+            {(['all', 'success', 'pending', 'failed'] as const).map((filterType) => (
+              <TouchableOpacity
+                key={filterType}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setFilter(filterType);
+                }}
+                className={`
+                  px-5 py-2.5 rounded-full
+                  ${filter === filterType
+                    ? 'bg-blue-600 shadow-md'
+                    : 'bg-gray-100'
+                  }
+                `}
+              >
+                <Text className={`
+                  text-sm font-medium capitalize
+                  ${filter === filterType ? 'text-white' : 'text-gray-700'}
+                `}>
+                  {filterType}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => {
+    const filteredPayments = getFilteredPayments();
+    
+    if (filteredPayments.length > 0) return null;
+
+    return (
+      <View className="flex-1 justify-center items-center px-6 mt-10">
+        <View className="bg-gray-100 w-24 h-24 rounded-full items-center justify-center mb-4">
+          <Receipt size={48} color={COLORS.textTertiary} />
+        </View>
+        <Text className="text-2xl font-bold text-gray-800 text-center">
+          No {filter !== 'all' ? filter : ''} Payments
+        </Text>
+        <Text className="text-gray-500 text-center mt-2 text-base">
+          {filter !== 'all'
+            ? `You don't have any ${filter} payments.`
+            : "You haven't made any payments yet."}
+        </Text>
+        {filter !== 'all' ? (
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setFilter('all');
+            }}
+            className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
+          >
+            <Text className="text-white font-semibold text-base">Show All Payments</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/tabs/trips');
+            }}
+            className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
+          >
+            <Text className="text-white font-semibold text-base">Book Your First Trip</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const filteredPayments = getFilteredPayments();
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text className="mt-4 text-gray-600 font-medium">Redirecting...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-4 py-3 border-b border-gray-200 flex-row items-center">
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
-          <ArrowLeft size={24} color="#4b5563" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-lg font-semibold text-gray-800">
-          Payment History
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+      <FlatList
+        data={filteredPayments}
+        renderItem={renderPaymentItem}
+        keyExtractor={(item) => item._id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={!loading ? renderEmptyState : null}
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 20,
+        }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={15}
+      />
 
-      {loading && !refreshing ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#3b82f6" />
-          <Text className="mt-4 text-gray-600">Loading payment history...</Text>
+      {loading && !refreshing && filteredPayments.length === 0 && (
+        <View className="absolute inset-0 bg-white/80 items-center justify-center">
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text className="mt-4 text-gray-600 font-medium">Loading payment history...</Text>
         </View>
-      ) : (
-        <ScrollView
-          className="flex-1 p-4"
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {payments.length === 0 ? (
-            renderEmptyState()
-          ) : (
-            <>
-              <Text className="text-sm text-gray-500 mb-3">
-                {payments.length} payment(s) found
-              </Text>
-              {payments.map(renderPaymentItem)}
-            </>
-          )}
-        </ScrollView>
       )}
     </SafeAreaView>
   );

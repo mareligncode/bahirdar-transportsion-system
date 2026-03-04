@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { 
+import {
   User,
   Mail,
   Phone,
@@ -24,7 +24,8 @@ import { Input } from '@/components/common/Input';
 import { COLORS } from '@/constants/colors';
 
 export default function ProfileScreen() {
-  const { user, logout, updateProfile, loading } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { user, logout, updateUser, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -36,8 +37,8 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Name cannot be empty');
       return;
     }
-    
-    const result = await updateProfile(formData);
+
+    const result = await updateUser(formData);
     if (result?.success) {
       setIsEditing(false);
     }
@@ -49,8 +50,8 @@ export default function ProfileScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
+        {
+          text: 'Logout',
           onPress: async () => {
             await logout();
           },
@@ -63,7 +64,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       <StatusBar style="dark" />
-      
+
       {/* Header - NO MENU BUTTON, only title and edit button */}
       <View className="bg-white px-4 py-4 border-b border-gray-200">
         <View className="flex-row justify-between items-center">
@@ -89,7 +90,7 @@ export default function ProfileScreen() {
               >
                 <X size={20} color="#ef4444" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave} disabled={loading}>
+              <TouchableOpacity onPress={handleSave} disabled={isLoading}>
                 <Check size={20} color="#10b981" />
               </TouchableOpacity>
             </View>
@@ -97,7 +98,11 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+      >
         {/* Profile Avatar */}
         <View className="items-center mt-8">
           <View className="w-24 h-24 bg-blue-100 rounded-full items-center justify-center border-4 border-white shadow-md">
@@ -162,7 +167,7 @@ export default function ProfileScreen() {
                 placeholder="Enter your full name"
                 leftIcon={<User size={20} color="#6b7280" />}
               />
-              
+
               <Input
                 label="Phone Number"
                 value={formData.phoneNumber}
@@ -171,7 +176,7 @@ export default function ProfileScreen() {
                 keyboardType="phone-pad"
                 leftIcon={<Phone size={20} color="#6b7280" />}
               />
-              
+
               <Text className="text-xs text-gray-500 mt-2">
                 Email cannot be changed. Contact support if needed.
               </Text>

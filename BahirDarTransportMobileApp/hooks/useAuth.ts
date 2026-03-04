@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const useAuth = () => {
   const router = useRouter();
   const [isInitializing, setIsInitializing] = useState(true);
-  
+
   const {
     user,
     token,
@@ -28,16 +28,10 @@ export const useAuth = () => {
 
   useEffect(() => {
     const initialize = async () => {
-      console.log('🔐 useAuth: Initializing...');
       await initializeAuth();
       setIsInitializing(false);
-      console.log('🔐 useAuth: Initialization complete', {
-        isAuthenticated,
-        userEmail: user?.email,
-        hasToken: !!token
-      });
     };
-    
+
     initialize();
   }, []);
 
@@ -61,24 +55,24 @@ export const useAuth = () => {
     return Boolean(isAuthenticated);
   };
 
-const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
-  console.log('🔐 useAuth: Forgot password called for:', email);
-  
-  try {
-    // ❌ Don't catch errors here - let them flow through to the UI
-    const result = await authAPI.forgotPassword(email);
-    return result; // Return the REAL result (success or error)
-    
-  } catch (error: any) {
-    console.error('🔐 useAuth: Forgot password error:', error);
-    
-    // Return the REAL error
-    return {
-      success: false,
-      message: error.message || 'Failed to send reset email'
-    };
-  }
-};
+  const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+    console.log('🔐 useAuth: Forgot password called for:', email);
+
+    try {
+      // ❌ Don't catch errors here - let them flow through to the UI
+      const result = await authAPI.forgotPassword(email);
+      return result; // Return the REAL result (success or error)
+
+    } catch (error: any) {
+      console.error('🔐 useAuth: Forgot password error:', error);
+
+      // Return the REAL error
+      return {
+        success: false,
+        message: error.message || 'Failed to send reset email'
+      };
+    }
+  };
   return {
     user,
     token,

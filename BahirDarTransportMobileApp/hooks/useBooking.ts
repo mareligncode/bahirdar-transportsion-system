@@ -1,3 +1,4 @@
+// hooks/useBooking.ts
 import { useState, useCallback } from 'react';
 import { bookingsApi } from '../lib/api/bookings';
 import { useBookingStore } from '../store/bookingStore';
@@ -24,8 +25,55 @@ export const useBooking = () => {
     clearBookingState
   } = useBookingStore();
 
+  // Helper to check if error is the backend routing issue
+  const isBackendRoutingIssue = (err: any): boolean => {
+    const errorString = JSON.stringify(err?.response?.data || err?.message || '');
+    return errorString.includes('Cast to ObjectId') &&
+      errorString.includes('my-bookings');
+  };
+
   const fetchMyBookings = useCallback(async (): Promise<void> => {
     if (!user) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await bookingsApi.getMyBookings();
+      if (response.success) {
+        const enhancedBookings = response.data.map(booking => ({
+          ...booking,
+          seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
+          totalPrice: booking.totalPrice || booking.amount ||
+            (typeof booking.tripID === 'object' && booking.tripID?.price
+              ? booking.tripID.price * (booking.seatNumbers?.length || booking.seatNumber ? 1 : 0)
+              : 0)
+        }));
+        setBookings(enhancedBookings);
+      }
+    } catch (err: any) {
+      // Check if it's the backend routing issue
+      if (isBackendRoutingIssue(err)) {
+        console.log('⚠️ Backend routing issue detected for my-bookings. This is a known issue.');
+        // Don't show error toast, just set empty bookings
+        setBookings([]);
+      } else {
+        const message = err.response?.data?.message || err.message || 'Failed to fetch bookings';
+        setError(message);
+        // Only show toast for non-routing errors
+        if (!isBackendRoutingIssue(err)) {
+          showToast(message, 'error');
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [user, setBookings, showToast]);
+
+  const getMyBookings = useCallback(async (refresh: boolean = false): Promise<Booking[]> => {
+    // If we already have bookings and don't need refresh, return them
+    if (bookings.length > 0 && !refresh) {
+      return bookings;
+    }
 
     setLoading(true);
     setError(null);
@@ -33,15 +81,33 @@ export const useBooking = () => {
     try {
       const response = await bookingsApi.getMyBookings();
       if (response.success) {
-        setBookings(response.data);
+        const enhancedBookings = response.data.map(booking => ({
+          ...booking,
+          seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
+          totalPrice: booking.totalPrice || booking.amount ||
+            (typeof booking.tripID === 'object' && booking.tripID?.price
+              ? booking.tripID.price * (booking.seatNumbers?.length || (booking.seatNumber ? 1 : 0))
+              : 0)
+        }));
+        setBookings(enhancedBookings);
+        return enhancedBookings;
       }
+      return [];
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch bookings');
-      showToast(err.message || 'Failed to fetch bookings', 'error');
+      // Check if it's the backend routing issue
+      if (isBackendRoutingIssue(err)) {
+        console.log('⚠️ Backend routing issue detected for my-bookings. Returning empty array.');
+        // Return empty array but don't set error state
+        return [];
+      }
+
+      const message = err.response?.data?.message || err.message || 'Failed to fetch bookings';
+      setError(message);
+      return [];
     } finally {
       setLoading(false);
     }
-  }, [user, setBookings, showToast]);
+  }, [setBookings, bookings.length]);
 
   const createBooking = useCallback(async (trip: Trip, seatNumbers: number[]): Promise<Booking[] | null> => {
     if (!user) {
@@ -49,82 +115,108 @@ export const useBooking = () => {
       return null;
     }
 
+    if (!trip || !trip._id) {
+      showToast('Invalid trip data', 'error');
+      return null;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const bookingsCreated: Booking[] = [];
-
-      for (const seatNumber of seatNumbers) {
-        const bookingData: BookingCreateData = {
-          tripID: trip._id,
-          seatNumber,
-          passengerDetails: {
-            fullName: user.fullName || '',
-            phoneNumber: user.phoneNumber || '',
-            email: user.email || '',
-            emergencyContact: user.emergencyContact || ''
-          }
-        };
-
-        const response = await bookingsApi.createBooking(bookingData);
-
-        if (response.success && response.data) {
-          bookingsCreated.push(response.data);
+      const result = await bookingsApi.createMultipleBookings({
+        tripID: trip._id,
+        seatNumbers,
+        passengerDetails: {
+          fullName: user?.fullName || '',
+          phoneNumber: user?.phoneNumber || '',
+          email: user?.email || '',
+          emergencyContact: user?.emergencyContact || ''
         }
+      });
+
+      if (result.success && result.data && result.data.length > 0) {
+
+        // Add each booking to the store
+        result.data.forEach(booking => {
+          addBooking(booking);
+        });
+
+        setCurrentBooking(result.data[0]);
+        showToast(
+          result.data.length === seatNumbers.length
+            ? `Successfully booked ${result.data.length} seat(s)!`
+            : `Booked ${result.data.length} of ${seatNumbers.length} seat(s).`,
+          'success'
+        );
+
+        return result.data;
+      } else {
+        console.error('❌ Batch booking failed:', result.message);
+        setError(result.message || 'Failed to create bookings');
+        showToast(result.message || 'Failed to create bookings', 'error');
+        return null;
       }
-
-      if (bookingsCreated.length > 0) {
-        // Add to store
-        bookingsCreated.forEach(booking => addBooking(booking));
-
-        // Set current booking for payment
-        setCurrentBooking(bookingsCreated[0]);
-
-        showToast(`${bookingsCreated.length} seat(s) booked successfully!`, 'success');
-
-        return bookingsCreated;
-      }
-
-      return null;
     } catch (err: any) {
-      setError(err.message || 'Failed to create booking');
-      showToast(err.message || 'Failed to create booking', 'error');
+      console.error('❌ Batch Booking error:', err);
+
+      if (err.response?.data) {
+        const errorMessage = err.response.data.message || 'Failed to create booking';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+      } else {
+        const errorMessage = err.message || 'Failed to create booking';
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+      }
+
       return null;
     } finally {
       setLoading(false);
     }
   }, [user, addBooking, setCurrentBooking, showToast]);
 
-  const cancelBooking = useCallback(async (bookingId: string): Promise<boolean> => {
+  const cancelBooking = useCallback(async (bookingId: string, options?: { silent?: boolean }): Promise<boolean> => {
+    // ID Validation guard
+    if (!bookingId || bookingId === 'undefined' || bookingId === 'null' || typeof bookingId !== 'string') {
+      console.warn('⚠️ [useBooking.cancelBooking] Prevention: Invalid Booking ID format:', bookingId);
+      if (!options?.silent) {
+        showToast('Invalid booking ID provided for cancellation', 'error');
+      }
+      return false;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const response = await bookingsApi.cancelBooking(bookingId);
+      const response = await bookingsApi.deleteBooking(bookingId);
 
       if (response.success) {
-        // Update in store
-        setBookings(
-          bookings.map(booking =>
-            booking._id === bookingId
-              ? { ...booking, status: 'cancelled' as const }
-              : booking
-          )
-        );
 
-        // Also update current booking if it's the one being cancelled
+        // Remove the cancelled booking from the list
+        setBookings(bookings.filter(booking => booking._id !== bookingId));
+
         if (currentBooking?._id === bookingId) {
-          setCurrentBooking({ ...currentBooking, status: 'cancelled' as const });
+          setCurrentBooking(null);
         }
 
-        showToast('Booking cancelled successfully', 'success');
+        if (!options?.silent) {
+          showToast('Booking cancelled successfully', 'success');
+        }
+
         return true;
       }
       return false;
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel booking');
-      showToast(err.message || 'Failed to cancel booking', 'error');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to cancel booking';
+      console.error('❌ Cancel booking error:', errorMessage);
+
+      if (!options?.silent) {
+        setError(errorMessage);
+        showToast(errorMessage, 'error');
+      }
+
       return false;
     } finally {
       setLoading(false);
@@ -134,18 +226,62 @@ export const useBooking = () => {
   const getBookingById = useCallback(async (id: string): Promise<Booking | null> => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await bookingsApi.getBookingById(id);
-
       if (response.success && response.data) {
-        setCurrentBooking(response.data);
-        return response.data;
+        const data = response.data;
+
+        if (!data.seatNumbers && data.seatNumber) {
+          data.seatNumbers = [data.seatNumber];
+        } else if (!data.seatNumbers) {
+          data.seatNumbers = [];
+        }
+
+        let totalPrice = data.totalPrice || data.amount || 0;
+        if (!totalPrice && typeof data.tripID === 'object' && data.tripID?.price) {
+          totalPrice = data.tripID.price * (data.seatNumbers?.length || 1);
+        }
+
+        const enhancedBooking = {
+          ...data,
+          seatNumbers: data.seatNumbers,
+          totalPrice: totalPrice,
+          pricePerSeat: data.pricePerSeat || (totalPrice / (data.seatNumbers?.length || 1))
+        };
+
+        console.log('📋 Enhanced booking:', {
+          id: enhancedBooking._id,
+          seatNumbers: enhancedBooking.seatNumbers,
+          totalPrice: enhancedBooking.totalPrice
+        });
+
+        setCurrentBooking(enhancedBooking);
+        return enhancedBooking;
       }
       return null;
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch booking');
-      showToast(err.message || 'Failed to fetch booking', 'error');
+      if (err.response?.status === 404) {
+        console.log(`ℹ️ Booking ${id} not found (404) - may have been deleted`);
+        return null;
+      }
+
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch booking';
+
+      // Fallback to locally cached booking if network request fails
+      const cachedBooking = bookings.find(b => b._id === id);
+      if (cachedBooking) {
+        console.log('ℹ️ Falling back to cached booking due to error:', errorMessage);
+        // Make sure to enhance it with expected structure
+        const enhancedCached = {
+          ...cachedBooking,
+          seatNumbers: cachedBooking.seatNumbers || (cachedBooking.seatNumber ? [cachedBooking.seatNumber] : []),
+        };
+        setCurrentBooking(enhancedCached);
+        return enhancedCached;
+      }
+
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
       return null;
     } finally {
       setLoading(false);
@@ -170,9 +306,7 @@ export const useBooking = () => {
       return false;
     }
 
-    // Handle case where tripID might be a string or object
     let departureTime: Date | null = null;
-
     if (booking.tripID && typeof booking.tripID === 'object') {
       departureTime = booking.tripID.departureTime
         ? new Date(booking.tripID.departureTime)
@@ -181,41 +315,44 @@ export const useBooking = () => {
 
     const now = new Date();
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-
     return departureTime ? departureTime > twoHoursFromNow : false;
   }, []);
 
-  const getMyBookings = useCallback(async (): Promise<Booking[]> => {
+  const getTripBookings = useCallback(async (tripId: string): Promise<Booking[]> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await bookingsApi.getMyBookings();
+      const response = await bookingsApi.getTripBookings(tripId);
       if (response.success) {
-        setBookings(response.data);
         return response.data;
       }
       return [];
     } catch (err: any) {
-      const message = err.message || 'Failed to fetch bookings';
+      const status = err.response?.status;
+
+      if (status === 403) {
+        console.log('User is not authorized to fetch all trip bookings (expected for passengers)');
+        return [];
+      }
+
+      const message = err.response?.data?.message || err.message || 'Failed to fetch trip bookings';
       setError(message);
       return [];
     } finally {
       setLoading(false);
     }
-  }, [setBookings]);
+  }, []);
 
   return {
-    // State
     bookings,
     selectedTrip,
     selectedSeats,
     currentBooking,
     loading,
     error,
-
-    // Actions
     fetchMyBookings,
     getMyBookings,
+    getTripBookings,
     createBooking,
     cancelBooking,
     getBookingById,

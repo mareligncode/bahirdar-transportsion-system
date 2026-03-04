@@ -14,6 +14,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
+import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { useTrips } from '@/hooks/useTrips';
 import { useBooking } from '@/hooks/useBooking';
 import { usePayment } from '@/hooks/usePayment';
@@ -175,12 +176,16 @@ export default function PassengerDashboard() {
       setUpcomingTrips(upcoming);
 
       const popular = trips
-        .filter(trip => (trip.availableSeats ?? 0) > 5)
+        .filter(trip =>
+          new Date(trip.departureTime) > now &&
+          trip.tripStatus === 'scheduled'
+        )
+        // sort by most booked (least available relative to total) or just fallback to least available
+        .sort((a, b) => (a.availableSeats ?? 0) - (b.availableSeats ?? 0))
         .slice(0, 5);
-      setPopularRoutes(popular);
+      setPopularRoutes(popular.length > 0 ? popular : upcoming);
 
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
       setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -229,8 +234,6 @@ export default function PassengerDashboard() {
   const formatDateTime = (dateString: string) => {
     return `${formatDate(dateString)} at ${formatTime(dateString)}`;
   };
-
-  const formatCurrency = (amount: number) => `ETB ${amount.toLocaleString()}`;
 
   const navigationActions = {
     bookTrip: () => router.push('/tabs/trips/search'),
@@ -323,23 +326,26 @@ export default function PassengerDashboard() {
   ];
   const now = new Date();
 
-  const activeBookings = userBookings.filter(b => {
-    if (b.status !== 'confirmed') return false;
-    const trip = getTripFromBooking(b);
-    return trip && new Date(trip.departureTime) > now;
-  }).length;
+  const { activeBookings, pendingCount, completedCount } = React.useMemo(() => {
+    const now = new Date();
+    const active = userBookings.filter(b => {
+      if (b.status !== 'confirmed') return false;
+      const trip = getTripFromBooking(b);
+      return trip && new Date(trip.departureTime) > now;
+    }).length;
 
-  const pendingCount = userBookings.filter(b =>
-    b.status === 'pending' && (!b.paymentStatus || b.paymentStatus === 'pending')
-  ).length;
+    const pending = userBookings.filter(b => b.status === 'pending').length;
 
-  const completedCount = userBookings.filter(b => {
-    if (b.status === 'completed') return true;
-    const trip = getTripFromBooking(b);
-    return trip && new Date(trip.departureTime) < now;
-  }).length;
+    const completed = userBookings.filter(b => {
+      if (b.status === 'completed') return true;
+      const trip = getTripFromBooking(b);
+      return trip && new Date(trip.departureTime) < now;
+    }).length;
 
-  const stats = [
+    return { activeBookings: active, pendingCount: pending, completedCount: completed };
+  }, [userBookings]);
+
+  const memoizedStats = React.useMemo(() => [
     {
       icon: Calendar,
       value: activeBookings.toString(),
@@ -368,7 +374,7 @@ export default function PassengerDashboard() {
       color: COLORS.accent,
       onPress: navigationActions.paymentHistory,
     },
-  ];
+  ], [activeBookings, pendingCount, completedCount, totalSpent]);
 
   const amenities = [
     { icon: Wifi, label: 'Free WiFi', color: '#3b82f6' },
@@ -568,7 +574,7 @@ export default function PassengerDashboard() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
       >
         <View className="px-4 mt-4">
           <TouchableOpacity
@@ -587,7 +593,7 @@ export default function PassengerDashboard() {
         </View>
         <View className="px-4 mt-4">
           <View className="flex-row flex-wrap -mx-1">
-            {stats.map((stat, index) => (
+            {memoizedStats.map((stat, index) => (
               <TouchableOpacity
                 key={index}
                 className="w-1/4 px-1"
@@ -642,9 +648,9 @@ export default function PassengerDashboard() {
             </TouchableOpacity>
           </View>
 
-          {upcomingTrips.length > 0 ? (
+          {popularRoutes.length > 0 ? (
             <FlatList
-              data={upcomingTrips}
+              data={popularRoutes}
               renderItem={renderUpcomingTripCard}
               keyExtractor={(item) => item._id}
               horizontal

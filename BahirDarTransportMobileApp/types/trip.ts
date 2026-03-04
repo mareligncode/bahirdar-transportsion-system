@@ -50,7 +50,7 @@ export interface Trip {
   totalSeats: number;
   estimatedDuration?: string;
   notes?: string;
-  tripStatus: 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled';
+  tripStatus: 'scheduled' | 'boarding' | 'ongoing' | 'completed' | 'cancelled' | 'delayed';
   isActive: boolean;
 }
 

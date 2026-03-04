@@ -60,123 +60,34 @@ export default function LandingPage() {
     }
   }, [isAuthenticated]);
 
-  // Load real testimonials from backend
   useEffect(() => {
-    loadRealTestimonials();
-  }, []);
+    let interval: NodeJS.Timeout;
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
-        setImageError(false);
+    if (!isAuthenticated) {
+      interval = setInterval(() => {
         Animated.timing(fadeAnim, {
-          toValue: 1,
+          toValue: 0,
           duration: 300,
           useNativeDriver: true,
-        }).start();
-      });
-    }, 4000);
+        }).start(() => {
+          setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+          setImageError(false);
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        });
+      }, 4000);
+    }
 
     return () => clearInterval(interval);
-  }, []);
-
-  const loadRealTestimonials = async () => {
-    setLoadingTestimonials(true);
-    try {
-      // Get user bookings to find frequent travelers
-      const bookings = await getMyBookings();
-
-      if (bookings && bookings.length > 0) {
-        // Extract unique passengers from bookings
-        const uniquePassengers = Array.from(
-          new Set(bookings.map((b: any) => b.passengerDetails?.fullName))
-        ).filter(Boolean);
-
-        // Create testimonials from real booking data
-        const realTestimonialsData = uniquePassengers.slice(0, 3).map((name, index) => {
-          const userBookings = bookings.filter((b: any) => b.passengerDetails?.fullName === name);
-          const totalTrips = userBookings.length;
-          const recentTrip = userBookings[userBookings.length - 1];
-
-          return {
-            id: index + 1,
-            name: name,
-            role: totalTrips > 5 ? 'Frequent Traveler' : totalTrips > 2 ? 'Regular User' : 'New User',
-            text: totalTrips > 5
-              ? `Booked ${totalTrips} trips! Always on time and reliable service.`
-              : totalTrips > 2
-                ? `Great service for my regular trips. Very convenient!`
-                : `Easy to use and saved me time on my first booking.`,
-            rating: totalTrips > 5 ? 5 : totalTrips > 2 ? 5 : 4,
-          };
-        });
-
-        setRealTestimonials(realTestimonialsData);
-      } else {
-        // Fallback to static testimonials if no bookings
-        setRealTestimonials([
-          {
-            id: 1,
-            name: 'Alem Gebre',
-            role: 'Daily Commuter',
-            text: 'Saves me 2 hours every day! Very reliable service.',
-            rating: 5,
-          },
-          {
-            id: 2,
-            name: 'Mikias Hailu',
-            role: 'Student',
-            text: 'Affordable and reliable. Perfect for campus travel.',
-            rating: 5,
-          },
-          {
-            id: 3,
-            name: 'Selamawit Tadele',
-            role: 'Tourist Guide',
-            text: 'Makes showing tourists around Bahir Dar so easy.',
-            rating: 4,
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error('Failed to load testimonials:', error);
-      // Use fallback testimonials
-      setRealTestimonials([
-        {
-          id: 1,
-          name: 'Alem Gebre',
-          role: 'Daily Commuter',
-          text: 'Saves me 2 hours every day! Very reliable service.',
-          rating: 5,
-        },
-        {
-          id: 2,
-          name: 'Mikias Hailu',
-          role: 'Student',
-          text: 'Affordable and reliable. Perfect for campus travel.',
-          rating: 5,
-        },
-        {
-          id: 3,
-          name: 'Selamawit Tadele',
-          role: 'Tourist Guide',
-          text: 'Makes showing tourists around Bahir Dar so easy.',
-          rating: 4,
-        },
-      ]);
-    } finally {
-      setLoadingTestimonials(false);
-    }
-  };
+  }, [isAuthenticated, fadeAnim]);
 
   const handleImageError = () => {
     setImageError(true);
   };
+
 
   if (isLoading) {
     return <Loader message="Loading..." />;
