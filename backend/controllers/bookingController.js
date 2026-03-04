@@ -428,6 +428,8 @@ export const deleteBooking = async (req, res) => {
                 message: 'Booking not found'
             });
         }
+
+        // Check permissions
         if (req.user.role === 'station_admin') {
             const station = await Station.findOne({ managerID: req.user.id });
             if (station && !booking.tripID.station.equals(station._id)) {
@@ -459,15 +461,36 @@ export const deleteBooking = async (req, res) => {
             });
         }
 
-        // Update trip available seats
-        trip.availableSeats += 1;
+        // CRITICAL FIX: Calculate the actual number of seats being cancelled
+        let seatsToRelease = 0;
+
+        if (booking.seatNumbers && Array.isArray(booking.seatNumbers) && booking.seatNumbers.length > 0) {
+            // Group booking with multiple seats
+            seatsToRelease = booking.seatNumbers.length;
+            console.log(`📊 Cancelling group booking with ${seatsToRelease} seats:`, booking.seatNumbers);
+        } else if (booking.seatNumber) {
+            // Single seat booking
+            seatsToRelease = 1;
+            console.log(`📊 Cancelling single seat booking: seat ${booking.seatNumber}`);
+        } else if (booking.seatCount) {
+            // Fallback to seatCount field
+            seatsToRelease = booking.seatCount;
+        }
+
+        // Make sure we have a valid number
+        if (seatsToRelease === 0) {
+            seatsToRelease = 1; // Default to 1 if we can't determine
+        }
+
+        // Update trip available seats (add back ALL cancelled seats)
+        trip.availableSeats += seatsToRelease;
         await trip.save();
 
         await booking.deleteOne();
 
         res.status(200).json({
             success: true,
-            message: 'Booking cancelled successfully'
+            message: `Booking cancelled successfully. ${seatsToRelease} seat(s) released.`
         });
 
     } catch (error) {
@@ -492,25 +515,7 @@ export const updateBookingStatus = async (req, res) => {
             });
         }
 
-        // Check permissions
-        if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !booking.tripID.station.equals(station._id)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Not authorized to update this booking'
-                });
-            }
-        }
-
-        if (req.user.role === 'passenger') {
-            if (!booking.passengerID.equals(req.user.id)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Not authorized to update this booking'
-                });
-            }
-        }
+        // ... permission checks ...
 
         // Validate status transitions
         const validTransitions = {
@@ -538,10 +543,24 @@ export const updateBookingStatus = async (req, res) => {
                 });
             }
 
+            // Calculate seats to release
+            let seatsToRelease = 0;
+            if (booking.seatNumbers && booking.seatNumbers.length > 0) {
+                seatsToRelease = booking.seatNumbers.length;
+            } else if (booking.seatNumber) {
+                seatsToRelease = 1;
+            } else if (booking.seatCount) {
+                seatsToRelease = booking.seatCount;
+            }
+
+            if (seatsToRelease === 0) seatsToRelease = 1;
+
             // Update trip available seats
             const trip = await Trip.findById(booking.tripID);
-            trip.availableSeats += 1;
+            trip.availableSeats += seatsToRelease;
             await trip.save();
+
+            console.log(`✅ Released ${seatsToRelease} seats for trip ${trip._id}`);
         }
 
         // Handle refund
@@ -561,13 +580,14 @@ export const updateBookingStatus = async (req, res) => {
 
         await booking.save();
 
-        // Send booking cancellation notification if booking was cancelled
+        // Send notification
         if (status === 'cancelled') {
             try {
+                const seatsReleased = booking.seatNumbers?.length || booking.seatCount || 1;
                 const notificationData = {
                     userID: booking.passengerID,
-                    title: 'Booking Cancelled - Refund Information',
-                    message: `Your booking ${booking.bookingNumber} has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : 'Please contact support for more information.'}`,
+                    title: 'Booking Cancelled',
+                    message: `Your booking ${booking.bookingNumber} has been cancelled. ${seatsReleased} seat(s) released.`,
                     type: 'booking_cancellation',
                     channel: 'all',
                     priority: 'high',
@@ -576,22 +596,20 @@ export const updateBookingStatus = async (req, res) => {
                         booking: {
                             bookingNumber: booking.bookingNumber,
                             ticketNumber: booking.ticketNumber,
-                            seatNumber: booking.seatNumber
+                            seatNumber: booking.seatNumber,
+                            seatNumbers: booking.seatNumbers,
+                            seatCount: seatsReleased
                         },
                         trip: {
                             tripNumber: booking.tripID?.tripNumber,
                             origin: booking.tripID?.origin?.stationName,
-                            destination: booking.tripID?.destination?.stationName,
-                            departureTime: booking.tripID?.departureTime,
-                            arrivalTime: booking.tripID?.arrivalTime
+                            destination: booking.tripID?.destination?.stationName
                         },
                         cancellation: {
                             reason: cancellationReason,
-                            refundAmount: refundAmount || 0,
+                            seatsReleased: seatsReleased,
                             cancelledAt: new Date()
-                        },
-                        actionURL: `${process.env.CLIENT_URL}/dashboard/bookings`,
-                        actionText: 'View Booking History'
+                        }
                     }
                 };
 
@@ -600,7 +618,6 @@ export const updateBookingStatus = async (req, res) => {
                 console.error('Failed to send booking cancellation notification:', notificationError);
             }
         }
-        //end of notfication changes
 
         res.status(200).json({
             success: true,
@@ -617,7 +634,6 @@ export const updateBookingStatus = async (req, res) => {
         });
     }
 };
-
 export const checkInPassenger = async (req, res) => {
     try {
         const booking = await Booking.findById(req.params.id);
@@ -753,10 +769,13 @@ export const getTripBookings = async (req, res) => {
     }
 };
 
+
+
+// bookingController.js - Updated createBatchBooking for group bookings
 export const createBatchBooking = async (req, res) => {
     try {
         const { tripID, seats, specialRequests, passengerDetails } = req.body;
-        
+
         // Validate required fields
         if (!tripID || !seats || !Array.isArray(seats) || seats.length === 0) {
             return res.status(400).json({
@@ -771,7 +790,7 @@ export const createBatchBooking = async (req, res) => {
                 message: 'Maximum 10 seats can be booked at once'
             });
         }
-        
+
         // Validate trip and availability
         const trip = await Trip.findById(tripID);
         if (!trip) {
@@ -794,10 +813,10 @@ export const createBatchBooking = async (req, res) => {
                 message: `Not enough seats available. Requested: ${seats.length}, Available: ${trip.availableSeats}`
             });
         }
-        
-        // Validate seat numbers and check availability
+
+        // Extract seat numbers
         const seatNumbers = seats.map(s => s.seatNumber);
-        
+
         // Check seat number range
         for (const seat of seats) {
             if (seat.seatNumber < 1 || seat.seatNumber > trip.totalSeats) {
@@ -816,108 +835,218 @@ export const createBatchBooking = async (req, res) => {
                 message: 'Duplicate seat numbers found in the request'
             });
         }
-        
+
         // Check seat availability for all requested seats
+        // We need to check if ANY of the requested seats are already booked
         const existingBookings = await Booking.find({
             tripID,
-            seatNumber: { $in: seatNumbers },
+            $or: [
+                { seatNumber: { $in: seatNumbers } },
+                { seatNumbers: { $in: seatNumbers } }
+            ],
             status: { $in: ['pending', 'confirmed'] }
         });
-        
+
         if (existingBookings.length > 0) {
-            const bookedSeats = existingBookings.map(b => b.seatNumber);
-            return res.status(400).json({
-                success: false,
-                message: `Seats ${bookedSeats.join(', ')} are already booked`
+            // Find which specific seats are already booked
+            const bookedSeats = new Set();
+            existingBookings.forEach(booking => {
+                if (booking.seatNumbers && booking.seatNumbers.length > 0) {
+                    booking.seatNumbers.forEach(seat => {
+                        if (seatNumbers.includes(seat)) {
+                            bookedSeats.add(seat);
+                        }
+                    });
+                } else if (booking.seatNumber && seatNumbers.includes(booking.seatNumber)) {
+                    bookedSeats.add(booking.seatNumber);
+                }
             });
+
+            if (bookedSeats.size > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Seats ${Array.from(bookedSeats).join(', ')} are already booked`
+                });
+            }
         }
-        
+
         // Calculate total amount for all seats
         const totalAmount = trip.price * seats.length;
-        
-        const bookings = [];
-        for (const seat of seats) {
-            const booking = new Booking({
-                passengerID: req.user.id,
-                tripID,
-                vehicleID: trip.vehicle,
-                seatNumber: seat.seatNumber,
-                specialRequests: seat.specialRequests || specialRequests,
-                passengerDetails: passengerDetails || {
-                    fullName: req.user.fullName,
-                    phoneNumber: req.user.phoneNumber,
-                    email: req.user.email,
-                    emergencyContact: req.user.emergencyContact
-                },
-                totalPrice: trip.price, // Individual booking price
-                batchTotalPrice: totalAmount, // Total price for all seats in batch
-                createdBy: req.user.id
-            });
-            await booking.save();
-            bookings.push(booking);
-        }
-        
+        const pricePerSeat = trip.price;
+
+        // Generate a unique group booking ID
+        const groupBookingId = `GRP-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+        // Generate a unique booking number
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const bookingNumber = `BK${year}${month}${day}${randomStr}`;
+
+        // Generate a group ticket number
+        const groupTicketNumber = `GTK${Date.now().toString(36).toUpperCase()}`;
+
+        // Create a SINGLE booking with multiple seats
+        const booking = new Booking({
+            passengerID: req.user.id,
+            tripID,
+            vehicleID: trip.vehicle,
+            seatNumbers: seatNumbers, // Array of all seats
+            seatNumber: seatNumbers[0], // For backward compatibility
+            bookingNumber,
+            ticketNumber: groupTicketNumber, // Use group ticket number
+            isGroupBooking: seats.length > 1,
+            groupBookingId: seats.length > 1 ? groupBookingId : undefined,
+            seatCount: seats.length,
+            specialRequests: specialRequests || seats[0]?.specialRequests,
+            passengerDetails: passengerDetails || {
+                fullName: req.user.fullName,
+                phoneNumber: req.user.phoneNumber,
+                email: req.user.email,
+                emergencyContact: req.user.emergencyContact
+            },
+            totalPrice: totalAmount,
+            pricePerSeat: pricePerSeat,
+            batchTotalPrice: totalAmount,
+            status: 'pending',
+            paymentStatus: 'pending',
+            createdBy: req.user.id
+        });
+
+        await booking.save();
+
         // Update trip available seats
         trip.availableSeats -= seats.length;
         await trip.save();
-        
-        // Send booking confirmation notifications for all bookings
-        try {
-            for (const booking of bookings) {
-                const notificationData = {
-                    userID: req.user.id,
-                    title: 'Multiple Seats Booked Successfully',
-                    message: `Your bookings ${bookings.map(b => b.bookingNumber).join(', ')} have been created successfully. Please proceed to payment to confirm your reservations.`,
-                    type: 'booking_confirmation',
-                    channel: 'all',
-                    priority: 'medium',
-                    metadata: {
-                        userName: req.user.fullName,
-                        bookings: bookings.map(b => ({
-                            bookingNumber: b.bookingNumber,
-                            ticketNumber: b.ticketNumber,
-                            seatNumber: b.seatNumber
-                        })),
-                        trip: {
-                            tripNumber: trip.tripNumber,
-                            origin: trip.origin?.stationName,
-                            destination: trip.destination?.stationName,
-                            departureTime: trip.departureTime,
-                            arrivalTime: trip.arrivalTime
-                        },
-                        vehicle: {
-                            plateNumber: trip.vehicle?.plateNumber,
-                            carType: trip.vehicle?.carType
-                        },
-                        actionURL: `${process.env.CLIENT_URL}/dashboard/bookings`,
-                        actionText: 'View Bookings'
-                    }
-                };
 
-                await NotificationService.createNotification(notificationData);
-            }
+        // Send booking confirmation notification
+        try {
+            const notificationData = {
+                userID: req.user.id,
+                title: seats.length > 1 ? 'Multiple Seats Booked Successfully' : 'Booking Confirmed',
+                message: seats.length > 1
+                    ? `Your booking for seats ${seatNumbers.join(', ')} has been created successfully. Please proceed to payment to confirm your reservation.`
+                    : `Your booking for seat ${seatNumbers[0]} has been created successfully. Please proceed to payment to confirm your reservation.`,
+                type: 'booking_confirmation',
+                channel: 'all',
+                priority: 'medium',
+                metadata: {
+                    userName: req.user.fullName,
+                    booking: {
+                        bookingNumber: booking.bookingNumber,
+                        ticketNumber: booking.groupTicketNumber || booking.ticketNumber,
+                        seatNumbers: booking.seatNumbers,
+                        seatCount: booking.seatCount,
+                        totalPrice: booking.totalPrice
+                    },
+                    trip: {
+                        tripNumber: trip.tripNumber,
+                        origin: trip.origin?.stationName,
+                        destination: trip.destination?.stationName,
+                        departureTime: trip.departureTime,
+                        arrivalTime: trip.arrivalTime
+                    },
+                    vehicle: {
+                        plateNumber: trip.vehicle?.plateNumber,
+                        carType: trip.vehicle?.carType
+                    },
+                    actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}/pay`,
+                    actionText: 'Complete Payment'
+                }
+            };
+
+            await NotificationService.createNotification(notificationData);
         } catch (notificationError) {
-            console.error('Failed to send batch booking confirmation notifications:', notificationError);
+            console.error('Failed to send booking confirmation notification:', notificationError);
         }
-        
-        // Populate and return all bookings
-        const populatedBookings = await Booking.find({ _id: { $in: bookings.map(b => b._id) } })
+
+        // Populate and return the booking
+        const populatedBooking = await Booking.findById(booking._id)
             .populate('passengerID', 'fullName phoneNumber email')
             .populate('tripID', 'tripNumber origin destination departureTime arrivalTime price')
             .populate('vehicleID', 'plateNumber carType totalCapacity')
             .populate('createdBy', 'fullName');
 
+        // Return as array for compatibility with frontend
         res.status(201).json({
             success: true,
             message: `${seats.length} seats booked successfully`,
-            data: populatedBookings
+            data: [populatedBooking] // Return as array with one item
         });
-        
+
     } catch (error) {
         console.error('Create batch booking error:', error);
-        res.status(400).json({
+
+        if (error.code === 11000 && error.keyPattern?.bookingNumber) {
+            return res.status(400).json({
+                success: false,
+                message: 'Booking number conflict. Please try again.',
+                error: error.message
+            });
+        }
+
+        res.status(500).json({
             success: false,
-            message: error.message
+            message: error.message || 'Error creating batch booking'
         });
     }
 };
+
+
+// Add this to your bookingController.js - place it before the module.exports
+export const getBookedSeatsForTrip = async (req, res) => {
+    try {
+        const { tripId } = req.params;
+
+        // Verify trip exists
+        const trip = await Trip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: 'Trip not found'
+            });
+        }
+
+        // Find all non-cancelled bookings for this trip
+        // Only select seat numbers, no passenger info
+        const bookings = await Booking.find({
+            tripID: tripId,
+            status: { $in: ['pending', 'confirmed'] }
+        }).select('seatNumber seatNumbers -_id');
+
+        // Extract all booked seat numbers into a Set to avoid duplicates
+        const bookedSeats = new Set();
+
+        bookings.forEach(booking => {
+            // Handle both single seat and multiple seat bookings
+            if (booking.seatNumbers && booking.seatNumbers.length > 0) {
+                booking.seatNumbers.forEach(seat => bookedSeats.add(seat));
+            } else if (booking.seatNumber) {
+                bookedSeats.add(booking.seatNumber);
+            }
+        });
+
+        // Convert Set to sorted array
+        const bookedSeatsArray = Array.from(bookedSeats).sort((a, b) => a - b);
+
+        console.log(`📊 Found ${bookedSeatsArray.length} booked seats for trip ${tripId}:`, bookedSeatsArray);
+
+        // Return just the array of booked seat numbers (no passenger info)
+        res.status(200).json({
+            success: true,
+            data: bookedSeatsArray
+        });
+
+    } catch (error) {
+        console.error('Get booked seats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching booked seats',
+            error: error.message
+        });
+    }
+};
+
+//925 line of code

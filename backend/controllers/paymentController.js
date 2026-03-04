@@ -101,7 +101,7 @@ export const initializePayment = async (req, res) => {
             });
         }
 
-        // Check if this booking is part of a batch booking
+        // Check if this booking is part of a legacy batch booking (multiple documents)
         const batchBookings = await Booking.find({
             tripID: booking.tripID,
             passengerID: userId,
@@ -110,15 +110,18 @@ export const initializePayment = async (req, res) => {
             _id: { $ne: bookingId }
         });
 
-        const isBatchBooking = batchBookings.length > 0;
-        
-        // Use batchTotalPrice if available (for batch bookings), otherwise calculate normally
-        let amount;
-        if (isBatchBooking) {
-            amount = booking.batchTotalPrice || (trip.price * (batchBookings.length + 1));
-        } else {
-            // For single bookings, charge just the trip price
-            amount = trip.price;
+        const isLegacyBatchBooking = batchBookings.length > 0;
+
+        // Determine correct amount, considering group bookings (multiple seats in one document)
+        let amount = booking.totalPrice;
+
+        if (!amount || amount === 0) {
+            const seatCount = booking.seatCount || (booking.seatNumbers && booking.seatNumbers.length > 0 ? booking.seatNumbers.length : 1);
+            if (isLegacyBatchBooking) {
+                amount = booking.batchTotalPrice || (trip.price * (batchBookings.length + 1));
+            } else {
+                amount = trip.price * seatCount;
+            }
         }
 
         // const formattedPhone = '+251911111111'; 
@@ -954,3 +957,6 @@ export const refundPayment = async (req, res) => {
         });
     }
 };
+
+
+//956 line of code
