@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema({
@@ -20,9 +21,15 @@ const bookingSchema = new mongoose.Schema({
         ref: 'Vehicle',
         required: true
     },
-    seatNumber: {
+    // Change from single seatNumber to array of seatNumbers
+    seatNumbers: [{
         type: Number,
         required: true,
+        min: 1
+    }],
+    // Keep for backward compatibility
+    seatNumber: {
+        type: Number,
         min: 1
     },
     bookingDate: {
@@ -41,7 +48,14 @@ const bookingSchema = new mongoose.Schema({
     },
     ticketNumber: {
         type: String,
-        unique: true
+        unique: true,
+        sparse: true // Allow multiple nulls for group bookings
+    },
+    // New field for group ticket
+    groupTicketNumber: {
+        type: String,
+        unique: true,
+        sparse: true
     },
     boardingPass: String, // QR code URL
     specialRequests: String,
@@ -51,7 +65,19 @@ const bookingSchema = new mongoose.Schema({
         email: String,
         emergencyContact: String
     },
-    //new
+    // For group bookings
+    isGroupBooking: {
+        type: Boolean,
+        default: false
+    },
+    groupBookingId: {
+        type: String, // Shared ID for all seats in the same group
+        sparse: true
+    },
+    seatCount: {
+        type: Number,
+        default: 1
+    },
     paymentID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Payment'
@@ -65,16 +91,23 @@ const bookingSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    pricePerSeat: {
+        type: Number,
+        default: 0
+    },
     batchTotalPrice: {
         type: Number,
         default: 0
     },
-    //new
     checkedIn: {
         type: Boolean,
         default: false
     },
     checkedInAt: Date,
+    checkedInSeats: [{
+        seatNumber: Number,
+        checkedInAt: Date
+    }],
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -89,6 +122,7 @@ bookingSchema.index({ tripID: 1 });
 bookingSchema.index({ vehicleID: 1 });
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ bookingDate: 1 });
+bookingSchema.index({ groupBookingId: 1 });
 
 // Generate booking number and ticket number
 bookingSchema.pre('save', async function (next) {
@@ -99,11 +133,22 @@ bookingSchema.pre('save', async function (next) {
         const count = await mongoose.model('Booking').countDocuments();
         this.bookingNumber = `BK${year}${month}${(count + 1).toString().padStart(6, '0')}`;
     }
-    
-    if (!this.ticketNumber) {
-        this.ticketNumber = `TKT${Date.now().toString(36).toUpperCase()}`;
+
+    // Generate group ticket number for group bookings
+    if (this.isGroupBooking && !this.groupTicketNumber) {
+        this.groupTicketNumber = `GTK${Date.now().toString(36).toUpperCase()}`;
     }
-    
+
+    // Set seatNumber for backward compatibility
+    if (this.seatNumbers && this.seatNumbers.length > 0 && !this.seatNumber) {
+        this.seatNumber = this.seatNumbers[0];
+    }
+
+    // Set seat count
+    if (this.seatNumbers) {
+        this.seatCount = this.seatNumbers.length;
+    }
+
     next();
 });
 
@@ -128,3 +173,5 @@ bookingSchema.pre(/^find/, function (next) {
 
 const Booking = mongoose.model('Booking', bookingSchema);
 export default Booking;
+
+//130
