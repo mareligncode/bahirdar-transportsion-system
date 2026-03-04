@@ -1,9 +1,8 @@
-// hooks/useAuth.ts - FIXED
+// hooks/useAuth.ts - COMPLETE FIXED VERSION
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { authAPI } from '@/lib/api/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useAuth = () => {
   const router = useRouter();
@@ -21,6 +20,7 @@ export const useAuth = () => {
     register: storeRegister,
     logout: storeLogout,
     updateUser,
+    changePassword: storeChangePassword,
     clearError,
     initializeAuth,
     setLoading,
@@ -59,20 +59,22 @@ export const useAuth = () => {
     console.log('🔐 useAuth: Forgot password called for:', email);
 
     try {
-      // ❌ Don't catch errors here - let them flow through to the UI
       const result = await authAPI.forgotPassword(email);
-      return result; // Return the REAL result (success or error)
-
+      return result;
     } catch (error: any) {
       console.error('🔐 useAuth: Forgot password error:', error);
-
-      // Return the REAL error
       return {
         success: false,
         message: error.message || 'Failed to send reset email'
       };
     }
   };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    console.log('🔐 useAuth: Change password called');
+    return await storeChangePassword(currentPassword, newPassword);
+  };
+
   return {
     user,
     token,
@@ -86,6 +88,7 @@ export const useAuth = () => {
     logout,
     forgotPassword,
     updateUser,
+    changePassword,
     clearError,
     checkAuthStatus,
     setLoading,
