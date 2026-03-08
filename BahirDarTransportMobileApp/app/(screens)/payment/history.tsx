@@ -1,4 +1,3 @@
-// app/(screens)/payment/history.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -239,8 +238,6 @@ export default function PaymentHistoryScreen() {
             </View>
           </View>
         </LinearGradient>
-
-        {/* Filter Chips */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 

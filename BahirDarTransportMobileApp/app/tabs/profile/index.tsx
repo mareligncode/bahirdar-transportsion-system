@@ -1,4 +1,3 @@
-// app/tabs/profile/index.tsx - Blue Profile Header Only
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -52,7 +51,6 @@ interface PasswordErrors {
   confirmPassword?: string;
 }
 
-// Custom Password Input with visibility toggle
 const PasswordInput = ({ 
   label, 
   value, 
@@ -120,7 +118,6 @@ export default function ProfileScreen() {
     emergencyContact: user?.emergencyContact || '',
   });
 
-  // Sync form data with user data when user changes
   useEffect(() => {
     if (user && !isEditing) {
       setFormData({
@@ -147,7 +144,6 @@ export default function ProfileScreen() {
       errors.newPassword = 'New password is required';
       isValid = false;
     } else {
-      // Password validation
       const hasUpperCase = /[A-Z]/.test(passwordFormData.newPassword);
       const hasLowerCase = /[a-z]/.test(passwordFormData.newPassword);
       const hasNumbers = /\d/.test(passwordFormData.newPassword);
@@ -298,8 +294,6 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       <StatusBar style="dark" />
-
-      {/* Profile Header - Blue */}
       <View className="bg-blue-500 px-4 py-4">
         <View className="flex-row justify-between items-center">
           <Text className="text-xl font-bold text-white">My Profile</Text>
@@ -346,7 +340,6 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
       >
-        {/* Profile Avatar Section */}
         <View className="items-center mt-6">
           <TouchableOpacity
             onPress={() => setShowAvatarDialog(true)}
@@ -395,15 +388,12 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-
-        {/* Profile Information */}
         <View className="bg-white mx-4 mt-6 p-5 rounded-xl border border-gray-200">
           <Text className="text-lg font-semibold text-gray-800 mb-4">
             Personal Information
           </Text>
 
           {viewMode === 'view' ? (
-            // View Mode
             <View className="space-y-4">
               <View className="flex-row items-center bg-gray-50 p-3 rounded-lg">
                 <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
@@ -442,7 +432,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           ) : (
-            // Edit Mode
             <View className="space-y-4">
               <Input
                 label="Full Name"
@@ -475,8 +464,6 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-
-        {/* Change Password Section */}
         {viewMode === 'view' && (
           <View className="bg-white mx-4 mt-6 p-5 rounded-xl border border-gray-200">
             <View className="flex-row items-center justify-between">
@@ -502,8 +489,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         )}
-
-        {/* Account Status */}
         <View className="bg-white mx-4 mt-6 p-5 rounded-xl border border-gray-200">
           <Text className="text-lg font-semibold text-gray-800 mb-4">
             Account Status
@@ -537,8 +522,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-
-        {/* Logout Button - Styled */}
         <View className="mx-4 mt-8 mb-8">
           <TouchableOpacity
             onPress={handleLogout}
@@ -552,8 +535,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Change Avatar Dialog */}
       <Modal
         visible={showAvatarDialog}
         transparent
@@ -605,8 +586,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Change Password Dialog */}
       <Modal
         visible={showPasswordDialog}
         transparent

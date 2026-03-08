@@ -3,7 +3,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
-import { Platform } from 'react-native';
 
 export const getPlatformBaseUrl = (): string => {
   let url = '';
@@ -11,7 +10,7 @@ export const getPlatformBaseUrl = (): string => {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
     // Use your actual backend IP address
-    url = 'http://10.161.142.191:5000/api';
+    url = 'http://192.168.137.1:5000/api';
   }
   return url;
 };

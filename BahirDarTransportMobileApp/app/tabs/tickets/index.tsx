@@ -1,4 +1,3 @@
-// app/tabs/tickets/index.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -49,7 +48,6 @@ export default function TicketsScreen() {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -57,7 +55,6 @@ export default function TicketsScreen() {
     useCallback(() => {
       if (isAuthenticated) {
         fetchMyBookings();
-        // Entrance animation
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -82,8 +79,6 @@ export default function TicketsScreen() {
     const now = new Date();
 
     let filtered = [...bookings];
-
-    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(b => {
         const originName = getOriginName(b).toLowerCase();
@@ -96,8 +91,6 @@ export default function TicketsScreen() {
                bookingNumber.includes(query);
       });
     }
-
-    // Apply status filter
     switch (filter) {
       case 'upcoming':
         filtered = filtered.filter(b => {
@@ -117,8 +110,6 @@ export default function TicketsScreen() {
       default:
         filtered = filtered;
     }
-
-    // Sort by date (most recent first)
     filtered.sort((a, b) => {
       const dateA = getDepartureTime(a) ? new Date(getDepartureTime(a)!).getTime() : 0;
       const dateB = getDepartureTime(b) ? new Date(getDepartureTime(b)!).getTime() : 0;
@@ -140,7 +131,6 @@ export default function TicketsScreen() {
     setFilter(newFilter);
   };
 
-  // Helper functions to safely get data
   const getTripFromBooking = (booking: Booking): Trip | null => {
     if (!booking.tripID) return null;
     return typeof booking.tripID === 'object' && booking.tripID !== null
@@ -230,7 +220,6 @@ export default function TicketsScreen() {
     const needsPayment = item.status === 'pending' && (!item.paymentStatus || item.paymentStatus === 'pending');
     const isPaid = item.paymentStatus === 'success';
     
-    // Create animated style for card
     const cardStyle = {
       opacity: fadeAnim,
       transform: [{ translateY: slideAnim }]
@@ -253,7 +242,6 @@ export default function TicketsScreen() {
             elevation: 5,
           }}
         >
-          {/* Gradient Header with Route */}
           <LinearGradient
             colors={isUpcoming ? ['#3b82f6', '#1e40af'] : ['#6b7280', '#4b5563']}
             start={{ x: 0, y: 0 }}
@@ -279,10 +267,7 @@ export default function TicketsScreen() {
               </View>
             </View>
           </LinearGradient>
-
-          {/* Ticket Content */}
           <View className="p-4">
-            {/* Date and Time Row */}
             <View className="flex-row justify-between items-center mb-4">
               <View className="flex-row items-center bg-blue-50 px-3 py-2 rounded-xl">
                 <Calendar size={16} color={COLORS.primary} />
@@ -298,7 +283,6 @@ export default function TicketsScreen() {
               </View>
             </View>
 
-            {/* Time Status Badge */}
             {isUpcoming && (
               <View className="mb-4">
                 <View className={`bg-orange-50 px-4 py-2 rounded-xl border border-orange-200 flex-row items-center`}>
@@ -310,7 +294,6 @@ export default function TicketsScreen() {
               </View>
             )}
 
-            {/* Seats and Vehicle Info */}
             <View className="flex-row justify-between items-center mb-4">
               <View>
                 <Text className="text-xs text-gray-500 mb-1">Seats</Text>
