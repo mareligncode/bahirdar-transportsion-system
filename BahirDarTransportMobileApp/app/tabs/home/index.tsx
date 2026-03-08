@@ -18,6 +18,7 @@ import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { useTrips } from '@/hooks/useTrips';
 import { useBooking } from '@/hooks/useBooking';
 import { usePayment } from '@/hooks/usePayment';
+import { useUnreadCount } from '@/store/notificationStore';
 import { CustomDrawerContent } from '@/components/layout/CustomDrawerContent';
 import {
   Card,
@@ -383,31 +384,39 @@ export default function PassengerDashboard() {
     { icon: Battery, label: 'Charging', color: '#8b5cf6' },
   ];
 
-  const HeaderRightActions = () => (
-    <View className="flex-row items-center gap-3">
-      <TouchableOpacity
-        onPress={navigationActions.notifications}
-        className="relative"
-        activeOpacity={0.7}
-      >
-        <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
-          <Bell size={20} color={COLORS.primary} />
-        </View>
-        <View className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white" />
-      </TouchableOpacity>
+  const HeaderRightActions = () => {
+    const unreadCount = useUnreadCount();
+    
+    return (
+      <View className="flex-row items-center gap-3">
+        <TouchableOpacity
+          onPress={navigationActions.notifications}
+          className="relative"
+          activeOpacity={0.7}
+        >
+          <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
+            <Bell size={20} color={COLORS.primary} />
+          </View>
+          {unreadCount > 0 && (
+            <View className="absolute -top-1 -right-1 bg-red-500 rounded-full px-1 min-w-[18px] h-5 items-center justify-center">
+              <Text className="text-white text-xs font-bold">{unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => {
-          logout();
-          router.replace('/auth/Login');
-        }}
-        className="w-10 h-10 bg-red-100 rounded-full items-center justify-center"
-        activeOpacity={0.7}
-      >
-        <LogOut size={20} color={COLORS.danger} />
-      </TouchableOpacity>
-    </View>
-  );
+        <TouchableOpacity
+          onPress={() => {
+            logout();
+            router.replace('/auth/Login');
+          }}
+          className="w-10 h-10 bg-red-100 rounded-full items-center justify-center"
+          activeOpacity={0.7}
+        >
+          <LogOut size={20} color={COLORS.danger} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const CustomHeader = () => (
     <View className="bg-white px-4 pb-4 border-b border-gray-200">

@@ -1,4 +1,3 @@
-// app/tabs/tickets/[id].tsx
 import React, { useState, useEffect, useRef } from 'react';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import {
@@ -75,7 +74,6 @@ export default function TicketDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    // Handle quick actions from the list screen
     if (action === 'download' && booking) {
       setTimeout(() => handleDownloadPDF(), 500);
     } else if (action === 'share' && booking) {
@@ -84,7 +82,6 @@ export default function TicketDetailScreen() {
   }, [action, booking]);
 
   useEffect(() => {
-    // Request media library permissions on Android
     if (Platform.OS === 'android') {
       (async () => {
         const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -98,7 +95,6 @@ export default function TicketDetailScreen() {
     if (data) {
       setBooking(data);
 
-      // If the booking is pending, find other pending bookings for the same trip to batch pay
       if (data.status?.toLowerCase() === 'pending') {
         try {
           const allMyBookings = await getMyBookings();
@@ -402,7 +398,6 @@ export default function TicketDetailScreen() {
     `;
   };
 
-  // In your ticket detail screen, the handleDownloadPDF function
   const handleDownloadPDF = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -496,8 +491,6 @@ export default function TicketDetailScreen() {
         showToast('Ticket view not ready', 'error');
         return;
       }
-
-      // Capture the ticket card as an image
       const uri = await captureRef(viewShotRef.current, {
         format: 'png',
         quality: 0.9,
@@ -579,7 +572,6 @@ export default function TicketDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right', 'bottom']}>
-      {/* Header */}
       <View className="px-4 py-3 bg-white border-b border-gray-200 flex-row items-center">
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
           <ArrowLeft size={24} color="#4b5563" />
@@ -600,7 +592,6 @@ export default function TicketDetailScreen() {
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
       >
-        {/* Status Banner */}
         <View className={`p-4 ${isConfirmed ? 'bg-green-50' : isPending ? 'bg-yellow-50' : isCancelled ? 'bg-red-50' : 'bg-gray-50'}`}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
@@ -626,8 +617,6 @@ export default function TicketDetailScreen() {
             <Text className="text-xs text-green-600 mt-1">Copied to clipboard!</Text>
           )}
         </View>
-
-        {/* QR Code Section */}
         <View className="mx-4 mt-4 bg-white rounded-2xl p-4 border border-gray-200 items-center">
           <QrCodeDisplay
             value={qrValue}
@@ -645,15 +634,12 @@ export default function TicketDetailScreen() {
             }}
           />
         </View>
-
-        {/* Main Ticket Card - Captured for Gallery Saving */}
         <ViewShot
           ref={viewShotRef}
           options={{ format: 'png', quality: 0.9 }}
-          style={{ backgroundColor: '#f9fafb' }} // Match background to avoid artifacts
+          style={{ backgroundColor: '#f9fafb' }} 
         >
           <View className="mx-4 mt-4 bg-white rounded-2xl overflow-hidden border border-gray-200">
-            {/* Route Header */}
             <View className="p-4 bg-blue-50 border-b border-blue-100">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 items-center">
@@ -679,8 +665,6 @@ export default function TicketDetailScreen() {
                 </View>
               </View>
             </View>
-
-            {/* Timeline */}
             <View className="p-4 border-b border-gray-200">
               <View className="flex-row gap-4">
                 <View className="flex-1">
@@ -703,10 +687,7 @@ export default function TicketDetailScreen() {
                 </View>
               </View>
             </View>
-
-            {/* Details */}
             <View className="p-4 gap-3">
-              {/* Seat Info */}
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm text-gray-500">Seat Number(s)</Text>
                 <View className="flex-row gap-1">
@@ -717,16 +698,12 @@ export default function TicketDetailScreen() {
                   ))}
                 </View>
               </View>
-
-              {/* Vehicle Info */}
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm text-gray-500">Vehicle</Text>
                 <Text className="font-medium text-gray-800">
                   {vehicle.carType || 'Bus'} • {vehicle.plateNumber || 'N/A'}
                 </Text>
               </View>
-
-              {/* Driver Info */}
               {driver?.fullName && (
                 <View className="flex-row items-center justify-between">
                   <Text className="text-sm text-gray-500">Driver</Text>
@@ -735,8 +712,6 @@ export default function TicketDetailScreen() {
                   </Text>
                 </View>
               )}
-
-              {/* Passenger Details */}
               <View className="mt-2 pt-2 border-t border-gray-200">
                 <Text className="text-sm font-medium text-gray-700 mb-2">
                   Passenger Details
@@ -762,8 +737,6 @@ export default function TicketDetailScreen() {
                   </View>
                 </View>
               </View>
-
-              {/* Payment Info */}
               <View className="mt-2 pt-2 border-t border-gray-200">
                 <Text className="text-sm font-medium text-gray-700 mb-2">
                   Payment Information
@@ -784,8 +757,6 @@ export default function TicketDetailScreen() {
                   </View>
                 </View>
               </View>
-
-              {/* Total Amount */}
               <View className="mt-2 pt-2 border-t border-gray-200">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-base font-medium text-gray-700">
@@ -802,8 +773,6 @@ export default function TicketDetailScreen() {
                 )}
               </View>
             </View>
-
-            {/* Footer */}
             <View className="p-3 bg-gray-50 border-t border-gray-200">
               <Text className="text-xs text-gray-400 text-center">
                 Booked on: {formatDate(booking.bookingDate || booking.createdAt || '')}
@@ -811,10 +780,7 @@ export default function TicketDetailScreen() {
             </View>
           </View>
         </ViewShot>
-
-        {/* Action Buttons */}
         <View className="px-4 pb-4 gap-3">
-          {/* Payment Button for Pending Bookings */}
           {isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending') && (
             <TouchableOpacity
               onPress={() => {
@@ -835,8 +801,6 @@ export default function TicketDetailScreen() {
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* Download PDF Button */}
           <TouchableOpacity
             onPress={handleDownloadPDF}
             className="flex-row items-center justify-center py-3 bg-blue-600 rounded-xl gap-2"
@@ -844,8 +808,6 @@ export default function TicketDetailScreen() {
             <Download size={20} color="white" />
             <Text className="font-medium text-white">Download PDF Ticket</Text>
           </TouchableOpacity>
-
-          {/* Save to Gallery Button */}
           <TouchableOpacity
             onPress={handleSaveToGallery}
             className="flex-row items-center justify-center py-3 bg-green-600 rounded-xl gap-2"
@@ -853,8 +815,6 @@ export default function TicketDetailScreen() {
             <Save size={20} color="white" />
             <Text className="font-medium text-white">Save to Gallery</Text>
           </TouchableOpacity>
-
-          {/* Share Button */}
           <TouchableOpacity
             onPress={handleShare}
             className="flex-row items-center justify-center py-3 bg-purple-600 rounded-xl gap-2"
@@ -864,8 +824,6 @@ export default function TicketDetailScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* QR Code Fullscreen Modal */}
       <Modal
         visible={qrModalVisible}
         transparent={true}
