@@ -11,6 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../../store/notificationStore';
 import { useToast } from '../../../components/common/Toast';
 import { NotificationList } from '../../../components/notifications/notificationList';
+import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/hooks/useTranslation';
+import { AppText } from '@/components/common/AppText';
 // Fix the import path - use relative path instead of alias
 import { registerForPushNotificationsAsync, setupNotificationListeners } from '../../../lib/notifications';
 
@@ -18,6 +21,8 @@ export default function NotificationScreen() {
   const { notifications, unreadCount, isLoading, fetchNotifications, markAllAsRead, deleteNotification } = useNotificationStore();
   const { showToast } = useToast();
   const router = useRouter();
+  const { isDark, colors } = useTheme();
+  const { translate } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -59,21 +64,21 @@ export default function NotificationScreen() {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead();
-    showToast('All notifications marked as read', 'success');
+    showToast(translate('mark_all_read_success'), 'success');
   };
 
   const handleDeleteNotification = (notificationId: string) => {
     Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
+      translate('delete_notification'),
+      translate('delete_notification_confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: translate('back'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: translate('delete_btn_label'),
           style: 'destructive',
           onPress: () => {
             deleteNotification(notificationId);
-            showToast('Notification deleted', 'success');
+            showToast(translate('notification_deleted_success'), 'success');
           },
         },
       ]
@@ -83,18 +88,18 @@ export default function NotificationScreen() {
   const filtered = activeTab === 'unread' ? notifications.filter(n => !n.is_read) : notifications;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <View className="flex-1">
-        <View className="bg-blue-600 px-4 py-3">
+        <View className={`${isDark ? 'bg-blue-700' : 'bg-blue-600'} px-4 py-3`}>
           <View className="flex-row justify-between items-center">
-            <Text className="text-white font-semibold text-lg">Notifications</Text>
+            <AppText className="text-white font-semibold text-lg">{translate('notifications')}</AppText>
             {unreadCount > 0 && (
               <TouchableOpacity
                 onPress={handleMarkAllAsRead}
-                className="px-3 py-2 bg-white rounded-lg"
+                className={`px-3 py-2 ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg`}
                 activeOpacity={0.8}
               >
-                <Text className="text-blue-600 font-medium">Mark All Read</Text>
+                <AppText className={`${isDark ? 'text-blue-400' : 'text-blue-600'} font-medium`}>{translate('mark_all_read_btn')}</AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -102,39 +107,39 @@ export default function NotificationScreen() {
             <TouchableOpacity
               onPress={() => setActiveTab('all')}
               className={`px-4 py-2 rounded-lg ${
-                activeTab === 'all' ? 'bg-white' : 'bg-blue-500'
+                activeTab === 'all' ? (isDark ? 'bg-gray-800' : 'bg-white') : (isDark ? 'bg-blue-800/50' : 'bg-blue-500')
               }`}
               activeOpacity={0.9}
             >
-              <Text
+              <AppText
                 className={`font-medium ${
-                  activeTab === 'all' ? 'text-blue-600' : 'text-white'
+                  activeTab === 'all' ? (isDark ? 'text-blue-400' : 'text-blue-600') : 'text-white'
                 }`}
               >
-                All ({notifications.length})
-              </Text>
+                {translate('all_filter')} ({notifications.length})
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setActiveTab('unread')}
               className={`px-4 py-2 rounded-lg ${
-                activeTab === 'unread' ? 'bg-white' : 'bg-blue-500'
+                activeTab === 'unread' ? (isDark ? 'bg-gray-800' : 'bg-white') : (isDark ? 'bg-blue-800/50' : 'bg-blue-500')
               }`}
               activeOpacity={0.9}
             >
-              <Text
+              <AppText
                 className={`font-medium ${
-                  activeTab === 'unread' ? 'text-blue-600' : 'text-white'
+                  activeTab === 'unread' ? (isDark ? 'text-blue-400' : 'text-blue-600') : 'text-white'
                 }`}
               >
-                Unread ({unreadCount})
-              </Text>
+                {translate('unread_filter')} ({unreadCount})
+              </AppText>
             </TouchableOpacity>
           </View>
         </View>
         
         {isLoading ? (
           <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#3b82f6" />
+            <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
           </View>
         ) : (
           <NotificationList

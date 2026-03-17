@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppText } from '../../../components/common/AppText';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -28,13 +28,16 @@ import { useBooking } from '../../../hooks/useBooking';
 import { useAuth } from '../../../hooks/useAuth';
 import { Booking, Trip } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
-import { COLORS } from '../../../constants/colors';
+import { useTheme } from '../../../context/ThemeContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 export default function BookingsListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const { bookings, fetchMyBookings, loading } = useBooking();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past' | 'pending'>('all');
@@ -104,29 +107,31 @@ export default function BookingsListScreen() {
   };
 
   const getStatusColor = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case 'confirmed': return { bg: 'bg-green-100', text: 'text-green-700', icon: '#16a34a' };
-      case 'pending': return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: '#ca8a04' };
-      case 'cancelled': return { bg: 'bg-red-100', text: 'text-red-700', icon: '#dc2626' };
-      case 'completed': return { bg: 'bg-blue-100', text: 'text-blue-700', icon: '#2563eb' };
-      default: return { bg: 'bg-gray-100', text: 'text-gray-700', icon: '#6b7280' };
+    const s = status?.toLowerCase();
+    switch (s) {
+      case 'confirmed': return { bg: isDark ? 'rgba(22,163,74,0.1)' : 'bg-green-100', text: isDark ? '#4ade80' : 'text-green-700', icon: isDark ? '#4ade80' : '#16a34a' };
+      case 'pending': return { bg: isDark ? 'rgba(202,138,4,0.1)' : 'bg-yellow-100', text: isDark ? '#fbbf24' : 'text-yellow-700', icon: isDark ? '#fbbf24' : '#ca8a04' };
+      case 'cancelled': return { bg: isDark ? 'rgba(220,38,38,0.1)' : 'bg-red-100', text: isDark ? '#f87171' : 'text-red-700', icon: isDark ? '#f87171' : '#dc2626' };
+      case 'completed': return { bg: isDark ? 'rgba(37,99,235,0.1)' : 'bg-blue-100', text: isDark ? '#60a5fa' : 'text-blue-700', icon: isDark ? '#60a5fa' : '#2563eb' };
+      default: return { bg: isDark ? 'rgba(107,114,128,0.1)' : 'bg-gray-100', text: isDark ? '#9ca3af' : 'text-gray-700', icon: isDark ? '#9ca3af' : '#6b7280' };
     }
   };
 
   const getStatusIcon = (status?: string) => {
+    const colors = getStatusColor(status);
     switch (status?.toLowerCase()) {
-      case 'confirmed': return <CheckCircle size={14} color="#16a34a" />;
-      case 'pending': return <Clock size={14} color="#ca8a04" />;
-      case 'cancelled': return <XCircle size={14} color="#dc2626" />;
-      case 'completed': return <CheckCircle size={14} color="#2563eb" />;
-      default: return <AlertCircle size={14} color="#6b7280" />;
+      case 'confirmed': return <CheckCircle size={14} color={colors.icon} />;
+      case 'pending': return <Clock size={14} color={colors.icon} />;
+      case 'cancelled': return <XCircle size={14} color={colors.icon} />;
+      case 'completed': return <CheckCircle size={14} color={colors.icon} />;
+      default: return <AlertCircle size={14} color={colors.icon} />;
     }
   };
 
   const renderBookingCard = ({ item, index }: { item: Booking; index: number }) => {
     const trip = getTripDetails(item);
-    const originName = trip?.origin?.stationName || 'Unknown';
-    const destinationName = trip?.destination?.stationName || 'Unknown';
+    const originName = trip?.origin?.stationName || translate('unknown');
+    const destinationName = trip?.destination?.stationName || translate('unknown');
     const departureTime = trip?.departureTime;
     const seatNumbers = item.seatNumbers || (item.seatNumber ? [item.seatNumber] : []);
     const totalAmount = item.totalPrice || item.amount || 0;
@@ -148,13 +153,13 @@ export default function BookingsListScreen() {
             router.push(`/(screens)/booking/${item._id}`);
           }}
           activeOpacity={0.95}
-          className="bg-white mb-3 rounded-xl overflow-hidden shadow-lg"
-        >
-          <View className="p-4">
+          style={isDark ? { elevation: 0, shadowOpacity: 0 } : {}}
+          className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} mb-3 rounded-xl overflow-hidden shadow-lg border`}>
+        <View className="p-4">
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center flex-1">
                 <LinearGradient
-                  colors={['#3b82f6', '#1e40af']}
+                  colors={isDark ? [colors.primary, '#1e3a8a'] : ['#3b82f6', '#1e40af']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   className="w-10 h-10 rounded-full items-center justify-center mr-3"
@@ -162,60 +167,60 @@ export default function BookingsListScreen() {
                   <Bus size={18} color="white" />
                 </LinearGradient>
                 <View className="flex-1">
-                  <Text className="font-bold text-gray-800 text-base">
+                  <AppText className={`font-bold ${isDark ? 'text-white' : 'text-gray-800'} text-base`}>
                     {originName} → {destinationName}
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
+                  </AppText>
+                  <AppText className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
                     #{item.bookingNumber || item._id?.slice(-6).toUpperCase()}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
               <View className={`px-3 py-1.5 rounded-full ${statusColors.bg}`}>
                 <View className="flex-row items-center gap-1.5">
                   {getStatusIcon(item.status)}
-                  <Text className={`text-xs font-bold ${statusColors.text}`}>
-                    {item.status?.toUpperCase()}
-                  </Text>
+                  <AppText className={`text-xs font-bold ${isDark ? '' : statusColors.text}`} style={isDark ? { color: statusColors.text } : {}}>
+                    {translate(`ticket_status_${item.status?.toLowerCase()}` as any)}
+                  </AppText>
                 </View>
               </View>
             </View>
 
             <View className="flex-row items-center gap-4 mb-3">
               <View className="flex-row items-center">
-                <Calendar size={14} color={COLORS.textSecondary} />
-                <Text className="text-xs text-gray-600 ml-1.5">
-                  {departureTime ? formatDate(departureTime) : 'N/A'}
-                </Text>
+                <Calendar size={14} color={colors.textSecondary} />
+                <AppText className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} ml-1.5`}>
+                  {departureTime ? formatDate(departureTime) : translate('not_available')}
+                </AppText>
               </View>
               <View className="flex-row items-center">
-                <Clock size={14} color={COLORS.textSecondary} />
-                <Text className="text-xs text-gray-600 ml-1.5">
-                  {departureTime ? formatTime(departureTime) : 'N/A'}
-                </Text>
+                <Clock size={14} color={colors.textSecondary} />
+                <AppText className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} ml-1.5`}>
+                  {departureTime ? formatTime(departureTime) : translate('not_available')}
+                </AppText>
               </View>
             </View>
 
-            <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
+            <View className={`flex-row items-center justify-between pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
               <View className="flex-row items-center">
-                <Text className="text-xs text-gray-500 mr-2">Seats:</Text>
+                <AppText className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mr-2`}>{translate('seats_label')}</AppText>
                 <View className="flex-row gap-1">
                   {seatNumbers.map((seat, idx) => (
                     <View key={idx} className="bg-blue-500 px-3 py-1 rounded-lg">
-                      <Text className="text-white text-xs font-bold">{seat}</Text>
+                      <AppText className="text-white text-xs font-bold">{seat}</AppText>
                     </View>
                   ))}
                 </View>
               </View>
-              <Text className="font-bold text-blue-600 text-base">
+              <AppText className="font-bold text-blue-600 text-base">
                 {formatCurrency(totalAmount)}
-              </Text>
+              </AppText>
             </View>
 
             {needsPayment && (
-              <View className="mt-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <Text className="text-yellow-700 text-xs font-bold text-center">
-                  ⚡ Payment required - Tap to complete
-                </Text>
+              <View style={{ backgroundColor: isDark ? 'rgba(234,179,8,0.1)' : '#fefce8', borderColor: isDark ? 'rgba(234,179,8,0.2)' : '#fef08a' }} className="mt-3 p-3 rounded-lg border">
+                <AppText className={`${isDark ? 'text-yellow-500' : 'text-yellow-700'} text-xs font-bold text-center`}>
+                  {translate('payment_required_tap')}
+                </AppText>
               </View>
             )}
           </View>
@@ -236,7 +241,7 @@ export default function BookingsListScreen() {
         }}
       >
         <LinearGradient
-          colors={['#1e40af', '#3b82f6']}
+          colors={isDark ? ['#1e1e1e', '#2d2d2d'] : ['#1e40af', '#3b82f6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           className="px-4 pt-2 pb-6"
@@ -248,19 +253,19 @@ export default function BookingsListScreen() {
             >
               <ArrowLeft size={20} color="white" />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-white">My Bookings</Text>
+            <AppText className="text-2xl font-bold text-white">{translate('my_bookings_title')}</AppText>
             <View className="w-10" />
           </View>
 
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-blue-100 text-sm">Total Bookings</Text>
-              <Text className="text-white text-3xl font-bold">{totalCount}</Text>
+              <AppText className="text-blue-100 text-sm">{translate('total_bookings')}</AppText>
+              <AppText className="text-white text-3xl font-bold">{totalCount}</AppText>
             </View>
             <View className="bg-white/20 px-4 py-2 rounded-full">
-              <Text className="text-white font-medium">
-                {filteredCount} {filter === 'all' ? 'total' : filter}
-              </Text>
+              <AppText className="text-white font-medium">
+                {filteredCount} {filter === 'all' ? translate('total_label') : translate(`${filter}_tickets` as any)}
+              </AppText>
             </View>
           </View>
         </LinearGradient>
@@ -268,7 +273,7 @@ export default function BookingsListScreen() {
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
-          className="px-4 py-3 bg-white border-b border-gray-100"
+          className={`px-4 py-3 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
         >
           <View className="flex-row gap-2">
             {(['all', 'upcoming', 'past', 'pending'] as const).map((filterType) => (
@@ -282,16 +287,13 @@ export default function BookingsListScreen() {
                   px-5 py-2.5 rounded-full
                   ${filter === filterType
                     ? 'bg-blue-600 shadow-md'
-                    : 'bg-gray-100'
+                    : isDark ? 'bg-gray-700' : 'bg-gray-100'
                   }
                 `}
               >
-                <Text className={`
-                  text-sm font-medium capitalize
-                  ${filter === filterType ? 'text-white' : 'text-gray-700'}
-                `}>
-                  {filterType}
-                </Text>
+                  <AppText className={filter === filterType ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-600'} weight={filter === filterType ? 'bold' : 'medium'}>
+                    {translate(`${filterType}_tickets` as any)}
+                  </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -313,17 +315,19 @@ export default function BookingsListScreen() {
         }}
         className="flex-1 justify-center items-center px-6 mt-10"
       >
-        <View className="bg-gray-100 w-20 h-20 rounded-full items-center justify-center mb-4">
-          <Receipt size={40} color={COLORS.textTertiary} />
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} w-20 h-20 rounded-full items-center justify-center mb-4`}>
+          <Receipt size={40} color={isDark ? colors.textTertiary : '#9CA3AF'} />
         </View>
-        <Text className="text-xl font-bold text-gray-800 text-center">
-          No {filter !== 'all' ? filter : ''} Bookings
-        </Text>
-        <Text className="text-gray-500 text-center mt-2">
+        <AppText className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'} text-center`}>
+          {filter !== 'all' 
+            ? translate('no_bookings_title', { filter: translate(`${filter}_tickets` as any) })
+            : translate('no_bookings_general')}
+        </AppText>
+        <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-center mt-2`}>
           {filter !== 'all'
-            ? `You don't have any ${filter} bookings.`
-            : "You haven't made any bookings yet."}
-        </Text>
+            ? translate('no_bookings_desc', { filter: translate(`${filter}_tickets` as any) })
+            : translate('no_bookings_general_desc')}
+        </AppText>
         {filter !== 'all' ? (
           <TouchableOpacity
             onPress={() => {
@@ -332,7 +336,7 @@ export default function BookingsListScreen() {
             }}
             className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold">Show All Bookings</Text>
+            <AppText className="text-white font-semibold">{translate('show_all_bookings')}</AppText>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -342,7 +346,7 @@ export default function BookingsListScreen() {
             }}
             className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold">Book Your First Trip</Text>
+            <AppText className="text-white font-semibold">{translate('book_first_trip')}</AppText>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -351,10 +355,10 @@ export default function BookingsListScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-600 font-medium">Redirecting...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'} font-medium`}>{translate('redirecting')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -363,7 +367,7 @@ export default function BookingsListScreen() {
   const filteredBookings = getFilteredBookings();
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top', 'left', 'right']}>
       <FlatList
         data={filteredBookings}
         renderItem={renderBookingCard}
@@ -377,8 +381,8 @@ export default function BookingsListScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -387,9 +391,9 @@ export default function BookingsListScreen() {
       />
 
       {loading && !refreshing && filteredBookings.length === 0 && (
-        <View className="absolute inset-0 bg-white/80 items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-600 font-medium">Loading your bookings...</Text>
+        <View className={`absolute inset-0 ${isDark ? 'bg-gray-900/80' : 'bg-white/80'} items-center justify-center`}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'} font-medium`}>{translate('my_bookings_desc')}</AppText>
         </View>
       )}
     </SafeAreaView>

@@ -1,11 +1,13 @@
 import React, { forwardRef } from 'react';
 import {
   View,
-  Text,
   TextInput as RNTextInput,
   TextInputProps as RNTextInputProps,
   TouchableOpacity,
 } from 'react-native';
+import { AppText } from './AppText';
+import { useFont } from '@/context/FontContext';
+import { TYPOGRAPHY } from '@/constants/typography';
 
 interface InputProps extends RNTextInputProps {
   label?: string;
@@ -25,14 +27,17 @@ export const Input = forwardRef<RNTextInput, InputProps>(({
   onRightIconPress,
   className = '',
   fullWidth = false,
+  style,
   ...props
 }, ref) => {
+  const { fontScale } = useFont();
+  
   return (
     <View className={`mb-4 ${fullWidth ? 'w-full' : ''} ${className}`}>
       {label && (
-        <Text className="text-sm font-medium text-gray-700 mb-2">
+        <AppText variant="bodySmall" weight="500" color="#374151" className="mb-2">
           {label}
-        </Text>
+        </AppText>
       )}
       
       <View className={`flex-row items-center border rounded-lg px-3 py-3 ${
@@ -46,9 +51,13 @@ export const Input = forwardRef<RNTextInput, InputProps>(({
         
         <RNTextInput
           ref={ref}
-          className={`flex-1 text-base text-gray-900 ${
+          className={`flex-1 text-gray-900 ${
             props.editable === false ? 'opacity-50' : ''
           }`}
+          style={[{ 
+            fontSize: TYPOGRAPHY.bodyMedium.fontSize * fontScale,
+            lineHeight: TYPOGRAPHY.bodyMedium.lineHeight * fontScale,
+          }, style]}
           placeholderTextColor="#9CA3AF"
           selectionColor="#3B82F6"
           {...props}
@@ -66,9 +75,9 @@ export const Input = forwardRef<RNTextInput, InputProps>(({
       </View>
       
       {error && (
-        <Text className="text-red-500 text-xs mt-1 ml-1">
+        <AppText variant="caption" color="#EF4444" className="mt-1 ml-1">
           {error}
-        </Text>
+        </AppText>
       )}
     </View>
   );

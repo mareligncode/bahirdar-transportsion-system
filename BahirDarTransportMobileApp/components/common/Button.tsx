@@ -1,11 +1,11 @@
 import React from 'react';
 import { 
   TouchableOpacity, 
-  Text, 
   ActivityIndicator,
   TouchableOpacityProps,
   View 
 } from 'react-native';
+import { AppText } from './AppText';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'title'> {
   title?: string;
@@ -56,13 +56,13 @@ export function Button({
     outline: 'text-blue-600'
   };
 
-  const textSizeClasses = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-    small: 'text-sm',
-    medium: 'text-base',
-    large: 'text-lg'
+  const textSizeVariants: Record<string, any> = {
+    sm: 'bodySmall',
+    md: 'bodyMedium',
+    lg: 'bodyLarge',
+    small: 'bodySmall',
+    medium: 'bodyMedium',
+    large: 'bodyLarge'
   };
 
   const buttonContent = children || title;
@@ -72,7 +72,7 @@ export function Button({
   const variantClass = variantClasses[variant] || variantClasses.primary;
   const sizeClass = sizeClasses[size] || sizeClasses.medium;
   const textVariantClass = textVariantClasses[variant] || textVariantClasses.primary;
-  const textSizeClass = textSizeClasses[size] || textSizeClasses.medium;
+  const textSizeVariant = textSizeVariants[size] || textSizeVariants.medium;
 
   // Build className safely - use conditional logic instead of template literals with booleans
   let buttonClassName = 'rounded-lg items-center justify-center flex-row';
@@ -108,9 +108,14 @@ export function Button({
         <>
           {leftIcon && <View className="mr-2">{leftIcon}</View>}
           {typeof buttonContent === 'string' ? (
-            <Text className={`font-semibold ${textVariantClass} ${textSizeClass}`}>
+            <AppText 
+              variant={textSizeVariant}
+              weight="600"
+              color={variant === 'outline' ? '#1a56db' : '#FFFFFF'}
+              className={className}
+            >
               {buttonContent}
-            </Text>
+            </AppText>
           ) : (
             buttonContent
           )}

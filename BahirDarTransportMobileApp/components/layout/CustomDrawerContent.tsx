@@ -2,9 +2,9 @@
 import React from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
 } from 'react-native';
+import { AppText } from '../common/AppText';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
 import {
@@ -15,6 +15,9 @@ import {
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { APP_CONSTANTS } from '@/constants/routes';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CustomDrawerContentProps {
   onClose?: () => void;
@@ -22,6 +25,9 @@ interface CustomDrawerContentProps {
 
 export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
   const { logout } = useAuth();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
     if (onClose) onClose();
@@ -37,9 +43,9 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
   };
 
   const menuItems = [
-    { label: 'Settings', icon: Settings, route: '/menu/settings' },
-    { label: 'Help & Support', icon: HelpCircle, route: '/menu/support' },
-    { label: 'About', icon: Info, route: '/menu/about' },
+    { label: translate('settings'), icon: Settings, route: '/menu/settings' },
+    { label: translate('help_support'), icon: HelpCircle, route: '/menu/support' },
+    { label: translate('about'), icon: Info, route: '/menu/about' },
   ];
 
   const renderIcon = (Icon: React.ComponentType<any>, size: number, color: string) => {
@@ -47,10 +53,10 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} style={{ paddingBottom: insets.bottom }}>
       {/* Simple Header - just title, no user info */}
-      <View className="bg-blue-600 px-4 py-6">
-        <Text className="text-white text-2xl font-bold">Menu</Text>
+      <View className="bg-blue-600 px-4 py-8">
+        <AppText variant="h2" weight="bold" color="white">{translate('menu_title')}</AppText>
       </View>
 
       <View className="flex-1 px-2 pt-4">
@@ -58,12 +64,12 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
           <TouchableOpacity
             key={index}
             onPress={() => navigateTo(item.route)}
-            className="flex-row items-center px-4 py-4 rounded-lg mb-2 border-b border-gray-100"
+            className={`flex-row items-center px-4 py-4 rounded-lg mb-2 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
           >
-            {renderIcon(item.icon, 24, COLORS.gray700)}
-            <Text className="ml-4 font-medium text-gray-800 text-lg">
+            {renderIcon(item.icon, 24, isDark ? colors.textSecondary : '#374151')}
+            <AppText weight="medium" color={isDark ? '#e5e7eb' : '#1f2937'} variant="bodyLarge" className="ml-4">
               {item.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -71,15 +77,15 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
       {/* Logout Button */}
       <TouchableOpacity
         onPress={handleLogout}
-        className="flex-row items-center px-6 py-5 border-t border-gray-200"
+        className={`flex-row items-center px-6 py-5 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}
       >
         {renderIcon(LogOut, 24, COLORS.danger)}
-        <Text className="ml-4 text-red-600 font-medium text-lg">Logout</Text>
+        <AppText weight="medium" color="#dc2626" variant="bodyLarge" className="ml-4">{translate('logout')}</AppText>
       </TouchableOpacity>
 
       {/* Version */}
       <View className="px-6 py-3">
-        <Text className="text-xs text-gray-400">Version {APP_CONSTANTS.VERSION}</Text>
+        <AppText variant="caption" color={isDark ? '#6b7280' : '#9ca3af'}>{translate('version')} {APP_CONSTANTS.VERSION}</AppText>
       </View>
     </View>
   );

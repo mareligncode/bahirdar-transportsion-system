@@ -3,13 +3,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
   Dimensions
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
@@ -28,12 +28,14 @@ import {
   Clock3
 } from 'lucide-react-native';
 import { useTrips } from '../../../hooks/useTrips';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { Select } from '../../../components/common/Select';
 import { TripCard } from '../../../components/booking/TripCard';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
+import { useTheme } from '../../../context/ThemeContext';
 import { formatDate, formatTime } from '../../../utils/helpers';
 import { Trip, Station, StationOption } from '../../../types';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,7 +44,9 @@ const { width } = Dimensions.get('window');
 
 export default function TripsScreen() {
   const insets = useSafeAreaInsets();
+  const { translate } = useTranslation();
   const params = useLocalSearchParams();
+  const { colors, isDark } = useTheme();
 
   // Fix: Handle case when params.id is 'index'
   if (params.id === 'index' || params.tripId === 'index') {
@@ -142,7 +146,7 @@ export default function TripsScreen() {
       setShowSearchSummary(true);
       setShowFilters(false);
     } catch (error) {
-      Alert.alert('Search Failed', 'Unable to search trips. Please try again.');
+      Alert.alert(translate('error'), translate('something_went_wrong'));
     }
   };
 
@@ -226,17 +230,17 @@ export default function TripsScreen() {
     const tripId = trip._id;
 
     if (!tripId) {
-      Alert.alert('Error', 'Invalid trip data');
+      Alert.alert(translate('error'), translate('invalid_trip_id'));
       return;
     }
 
     if (tripId === 'index') {
-      Alert.alert('Error', 'Invalid trip ID format');
+      Alert.alert(translate('error'), translate('invalid_trip_id'));
       return;
     }
 
     if (tripId.length !== 24) {
-      Alert.alert('Error', 'Invalid trip ID format');
+      Alert.alert(translate('error'), translate('invalid_trip_id'));
       return;
     }
 
@@ -295,38 +299,38 @@ export default function TripsScreen() {
     const searchDate = date ? new Date(date) : new Date();
 
     return (
-      <View className="bg-blue-50 p-4 mb-4 rounded-xl border border-blue-200">
+      <View className={`${isDark ? 'bg-blue-900/30 border-blue-800' : 'bg-blue-50 border-blue-200'} p-4 mb-4 rounded-xl border`}>
         <View className="flex-row justify-between items-start">
           <View className="flex-1">
-            <Text className="text-sm text-blue-800 font-medium mb-1">
-              Search Results
-            </Text>
-            <Text className="text-base font-bold text-gray-900">
+            <AppText variant="caption" weight="500" color="#1e40af" className="mb-1">
+              {translate('search_results')}
+            </AppText>
+            <AppText variant="bodyLarge" weight="bold" color={isDark ? 'white' : 'black'}>
               {originName} → {destName}
-            </Text>
+            </AppText>
             <View className="flex-row items-center mt-2">
-              <Calendar size={14} color="#4b5563" />
-              <Text className="text-sm text-gray-600 ml-1">
+              <Calendar size={14} color={colors.textSecondary} />
+              <AppText variant="caption" color={colors.textSecondary} className="ml-1">
                 {formatDate(searchDate)}
-              </Text>
-              <Users size={14} color="#4b5563" className="ml-3" />
-              <Text className="text-sm text-gray-600 ml-1">
-                {passengers || 1} passenger(s)
-              </Text>
+              </AppText>
+              <Users size={14} color={colors.textSecondary} className="ml-3" />
+              <AppText variant="caption" color={colors.textSecondary} className="ml-1">
+                {searchParams.passengers} {translate(searchParams.passengers > 1 ? 'passengers' : 'passenger')}
+              </AppText>
             </View>
           </View>
           <TouchableOpacity
             onPress={handleClearSearch}
-            className="bg-white p-2 rounded-full"
+            className={`${isDark ? 'bg-gray-800' : 'bg-white'} p-2 rounded-full`}
           >
-            <X size={16} color="#4b5563" />
+            <X size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/tabs/trips/search')}
-          className="mt-3 bg-white py-2 px-3 rounded-lg self-start"
+          className={`mt-3 ${isDark ? 'bg-gray-800' : 'bg-white'} py-2 px-3 rounded-lg self-start`}
         >
-          <Text className="text-blue-600 text-sm font-medium">Modify Search</Text>
+          <AppText variant="label" color={colors.primary}>{translate('modify_search')}</AppText>
         </TouchableOpacity>
       </View>
     );
@@ -336,57 +340,69 @@ export default function TripsScreen() {
     <View className="flex-row justify-between mb-4">
       <TouchableOpacity
         onPress={() => toggleSort('departureTime')}
-        className={`px-4 py-2 rounded-full mr-2 flex-row items-center ${activeSort === 'departureTime' ? 'bg-blue-500' : 'bg-gray-200'
+        className={`px-4 py-2 rounded-full mr-2 flex-row items-center ${activeSort === 'departureTime' ? 'bg-blue-500' : isDark ? 'bg-gray-800' : 'bg-gray-200'
           }`}
       >
-        <Clock size={16} color={activeSort === 'departureTime' ? 'white' : '#4b5563'} />
-        <Text className={`ml-1 font-medium ${activeSort === 'departureTime' ? 'text-white' : 'text-gray-700'
-          }`}>
-          Time
-        </Text>
+        <Clock size={16} color={activeSort === 'departureTime' ? 'white' : colors.textSecondary} />
+        <AppText 
+          variant="label" 
+          weight="500"
+          color={activeSort === 'departureTime' ? 'white' : isDark ? '#d1d5db' : '#374151'}
+          className="ml-1"
+        >
+          {translate('time')}
+        </AppText>
         {activeSort === 'departureTime' && (
-          <Text className="text-white ml-1">
+          <AppText variant="label" color="white" className="ml-1">
             {filters.sortOrder === 'asc' ? '↑' : '↓'}
-          </Text>
+          </AppText>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => toggleSort('price')}
-        className={`px-4 py-2 rounded-full mr-2 flex-row items-center ${activeSort === 'price' ? 'bg-blue-500' : 'bg-gray-200'
+        className={`px-4 py-2 rounded-full mr-2 flex-row items-center ${activeSort === 'price' ? 'bg-blue-500' : isDark ? 'bg-gray-800' : 'bg-gray-200'
           }`}
       >
-        <Text className={activeSort === 'price' ? 'text-white' : 'text-gray-700'}>
-          Price
-        </Text>
+        <AppText 
+          variant="label"
+          weight="500"
+          color={activeSort === 'price' ? 'white' : isDark ? '#d1d5db' : '#374151'}
+        >
+          {translate('price')}
+        </AppText>
         {activeSort === 'price' && (
-          <Text className="text-white ml-1">
+          <AppText variant="label" color="white" className="ml-1">
             {filters.sortOrder === 'asc' ? '↑' : '↓'}
-          </Text>
+          </AppText>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => toggleSort('availability')}
-        className={`px-4 py-2 rounded-full flex-row items-center ${activeSort === 'availability' ? 'bg-blue-500' : 'bg-gray-200'
+        className={`px-4 py-2 rounded-full flex-row items-center ${activeSort === 'availability' ? 'bg-blue-500' : isDark ? 'bg-gray-800' : 'bg-gray-200'
           }`}
       >
-        <Users size={16} color={activeSort === 'availability' ? 'white' : '#4b5563'} />
-        <Text className={`ml-1 font-medium ${activeSort === 'availability' ? 'text-white' : 'text-gray-700'
-          }`}>
-          Seats
-        </Text>
+        <Users size={16} color={activeSort === 'availability' ? 'white' : colors.textSecondary} />
+        <AppText 
+          variant="label" 
+          weight="500"
+          color={activeSort === 'availability' ? 'white' : isDark ? '#d1d5db' : '#374151'}
+          className="ml-1"
+        >
+          {translate('seats')}
+        </AppText>
         {activeSort === 'availability' && (
-          <Text className="text-white ml-1">
+          <AppText variant="label" color="white" className="ml-1">
             {filters.sortOrder === 'asc' ? '↑' : '↓'}
-          </Text>
+          </AppText>
         )}
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <SafeAreaView className="flex-1" edges={['top', 'left', 'right', 'bottom']}>
         <StatusBar style="dark" />
 
@@ -399,10 +415,10 @@ export default function TripsScreen() {
         >
           <View className="flex-row justify-between items-center">
             <View>
-              <Text className="text-2xl font-bold text-white">Available Trips</Text>
-              <Text className="text-sm text-blue-100 mt-1">
-                Find your perfect journey
-              </Text>
+              <AppText variant="h1" color="white">{translate('available_trips')}</AppText>
+              <AppText variant="bodySmall" color="#dbeafe" className="mt-1">
+                {translate('find_journey_sub')}
+              </AppText>
             </View>
             <View className="flex-row">
               <TouchableOpacity
@@ -423,22 +439,22 @@ export default function TripsScreen() {
           {/* Quick Stats */}
           <View className="flex-row mt-3 pt-3 border-t border-white/20">
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Available Today</Text>
-              <Text className="text-lg font-bold text-white">
-                {displayedTrips.length}
-              </Text>
+              <AppText variant="caption" color="#bfdbfe">{translate('available_today')}</AppText>
+              <AppText variant="h2" color="white">
+                {displayedTrips.length} {displayedTrips.length === 1 ? translate('trip') : translate('trips')}
+              </AppText>
             </View>
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Routes</Text>
-              <Text className="text-lg font-bold text-white">
+              <AppText variant="caption" color="#bfdbfe">{translate('routes')}</AppText>
+              <AppText variant="h2" color="white">
                 {stations.length}
-              </Text>
+              </AppText>
             </View>
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Passengers</Text>
-              <Text className="text-lg font-bold text-white">
+              <AppText variant="caption" color="#bfdbfe">{translate('passengers')}</AppText>
+              <AppText variant="h2" color="white">
                 {searchParams.passengers}
-              </Text>
+              </AppText>
             </View>
           </View>
         </LinearGradient>
@@ -459,85 +475,95 @@ export default function TripsScreen() {
 
             {/* Quick Stats Cards */}
             <View className="flex-row mb-4">
-              <View className="flex-1 bg-white rounded-xl p-3 mr-2 border border-gray-200">
-                <TrendingUp size={20} color="#3b82f6" />
-                <Text className="text-lg font-bold text-gray-900 mt-1">24/7</Text>
-                <Text className="text-xs text-gray-500">Service</Text>
+              <View className={`flex-1 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-3 mr-2 border`}>
+                <TrendingUp size={20} color={colors.primary} />
+                <AppText variant="h3" color={isDark ? 'white' : 'black'} className="mt-1">24/7</AppText>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('service')}</AppText>
               </View>
-              <View className="flex-1 bg-white rounded-xl p-3 mr-2 border border-gray-200">
-                <Star size={20} color="#f59e0b" />
-                <Text className="text-lg font-bold text-gray-900 mt-1">4.8</Text>
-                <Text className="text-xs text-gray-500">Rating</Text>
+              <View className={`flex-1 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-3 mr-2 border`}>
+                <Star size={20} color={colors.accent} />
+                <AppText variant="h3" color={isDark ? 'white' : 'black'} className="mt-1">4.8</AppText>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('rating')}</AppText>
               </View>
-              <View className="flex-1 bg-white rounded-xl p-3 border border-gray-200">
-                <Clock3 size={20} color="#10b981" />
-                <Text className="text-lg font-bold text-gray-900 mt-1">On Time</Text>
-                <Text className="text-xs text-gray-500">95%</Text>
+              <View className={`flex-1 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-3 border`}>
+                <Clock3 size={20} color={colors.success} />
+                <AppText variant="h3" color={isDark ? 'white' : 'black'} className="mt-1">95%</AppText>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('on_time')}</AppText>
               </View>
             </View>
 
             {/* Filters Panel */}
             {showFilters && (
-              <View className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-200">
-                <Text className="text-lg font-semibold text-gray-900 mb-4">
-                  Filter Results
-                </Text>
+              <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-5 mb-6 shadow-sm border`}>
+                <AppText variant="h3" color={isDark ? 'white' : 'black'} className="mb-4">
+                  {translate('filter_results')}
+                </AppText>
 
                 <View className="space-y-4">
                   <View>
-                    <Text className="text-sm font-medium text-gray-700 mb-2">Price Range</Text>
+                    <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="mb-2">
+                      {translate('price_range')}
+                    </AppText>
                     <View className="flex-row flex-wrap">
                       {[
-                        { id: 'all', label: 'All Prices' },
-                        { id: 'under500', label: 'Under ETB 500' },
-                        { id: '500-1000', label: 'ETB 500-1000' },
-                        { id: 'over1000', label: 'Over ETB 1000' }
+                        { id: 'all', label: translate('all_prices') },
+                        { id: 'under500', label: translate('under_500') },
+                        { id: '500-1000', label: translate('between_500_1000') },
+                        { id: 'over1000', label: translate('over_1000') }
                       ].map(range => (
                         <TouchableOpacity
                           key={range.id}
                           onPress={() => setFilters(prev => ({ ...prev, priceRange: range.id }))}
-                          className={`px-4 py-2 rounded-full mr-2 mb-2 ${filters.priceRange === range.id ? 'bg-blue-500' : 'bg-gray-200'
+                          className={`px-4 py-2 rounded-full mr-2 mb-2 ${filters.priceRange === range.id ? 'bg-blue-500' : isDark ? 'bg-gray-700' : 'bg-gray-200'
                             }`}
                         >
-                          <Text className={filters.priceRange === range.id ? 'text-white' : 'text-gray-700'}>
+                          <AppText 
+                            variant="label" 
+                            color={filters.priceRange === range.id ? 'white' : isDark ? '#d1d5db' : '#4b5563'}
+                          >
                             {range.label}
-                          </Text>
+                          </AppText>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
 
                   <View>
-                    <Text className="text-sm font-medium text-gray-700 mb-2">Bus Type</Text>
+                    <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="mb-2">
+                      {translate('bus_type')}
+                    </AppText>
                     <View className="flex-row flex-wrap">
                       {[
-                        { id: 'all', label: 'All Types' },
-                        { id: 'bus', label: 'Bus' },
-                        { id: 'minibus', label: 'Minibus' },
-                        { id: 'coaster', label: 'Coaster' }
+                        { id: 'all', label: translate('all_types') },
+                        { id: 'bus', label: translate('bus') },
+                        { id: 'minibus', label: translate('minibus') },
+                        { id: 'coaster', label: translate('coaster') }
                       ].map(type => (
                         <TouchableOpacity
                           key={type.id}
                           onPress={() => setFilters(prev => ({ ...prev, busType: type.id }))}
-                          className={`px-4 py-2 rounded-full mr-2 mb-2 ${filters.busType === type.id ? 'bg-blue-500' : 'bg-gray-200'
+                          className={`px-4 py-2 rounded-full mr-2 mb-2 ${filters.busType === type.id ? 'bg-blue-500' : isDark ? 'bg-gray-700' : 'bg-gray-200'
                             }`}
                         >
-                          <Text className={filters.busType === type.id ? 'text-white' : 'text-gray-700'}>
+                          <AppText 
+                            variant="label" 
+                            color={filters.busType === type.id ? 'white' : isDark ? '#d1d5db' : '#4b5563'}
+                          >
                             {type.label}
-                          </Text>
+                          </AppText>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
 
                   <Button
-                    title="Apply Filters"
+                    title={translate('apply_filters')}
                     onPress={handleApplyFilters}
                     className="bg-blue-600"
                   />
 
                   <Button
-                    title="Reset Filters"
+                    title={translate('reset_filters')}
                     variant="outline"
                     onPress={() => {
                       setFilters({
@@ -558,31 +584,31 @@ export default function TripsScreen() {
 
             {/* Results Header */}
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-semibold text-gray-900">
-                {displayedTrips.length > 0 ? 'Available Trips' : 'No Trips Found'}
-              </Text>
+              <AppText variant="h3" weight="semibold" color={isDark ? 'white' : '#111827'}>
+                {displayedTrips.length > 0 ? translate('available_trips') : translate('no_trips_found')}
+              </AppText>
               <View className="bg-blue-100 px-3 py-1 rounded-full">
-                <Text className="text-sm font-medium text-blue-600">
-                  {displayedTrips.length} trip{displayedTrips.length !== 1 ? 's' : ''}
-                </Text>
+                <AppText variant="caption" weight="500" color="#2563eb">
+                  {translate('trip_count', { count: displayedTrips.length })}
+                </AppText>
               </View>
             </View>
 
             {/* Trip List */}
             {loading && !refreshing ? (
               <View className="py-10">
-                <Loader message="Loading trips..." />
+                <Loader message={translate('loading_trips')} />
               </View>
             ) : displayedTrips.length === 0 ? (
               <EmptyState
                 icon={<Bus size={48} color="#94a3b8" />}
-                title="No trips available"
+                title={translate('no_trips_available')}
                 message={
                   searchParams.origin && searchParams.destination
-                    ? "No trips found for your search criteria. Try different dates or stations."
-                    : "There are no trips available at the moment. Please check back later."
+                    ? translate('no_search_results_desc')
+                    : translate('no_trips_general_desc')
                 }
-                buttonTitle="Search Again"
+                buttonTitle={translate('search_again')}
                 onButtonPress={() => router.push('/tabs/trips/search')}
               />
             ) : (
@@ -600,9 +626,9 @@ export default function TripsScreen() {
             {/* Popular Routes */}
             {!showSearchSummary && stationOptions.length >= 4 && (
               <View className="mt-8">
-                <Text className="text-lg font-semibold text-gray-900 mb-3">
-                  Popular Routes
-                </Text>
+                <AppText variant="h3" weight="semibold" color={isDark ? 'white' : '#111827'} className="mb-3">
+                  {translate('popular_routes')}
+                </AppText>
                 <View className="flex-row flex-wrap">
                   {stationOptions.slice(0, 4).map((station, index) => {
                     if (index < stationOptions.length - 1) {
@@ -610,12 +636,12 @@ export default function TripsScreen() {
                         <TouchableOpacity
                           key={index}
                           onPress={() => handleQuickSearch(station.value, stationOptions[index + 1]?.value)}
-                          className="bg-white border border-gray-200 rounded-full px-4 py-2 mr-2 mb-2 flex-row items-center"
+                          className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-full px-4 py-2 mr-2 mb-2 flex-row items-center`}
                         >
-                          <Bus size={16} color="#64748b" />
-                          <Text className="ml-1.5 text-sm text-gray-700">
+                          <Bus size={16} color={colors.textSecondary} />
+                          <AppText variant="bodySmall" color={isDark ? '#d1d5db' : '#4b5563'} className="ml-1.5">
                             {station.label.split(' (')[0]} → {stationOptions[index + 1]?.label.split(' (')[0]}
-                          </Text>
+                          </AppText>
                           <ArrowRight size={14} color="#3b82f6" className="ml-1" />
                         </TouchableOpacity>
                       );

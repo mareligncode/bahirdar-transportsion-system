@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { AppText } from '../common/AppText';
 import { Bell, Check, Clock, CreditCard, User, Trash2 } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 import type { Notification } from '../../types/notification';
 
 type Props = {
@@ -38,28 +40,32 @@ const timeAgo = (dateString: string) => {
 };
 
 export function NotificationItem({ item, onPress, onDelete }: Props) {
+  const { isDark, colors } = useTheme();
+
   return (
     <TouchableOpacity
       onPress={() => onPress?.(item.id)}
-      className={`flex-row mx-4 p-4 bg-white rounded-xl border ${
-        item.is_read ? 'border-gray-200' : 'border-blue-200 bg-blue-50'
+      className={`flex-row mx-4 p-4 rounded-xl border ${
+        item.is_read 
+          ? `bg-white dark:bg-gray-800 ${isDark ? 'border-gray-700' : 'border-gray-200'}` 
+          : `bg-blue-50 dark:bg-blue-900/20 ${isDark ? 'border-blue-900/50' : 'border-blue-200'}`
       }`}
       activeOpacity={0.8}
     >
       <View className="flex-1 flex-row items-start space-x-3">
         {getIcon(item.type)}
-        <View className="flex-1">
-          <Text className="font-semibold text-gray-900 text-base">
+        <View className="flex-1 ml-3">
+          <AppText weight="semibold" color="textPrimary" variant="bodyMedium">
             {item.title}
-          </Text>
-          <Text className="text-gray-600 text-sm mt-1">
+          </AppText>
+          <AppText color="textSecondary" variant="bodySmall" className="mt-1">
             {item.message}
-          </Text>
-          <Text className="text-gray-400 text-xs mt-1">
+          </AppText>
+          <AppText variant="caption" color="textTertiary" className="mt-1">
             {timeAgo(item.created_at)}
-          </Text>
+          </AppText>
         </View>
-        {!item.is_read && <View className="w-2 h-2 bg-blue-500 rounded-full" />}
+        {!item.is_read && <View className="w-2 h-2 bg-blue-500 rounded-full mt-2" />}
       </View>
       {onDelete && (
         <TouchableOpacity
@@ -67,7 +73,7 @@ export function NotificationItem({ item, onPress, onDelete }: Props) {
           className="ml-3 p-2 rounded-full"
           activeOpacity={0.8}
         >
-          <Trash2 size={18} color="#6b7280" />
+          <Trash2 size={18} color={isDark ? colors.textTertiary : "#6b7280"} />
         </TouchableOpacity>
       )}
     </TouchableOpacity>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ScrollView,
   Dimensions,
 } from 'react-native';
-import { Car } from 'lucide-react-native';
+import { Car, User } from 'lucide-react-native';
+import { AppText } from '../common/AppText';
+import { useTheme } from '@/context/ThemeContext';
+import { formatCurrency } from '@/utils/helpers';
 
 interface SeatSelectorProps {
   totalSeats: number;
@@ -36,6 +38,7 @@ const SeatSelector: React.FC<SeatSelectorProps> = ({
   pricePerSeat = 0,
   maxSeats = 10,
 }) => {
+  const { isDark, colors } = useTheme();
   const [localSelectedSeats, setLocalSelectedSeats] = useState<string[]>(selectedSeats);
   const [seatLayout, setSeatLayout] = useState<SeatItem[][]>([]);
   const screenWidth = Dimensions.get('window').width;
@@ -132,7 +135,7 @@ const SeatSelector: React.FC<SeatSelectorProps> = ({
       >
         <View className="items-center mb-8">
           <View className="bg-gray-800 px-4 py-2 rounded-lg mb-2">
-            <Text className="text-white font-bold">DRIVER</Text>
+            <AppText weight="bold" color="white">DRIVER</AppText>
           </View>
           <View className="w-full h-1 bg-gray-300" />
         </View>
@@ -142,7 +145,7 @@ const SeatSelector: React.FC<SeatSelectorProps> = ({
             <View key={rowIndex} className="flex-row justify-center space-x-4">
               {/* Row Label */}
               <View className="w-8 items-center justify-center">
-                <Text className="font-bold text-gray-700">{row[0]?.row || ''}</Text>
+                <AppText weight="bold" color={isDark ? 'white' : 'textSecondary'}>{row[0]?.row || ''}</AppText>
               </View>
 
               {/* Seats */}
@@ -158,9 +161,9 @@ const SeatSelector: React.FC<SeatSelectorProps> = ({
                         } ${seat.isBooked ? 'opacity-60' : ''}`}
                       activeOpacity={0.7}
                     >
-                      <Text className={`font-bold ${getSeatTextColor(seat.isBooked, seat.isSelected)}`}>
+                      <AppText weight="bold" color={getSeatTextColor(seat.isBooked, seat.isSelected)}>
                         {seat.number}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
 
                     {/* Add aisle space */}
@@ -175,51 +178,51 @@ const SeatSelector: React.FC<SeatSelectorProps> = ({
         {/* Legend */}
         <View className="flex-row justify-between mt-8 px-4">
           <View className="items-center">
-            <View className="w-10 h-10 bg-gray-300 rounded-lg items-center justify-center mb-1">
-              <Text className="font-bold text-gray-800">1</Text>
+            <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg items-center justify-center mb-1">
+              <AppText weight="bold" color={isDark ? 'white' : 'textSecondary'}>1</AppText>
             </View>
-            <Text className="text-xs text-gray-600">Available</Text>
+            <AppText variant="caption" color="textSecondary">Available</AppText>
           </View>
 
           <View className="items-center">
             <View className="w-10 h-10 bg-blue-500 rounded-lg items-center justify-center mb-1">
-              <Text className="font-bold text-white">2</Text>
+              <AppText weight="bold" color="white">2</AppText>
             </View>
-            <Text className="text-xs text-gray-600">Selected</Text>
+            <AppText variant="caption" color="textSecondary">Selected</AppText>
           </View>
 
           <View className="items-center">
             <View className="w-10 h-10 bg-red-500 rounded-lg items-center justify-center mb-1">
-              <Text className="font-bold text-white">3</Text>
+              <AppText weight="bold" color="white">3</AppText>
             </View>
-            <Text className="text-xs text-gray-600">Booked</Text>
+            <AppText variant="caption" color="textSecondary">Booked</AppText>
           </View>
 
           <View className="items-center">
             <View className="w-10 h-10 bg-gray-800 rounded-lg items-center justify-center mb-1">
               <Car size={20} color="white" />
             </View>
-            <Text className="text-xs text-gray-600">Driver</Text>
+            <AppText variant="caption" color="textSecondary">Driver</AppText>
           </View>
         </View>
       </ScrollView>
 
       {/* Selection Summary */}
       {localSelectedSeats.length > 0 && (
-        <View className="border-t border-gray-200 p-4">
-          <Text className="font-semibold text-gray-800 mb-2">
+        <View className={`border-t ${isDark ? 'border-gray-800' : 'border-gray-200'} p-4`}>
+          <AppText weight="semibold" color={isDark ? 'white' : 'textPrimary'} className="mb-2">
             Selected Seats: {sortSeats(localSelectedSeats).join(', ')}
-          </Text>
+          </AppText>
           {pricePerSeat > 0 && (
             <>
-              <Text className="text-gray-600">
-                Total: ETB {pricePerSeat * localSelectedSeats.length}
-                ({localSelectedSeats.length} seat{localSelectedSeats.length !== 1 ? 's' : ''} × ETB {pricePerSeat})
-              </Text>
+              <AppText color="textSecondary">
+                Total: {formatCurrency(pricePerSeat * localSelectedSeats.length)}
+                ({localSelectedSeats.length} seat{localSelectedSeats.length !== 1 ? 's' : ''} × {formatCurrency(pricePerSeat)})
+              </AppText>
               {maxSeats && (
-                <Text className="text-sm text-gray-500 mt-1">
+                <AppText variant="caption" color="textTertiary" className="mt-1">
                   Maximum {maxSeats} seat{maxSeats !== 1 ? 's' : ''} per booking
-                </Text>
+                </AppText>
               )}
             </>
           )}

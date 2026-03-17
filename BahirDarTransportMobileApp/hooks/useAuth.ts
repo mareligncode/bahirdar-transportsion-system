@@ -48,7 +48,7 @@ export const useAuth = () => {
   const logout = async () => {
     console.log('🚪 useAuth: Logout called');
     await storeLogout();
-    router.replace('/auth/Login');
+    router.replace('/');
   };
 
   const checkAuthStatus = async (): Promise<boolean> => {

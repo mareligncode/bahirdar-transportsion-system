@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -26,8 +25,11 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../components/common/Toast';
 import { formatCurrency } from '../../../utils/helpers';
 import { Booking } from '../../../types';
+import { AppText } from '../../../components/common/AppText';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { useTheme } from '../../../context/ThemeContext';
 
-type PaymentMethod = 'mobile_money' | 'card' | 'cash';
+type PaymentMethodType = 'mobile_money' | 'card' | 'cash';
 
 export default function PaymentCheckoutScreen() {
   const { bookingIds, bookingId, seatCount } = useLocalSearchParams<{
@@ -40,8 +42,10 @@ export default function PaymentCheckoutScreen() {
   const { initializePayment, verifyPayment, loading: paymentLoading } = usePayment();
   const { getBookingById } = useBooking();
   const { showToast } = useToast();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
 
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('mobile_money');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>('mobile_money');
   const [processing, setProcessing] = useState<boolean>(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export default function PaymentCheckoutScreen() {
         setShowWebView(false);
         setPaymentCompleted(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        showToast('Payment verification required', 'warning');
+        showToast(translate('verifying_payment'), 'warning');
 
         setTimeout(() => {
           router.replace({
@@ -169,7 +173,7 @@ export default function PaymentCheckoutScreen() {
     }
     
     if (fetchRetryCount >= 3 && bookings.length === 0) {
-      showToast('Unable to load booking details. Please try again.', 'error');
+      showToast(translate('something_went_wrong'), 'error');
       setTimeout(() => {
         router.back();
       }, 2000);
@@ -217,19 +221,19 @@ const fetchAllBookingDetails = async () => {
     setFetchRetryCount(0);
 
     if (fetchedBookings.length === 0 && parsedBookingIds.length > 0) {
-      showToast('Bookings no longer available. Please try again.', 'error');
+      showToast(translate('trip_not_found_err'), 'error');
       setTimeout(() => {
         router.replace('/tabs/trips');
       }, 2000);
     } else if (fetchedBookings.length < parsedBookingIds.length) {
-      showToast(`Found ${fetchedBookings.length} of ${parsedBookingIds.length} bookings`, 'info');
+      showToast(translate('found_bookings_count', { fetched: fetchedBookings.length, total: parsedBookingIds.length }), 'info');
     }
   } catch (error) {
   }
 };
   const handlePayment = async () => {
     if (parsedBookingIds.length === 0 || bookings.length === 0) {
-      showToast('No bookings found to pay for', 'error');
+      showToast(translate('no_bookings_found_to_pay'), 'error');
       return;
     }
 
@@ -254,11 +258,11 @@ const fetchAllBookingDetails = async () => {
           }
         }, 45000);
       } else {
-        Alert.alert('Payment Error', 'Failed to initialize payment. Please try again.');
+        Alert.alert(translate('error'), translate('something_went_wrong'));
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to initialize payment';
-      Alert.alert('Error', msg);
+      const msg = error.response?.data?.message || translate('failed_init_payment');
+      Alert.alert(translate('error'), msg);
     } finally {
       setProcessing(false);
     }
@@ -312,7 +316,7 @@ const fetchAllBookingDetails = async () => {
       setShowWebView(false);
       setPaymentCompleted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast('Payment successful!', 'success');
+      showToast(translate('success'), 'success');
 
       setTimeout(() => {
         router.replace({
@@ -333,11 +337,11 @@ const fetchAllBookingDetails = async () => {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        'Payment Failed',
-        'There was a problem with your payment. Please try again.',
+        translate('payment_failed_title'),
+        translate('payment_failed_desc'),
         [
-          { text: 'Try Again', onPress: () => setShowWebView(true) },
-          { text: 'Back to Booking', onPress: handleGoToConfirmation }
+          { text: translate('try_again'), onPress: () => setShowWebView(true) },
+          { text: translate('back'), onPress: handleGoToConfirmation }
         ]
       );
 
@@ -350,11 +354,11 @@ const handleVerification = useCallback(async () => {
   if (verifying || parsedBookingIds.length === 0 || paymentCompleted) return;
 
   setVerifying(true);
-  showToast('Verifying your payment...', 'info');
+  showToast(translate('verifying_payment'), 'info');
 
   try {
     if (!globalTxRef) {
-      showToast('No transaction reference found', 'error');
+      showToast(translate('no_tx_ref_err'), 'error');
       setVerifying(false);
       return;
     }
@@ -366,7 +370,7 @@ const handleVerification = useCallback(async () => {
           setPaymentCompleted(true);
           setShowWebView(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          showToast('Payment confirmed!', 'success');
+          showToast(translate('payment_confirmed'), 'success');
 
           setTimeout(() => {
             router.replace({
@@ -384,7 +388,7 @@ const handleVerification = useCallback(async () => {
         setPaymentCompleted(true);
         setShowWebView(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showToast('Payment confirmed!', 'success');
+        showToast(translate('payment_confirmed'), 'success');
 
         setTimeout(() => {
           router.replace({
@@ -399,10 +403,10 @@ const handleVerification = useCallback(async () => {
         return;
       }
     }
-    showToast(result.message || 'Payment still pending. Please wait.', 'info');
+    showToast(result.message || translate('payment_pending_msg'), 'info');
     
   } catch (error: any) {
-    showToast('Verification failed. We will check again shortly.', 'warning');
+    showToast(translate('verification_failed_msg'), 'warning');
   } finally {
     setVerifying(false);
   }
@@ -427,55 +431,55 @@ const handleVerification = useCallback(async () => {
 
     setShowWebView(false);
     Alert.alert(
-      'Payment Incomplete',
-      'Did you complete the payment?',
+      translate('payment_failed_title'),
+      translate('payment_failed_desc'),
       [
-        { text: 'Yes, Verify', onPress: handleVerification },
-        { text: 'No, Go Back', onPress: handleGoToConfirmation },
-        { text: 'Cancel', style: 'cancel' }
+        { text: translate('success'), onPress: handleVerification },
+        { text: translate('back'), onPress: handleGoToConfirmation },
+        { text: translate('cancel'), style: 'cancel' }
       ]
     );
   }, [handleVerification, handleGoToConfirmation]);
 
-  const paymentMethods: Array<{ id: PaymentMethod; name: string; icon: any; description: string }> = [
+  const paymentMethods: Array<{ id: PaymentMethodType; name: string; icon: any; description: string }> = [
     {
       id: 'mobile_money',
-      name: 'Mobile Money',
+      name: translate('mobile_money'),
       icon: Smartphone,
-      description: 'Pay using Telebirr, M-Pesa, etc.'
+      description: translate('mobile_money_desc')
     },
     {
       id: 'card',
-      name: 'Card Payment',
+      name: translate('card_payment'),
       icon: CreditCard,
-      description: 'Credit or Debit card'
+      description: translate('card_payment_desc')
     },
     {
       id: 'cash',
-      name: 'Cash at Station',
+      name: translate('cash_payment'),
       icon: Banknote,
-      description: 'Pay at the bus station'
+      description: translate('cash_payment_desc')
     }
   ];
 
   if (bookings.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="mt-4 text-gray-600">Loading booking details...</Text>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'} justify-center items-center`}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <AppText className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{translate('loading_content')}</AppText>
       </SafeAreaView>
     );
   }
   if (showWebView && checkoutUrl) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-        <View className="px-4 py-3 border-b border-gray-200 flex-row items-center bg-white">
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
+        <View className={`px-4 py-3 border-b ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'} flex-row items-center`}>
           <TouchableOpacity onPress={closeWebView} className="mr-3">
-            <ArrowLeft size={24} color="#4b5563" />
+            <ArrowLeft size={24} color={isDark ? colors.textSecondary : "#4b5563"} />
           </TouchableOpacity>
-          <Text className="flex-1 text-lg font-semibold text-gray-800">
-            Secure Payment
-          </Text>
+          <AppText className={`flex-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+            {translate('secure_payment_title')}
+          </AppText>
         </View>
 
         <WebView
@@ -486,7 +490,7 @@ const handleVerification = useCallback(async () => {
           renderLoading={() => (
             <View className="absolute top-0 left-0 right-0 bottom-0 justify-center items-center bg-white">
               <ActivityIndicator size="large" color="#3b82f6" />
-              <Text className="mt-4 text-gray-600">Loading payment page...</Text>
+              <AppText className="mt-4 text-gray-600">{translate('loading')}</AppText>
             </View>
           )}
           javaScriptEnabled={true}
@@ -501,73 +505,71 @@ const handleVerification = useCallback(async () => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-      <View className="px-4 py-3 border-b border-gray-200 flex-row items-center">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
+      <View className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center`}>
         <TouchableOpacity onPress={handleGoToConfirmation} className="mr-3">
-          <ArrowLeft size={24} color="#4b5563" />
+          <ArrowLeft size={24} color={isDark ? colors.textSecondary : "#4b5563"} />
         </TouchableOpacity>
-        <Text className="flex-1 text-lg font-semibold text-gray-800">
-          Complete Payment
-        </Text>
+        <AppText className={`flex-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          {translate('complete_payment')}
+        </AppText>
       </View>
 
       <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
-        <View className="bg-blue-50 p-5 rounded-xl border border-blue-200 mb-6">
-          <Text className="text-sm text-gray-600 text-center">Total Amount</Text>
-          <Text className="text-3xl font-bold text-blue-600 text-center">
+        <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderColor: isDark ? 'rgba(59,130,246,0.2)' : '#bfdbfe' }} className="p-5 rounded-xl border mb-6">
+          <AppText className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center`}>{translate('total_amount')}</AppText>
+          <AppText className={`text-3xl font-bold ${isDark ? colors.primary : '#2563eb'} text-center`}>
             {formatCurrency(totalAmount)}
-          </Text>
+          </AppText>
 
           <View className="flex-row justify-center flex-wrap gap-2 mt-3">
             {allSeatNumbers.length > 0 ? (
               allSeatNumbers.map((seat: number, index: number) => (
                 <View key={index} className="bg-blue-500 px-4 py-2 rounded-full shadow-sm">
-                  <Text className="text-white text-sm font-bold">Seat {seat}</Text>
+                  <AppText className="text-white text-sm font-bold">{translate('seat_label', { number: seat })}</AppText>
                 </View>
               ))
             ) : (
               <View className="bg-gray-400 px-4 py-2 rounded-full">
-                <Text className="text-white text-sm font-bold">Loading seats...</Text>
+                <AppText className="text-white text-sm font-bold">{translate('loading_seats')}</AppText>
               </View>
             )}
           </View>
           {isGroupBooking && (
-            <View className="bg-purple-100 px-3 py-1 rounded-full self-center mt-2">
-              <Text className="text-purple-700 text-xs font-bold">
-                GROUP BOOKING • {allSeatNumbers.length} SEATS
-              </Text>
+            <View className={`${isDark ? 'bg-purple-900/20' : 'bg-purple-100'} px-3 py-1 rounded-full self-center mt-2`}>
+              <AppText className={`${isDark ? 'text-purple-400' : 'text-purple-700'} text-xs font-bold`}>
+                {translate('group_booking_label')} • {allSeatNumbers.length} {translate('seats')}
+              </AppText>
             </View>
           )}
           {allSeatNumbers.length > 0 && (
             <>
-              <Text className="text-xs text-gray-500 text-center mt-3">
-                {allSeatNumbers.length} {allSeatNumbers.length === 1 ? 'seat' : 'seats'} × {formatCurrency(pricePerSeat)}
-              </Text>
+              <AppText className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} text-center mt-3`}>
+                {allSeatNumbers.length} {allSeatNumbers.length === 1 ? translate('passenger_label') : translate('passengers')} × {formatCurrency(pricePerSeat)}
+              </AppText>
 
-              <View className="flex-row justify-between items-center pt-4 border-t border-gray-100">
+              <View className={`flex-row justify-between items-center pt-4 border-t ${isDark ? 'border-blue-900/30' : 'border-gray-100'}`}>
                 <View>
-                  <Text className="text-gray-600 font-medium">Total Amount</Text>
+                  <AppText className="text-gray-600 font-medium">{translate('total_amount')}</AppText>
                   {allSeatNumbers.length > 1 && (
-                    <Text className="text-xs text-gray-500">
-                      {allSeatNumbers.length} seats
-                    </Text>
+                    <AppText className="text-xs text-gray-500">
+                      {allSeatNumbers.length} {translate('seats')}
+                    </AppText>
                   )}
                 </View>
                 <View className="items-end">
-                  <Text className="text-2xl font-bold text-blue-600">
+                  <AppText className={`text-2xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                     {formatCurrency(backendAmount || totalAmount)}
-                  </Text>
-                  {backendAmount && backendAmount !== totalAmount && (
-                    <Text className="text-xs text-amber-600 font-medium">
-                      Includes all pending seats for this trip
-                    </Text>
-                  )}
+                  </AppText>
+                    <AppText className="text-xs text-gray-500 text-right">
+                      {translate('pending_seats_note')}
+                    </AppText>
                 </View>
               </View>
             </>
           )}
         </View>
-        <Text className="font-semibold text-gray-700 mb-3">Select Payment Method</Text>
+        <AppText className={`font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>{translate('payment_methods_title')}</AppText>
 
         {paymentMethods.map((method) => (
           <TouchableOpacity
@@ -576,25 +578,31 @@ const handleVerification = useCallback(async () => {
             className={`
               flex-row items-center p-4 mb-3 rounded-xl border-2
               ${selectedMethod === method.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 bg-white'
+                ? (isDark ? 'border-blue-600 bg-blue-900/10' : 'border-blue-500 bg-blue-50')
+                : `${isDark ? 'border-gray-800 bg-gray-800' : 'border-gray-200 bg-white'}`
               }
             `}
           >
             <View className={`
               w-10 h-10 rounded-full items-center justify-center mr-3
-              ${selectedMethod === method.id ? 'bg-blue-500' : 'bg-gray-100'}
+              ${selectedMethod === method.id 
+                ? 'bg-blue-500' 
+                : isDark ? 'bg-gray-700' : 'bg-gray-100'}
             `}>
               <method.icon
                 size={20}
-                color={selectedMethod === method.id ? 'white' : '#6b7280'}
+                color={selectedMethod === method.id 
+                  ? 'white' 
+                  : isDark ? '#9ca3af' : '#6b7280'}
               />
             </View>
             <View className="flex-1">
-              <Text className={`font-semibold ${selectedMethod === method.id ? 'text-blue-600' : 'text-gray-700'}`}>
+              <AppText className={`font-semibold ${selectedMethod === method.id 
+                ? (isDark ? 'text-blue-400' : 'text-blue-600') 
+                : (isDark ? 'text-gray-300' : 'text-gray-700')}`}>
                 {method.name}
-              </Text>
-              <Text className="text-xs text-gray-500">{method.description}</Text>
+              </AppText>
+              <AppText className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{method.description}</AppText>
             </View>
             {selectedMethod === method.id && (
               <CheckCircle size={20} color="#3b82f6" />
@@ -614,29 +622,29 @@ const handleVerification = useCallback(async () => {
           ) : (
             <>
               <CreditCard size={20} color="white" />
-              <Text className="text-white font-semibold ml-2 text-base">
-                Pay {formatCurrency(backendAmount || totalAmount)}
-              </Text>
+              <AppText className="text-white font-semibold ml-2 text-base">
+                {translate('pay_btn', { amount: formatCurrency(backendAmount || totalAmount) })}
+              </AppText>
             </>
           )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleVerification}
           disabled={verifying || paymentCompleted}
-          className="py-3 rounded-xl flex-row items-center justify-center mt-3 bg-gray-100"
+          className={`py-3 rounded-xl flex-row items-center justify-center mt-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
         >
           {verifying ? (
-            <ActivityIndicator size="small" color="#4b5563" />
+            <ActivityIndicator size="small" color={isDark ? colors.textSecondary : "#4b5563"} />
           ) : (
-            <Text className="font-semibold text-gray-600">Check Payment Status</Text>
+            <AppText className={`font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{translate('check_payment_status')}</AppText>
           )}
         </TouchableOpacity>
-        <View className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <View className={`mt-6 p-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} rounded-lg border`}>
           <View className="flex-row items-start gap-2">
-            <AlertCircle size={16} color="#6b7280" />
-            <Text className="flex-1 text-xs text-gray-500">
-              Your payment is secure and encrypted. You'll be redirected to our secure payment page.
-            </Text>
+            <AlertCircle size={16} color={isDark ? colors.textTertiary : "#6b7280"} />
+            <AppText className={`flex-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {translate('secure_payment_note')}
+            </AppText>
           </View>
         </View>
       </ScrollView>

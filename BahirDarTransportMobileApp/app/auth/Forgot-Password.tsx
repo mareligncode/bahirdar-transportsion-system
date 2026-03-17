@@ -11,12 +11,15 @@ import {
   Keyboard,
   Linking,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
 import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -24,14 +27,16 @@ import { Mail, ArrowLeft, CheckCircle, ExternalLink, Smartphone, Info } from 'lu
 
 const forgotPasswordSchema = z.object({
   email: z.string()
-    .email('Please enter a valid email address')
-    .min(1, 'Email is required'),
+    .email('email_invalid')
+    .min(1, 'email_required'),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPassword() {
+  const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { isDark, colors } = useTheme();
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,7 +78,7 @@ export default function ForgotPassword() {
 
   const openEmailApp = () => {
     Linking.openURL('mailto:').catch(() => {
-      Alert.alert('Error', 'Could not open email app');
+      Alert.alert(translate('error'), translate('unable_open_email'));
     });
   };
 
@@ -83,9 +88,9 @@ export default function ForgotPassword() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
-          <Loader message="Sending reset instructions..." />
+          <Loader message={translate('sending_instructions')} />
         </View>
       </SafeAreaView>
     );
@@ -93,7 +98,7 @@ export default function ForgotPassword() {
 
   if (submitted) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
@@ -109,83 +114,83 @@ export default function ForgotPassword() {
                 <CheckCircle size={48} color="#10B981" />
               </View>
 
-              <Text className="text-2xl font-bold text-gray-900 text-center">
-                Check Your Email
-              </Text>
-              <Text className="text-gray-600 text-center mt-2">
-                We've sent reset instructions to:
-              </Text>
-              <Text className="text-blue-600 font-semibold text-lg mt-1">
+              <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} text-center`}>
+                {translate('check_email')}
+              </AppText>
+              <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center mt-2`}>
+                {translate('sent_instructions')}
+              </AppText>
+              <AppText variant="h3" weight="semibold" className="text-blue-600 mt-1">
                 {submittedEmail}
-              </Text>
+              </AppText>
             </View>
 
             <View className="w-full bg-blue-50 rounded-xl p-5 mb-6 border border-blue-100">
               <View className="flex-row items-center mb-3">
                 <Smartphone size={20} color="#3B82F6" />
-                <Text className="text-blue-800 font-bold text-lg ml-2">
-                  📱 Mobile App Users
-                </Text>
+                <AppText variant="h3" weight="bold" className="text-blue-800 ml-2">
+                  📱 {translate('mobile_users')}
+                </AppText>
               </View>
 
               <View className="space-y-3">
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <Text className="text-blue-800 font-bold text-sm">1</Text>
+                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">1</AppText>
                   </View>
-                  <Text className="text-blue-800 flex-1">
-                    Open your email app
-                  </Text>
+                   <AppText className="text-blue-800 flex-1">
+                    {translate('step_1')}
+                  </AppText>
                 </View>
 
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <Text className="text-blue-800 font-bold text-sm">2</Text>
+                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">2</AppText>
                   </View>
-                  <Text className="text-blue-800 flex-1">
-                    Find email from <Text className="font-bold">"Bahir Dar Transport System"</Text>
-                  </Text>
+                   <AppText className="text-blue-800 flex-1">
+                    {translate('step_2')}
+                  </AppText>
                 </View>
 
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <Text className="text-blue-800 font-bold text-sm">3</Text>
+                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">3</AppText>
                   </View>
-                  <Text className="text-blue-800 flex-1">
-                    Tap <Text className="font-bold">"Open App to Reset Password"</Text> button
-                  </Text>
+                   <AppText className="text-blue-800 flex-1">
+                    {translate('step_3')}
+                  </AppText>
                 </View>
 
                 <View className="flex-row items-start">
                   <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <Text className="text-blue-800 font-bold text-sm">4</Text>
+                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">4</AppText>
                   </View>
-                  <Text className="text-blue-800 flex-1">
-                    App will open automatically to reset your password
-                  </Text>
+                   <AppText className="text-blue-800 flex-1">
+                    {translate('step_4')}
+                  </AppText>
                 </View>
               </View>
 
               <View className="mt-4 pt-3 border-t border-blue-200">
                 <View className="flex-row items-center">
                   <Info size={16} color="#3B82F6" />
-                  <Text className="text-blue-700 text-sm ml-2">
-                    Using Expo Go? Make sure it's installed on your device
-                  </Text>
+                  <AppText variant="bodySmall" className="text-blue-700 ml-2">
+                    {translate('expo_go_note')}
+                  </AppText>
                 </View>
               </View>
             </View>
 
-            <View className="w-full bg-gray-50 rounded-xl p-5 mb-6">
-              <Text className="text-gray-700 font-bold text-lg mb-3">
-                💻 Using Desktop?
-              </Text>
-              <Text className="text-gray-600 mb-2">
-                Click the web link in the email or copy/paste it in your browser.
-              </Text>
-              <Text className="text-gray-500 text-xs">
-                Note: Desktop link will open web version
-              </Text>
+            <View className={`w-full ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50'} rounded-xl p-5 mb-6`}>
+                <AppText variant="h3" weight="bold" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                 💻 {translate('using_desktop')}
+               </AppText>
+                <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+                 {translate('desktop_desc')}
+               </AppText>
+                <AppText variant="caption" className={`${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                 {translate('desktop_note')}
+               </AppText>
             </View>
 
             <View className="w-full space-y-3">
@@ -194,13 +199,13 @@ export default function ForgotPassword() {
                 className="w-full bg-blue-50 py-4 px-6 rounded-lg flex-row items-center justify-center border border-blue-200"
               >
                 <ExternalLink size={20} color="#3B82F6" />
-                <Text className="text-blue-600 font-semibold ml-2">
-                  📧 Open Email App
-                </Text>
+                 <AppText weight="semibold" className="text-blue-600 ml-2">
+                  📧 {translate('open_email_app')}
+                </AppText>
               </TouchableOpacity>
 
-              <Button
-                title="← Back to Login"
+               <Button
+                title={"← " + translate('back_to_login')}
                 onPress={handleBackToLogin}
                 variant="outline"
                 size="large"
@@ -213,14 +218,14 @@ export default function ForgotPassword() {
                 onPress={() => setSubmitted(false)}
                 className="items-center"
               >
-                <Text className="text-blue-600 font-semibold">
-                  Didn't receive email? Try again
-                </Text>
+                  <AppText weight="semibold" className="text-blue-600">
+                   {translate('didnt_receive')}
+                 </AppText>
               </TouchableOpacity>
 
-              <Text className="text-gray-400 text-xs text-center mt-4">
-                Check spam folder • Link expires in 15 minutes
-              </Text>
+                <AppText variant="caption" className="text-gray-400 text-center mt-4">
+                 {translate('spam_note')}
+               </AppText>
             </View>
           </View>
         </ScrollView>
@@ -230,7 +235,7 @@ export default function ForgotPassword() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -255,12 +260,12 @@ export default function ForgotPassword() {
                 </TouchableOpacity>
 
                 <View>
-                  <Text className="text-3xl font-bold text-blue-600 mb-2">
-                    Reset Password
-                  </Text>
-                  <Text className="text-gray-600 text-base">
-                    Enter your email address and we'll send you instructions to reset your password
-                  </Text>
+                    <AppText variant="h1" weight="bold" className="text-blue-600 mb-2">
+                     {translate('reset_password_title')}
+                   </AppText>
+                   <AppText className="text-gray-600 text-base">
+                     {translate('reset_password_sub')}
+                   </AppText>
                 </View>
               </View>
 
@@ -270,13 +275,13 @@ export default function ForgotPassword() {
                   control={control}
                   render={({ field: { onChange, value, onBlur } }) => (
                     <View>
-                      <Input
-                        label="Email Address"
-                        placeholder="your.email@example.com"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        error={errors.email?.message}
+                        <Input
+                         label={translate('email_address')}
+                         placeholder={translate('email_placeholder')}
+                         value={value}
+                         onChangeText={onChange}
+                         onBlur={onBlur}
+                         error={errors.email?.message ? translate(errors.email.message as any) : undefined}
                         keyboardType="email-address"
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -286,33 +291,33 @@ export default function ForgotPassword() {
                         className="bg-gray-50"
                       />
 
-                      <View className="flex-row items-center mt-2">
-                        <Info size={14} color="#6B7280" />
-                        <Text className="text-gray-500 text-xs ml-1">
-                          We'll send a secure link that expires in 15 minutes
-                        </Text>
-                      </View>
+                       <View className="flex-row items-center mt-2">
+                         <Info size={14} color="#6B7280" />
+                          <AppText variant="caption" className="text-gray-500 ml-1">
+                           {translate('spam_note')}
+                         </AppText>
+                       </View>
                     </View>
                   )}
                 />
 
-                <View className="bg-blue-50 p-4 rounded-lg mt-2">
-                  <Text className="text-blue-800 font-semibold mb-2">
-                    📱 How it works:
-                  </Text>
-                  <Text className="text-blue-700 text-sm mb-1">
-                    1. Enter your email above
-                  </Text>
-                  <Text className="text-blue-700 text-sm mb-1">
-                    2. Click the link in the email
-                  </Text>
-                  <Text className="text-blue-700 text-sm">
-                    3. App opens → Create new password
-                  </Text>
-                </View>
+                 <View className="bg-blue-50 p-4 rounded-lg mt-2">
+                    <AppText weight="semibold" className="text-blue-800 mb-2">
+                     📱 {translate('how_it_works')}:
+                   </AppText>
+                   <AppText variant="bodySmall" className="text-blue-700 mb-1">
+                     1. {translate('enter_email_step')}
+                   </AppText>
+                   <AppText variant="bodySmall" className="text-blue-700 mb-1">
+                     2. {translate('click_link_step')}
+                   </AppText>
+                   <AppText variant="bodySmall" className="text-blue-700">
+                     3. {translate('app_opens_step')}
+                   </AppText>
+                 </View>
 
-                <Button
-                  title="Send Reset Instructions"
+                 <Button
+                  title={translate('send_reset')}
                   onPress={handleSubmit(handleForgotPassword)}
                   loading={loading}
                   disabled={loading}
@@ -322,27 +327,27 @@ export default function ForgotPassword() {
                   fullWidth
                 />
 
-                <View className="mt-8 pt-6 border-t border-gray-200">
+                <View className={`mt-8 pt-6 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                   <View className="flex-row justify-center items-center">
-                    <Text className="text-gray-600">
-                      Remember your password?{' '}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => router.back()}
-                      activeOpacity={0.7}
-                    >
-                      <Text className="text-blue-600 font-bold">
-                        Sign In
-                      </Text>
-                    </TouchableOpacity>
+                     <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                     {translate('already_have_account')}{' '}
+                   </AppText>
+                   <TouchableOpacity
+                     onPress={() => router.back()}
+                     activeOpacity={0.7}
+                   >
+                      <AppText weight="bold" className="text-blue-600">
+                       {translate('sign_in')}
+                     </AppText>
+                   </TouchableOpacity>
                   </View>
                 </View>
 
-                <TouchableOpacity className="items-center mt-4">
-                  <Text className="text-gray-400 text-sm">
-                    Need help? Contact Support
-                  </Text>
-                </TouchableOpacity>
+                 <TouchableOpacity className="items-center mt-4">
+                    <AppText variant="bodySmall" className="text-gray-400">
+                     {translate('need_help')}? {translate('contact_us')}
+                   </AppText>
+                 </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
