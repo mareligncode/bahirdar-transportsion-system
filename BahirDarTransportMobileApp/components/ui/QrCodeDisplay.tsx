@@ -2,13 +2,13 @@
 import React, { useState, useRef } from 'react';
 import {
     View,
-    Text,
     TouchableOpacity,
     ActivityIndicator,
     Platform,
     Alert,
     Linking
 } from 'react-native';
+import { AppText } from '../common/AppText';
 import ViewShot from 'react-native-view-shot';
 import QRCode from 'react-native-qrcode-svg';
 import { Download, Share2 } from 'lucide-react-native';
@@ -36,9 +36,9 @@ const QRCodeWrapper: React.FC<Omit<QrCodeDisplayProps, 'showActions' | 'onSave' 
 }) => (
     <View className="bg-white p-4 rounded-2xl shadow-lg border border-gray-200">
         {title && (
-            <Text className="text-lg font-bold text-gray-800 text-center mb-2">
+            <AppText variant="bodyLarge" weight="bold" color="textPrimary" className="text-center mb-2">
                 {title}
-            </Text>
+            </AppText>
         )}
 
         <View className="p-3 bg-white rounded-xl">
@@ -51,9 +51,9 @@ const QRCodeWrapper: React.FC<Omit<QrCodeDisplayProps, 'showActions' | 'onSave' 
         </View>
 
         {subtitle && (
-            <Text className="text-xs text-gray-500 text-center mt-2">
+            <AppText variant="caption" color="textSecondary" className="text-center mt-2">
                 {subtitle}
-            </Text>
+            </AppText>
         )}
     </View>
 );
@@ -163,9 +163,9 @@ export const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
                         ) : (
                             <>
                                 <Download size={16} color="white" />
-                                <Text className="text-white ml-2 font-medium">
+                                <AppText weight="medium" color="white" className="ml-2">
                                     {Platform.OS === 'web' ? 'Download' : 'Save to Gallery'}
-                                </Text>
+                                </AppText>
                             </>
                         )}
                     </TouchableOpacity>
@@ -180,7 +180,7 @@ export const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
                         ) : (
                             <>
                                 <Share2 size={16} color="white" />
-                                <Text className="text-white ml-2 font-medium">Share</Text>
+                                <AppText weight="medium" color="white" className="ml-2">Share</AppText>
                             </>
                         )}
                     </TouchableOpacity>

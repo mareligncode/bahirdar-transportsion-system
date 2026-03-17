@@ -1,109 +1,5 @@
-// lib/api/index.ts
-import axios, {
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-  InternalAxiosRequestConfig
-} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, getPlatformBaseUrl, api as apiClient } from '../../config/api';
-
-// Re-export the apiClient
-export { apiClient };
-
-// Helper function for consistent API requests
-export const apiRequest = async <T>(
-  config: AxiosRequestConfig
-): Promise<{ data: T; status: number; headers: any }> => {
-  try {
-    const response: AxiosResponse<T> = await apiClient(config);
-    return {
-      data: response.data,
-      status: response.status,
-      headers: response.headers,
-    };
-  } catch (error: any) {
-    console.error('API request failed:', error.message);
-    throw error;
-  }
-};
-
-// Generic HTTP methods with error handling
-export const get = async <T>(
-  url: string,
-  params?: Record<string, any>,
-  config?: AxiosRequestConfig
-): Promise<T> => {
-  const response = await apiRequest<T>({
-    method: 'GET',
-    url,
-    params,
-    ...config,
-  });
-  return response.data;
-};
-
-export const post = async <T>(
-  url: string,
-  data?: any,
-  config?: AxiosRequestConfig
-): Promise<T> => {
-  const response = await apiRequest<T>({
-    method: 'POST',
-    url,
-    data,
-    ...config,
-  });
-  return response.data;
-};
-
-export const put = async <T>(
-  url: string,
-  data?: any,
-  config?: AxiosRequestConfig
-): Promise<T> => {
-  const response = await apiRequest<T>({
-    method: 'PUT',
-    url,
-    data,
-    ...config,
-  });
-  return response.data;
-};
-
-export const patch = async <T>(
-  url: string,
-  data?: any,
-  config?: AxiosRequestConfig
-): Promise<T> => {
-  const response = await apiRequest<T>({
-    method: 'PATCH',
-    url,
-    data,
-    ...config,
-  });
-  return response.data;
-};
-
-export const del = async <T>(
-  url: string,
-  config?: AxiosRequestConfig
-): Promise<T> => {
-  const response = await apiRequest<T>({
-    method: 'DELETE',
-    url,
-    ...config,
-  });
-  return response.data;
-};
-
-// Export all API modules
-export * from './auth';
-export * from './trips';
-export * from './bookings';
-export * from './payments';
-export * from './user';
-export * from './notification';
+import { api as apiClient, API_ENDPOINTS, getPlatformBaseUrl } from '../../config/api';
 
 // Utility functions
 export const handleApiError = (error: any): {
@@ -211,6 +107,7 @@ export const testApiConnection = async (): Promise<{
   const url = `${baseURL}/health`;
 
   try {
+    // Use the apiClient (axios instance) instead of fetch
     const response = await apiClient.get('/health', {
       timeout: 5000,
     });
@@ -219,11 +116,19 @@ export const testApiConnection = async (): Promise<{
 
     return {
       success: response.status === 200,
-      message: response.data?.message || 'API is reachable',
+      message: 'API is reachable',
       latency,
       url,
     };
   } catch (error: any) {
+    if (error.code === 'ECONNABORTED') {
+      return {
+        success: false,
+        message: 'Request timed out. Please check your internet connection.',
+        url,
+      };
+    }
+    
     return {
       success: false,
       message: error.message || 'Failed to connect to API',
@@ -231,5 +136,3 @@ export const testApiConnection = async (): Promise<{
     };
   }
 };
-
-export default apiClient;

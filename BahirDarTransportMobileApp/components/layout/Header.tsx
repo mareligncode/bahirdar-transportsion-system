@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { View, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { AppText } from '../common/AppText';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 interface HeaderProps {
   title: string;
@@ -21,6 +23,7 @@ export function Header({
   className = ''
 }: HeaderProps) {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -31,29 +34,41 @@ export function Header({
   };
 
   return (
-    <View className={`bg-white ${Platform.OS === 'android' ? 'pt-6' : 'pt-2'} pb-4 px-4 border-b border-gray-200 ${className}`}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View className={`bg-white dark:bg-gray-800 ${Platform.OS === 'android' ? 'pt-6' : 'pt-2'} pb-4 px-4 border-b border-gray-200 dark:border-gray-700 ${className}`}>
+      <StatusBar 
+        barStyle={isDark ? "light-content" : "dark-content"} 
+        backgroundColor={isDark ? "#1F2937" : "#FFFFFF"} 
+      />
 
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
           {showBackButton && (
             <TouchableOpacity
               onPress={handleBackPress}
-              className="mr-3 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+              className="mr-3 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 items-center justify-center"
               activeOpacity={0.7}
             >
-              <ArrowLeft size={20} color="#374151" />
+              <ArrowLeft size={20} color={isDark ? "#FFFFFF" : "#374151"} />
             </TouchableOpacity>
           )}
 
           <View className="flex-1">
-            <Text className="text-xl font-bold text-gray-900" numberOfLines={1}>
+            <AppText 
+              variant="h3" 
+              color={isDark ? "#FFFFFF" : "#111827"}
+              numberOfLines={1}
+            >
               {title}
-            </Text>
+            </AppText>
             {subtitle && (
-              <Text className="text-sm text-gray-600 mt-1" numberOfLines={1}>
+              <AppText 
+                variant="bodySmall"
+                color={isDark ? "#9CA3AF" : "#4B5563"}
+                className="mt-1" 
+                numberOfLines={1}
+              >
                 {subtitle}
-              </Text>
+              </AppText>
             )}
           </View>
         </View>

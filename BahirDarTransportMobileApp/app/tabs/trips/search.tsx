@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
   Alert,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { 
@@ -26,10 +26,14 @@ import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { Select } from '../../../components/common/Select';
 import { formatDate, formatTime } from '../../../utils/helpers';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function SearchScreen() {
+  const { translate } = useTranslation();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { searchTrips, stations, fetchStations, loading } = useTrips();
+  const { stations, fetchStations, loading } = useTrips();
   
   const [formData, setFormData] = useState({
     origin: '',
@@ -52,7 +56,7 @@ export default function SearchScreen() {
     try {
       await fetchStations();
     } catch (error) {
-      Alert.alert('Error', 'Failed to load stations. Please try again.');
+      Alert.alert(translate('error'), translate('no_stations'));
     } finally {
       setRefreshingStations(false);
     }
@@ -60,21 +64,21 @@ export default function SearchScreen() {
 
   const handleSearch = async () => {
     if (!formData.origin) {
-      Alert.alert('Validation Error', 'Please select departure station');
+      Alert.alert(translate('validation_error'), translate('select_departure_err'));
       return;
     }
     if (!formData.destination) {
-      Alert.alert('Validation Error', 'Please select arrival station');
+      Alert.alert(translate('validation_error'), translate('select_arrival_err'));
       return;
     }
     if (formData.origin === formData.destination) {
-      Alert.alert('Validation Error', 'Departure and arrival stations cannot be the same');
+      Alert.alert(translate('validation_error'), translate('same_station_err'));
       return;
     }
 
     const passengersNum = parseInt(formData.passengers);
     if (isNaN(passengersNum) || passengersNum < 1 || passengersNum > 4) {
-      Alert.alert('Validation Error', 'Please enter a valid number of passengers (1-4)');
+      Alert.alert(translate('validation_error'), translate('invalid_passengers_err'));
       return;
     }
 
@@ -94,7 +98,7 @@ export default function SearchScreen() {
       });
     } catch (error) {
       console.error('Search failed:', error);
-      Alert.alert('Search Failed', 'Unable to search trips. Please try again.');
+      Alert.alert(translate('search_failed'), translate('something_went_wrong'));
     }
   };
 
@@ -149,18 +153,21 @@ export default function SearchScreen() {
   const tabBarHeight = 60 + insets.bottom;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
-      <StatusBar style="dark" />
+    <SafeAreaView 
+      className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} 
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar style={isDark ? "light" : "dark"} />
       
       {/* Header */}
-      <View className="bg-white px-4 pb-3 border-b border-gray-200">
+      <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} px-4 pb-3 border-b`}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-            <ChevronLeft size={24} color="#1e293b" />
+            <ChevronLeft size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text className="flex-1 text-center text-xl font-bold text-gray-900">
-            Search Trips
-          </Text>
+          <AppText variant="h2" weight="bold" color={colors.textPrimary} className="flex-1 text-center">
+            {translate('search_trips')}
+          </AppText>
           <View className="w-10" />
         </View>
       </View>
@@ -177,78 +184,78 @@ export default function SearchScreen() {
           }}
         >
           {/* Hero Banner */}
-          <View className="bg-blue-600 px-6 py-6">
-            <Text className="text-2xl font-bold text-white mb-2">
-              Find Your Trip
-            </Text>
-            <Text className="text-blue-100 text-base">
-              Search available trips to your destination
-            </Text>
+          <View className={`${isDark ? 'bg-blue-900/50' : 'bg-blue-600'} px-6 py-6`}>
+            <AppText variant="h1" weight="bold" color="white" className="mb-2">
+              {translate('find_your_trip')}
+            </AppText>
+            <AppText variant="bodyMedium" color={isDark ? colors.gray300 : "#dbeafe"}>
+              {translate('search_available_trips')}
+            </AppText>
           </View>
 
           {/* Search Form */}
-          <View className="bg-white mx-4 -mt-6 p-5 rounded-2xl shadow-md border border-gray-100">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
-              Search Available Trips
-            </Text>
+          <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} mx-4 -mt-6 p-5 rounded-2xl shadow-md border`}>
+            <AppText variant="bodyLarge" weight="semibold" color={colors.textPrimary} className="mb-4">
+              {translate('search_available_trips')}
+            </AppText>
             
             <View className="space-y-4">
               {/* Origin Station */}
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  From
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={colors.textSecondary} className="mb-2">
+                  {translate('from')}
+                </AppText>
                 <Select
-                  placeholder="Select departure station"
+                  placeholder={translate('select_departure')}
                   value={formData.origin}
                   onValueChange={(value: string) => setFormData(prev => ({ ...prev, origin: value }))}
                   items={stationOptions}
-                  leftIcon={<MapPin size={20} color="#3b82f6" />}
+                  leftIcon={<MapPin size={20} color={colors.primary} />}
                   loading={refreshingStations}
                 />
                 {stationOptions.length === 0 && !refreshingStations && (
-                  <Text className="text-xs text-red-500 mt-1">
-                    No stations available. Pull down to refresh.
-                  </Text>
+                  <AppText variant="caption" color={colors.danger} className="mt-1">
+                    {translate('no_stations')}
+                  </AppText>
                 )}
               </View>
 
               {/* Swap Button */}
               <TouchableOpacity
                 onPress={handleSwapLocations}
-                className="self-center bg-white p-2 rounded-full border border-gray-200 shadow-sm"
+                className={`${isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} self-center p-2 rounded-full border shadow-sm`}
               >
-                <ArrowRight size={22} color="#3b82f6" style={{ transform: [{ rotate: '90deg' }] }} />
+                <ArrowRight size={22} color={colors.primary} style={{ transform: [{ rotate: '90deg' }] }} />
               </TouchableOpacity>
 
               {/* Destination Station */}
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  To
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={colors.textSecondary} className="mb-2">
+                  {translate('to')}
+                </AppText>
                 <Select
-                  placeholder="Select arrival station"
+                  placeholder={translate('select_arrival')}
                   value={formData.destination}
                   onValueChange={(value: string) => setFormData(prev => ({ ...prev, destination: value }))}
                   items={stationOptions}
-                  leftIcon={<MapPin size={20} color="#ef4444" />}
+                  leftIcon={<MapPin size={20} color={colors.danger} />}
                   loading={refreshingStations}
                 />
               </View>
 
               {/* Travel Date */}
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Travel Date
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={colors.textSecondary} className="mb-2">
+                  {translate('travel_date')}
+                </AppText>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
-                  className="flex-row items-center border border-gray-300 rounded-xl p-3.5 bg-gray-50"
+                  className={`${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'} flex-row items-center border rounded-xl p-3.5`}
                 >
-                  <Calendar size={20} color="#64748b" />
-                  <Text className="flex-1 ml-2 text-gray-900 font-medium">
+                  <Calendar size={20} color={colors.textTertiary} />
+                  <AppText variant="bodyMedium" weight="500" color={colors.textPrimary} className="flex-1 ml-2">
                     {formatDate(formData.date)}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
                 
                 {showDatePicker && (
@@ -264,17 +271,17 @@ export default function SearchScreen() {
 
               {/* Travel Time */}
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Preferred Departure Time
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={colors.textSecondary} className="mb-2">
+                  {translate('departure_time')}
+                </AppText>
                 <TouchableOpacity
                   onPress={() => setShowTimePicker(true)}
-                  className="flex-row items-center border border-gray-300 rounded-xl p-3.5 bg-gray-50"
+                  className={`${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'} flex-row items-center border rounded-xl p-3.5`}
                 >
-                  <Clock size={20} color="#64748b" />
-                  <Text className="flex-1 ml-2 text-gray-900 font-medium">
+                  <Clock size={20} color={colors.textTertiary} />
+                  <AppText variant="bodyMedium" weight="500" color={colors.textPrimary} className="flex-1 ml-2">
                     {formatTime(formData.time)}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
                 
                 {showTimePicker && (
@@ -285,18 +292,15 @@ export default function SearchScreen() {
                     onChange={handleTimeChange}
                   />
                 )}
-                <Text className="text-xs text-gray-500 mt-1">
-                  Select your preferred departure time
-                </Text>
               </View>
 
               {/* Passengers */}
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Passengers
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={colors.textSecondary} className="mb-2">
+                  {translate('passengers')}
+                </AppText>
                 <Input
-                  placeholder="Number of passengers"
+                  placeholder={translate('passengers')}
                   value={formData.passengers}
                   onChangeText={(value: string) => {
                     if (/^\d*$/.test(value)) {
@@ -304,21 +308,22 @@ export default function SearchScreen() {
                     }
                   }}
                   keyboardType="numeric"
-                  leftIcon={<Users size={20} color="#64748b" />}
-                  className="bg-gray-50"
+                  leftIcon={<Users size={20} color={colors.textTertiary} />}
+                  className={isDark ? 'bg-gray-700' : 'bg-gray-50'}
                 />
-                <Text className="text-xs text-gray-500 mt-1">
-                  Maximum 4 passengers per booking
-                </Text>
+                <AppText variant="caption" color={colors.textTertiary} className="mt-1">
+                  {translate('max_passengers')}
+                </AppText>
               </View>
 
               {/* Search Button */}
               <Button
-                title="Search Available Trips"
+                title={translate('search_button')}
                 onPress={handleSearch}
                 loading={loading}
                 disabled={loading || refreshingStations || stationOptions.length === 0}
-                className="mt-2 bg-blue-600"
+                className="mt-2"
+                variant="primary"
                 size="large"
               />
             </View>
@@ -327,14 +332,14 @@ export default function SearchScreen() {
           {/* Popular Routes */}
           {popularRoutes.length > 0 && (
             <View className="mt-6 px-4">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">
-                Popular Routes
-              </Text>
+              <AppText variant="bodyLarge" weight="semibold" color={colors.textPrimary} className="mb-3">
+                {translate('popular_routes_label')}
+              </AppText>
               <View className="flex-row flex-wrap">
                 {popularRoutes.map((route, index) => (
                   <TouchableOpacity
                     key={index}
-                    className="bg-white border border-gray-200 rounded-full px-4 py-2.5 mr-2 mb-2 flex-row items-center"
+                    className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-full px-4 py-2.5 mr-2 mb-2 flex-row items-center`}
                     onPress={() => {
                       setFormData(prev => ({
                         ...prev,
@@ -343,10 +348,10 @@ export default function SearchScreen() {
                       }));
                     }}
                   >
-                    <Bus size={16} color="#64748b" />
-                    <Text className="ml-1.5 text-sm text-gray-700">
+                    <Bus size={16} color={colors.textTertiary} />
+                    <AppText variant="bodySmall" color={colors.textSecondary} className="ml-1.5">
                       {getStationName(route.origin)} → {getStationName(route.destination)}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -355,28 +360,28 @@ export default function SearchScreen() {
 
           {/* Travel Tips */}
           <View className="mt-6 px-4 mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
-              Travel Tips
-            </Text>
-            <View className="bg-white p-4 rounded-xl border border-gray-200">
+            <AppText variant="bodyLarge" weight="semibold" color={colors.textPrimary} className="mb-3">
+              {translate('travel_tips')}
+            </AppText>
+            <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
               <View className="space-y-3">
-                <View className="flex-row items-center">
-                  <Clock size={20} color="#3b82f6" />
-                  <Text className="ml-3 text-gray-700 flex-1">
-                    Arrive at least 30 minutes before departure
-                  </Text>
+                <View className="flex-row items-center mb-3">
+                  <Clock size={20} color={colors.primary} />
+                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
+                    {translate('arrival_tip')}
+                  </AppText>
+                </View>
+                <View className="flex-row items-center mb-3">
+                  <Users size={20} color={colors.primary} />
+                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
+                    {translate('passenger_tip')}
+                  </AppText>
                 </View>
                 <View className="flex-row items-center">
-                  <Users size={20} color="#3b82f6" />
-                  <Text className="ml-3 text-gray-700 flex-1">
-                    Maximum 4 passengers per booking
-                  </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Calendar size={20} color="#3b82f6" />
-                  <Text className="ml-3 text-gray-700 flex-1">
-                    Book at least 2 hours before departure
-                  </Text>
+                  <Calendar size={20} color={colors.primary} />
+                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
+                    {translate('booking_tip')}
+                  </AppText>
                 </View>
               </View>
             </View>

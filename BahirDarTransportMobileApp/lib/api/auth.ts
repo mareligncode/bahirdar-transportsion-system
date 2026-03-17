@@ -1,5 +1,5 @@
 // BahirDarTransportMobileApp\lib\api\auth.ts - REAL API VERSION
-import { API_ENDPOINTS, API_CONFIG, getFullUrl } from '../../config/api';
+import { API_ENDPOINTS, API_CONFIG, getFullUrl, api } from '../../config/api';
 import { storage } from '../storage';
 import {
   LoginCredentials,
@@ -173,31 +173,15 @@ export const authAPI = {
 
   async getProfile(): Promise<User> {
     try {
-      const token = await storage.getToken();
+      // Use axios api instance so the token-refresh interceptor handles 401s automatically
+      const response = await api.get(API_ENDPOINTS.AUTH.PROFILE);
+      const data = response.data;
 
-      if (!token) {
-        throw new Error('No authentication token');
-      }
-
-      const response: Response = await fetch(getFullUrl(API_ENDPOINTS.AUTH.PROFILE), {
-        method: 'GET',
-        headers: {
-          ...API_CONFIG.headers,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-      }
-
-      const data: any = await response.json();
       console.log('🔍 [getProfile] Raw API response:', data);
 
       // The API returns { success: true, data: { user: {...} } }
-      // We need to extract the user from data.user
       const user: User = data.data?.user || data.user || data;
-      
+
       console.log('🔍 [getProfile] Extracted user:', user?.email);
       await storage.storeUser(user);
 

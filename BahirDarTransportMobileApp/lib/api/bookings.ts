@@ -1,6 +1,5 @@
 // lib/api/bookings.ts
-import { apiClient } from './index';
-import { API_ENDPOINTS } from '../../config/api';
+import { api as apiClient, API_ENDPOINTS } from '../../config/api';
 import { Booking, BookingCreateData, ApiResponse } from '../../types';
 
 interface BulkBookingData {

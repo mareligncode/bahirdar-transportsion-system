@@ -1,6 +1,5 @@
 // lib/api/trips.ts
-import { apiClient } from './index';
-import { API_ENDPOINTS } from '../../config/api';
+import { api as apiClient, API_ENDPOINTS } from '../../config/api';
 import { SearchTripParams } from '../../types/trip';
 
 export const tripsApi = {

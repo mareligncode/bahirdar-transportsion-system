@@ -1,26 +1,27 @@
-// app/menu/about.tsx
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
-  Info,
-  ArrowLeft,
-  Github,
-  Globe,
-  Mail,
   FileText,
   Shield,
-  Heart
+  Heart,
+  ArrowLeft,
+  Mail
 } from 'lucide-react-native';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function AboutScreen() {
+  const { translate } = useTranslation();
+  const router = useRouter();
+  const { isDark, colors } = useTheme();
   const appVersion = '1.0.0';
   const buildNumber = '20250222';
 
@@ -32,75 +33,74 @@ export default function AboutScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200">
+      <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} px-4 py-4 border-b`}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <ArrowLeft size={24} color="#1e293b" />
+            <ArrowLeft size={24} color={isDark ? colors.textSecondary : colors.gray900} />
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-900">About</Text>
+          <AppText variant="h2" weight="bold" color="textPrimary">{translate('about_title' as any)}</AppText>
         </View>
       </View>
 
       <ScrollView className="flex-1 px-4 py-6">
         {/* App Icon */}
         <View className="items-center mb-8">
-          <View className="w-24 h-24 bg-blue-600 rounded-2xl items-center justify-center mb-4">
-            <Text className="text-white font-bold text-4xl">B</Text>
+          <View className={`w-24 h-24 ${isDark ? 'bg-blue-700' : 'bg-blue-600'} rounded-2xl items-center justify-center mb-4`}>
+            <AppText weight="bold" color="white" className="text-4xl">B</AppText>
           </View>
-          <Text className="text-2xl font-bold text-gray-900">Bahir Dar Transport</Text>
-          <Text className="text-gray-500 mt-1">Version {appVersion} ({buildNumber})</Text>
+          <AppText variant="h1" weight="bold" color="textPrimary">{translate('app_name' as any)}</AppText>
+          <AppText color="textSecondary" className="mt-1">{translate('version' as any)} {appVersion} ({buildNumber})</AppText>
         </View>
 
         {/* App Description */}
-        <View className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
-          <Text className="text-gray-700 leading-6">
-            Bahir Dar Transport System makes it easy to book bus tickets, track your trips, 
-            and manage your travel across Ethiopia. Safe, reliable, and convenient.
-          </Text>
+        <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-5 rounded-xl border mb-6`}>
+          <AppText color="textPrimary" className="leading-6">
+            {translate('app_desc' as any)}
+          </AppText>
         </View>
 
         {/* Quick Links */}
-        <View className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+        <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl border overflow-hidden mb-6`}>
           <TouchableOpacity
-            onPress={() => openLink('https://example.com/terms')}
-            className="flex-row items-center p-4 border-b border-gray-200"
+            onPress={() => router.push('/terms')}
+            className={`flex-row items-center p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
           >
-            <FileText size={20} color="#6b7280" />
-            <Text className="flex-1 text-gray-700 ml-3">Terms of Service</Text>
-            <Text className="text-gray-400">›</Text>
+            <FileText size={20} color={isDark ? colors.textSecondary : colors.gray600} />
+            <AppText className="flex-1 ml-3" color="textPrimary">{translate('terms_of_service' as any)}</AppText>
+            <AppText color="textTertiary">›</AppText>
           </TouchableOpacity>
           
           <TouchableOpacity
-            onPress={() => openLink('https://example.com/privacy')}
-            className="flex-row items-center p-4 border-b border-gray-200"
+            onPress={() => router.push('/privacy')}
+            className={`flex-row items-center p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
           >
-            <Shield size={20} color="#6b7280" />
-            <Text className="flex-1 text-gray-700 ml-3">Privacy Policy</Text>
-            <Text className="text-gray-400">›</Text>
+            <Shield size={20} color={isDark ? colors.textSecondary : colors.gray600} />
+            <AppText weight="medium" className="flex-1 ml-3" color="textPrimary">{translate('privacy_policy' as any)}</AppText>
+            <AppText color="textTertiary">›</AppText>
           </TouchableOpacity>
           
           <TouchableOpacity
             onPress={() => openLink('mailto:support@bahirdartransport.com')}
             className="flex-row items-center p-4"
           >
-            <Mail size={20} color="#6b7280" />
-            <Text className="flex-1 text-gray-700 ml-3">Contact Support</Text>
-            <Text className="text-gray-400">›</Text>
+            <Mail size={20} color={isDark ? colors.textSecondary : colors.gray600} />
+            <AppText className="flex-1 ml-3" color="textPrimary">{translate('contact_support' as any)}</AppText>
+            <AppText color="textTertiary">›</AppText>
           </TouchableOpacity>
         </View>
 
         {/* Credits */}
-        <View className="bg-white p-5 rounded-xl border border-gray-200">
-          <Text className="text-gray-900 font-semibold mb-3">Made with</Text>
+        <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-5 rounded-xl border`}>
+          <AppText weight="semibold" className="mb-3" color="textPrimary">{translate('made_with' as any)}</AppText>
           <View className="flex-row items-center">
             <Heart size={16} color="#ef4444" fill="#ef4444" />
-            <Text className="text-gray-600 ml-2">in Bahir Dar, Ethiopia</Text>
+            <AppText color="textSecondary" className="ml-2">{translate('in_bahirdar' as any)}</AppText>
           </View>
-          <Text className="text-gray-400 text-xs mt-4 text-center">
-            © 2025 Bahir Dar Transport System. All rights reserved.
-          </Text>
+          <AppText variant="caption" color="textTertiary" className="mt-4 text-center">
+            {translate('all_rights_reserved' as any)}
+          </AppText>
         </View>
       </ScrollView>
     </SafeAreaView>

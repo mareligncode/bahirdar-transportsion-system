@@ -1,45 +1,48 @@
 // components/common/PasswordRequirements.tsx
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+import { AppText } from './AppText';
 import { Check, X } from 'lucide-react-native';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface PasswordRequirementsProps {
   password: string;
 }
 
 export function PasswordRequirements({ password }: PasswordRequirementsProps) {
+  const { translate } = useTranslation();
   const requirements = [
     {
-      label: 'At least 8 characters',
+      label: translate('pass_req_min_8' as any),
       met: password.length >= 8,
     },
     {
-      label: 'Contains uppercase letter',
+      label: translate('pass_req_upper' as any),
       met: /[A-Z]/.test(password),
     },
     {
-      label: 'Contains lowercase letter',
+      label: translate('pass_req_lower' as any),
       met: /[a-z]/.test(password),
     },
     {
-      label: 'Contains number',
+      label: translate('pass_req_number' as any),
       met: /\d/.test(password),
     },
     {
-      label: 'Contains special character',
+      label: translate('pass_req_special' as any),
       met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     },
     {
-      label: 'Not too common',
+      label: translate('pass_req_uncommon' as any),
       met: !/^(password|123456|qwerty|admin|letmein)/i.test(password),
     },
   ];
 
   return (
     <View className="mt-2 bg-gray-50 rounded-lg p-3">
-      <Text className="text-sm font-medium text-gray-700 mb-2">
-        Password Requirements:
-      </Text>
+      <AppText variant="bodySmall" weight="medium" color="textPrimary" className="mb-2">
+        {translate('pass_req_header' as any)}
+      </AppText>
       {requirements.map((req, index) => (
         <View key={index} className="flex-row items-center mb-1">
           {req.met ? (
@@ -47,11 +50,12 @@ export function PasswordRequirements({ password }: PasswordRequirementsProps) {
           ) : (
             <X size={16} color="#EF4444" className="mr-2" />
           )}
-          <Text
-            className={`text-sm ${req.met ? 'text-green-600' : 'text-gray-500'}`}
+          <AppText
+            variant="bodySmall"
+            color={req.met ? '#16a34a' : 'textSecondary'}
           >
             {req.label}
-          </Text>
+          </AppText>
         </View>
       ))}
     </View>

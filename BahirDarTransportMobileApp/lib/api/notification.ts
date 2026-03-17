@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { api as apiClient } from '../../config/api';
 import type { Notification as MobileNotification } from '../../types/notification';
 import type { ApiResponse } from '../../types/auth';
 

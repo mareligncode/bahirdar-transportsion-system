@@ -1,6 +1,8 @@
 import React from 'react';
-import { FlatList, RefreshControl, View, Text, Alert } from 'react-native';
+import { FlatList, RefreshControl, View, Alert } from 'react-native';
+import { AppText } from '../common/AppText';
 import { Bell } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 import type { Notification } from '../../types/notification';
 import { NotificationItem } from './notificationItem';
 
@@ -21,6 +23,7 @@ export function NotificationList({
   onPressItem,
   onDeleteItem,
 }: Props) {
+  const { isDark } = useTheme();
   
   const handleNotificationPress = (item: Notification) => {
     // Show alert with notification details
@@ -36,19 +39,19 @@ export function NotificationList({
     return (
       <View className="flex-1 justify-center items-center px-8">
         <View className="relative">
-          <Bell size={48} color="#9ca3af" />
+          <Bell size={48} color={isDark ? '#4b5563' : "#9ca3af"} />
           {unreadCount > 0 && (
             <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-6 h-6 justify-center items-center">
-              <Text className="text-white text-xs font-bold">{unreadCount}</Text>
+              <AppText variant="caption" weight="bold" color="white">{unreadCount}</AppText>
             </View>
           )}
         </View>
-        <Text className="text-gray-500 text-center mt-4 text-base">
+        <AppText weight="medium" color="textSecondary" className="text-center mt-4">
           No notifications yet
-        </Text>
-        <Text className="text-gray-400 text-center mt-2 text-sm">
+        </AppText>
+        <AppText variant="caption" color="textTertiary" className="text-center mt-2">
           Your booking confirmations and updates will appear here
-        </Text>
+        </AppText>
       </View>
     );
   }
@@ -65,7 +68,12 @@ export function NotificationList({
         />
       )}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh} 
+          tintColor={isDark ? '#60A5FA' : '#3B82F6'}
+          colors={[isDark ? '#60A5FA' : '#3B82F6']}
+        />
       }
     />
   );

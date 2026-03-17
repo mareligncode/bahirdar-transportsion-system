@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   Modal,
   FlatList,
 } from 'react-native';
+import { AppText } from './AppText';
 import { ChevronDown, LucideIcon } from 'lucide-react-native';
 
 interface SelectItem {
@@ -42,9 +42,9 @@ export function Select({
   return (
     <View className={`mb-4 ${className}`}>
       {label && (
-        <Text className="text-sm font-medium text-gray-700 mb-2">
+        <AppText variant="bodySmall" weight="500" color="#374151" className="mb-2">
           {label}
-        </Text>
+        </AppText>
       )}
       
       <TouchableOpacity
@@ -58,9 +58,13 @@ export function Select({
           </View>
         )}
         
-        <Text className={`flex-1 ${value ? 'text-gray-900' : 'text-gray-500'}`}>
+        <AppText 
+          variant="bodyMedium" 
+          color={value ? '#111827' : '#6B7280'}
+          className="flex-1"
+        >
           {selectedItem?.label || placeholder}
-        </Text>
+        </AppText>
         
         <ChevronDown size={20} color="#6B7280" />
       </TouchableOpacity>
@@ -74,9 +78,9 @@ export function Select({
         <View className="flex-1 justify-end bg-black/50">
           <View className="bg-white rounded-t-3xl max-h-3/4">
             <View className="p-4 border-b border-gray-200">
-              <Text className="text-lg font-semibold text-gray-900">
+              <AppText variant="h3" color="#111827">
                 {label || 'Select an option'}
-              </Text>
+              </AppText>
             </View>
             
             <FlatList
@@ -91,9 +95,13 @@ export function Select({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text className={`${value === item.value ? 'text-blue-600 font-medium' : 'text-gray-900'}`}>
+                  <AppText 
+                    variant="bodyMedium"
+                    weight={value === item.value ? '500' : '400'}
+                    color={value === item.value ? '#3B82F6' : '#111827'}
+                  >
                     {item.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View className="h-px bg-gray-100" />}
@@ -104,9 +112,9 @@ export function Select({
               onPress={() => setModalVisible(false)}
               activeOpacity={0.7}
             >
-              <Text className="text-center text-red-600 font-medium">
+              <AppText variant="bodyMedium" weight="500" color="#EF4444" className="text-center">
                 Cancel
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
         </View>

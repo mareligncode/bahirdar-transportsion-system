@@ -3,6 +3,9 @@
     "name": "BahirDar Transport",
     "slug": "bahirdar-transport",
     "version": "1.0.0",
+    "scripts": {
+      "update-translations": "node scripts/update-translations.js"
+    },
     "orientation": "portrait",
     "jsEngine": "hermes",
     "userInterfaceStyle": "light",
@@ -20,8 +23,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bahirdartransport.app",
       "associatedDomains": [
-        "applinks:192.168.137.1",
-        "applinks:localhost"
+        "applinks:10.161.142.162"
       ],
       "infoPlist": {
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save QR codes to your photo library",
@@ -52,37 +54,25 @@
           "data": [
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
-              "port": "8081",
-              "pathPrefix": "/redirect.html"
-            },
-            {
-              "scheme": "http",
-              "host": "localhost",
-              "port": "8081",
-              "pathPrefix": "/redirect.html"
-            },
-            {
-              "scheme": "https",
-              "host": "localhost",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
@@ -103,25 +93,13 @@
           "data": [
             {
               "scheme": "http",
-              "host": "192.168.137.1",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             },
             {
               "scheme": "https",
-              "host": "192.168.137.1",
-              "port": "8081",
-              "pathPattern": ".*reset-password.*"
-            },
-            {
-              "scheme": "http",
-              "host": "localhost",
-              "port": "8081",
-              "pathPattern": ".*reset-password.*"
-            },
-            {
-              "scheme": "https",
-              "host": "localhost",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             }
@@ -150,7 +128,7 @@
     "scheme": "bahirdartransport",
     "extra": {
       "router": {
-        "origin": "https://192.168.137.1:8081"
+        "origin": "https://10.161.142.162:8081"
       }
     }
   }
