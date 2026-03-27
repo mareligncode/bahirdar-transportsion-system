@@ -24,10 +24,8 @@ const userSchema = new mongoose.Schema({
         minlength: 8,
         validate: {
             validator: function (value) {
-                // If password is already hashed, skip regex
                 if (value.startsWith('$2b$')) return true;
 
-                // Validate only plain password
                 return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/.test(value);
             },
             message:
@@ -48,22 +46,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    // stationID: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'Station',
-    //     default: null
-    // },
+    
     stationID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Station',
         validate: {
             validator: function (value) {
-                // StationID can be null for non-station-admin roles
-                // But MUST have a value for station_admin role
                 if (this.role === 'station_admin') {
                     return value !== null && value !== undefined;
                 }
-                return true; // Allow null for other roles
+                return true; 
             },
             message: 'Station Admin must be assigned to a station'
         }
@@ -95,15 +87,23 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    passwordResetCode: {
+        type: String,
+        default: null
+    },
+    passwordResetCodeExpires: {
+        type: Date,
+        default: null
+    },
     lastPasswordReset: {
         type: Date,
         default: null
     }
 },
-    
+
     {
-    timestamps: true
-});
+        timestamps: true
+    });
 
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
@@ -117,12 +117,10 @@ userSchema.pre('save', async function (next) {
     }
 });
 
-// Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to get user without sensitive data
 userSchema.methods.toJSON = function () {
     const user = this.toObject();
     delete user.password;
