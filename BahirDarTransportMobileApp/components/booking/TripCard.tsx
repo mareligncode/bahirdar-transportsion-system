@@ -1,6 +1,7 @@
 // components/booking/TripCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from '../common/AppText';
 import { router } from 'expo-router';
 import {
   Bus,
@@ -12,7 +13,8 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { Trip } from '../../types/trip';
-import { COLORS } from '@/constants/colors';
+import { useTranslation } from '../../hooks/useTranslation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TripCardProps {
   trip: Trip;
@@ -25,13 +27,15 @@ export const TripCard: React.FC<TripCardProps> = ({
   onSelect,
   compact = false
 }) => {
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
 
   const getAvailabilityColor = (available: number, total: number) => {
     const percentage = (available / total) * 100;
-    if (available === 0) return 'bg-red-100 text-red-700';
-    if (percentage <= 20) return 'bg-orange-100 text-orange-700';
-    if (percentage <= 50) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-green-100 text-green-700';
+    if (available === 0) return isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700';
+    if (percentage <= 20) return isDark ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700';
+    if (percentage <= 50) return isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700';
+    return isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700';
   };
 
   const handlePress = () => {
@@ -41,12 +45,12 @@ export const TripCard: React.FC<TripCardProps> = ({
     const isAvailable = trip.availableSeats > 0 && trip.tripStatus === 'scheduled';
 
     if (!isAvailable) {
-      Alert.alert('Not Available', 'This trip is fully booked or unavailable.');
+      Alert.alert(translate('not_available') || 'Not Available', translate('trip_unavailable') || 'This trip is fully booked or unavailable.');
       return;
     }
 
     if (!tripId) {
-      Alert.alert('Error', 'Invalid trip data - missing ID');
+      Alert.alert(translate('error'), translate('invalid_trip_id'));
       return;
     }
 
@@ -54,7 +58,7 @@ export const TripCard: React.FC<TripCardProps> = ({
 
     if (tripId === 'index' || !isValidMongoId) {
       console.error('❌ Invalid trip ID:', tripId);
-      Alert.alert('Error', 'Invalid trip data. Please try searching again.');
+      Alert.alert(translate('error'), translate('invalid_trip_data') || 'Invalid trip data. Please try searching again.');
       return;
     }
 
@@ -77,121 +81,121 @@ export const TripCard: React.FC<TripCardProps> = ({
       onPress={handlePress}
       disabled={!isAvailable}
       className={`
-        bg-white rounded-2xl border border-gray-200 p-5 mb-4 shadow-sm
-        ${isAvailable ? 'active:bg-gray-50' : 'opacity-75'}
+        ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl border p-5 mb-4 shadow-sm
+        ${isAvailable ? 'active:opacity-80' : 'opacity-75'}
       `}
     >
       <View className="flex-row justify-between items-start mb-4">
         <View className="flex-1">
           <View className="flex-row items-center mb-2">
-            <View className="bg-blue-100 p-2 rounded-full mr-3">
-              <Bus size={20} color={COLORS.primary} />
+            <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} p-2 rounded-full mr-3`}>
+              <Bus size={20} color={isDark ? '#60a5fa' : colors.primary} />
             </View>
-            <Text className="text-lg font-bold text-gray-900 flex-1">
+            <AppText variant="bodyLarge" weight="bold" color={colors.text} className="flex-1">
               {trip.origin?.stationName}
-            </Text>
+            </AppText>
           </View>
 
           <View className="ml-10">
             <View className="flex-row items-center">
-              <View className="w-2 h-2 bg-gray-300 rounded-full" />
-              <View className="w-10 h-0.5 bg-gray-300 mx-1" />
-              <ChevronRight size={16} color={COLORS.gray400} />
-              <View className="w-10 h-0.5 bg-gray-300 mx-1" />
-              <View className="w-2 h-2 bg-gray-300 rounded-full" />
+              <View className={`w-2 h-2 ${isDark ? 'bg-gray-600' : 'bg-gray-300'} rounded-full`} />
+              <View className={`w-10 h-0.5 ${isDark ? 'bg-gray-600' : 'bg-gray-300'} mx-1`} />
+              <ChevronRight size={16} color={colors.textTertiary} />
+              <View className={`w-10 h-0.5 ${isDark ? 'bg-gray-600' : 'bg-gray-300'} mx-1`} />
+              <View className={`w-2 h-2 ${isDark ? 'bg-gray-600' : 'bg-gray-300'} rounded-full`} />
             </View>
-            <Text className="text-xs text-gray-500 mt-1 ml-1">{duration}</Text>
+            <AppText variant="caption" color={colors.textSecondary} className="mt-1 ml-1">{duration}</AppText>
           </View>
 
           <View className="flex-row items-center mt-2">
-            <View className="bg-red-100 p-2 rounded-full mr-3">
-              <MapPin size={20} color={COLORS.danger} />
+            <View className={`${isDark ? 'bg-red-900/30' : 'bg-red-100'} p-2 rounded-full mr-3`}>
+              <MapPin size={20} color={isDark ? '#f87171' : colors.error} />
             </View>
-            <Text className="text-lg font-bold text-gray-900">
+            <AppText variant="bodyLarge" weight="bold" color={colors.text}>
               {trip.destination?.stationName}
-            </Text>
+            </AppText>
           </View>
         </View>
 
         <View className={`px-3 py-1.5 rounded-full ${availabilityColor}`}>
-          <Text className="text-xs font-semibold">
+          <AppText variant="label" weight="semibold">
             {trip.availableSeats === 0
-              ? 'Sold Out'
-              : `${trip.availableSeats} seats`}
-          </Text>
+              ? (translate('sold_out') || 'Sold Out')
+              : `${trip.availableSeats} ${translate('seats') || 'seats'}`}
+          </AppText>
         </View>
       </View>
 
       {/* Time Information */}
-      <View className="bg-gray-50 p-4 rounded-xl mb-4">
+      <View className={`${isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-transparent'} border p-4 rounded-xl mb-4`}>
         <View className="flex-row justify-between">
           <View className="flex-1">
-            <Text className="text-xs text-gray-500 mb-1">Departure</Text>
+            <AppText variant="caption" color={colors.textSecondary} className="mb-1">{translate('departure') || 'Departure'}</AppText>
             <View className="flex-row items-center">
-              <Clock size={16} color={COLORS.primary} />
-              <Text className="ml-1.5 font-semibold text-gray-900">
+              <Clock size={16} color={colors.primary} />
+              <AppText variant="bodyMedium" weight="semibold" color={colors.text} className="ml-1.5">
                 {new Date(trip.departureTime).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: true,
                 })}
-              </Text>
+              </AppText>
             </View>
-            <Text className="text-xs text-gray-500 mt-1">
+            <AppText variant="caption" color={colors.textSecondary} className="mt-1">
               {new Date(trip.departureTime).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric'
               })}
-            </Text>
+            </AppText>
           </View>
 
           <View className="flex-1 items-center">
-            <Text className="text-xs text-gray-500 mb-1">Duration</Text>
-            <View className="bg-white px-3 py-1.5 rounded-full border border-gray-200">
-              <Text className="text-sm font-medium text-gray-700">{duration}</Text>
+            <AppText variant="caption" color={colors.textSecondary} className="mb-1">{translate('duration') || 'Duration'}</AppText>
+            <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} px-3 py-1.5 rounded-full border`}>
+              <AppText variant="bodySmall" weight="500" color={colors.text}>{duration}</AppText>
             </View>
           </View>
 
           <View className="flex-1 items-end">
-            <Text className="text-xs text-gray-500 mb-1">Arrival</Text>
+            <AppText variant="caption" color={colors.textSecondary} className="mb-1">{translate('arrival') || 'Arrival'}</AppText>
             <View className="flex-row items-center">
-              <Clock size={16} color={COLORS.gray500} />
-              <Text className="ml-1.5 font-semibold text-gray-900">
+              <Clock size={16} color={colors.textTertiary} />
+              <AppText variant="bodyMedium" weight="semibold" color={colors.text} className="ml-1.5">
                 {new Date(trip.arrivalTime).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: true,
                 })}
-              </Text>
+              </AppText>
             </View>
-            <Text className="text-xs text-gray-500 mt-1">
+            <AppText variant="caption" color={colors.textSecondary} className="mt-1">
               {new Date(trip.arrivalTime).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric'
               })}
-            </Text>
+            </AppText>
           </View>
         </View>
 
         {/* Vehicle Info */}
-        <View className="flex-row items-center justify-between pt-3 mt-3 border-t border-gray-200">
+        <View className={`flex-row items-center justify-between pt-3 mt-3 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
           <View className="flex-row items-center">
-            <View className="bg-gray-100 p-1.5 rounded-full mr-2">
-              <Bus size={14} color="#4b5563" />
+            <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} p-1.5 rounded-full mr-2`}>
+              <Bus size={14} color={colors.textSecondary} />
             </View>
-            <Text className="text-sm text-gray-700">
+            <AppText variant="bodySmall" color={colors.text}>
               {trip.vehicle?.carType || 'Standard Bus'}
-            </Text>
-            <Text className="text-xs text-gray-500 ml-2">
+            </AppText>
+            <AppText variant="caption" color={colors.textTertiary} className="ml-2">
               {trip.vehicle?.plateNumber || ''}
-            </Text>
+            </AppText>
           </View>
 
           <View className="flex-row items-center">
-            <Shield size={14} color={COLORS.secondary} />
-            <Text className="text-xs text-green-600 ml-1">Safe Travel</Text>
+            <Shield size={14} color={isDark ? '#10b981' : colors.secondary} />
+            <AppText variant="caption" color={isDark ? '#10b981' : '#16a34a'} className="ml-1">{translate('safe_travel') || 'Safe Travel'}</AppText>
           </View>
         </View>
       </View>
@@ -199,27 +203,27 @@ export const TripCard: React.FC<TripCardProps> = ({
       {/* Price - Just display price, no button here */}
       <View className="flex-row justify-between items-center">
         <View>
-          <Text className="text-xs text-gray-500 mb-1">Price per seat</Text>
+          <AppText variant="caption" color={colors.textSecondary} className="mb-1">{translate('price_per_seat') || 'Price per seat'}</AppText>
           <View className="flex-row items-baseline">
-            <Text className="text-3xl font-bold text-blue-600">
-              ETB {trip.price || 0}
-            </Text>
+            <AppText variant="h1" color={isDark ? '#60a5fa' : colors.primary}>
+              {translate('etb')} {trip.price || 0}
+            </AppText>
           </View>
         </View>
 
         {/* Simple indicator that this card is clickable */}
-        <View className="bg-blue-50 px-4 py-2 rounded-full">
-          <Text className="text-blue-600 font-medium">View Details</Text>
+        <View className={`${isDark ? 'bg-blue-900/40' : 'bg-blue-50'} px-4 py-2 rounded-full`}>
+          <AppText variant="bodySmall" weight="bold" color={isDark ? '#93c5fd' : '#2563eb'}>{translate('view_details') || 'View Details'}</AppText>
         </View>
       </View>
 
       {/* Notes */}
       {trip.notes && (
-        <View className="mt-3 bg-blue-50 p-3 rounded-lg flex-row items-start">
-          <AlertCircle size={16} color={COLORS.primary} />
-          <Text className="ml-2 text-xs text-blue-700 flex-1">
+        <View className={`mt-3 ${isDark ? 'bg-blue-900/20' : 'bg-blue-50'} p-3 rounded-lg flex-row items-start`}>
+          <AlertCircle size={16} color={isDark ? '#60a5fa' : colors.primary} />
+          <AppText variant="caption" color={isDark ? '#93c5fd' : '#1d4ed8'} className="ml-2 flex-1">
             {trip.notes}
-          </Text>
+          </AppText>
         </View>
       )}
     </TouchableOpacity>

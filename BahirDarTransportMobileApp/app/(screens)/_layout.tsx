@@ -1,4 +1,3 @@
-// app/(screens)/_layout.tsx
 import React from 'react';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +17,6 @@ export default function ScreensLayout() {
           },
         }}
       >
-        {/* Notification Screen */}
         <Stack.Screen
           name="notification"
           options={{
@@ -26,8 +24,13 @@ export default function ScreensLayout() {
             presentation: 'modal',
           }}
         />
-
-        {/* Booking Screens */}
+        <Stack.Screen
+          name="notification/[id]"
+          options={{
+            animation: 'slide_from_right',
+            presentation: 'card',
+          }}
+        />
         <Stack.Screen
           name="booking/index"
           options={{
@@ -44,11 +47,9 @@ export default function ScreensLayout() {
           name="booking/confirmation"
           options={{
             animation: 'fade',
-            gestureEnabled: false, // Prevent going back from confirmation
+            gestureEnabled: false,
           }}
         />
-
-        {/* Payment Screens */}
         <Stack.Screen
           name="payment/checkout"
           options={{
@@ -66,11 +67,9 @@ export default function ScreensLayout() {
           name="payment/success"
           options={{
             animation: 'fade',
-            gestureEnabled: false, // Prevent going back from success
+            gestureEnabled: false, 
           }}
         />
-
-        {/* Catch-all for any unmatched routes */}
         <Stack.Screen
           name="*"
           options={{

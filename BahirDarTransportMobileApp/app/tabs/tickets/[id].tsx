@@ -1,9 +1,7 @@
-// app/tabs/tickets/[id].tsx
 import React, { useState, useEffect, useRef } from 'react';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -13,6 +11,7 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
@@ -44,12 +43,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useBooking } from '../../../hooks/useBooking';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../components/common/Toast';
 import { QrCodeDisplay } from '../../../components/ui/QrCodeDisplay';
 import { Booking, Trip, Station, Vehicle, Driver } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
-import { COLORS } from '../../../constants/colors';
+import { useTheme } from '../../../context/ThemeContext';
 import { savePDFToDevice, saveToGallery } from '../../../utils/filesystem';
 
 export default function TicketDetailScreen() {
@@ -59,6 +59,8 @@ export default function TicketDetailScreen() {
   const { user } = useAuth();
   const { getBookingById, getMyBookings, loading } = useBooking();
   const { showToast } = useToast();
+  const { colors, isDark } = useTheme();
+  const { translate } = useTranslation();
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,7 +77,6 @@ export default function TicketDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    // Handle quick actions from the list screen
     if (action === 'download' && booking) {
       setTimeout(() => handleDownloadPDF(), 500);
     } else if (action === 'share' && booking) {
@@ -84,7 +85,6 @@ export default function TicketDetailScreen() {
   }, [action, booking]);
 
   useEffect(() => {
-    // Request media library permissions on Android
     if (Platform.OS === 'android') {
       (async () => {
         const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -98,7 +98,6 @@ export default function TicketDetailScreen() {
     if (data) {
       setBooking(data);
 
-      // If the booking is pending, find other pending bookings for the same trip to batch pay
       if (data.status?.toLowerCase() === 'pending') {
         try {
           const allMyBookings = await getMyBookings();
@@ -143,7 +142,7 @@ export default function TicketDetailScreen() {
     setCopySuccess(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTimeout(() => setCopySuccess(false), 2000);
-    showToast('Booking code copied to clipboard!', 'success');
+    showToast(translate('booking_code_copied'), 'success');
   };
 
   const generateTicketHTML = () => {
@@ -166,7 +165,7 @@ export default function TicketDetailScreen() {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Bahir Dar Transport - Ticket</title>
+        <title>${translate('app_name')} - ${translate('ticket')}</title>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
@@ -326,58 +325,58 @@ export default function TicketDetailScreen() {
         <div class="ticket">
           <div class="header">
             <h1>Bahir Dar Transport</h1>
-            <p>E-Ticket</p>
+            <p>${translate('e_ticket')}</p>
           </div>
           <div class="content">
             <div class="status-badge status-${booking.status?.toLowerCase() || 'pending'}">
-              ${booking.status?.toUpperCase() || 'PENDING'}
+              ${translate(`ticket_status_${booking.status?.toLowerCase()}` as any).toUpperCase()}
             </div>
             
             <div class="info-row">
-              <span class="label">Booking #</span>
+              <span class="label">${translate('booking')} #</span>
               <span class="value">${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}</span>
             </div>
             
             <div class="info-row">
-              <span class="label">Ticket #</span>
-              <span class="value">${booking.ticketNumber || 'N/A'}</span>
+              <span class="label">${translate('ticket')} #</span>
+              <span class="value">${booking.ticketNumber || translate('not_available')}</span>
             </div>
             
             <div class="route">
-              <h2>${origin.stationName || 'N/A'} → ${destination.stationName || 'N/A'}</h2>
+              <h2>${origin.stationName || translate('unknown')} → ${destination.stationName || translate('unknown')}</h2>
               <div class="route-time">
                 <div class="time-block">
-                  <div class="time-label">Departure</div>
-                  <div class="time-value">${departureTime ? departureTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${departureTime ? departureTime.toLocaleDateString() : ''}</div>
+                  <div class="time-label">${translate('departure')}</div>
+                  <div class="time-value">${departureTime ? departureTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : translate('not_available')}</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${departureTime ? formatDate(departureTime.toISOString()) : ''}</div>
                 </div>
                 <div class="time-block">
-                  <div class="time-label">Arrival</div>
-                  <div class="time-value" style="color: #10b981;">${arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${arrivalTime ? arrivalTime.toLocaleDateString() : ''}</div>
+                  <div class="time-label">${translate('arrival')}</div>
+                  <div class="time-value" style="color: #10b981;">${arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : translate('not_available')}</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${arrivalTime ? formatDate(arrivalTime.toISOString()) : ''}</div>
                 </div>
               </div>
             </div>
             
             <div style="text-align: center; margin-bottom: 16px;">
               ${seatNumbers.map((seat, index) => (
-      `<span class="seat-tag" ${index > 0 ? 'style="margin-left: 4px;"' : ''}>Seat ${seat}</span>`
+      `<span class="seat-tag" ${index > 0 ? 'style="margin-left: 4px;"' : ''}>${translate('seat_label_static')} ${seat}</span>`
     )).join('')}
             </div>
             
             <div class="info-row">
-              <span class="label">Passenger</span>
-              <span class="value">${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}</span>
+              <span class="label">${translate('passenger_label')}</span>
+              <span class="value">${booking.passengerDetails?.fullName || user?.fullName || translate('unknown')}</span>
             </div>
             
             <div class="info-row">
-              <span class="label">Vehicle</span>
-              <span class="value">${vehicle.carType || 'Bus'} • ${vehicle.plateNumber || 'N/A'}</span>
+              <span class="label">${translate('vehicle')}</span>
+              <span class="value">${vehicle.carType || translate('bus')} • ${vehicle.plateNumber || translate('not_available')}</span>
             </div>
             
             <div class="info-row">
-              <span class="label">Payment</span>
-              <span class="value" style="color: ${booking.paymentStatus === 'success' ? '#16a34a' : '#ca8a04'}">${(booking.paymentStatus || 'PENDING').toUpperCase()}</span>
+              <span class="label">${translate('payment')}</span>
+              <span class="value" style="color: ${booking.paymentStatus === 'success' ? '#16a34a' : '#ca8a04'}">${translate(`ticket_status_${booking.paymentStatus || 'pending'}` as any).toUpperCase()}</span>
             </div>
             
             <div class="amount">
@@ -393,8 +392,8 @@ export default function TicketDetailScreen() {
             </div>
           </div>
           <div class="footer">
-            Thank you for choosing Bahir Dar Transport System!<br/>
-            This is a computer generated ticket. Valid with ID proof.
+            ${translate('share_thank_you')}<br/>
+            ${translate('computer_generated_note')}
           </div>
         </div>
       </body>
@@ -402,14 +401,13 @@ export default function TicketDetailScreen() {
     `;
   };
 
-  // In your ticket detail screen, the handleDownloadPDF function
   const handleDownloadPDF = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      showToast('Generating PDF...', 'info');
+      showToast(translate('generating_pdf'), 'info');
 
       if (!booking) {
-        showToast('No booking data available', 'error');
+        showToast(translate('no_booking_data'), 'error');
         return;
       }
 
@@ -449,29 +447,26 @@ export default function TicketDetailScreen() {
       const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
       const totalAmount = booking.totalPrice || booking.amount || 0;
 
-      const message = `🚌 *Bahir Dar Transport - Ticket*\n\n` +
+      const message = `🚌 *${translate('app_name')} - ${translate('ticket')}*\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `*From:* ${origin.stationName || 'Origin'}\n` +
-        `*To:* ${destination.stationName || 'Destination'}\n` +
-        `*Date:* ${departureTime ? departureTime.toLocaleDateString() : 'N/A'}\n` +
-        `*Time:* ${departureTime ? departureTime.toLocaleTimeString() : 'N/A'}\n` +
-        `*Seat:* ${seatNumbers.join(', ')}\n` +
-        `*Booking #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
-        `*Amount:* ${formatCurrency(totalAmount)}\n` +
-        `*Status:* ${booking.status?.toUpperCase()}\n\n` +
+        `*${translate('from')}:* ${origin.stationName || translate('unknown')}\n` +
+        `*${translate('to')}:* ${destination.stationName || translate('unknown')}\n` +
+        `*${translate('date')}:* ${departureTime ? formatDate(departureTime.toISOString()) : translate('not_available')}\n` +
+        `*${translate('time')}:* ${departureTime ? formatTime(departureTime.toISOString()) : translate('not_available')}\n` +
+        `*${translate('seats')}:* ${seatNumbers.join(', ')}\n` +
+        `*${translate('booking')} #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
+        `*${translate('total_amount')}:* ${formatCurrency(totalAmount)}\n` +
+        `*${translate('status')}:* ${translate(`ticket_status_${booking.status?.toLowerCase()}` as any).toUpperCase()}\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `Thank you for choosing Bahir Dar Transport System!`;
+        `${translate('share_thank_you')}`;
 
       const result = await Share.share({
         message,
-        title: 'My Bus Ticket'
+        title: translate('ticket')
       });
 
       if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          console.log('Shared with activity type:', result.activityType);
-        }
-        showToast('Ticket shared successfully', 'success');
+        showToast(translate('ticket_shared_success'), 'success');
       } else if (result.action === Share.dismissedAction) {
         console.log('Share dismissed');
       }
@@ -485,19 +480,17 @@ export default function TicketDetailScreen() {
   const handleSaveToGallery = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      showToast('Capturing ticket...', 'info');
+      showToast(translate('capturing_ticket'), 'info');
 
       if (!booking) {
-        showToast('No booking data available', 'error');
+        showToast(translate('no_booking_data'), 'error');
         return;
       }
 
       if (!viewShotRef.current) {
-        showToast('Ticket view not ready', 'error');
+        showToast(translate('ticket_view_not_ready'), 'error');
         return;
       }
-
-      // Capture the ticket card as an image
       const uri = await captureRef(viewShotRef.current, {
         format: 'png',
         quality: 0.9,
@@ -521,34 +514,34 @@ export default function TicketDetailScreen() {
   };
   if (loading && !refreshing) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-600">Loading ticket details...</Text>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'} justify-center items-center`}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <AppText color={isDark ? colors.textTertiary : colors.textSecondary} className="mt-4">{translate('loading_ticket_details')}</AppText>
       </SafeAreaView>
     );
   }
 
   if (!booking) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
         <View className="p-4">
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}>
-            <ArrowLeft size={24} color="#4b5563" />
+            <ArrowLeft size={24} color={isDark ? colors.textSecondary : "#4b5563"} />
           </TouchableOpacity>
         </View>
         <View className="flex-1 justify-center items-center p-6">
           <Ticket size={60} color="#ef4444" />
-          <Text className="text-xl font-semibold text-gray-800 mt-4">
-            Ticket Not Found
-          </Text>
-          <Text className="text-gray-500 text-center mt-2">
-            The ticket you're looking for doesn't exist.
-          </Text>
+          <AppText variant="h2" weight="bold" color={isDark ? 'white' : colors.gray800} className="mt-4">
+            {translate('booking_not_found')}
+          </AppText>
+          <AppText color={isDark ? colors.gray400 : colors.gray500} className="text-center mt-2">
+            {translate('booking_not_found_msg')}
+          </AppText>
           <TouchableOpacity
             onPress={() => router.push('/tabs/tickets')}
             className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
           >
-            <Text className="text-white font-semibold">View My Tickets</Text>
+            <AppText weight="semibold" color="white">{translate('view_my_tickets')}</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -578,17 +571,16 @@ export default function TicketDetailScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right', 'bottom']}>
-      {/* Header */}
-      <View className="px-4 py-3 bg-white border-b border-gray-200 flex-row items-center">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top', 'left', 'right', 'bottom']}>
+      <View className={`px-4 py-3 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b flex-row items-center`}>
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
-          <ArrowLeft size={24} color="#4b5563" />
+          <ArrowLeft size={24} color={isDark ? colors.textSecondary : "#4b5563"} />
         </TouchableOpacity>
-        <Text className="flex-1 text-lg font-semibold text-gray-800">
-          Ticket Details
-        </Text>
+        <AppText variant="h3" weight="semibold" color={isDark ? 'white' : colors.gray800} className="flex-1">
+          {translate('trip_details')}
+        </AppText>
         <TouchableOpacity onPress={() => setQrModalVisible(true)} className="mr-2 p-2">
-          <Maximize2 size={20} color={COLORS.primary} />
+          <Maximize2 size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -600,22 +592,25 @@ export default function TicketDetailScreen() {
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
       >
-        {/* Status Banner */}
-        <View className={`p-4 ${isConfirmed ? 'bg-green-50' : isPending ? 'bg-yellow-50' : isCancelled ? 'bg-red-50' : 'bg-gray-50'}`}>
+        <View className={`p-4 ${isConfirmed ? (isDark ? 'bg-green-900/20' : 'bg-green-50') : 
+                        isPending ? (isDark ? 'bg-yellow-900/20' : 'bg-yellow-50') : 
+                        isCancelled ? (isDark ? 'bg-red-900/20' : 'bg-red-50') : 
+                        (isDark ? colors.card : 'bg-gray-50')}`}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               {isConfirmed && <CheckCircle size={20} color="#16a34a" />}
               {isPending && <Clock size={20} color="#ca8a04" />}
               {isCancelled && <XCircle size={20} color="#dc2626" />}
               <View>
-                <Text className={`font-semibold ${isConfirmed ? 'text-green-700' :
-                  isPending ? 'text-yellow-700' : isCancelled ? 'text-red-700' : 'text-gray-700'
-                  }`}>
-                  {booking.status?.toUpperCase()}
-                </Text>
-                <Text className="text-xs text-gray-500">
-                  Ticket #{booking.ticketNumber || booking._id?.slice(-6).toUpperCase()}
-                </Text>
+                <AppText weight="semibold" color={isConfirmed ? (isDark ? '#4ade80' : '#15803d') :
+                  isPending ? (isDark ? '#fbbf24' : '#a16207') : 
+                  isCancelled ? (isDark ? '#f87171' : '#b91c1c') : (isDark ? 'white' : '#374151')
+                  }>
+                  {translate(`ticket_status_${booking.status?.toLowerCase()}` as any).toUpperCase()}
+                </AppText>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>
+                  {translate('ticket_number_label')} {booking.ticketNumber || booking._id?.slice(-6).toUpperCase()}
+                </AppText>
               </View>
             </View>
             <TouchableOpacity onPress={handleCopyCode} className="p-2">
@@ -623,17 +618,15 @@ export default function TicketDetailScreen() {
             </TouchableOpacity>
           </View>
           {copySuccess && (
-            <Text className="text-xs text-green-600 mt-1">Copied to clipboard!</Text>
+            <AppText variant="caption" color="#16a34a" className="mt-1">{translate('copied_to_clipboard')}</AppText>
           )}
         </View>
-
-        {/* QR Code Section */}
-        <View className="mx-4 mt-4 bg-white rounded-2xl p-4 border border-gray-200 items-center">
+        <View className={`mx-4 mt-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl p-4 border items-center`}>
           <QrCodeDisplay
             value={qrValue}
             size={180}
-            title="Scan this QR code"
-            subtitle="Show this at the bus station for boarding"
+            title={translate('scan_qr_code')}
+            subtitle={translate('boarding_qr_subtitle')}
             showActions={true}
             onSave={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -645,176 +638,153 @@ export default function TicketDetailScreen() {
             }}
           />
         </View>
-
-        {/* Main Ticket Card - Captured for Gallery Saving */}
         <ViewShot
           ref={viewShotRef}
           options={{ format: 'png', quality: 0.9 }}
-          style={{ backgroundColor: '#f9fafb' }} // Match background to avoid artifacts
+          style={{ backgroundColor: isDark ? colors.background : '#f9fafb' }} 
         >
-          <View className="mx-4 mt-4 bg-white rounded-2xl overflow-hidden border border-gray-200">
-            {/* Route Header */}
-            <View className="p-4 bg-blue-50 border-b border-blue-100">
+          <View className={`mx-4 mt-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl overflow-hidden border shadow-sm`}>
+            <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderBottomColor: isDark ? 'rgba(59,130,246,0.2)' : '#bfdbfe' }} className="p-4 border-b">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 items-center">
-                  <Text className="text-xs text-gray-500">From</Text>
-                  <Text className="font-bold text-gray-800 text-center">
-                    {origin.stationName || 'N/A'}
-                  </Text>
+                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('from')}</AppText>
+                  <AppText weight="bold" color={isDark ? 'white' : colors.gray900} className="text-center">
+                    {origin.stationName || translate('not_available')}
+                  </AppText>
                   {origin.city && (
-                    <Text className="text-xs text-gray-500">{origin.city}</Text>
+                    <AppText variant="caption" color={isDark ? colors.textTertiary : colors.gray500}>{origin.city}</AppText>
                   )}
                 </View>
                 <View className="px-4">
-                  <Bus size={24} color={COLORS.primary} />
+                  <Bus size={24} color={isDark ? colors.primary : colors.primary} />
                 </View>
                 <View className="flex-1 items-center">
-                  <Text className="text-xs text-gray-500">To</Text>
-                  <Text className="font-bold text-gray-800 text-center">
-                    {destination.stationName || 'N/A'}
-                  </Text>
+                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('to')}</AppText>
+                  <AppText weight="bold" color={isDark ? 'white' : colors.gray900} className="text-center">
+                    {destination.stationName || translate('not_available')}
+                  </AppText>
                   {destination.city && (
-                    <Text className="text-xs text-gray-500">{destination.city}</Text>
+                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{destination.city}</AppText>
                   )}
                 </View>
               </View>
             </View>
-
-            {/* Timeline */}
-            <View className="p-4 border-b border-gray-200">
+            <View className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <View className="flex-row gap-4">
                 <View className="flex-1">
                   <View className="flex-row items-center gap-1 mb-1">
-                    <Clock size={14} color={COLORS.primary} />
-                    <Text className="text-xs text-gray-500">Departure</Text>
+                    <Clock size={14} color={colors.primary} />
+                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('departure')}</AppText>
                   </View>
-                  <Text className="font-semibold text-gray-800">
-                    {trip.departureTime ? formatDate(trip.departureTime) : 'N/A'} at {trip.departureTime ? formatTime(trip.departureTime) : 'N/A'}
-                  </Text>
+                  <AppText variant="bodySmall" weight="semibold" color={isDark ? 'white' : colors.gray900}>
+                    {trip.departureTime ? formatDate(trip.departureTime) : translate('not_available')} {translate('at')} {trip.departureTime ? formatTime(trip.departureTime) : translate('not_available')}
+                  </AppText>
                 </View>
                 <View className="flex-1">
                   <View className="flex-row items-center gap-1 mb-1">
                     <Clock size={14} color="#10b981" />
-                    <Text className="text-xs text-gray-500">Arrival</Text>
+                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('arrival')}</AppText>
                   </View>
-                  <Text className="font-semibold text-gray-800">
-                    {trip.arrivalTime ? formatDate(trip.arrivalTime) : 'N/A'} at {trip.arrivalTime ? formatTime(trip.arrivalTime) : 'N/A'}
-                  </Text>
+                  <AppText variant="bodySmall" weight="semibold" color={isDark ? 'white' : colors.gray900}>
+                    {trip.arrivalTime ? formatDate(trip.arrivalTime) : translate('not_available')} {translate('at')} {trip.arrivalTime ? formatTime(trip.arrivalTime) : translate('not_available')}
+                  </AppText>
                 </View>
               </View>
             </View>
-
-            {/* Details */}
             <View className="p-4 gap-3">
-              {/* Seat Info */}
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm text-gray-500">Seat Number(s)</Text>
+                <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('seat_numbers')}</AppText>
                 <View className="flex-row gap-1">
                   {seatNumbers.map((seat: number, index: number) => (
                     <View key={index} className="bg-blue-500 px-3 py-1 rounded-full">
-                      <Text className="text-white text-sm font-bold">{seat}</Text>
+                      <AppText weight="bold" color="white" variant="bodySmall">{seat}</AppText>
                     </View>
                   ))}
                 </View>
               </View>
-
-              {/* Vehicle Info */}
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm text-gray-500">Vehicle</Text>
-                <Text className="font-medium text-gray-800">
-                  {vehicle.carType || 'Bus'} • {vehicle.plateNumber || 'N/A'}
-                </Text>
+                <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('vehicle')}</AppText>
+                <AppText weight="500" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
+                  {vehicle.carType || translate('bus')} • {vehicle.plateNumber || translate('not_available')}
+                </AppText>
               </View>
-
-              {/* Driver Info */}
               {driver?.fullName && (
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-sm text-gray-500">Driver</Text>
-                  <Text className="font-medium text-gray-800">
+                  <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('driver')}</AppText>
+                  <AppText weight="500" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
                     {driver.fullName}
-                  </Text>
+                  </AppText>
                 </View>
               )}
-
-              {/* Passenger Details */}
-              <View className="mt-2 pt-2 border-t border-gray-200">
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Passenger Details
-                </Text>
+              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <AppText weight="semibold" color={isDark ? colors.gray300 : colors.gray700} variant="bodyMedium" className="mb-2">
+                  {translate('passenger_info')}
+                </AppText>
                 <View className="gap-2">
                   <View className="flex-row items-center gap-2">
-                    <User size={14} color="#6b7280" />
-                    <Text className="text-sm text-gray-600">
+                    <User size={14} color={colors.textSecondary} />
+                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
                       {booking.passengerDetails?.fullName || user?.fullName}
-                    </Text>
+                    </AppText>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <Phone size={14} color="#6b7280" />
-                    <Text className="text-sm text-gray-600">
+                    <Phone size={14} color={colors.textSecondary} />
+                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
                       {booking.passengerDetails?.phoneNumber || user?.phoneNumber}
-                    </Text>
+                    </AppText>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <Mail size={14} color="#6b7280" />
-                    <Text className="text-sm text-gray-600">
+                    <Mail size={14} color={colors.textSecondary} />
+                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
                       {booking.passengerDetails?.email || user?.email}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </View>
-
-              {/* Payment Info */}
-              <View className="mt-2 pt-2 border-t border-gray-200">
-                <Text className="text-sm font-medium text-gray-700 mb-2">
-                  Payment Information
-                </Text>
+              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <AppText weight="semibold" color={isDark ? colors.gray300 : colors.gray700} variant="bodyMedium" className="mb-2">
+                  {translate('payment_information')}
+                </AppText>
                 <View className="flex-row justify-between items-center">
                   <View className="flex-row items-center gap-2">
-                    <CreditCard size={14} color="#6b7280" />
-                    <Text className="text-sm text-gray-600">Status</Text>
+                    <CreditCard size={14} color={colors.textSecondary} />
+                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600}>{translate('status')}</AppText>
                   </View>
-                  <View className={`px-2 py-1 rounded-full ${isPaid ? 'bg-green-100' :
-                    booking.paymentStatus === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
+                  <View className={`px-2 py-1 rounded-full ${isPaid ? (isDark ? 'bg-green-900/30' : 'bg-green-100') :
+                    booking.paymentStatus === 'pending' ? (isDark ? 'bg-yellow-900/30' : 'bg-yellow-100') : (isDark ? 'bg-gray-700' : 'bg-gray-100')
                     }`}>
-                    <Text className={`text-xs font-medium ${isPaid ? 'text-green-700' :
-                      booking.paymentStatus === 'pending' ? 'text-yellow-700' : 'text-gray-700'
-                      }`}>
-                      {(booking.paymentStatus || 'PENDING').toUpperCase()}
-                    </Text>
+                    <AppText variant="caption" weight="bold" color={isPaid ? (isDark ? '#4ade80' : '#15803d') :
+                      booking.paymentStatus === 'pending' ? (isDark ? '#fbbf24' : '#a16207') : (isDark ? colors.textTertiary : '#374151')
+                      }>
+                      {translate(`ticket_status_${booking.paymentStatus || 'pending'}` as any).toUpperCase()}
+                    </AppText>
                   </View>
                 </View>
               </View>
-
-              {/* Total Amount */}
-              <View className="mt-2 pt-2 border-t border-gray-200">
+              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-base font-medium text-gray-700">
-                    Total Amount
-                  </Text>
-                  <Text className="text-2xl font-bold text-blue-600">
+                  <AppText variant="bodyLarge" weight="semibold" color={isDark ? colors.gray300 : colors.gray700}>
+                    {translate('total_amount')}
+                  </AppText>
+                  <AppText variant="h2" weight="bold" color={isDark ? '#60a5fa' : colors.primary}>
                     {formatCurrency(totalAmount)}
-                  </Text>
+                  </AppText>
                 </View>
                 {seatNumbers.length > 1 && (
-                  <Text className="text-xs text-gray-500 text-right mt-1">
-                    {seatNumbers.length} seats × {formatCurrency(totalAmount / seatNumbers.length)}
-                  </Text>
+                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="text-right mt-1">
+                    {seatNumbers.length} {translate('seats')} × {formatCurrency(totalAmount / seatNumbers.length)}
+                  </AppText>
                 )}
               </View>
             </View>
-
-            {/* Footer */}
-            <View className="p-3 bg-gray-50 border-t border-gray-200">
-              <Text className="text-xs text-gray-400 text-center">
-                Booked on: {formatDate(booking.bookingDate || booking.createdAt || '')}
-              </Text>
+            <View className={`p-3 ${isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-gray-50 border-gray-200'} border-t`}>
+              <AppText variant="caption" color={isDark ? colors.textTertiary : colors.gray400} className="text-center">
+                {translate('booked_on')} {formatDate(booking.bookingDate || booking.createdAt || '')}
+              </AppText>
             </View>
           </View>
         </ViewShot>
-
-        {/* Action Buttons */}
         <View className="px-4 pb-4 gap-3">
-          {/* Payment Button for Pending Bookings */}
           {isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending') && (
             <TouchableOpacity
               onPress={() => {
@@ -830,42 +800,34 @@ export default function TicketDetailScreen() {
               className="flex-row items-center justify-center py-4 bg-yellow-500 rounded-xl gap-2"
             >
               <CreditCard size={20} color="white" />
-              <Text className="font-semibold text-white">
-                {relatedBookingIds.length > 1 ? `Pay for ${relatedBookingIds.length} Seats` : 'Complete Payment Now'}
-              </Text>
+              <AppText weight="semibold" color="white">
+                {relatedBookingIds.length > 1 ? `${translate('pay_now')} (${relatedBookingIds.length} ${translate('seats')})` : translate('complete_payment_now')}
+              </AppText>
             </TouchableOpacity>
           )}
-
-          {/* Download PDF Button */}
           <TouchableOpacity
             onPress={handleDownloadPDF}
             className="flex-row items-center justify-center py-3 bg-blue-600 rounded-xl gap-2"
           >
             <Download size={20} color="white" />
-            <Text className="font-medium text-white">Download PDF Ticket</Text>
+            <AppText weight="medium" color="white">Download PDF Ticket</AppText>
           </TouchableOpacity>
-
-          {/* Save to Gallery Button */}
           <TouchableOpacity
             onPress={handleSaveToGallery}
             className="flex-row items-center justify-center py-3 bg-green-600 rounded-xl gap-2"
           >
             <Save size={20} color="white" />
-            <Text className="font-medium text-white">Save to Gallery</Text>
+            <AppText weight="medium" color="white">Save to Gallery</AppText>
           </TouchableOpacity>
-
-          {/* Share Button */}
           <TouchableOpacity
             onPress={handleShare}
             className="flex-row items-center justify-center py-3 bg-purple-600 rounded-xl gap-2"
           >
             <Share2 size={20} color="white" />
-            <Text className="font-medium text-white">Share Ticket</Text>
+            <AppText weight="medium" color="white">Share Ticket</AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* QR Code Fullscreen Modal */}
       <Modal
         visible={qrModalVisible}
         transparent={true}
@@ -892,7 +854,7 @@ export default function TicketDetailScreen() {
               }}
               className="mt-4 bg-gray-200 py-2 px-4 rounded-full self-center"
             >
-              <Text className="text-gray-700 font-medium">Close</Text>
+              <AppText variant="bodyMedium" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="text-center">Close</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

@@ -1,6 +1,7 @@
 // components/common/IconButton.tsx
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, ActivityIndicator } from 'react-native';
+import { AppText } from './AppText';
 import { LucideIcon } from 'lucide-react-native';
 
 interface IconButtonProps {
@@ -83,13 +84,14 @@ export function IconButton({
         />
       )}
       
-      <Text className={`
-        font-semibold
-        ${textStyles[variant]}
-        ${textSize[size]}
-      `}>
+      <AppText 
+        weight="semibold"
+        color={variant === 'outline' ? '#1f2937' : 'white'}
+        variant={size === 'small' ? 'bodySmall' : size === 'large' ? 'bodyLarge' : 'bodyMedium'}
+        className={className}
+      >
         {title}
-      </Text>
+      </AppText>
       
       {!loading && Icon && iconPosition === 'right' && (
         <Icon 

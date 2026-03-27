@@ -1,39 +1,68 @@
-export interface SupportTicket {
-  _id: string;
-  userID: string;
-  subject: string;
-  message: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high';
-  category: 'booking' | 'payment' | 'technical' | 'general';
-  attachments?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SupportMessage {
-  _id: string;
-  ticketID: string;
-  userID: string;
-  message: string;
-  isStaff: boolean;
-  attachments?: string[];
-  createdAt: string;
-}
-
 export interface FAQ {
-  _id: string;
+  id: string;
   question: string;
   answer: string;
-  category: string;
-  order: number;
-  isActive: boolean;
+  category: 'general' | 'booking' | 'payment' | 'account' | 'trip';
 }
 
-export interface CreateTicketData {
+export interface SupportTicket {
+  id: string;
   subject: string;
   message: string;
-  category: SupportTicket['category'];
-  priority?: SupportTicket['priority'];
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  updatedAt: string;
   attachments?: string[];
+}
+
+export interface ContactForm {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  type: 'feedback' | 'complaint' | 'inquiry' | 'other';
+}
+
+export interface Feedback {
+  rating: number;
+  comment: string;
+  category: 'app' | 'service' | 'booking' | 'other';
+  userId?: string;
+}
+
+export interface Language {
+  code: 'en' | 'am';
+  name: string;
+  nativeName: string;
+}
+
+export interface Theme {
+  mode: 'light' | 'dark' | 'system';
+}
+
+export interface FontSize {
+  scale: number; // 0.8 to 1.2
+  name: 'small' | 'normal' | 'large' | 'extra-large';
+}
+
+// Simplified PrivacySetting - only privacy toggles, no security features
+export interface PrivacySetting {
+  shareLocation: boolean;
+  saveHistory: boolean;
+  allowNotifications: boolean;
+}
+
+export interface AppSetting {
+  language: Language['code'];
+  theme: Theme['mode'];
+  fontSize: FontSize;
+  privacy: PrivacySetting;
+  autoUpdate: boolean;
+  cacheData: boolean;
+  downloadOverWifi: boolean;
+}
+
+export interface FontSizeOption extends FontSize {
+  label: string;
 }

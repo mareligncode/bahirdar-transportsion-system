@@ -18,7 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Loader } from '@/components/common/Loader';
+import { useTheme } from '@/context/ThemeContext';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -40,6 +42,7 @@ import {
   Search
 } from 'lucide-react-native';
 import { RegisterFormData } from '@/types/auth';
+import { AppText } from '@/components/common/AppText';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -48,6 +51,8 @@ const countryCodes = [
 ];
 
 export default function Register() {
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
   const [isCountryOpen, setIsCountryOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [error, setError] = useState('');
@@ -160,7 +165,7 @@ export default function Register() {
     setSuccess('');
 
     if (!passwordMeetsAllCriteria) {
-      setError('Password must meet all security requirements');
+      setError(translate('pass_security_req'));
       return;
     }
 
@@ -177,7 +182,7 @@ export default function Register() {
       const result = await registerUser(data);
 
       if (result.success) {
-        setSuccess('Account created successfully! Redirecting...');
+        setSuccess(translate('account_created'));
 
         setTimeout(() => {
           router.replace('/tabs/home');
@@ -186,7 +191,7 @@ export default function Register() {
         throw new Error(result.message || 'Registration failed');
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Registration failed. Please try again.';
+      const errorMessage = err.message || translate('registration_failed');
       setError(errorMessage);
     }
   };
@@ -231,11 +236,11 @@ export default function Register() {
   const loading = authLoading || isSubmitting;
 
   if (loading) {
-    return <Loader message="Creating account..." />;
+    return <Loader message={translate('creating_account')} />;
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -266,17 +271,17 @@ export default function Register() {
                 </TouchableOpacity>
 
                 <View className="items-center mb-6">
-                  <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
+                  <View className={`w-16 h-16 ${isDark ? 'bg-blue-900/50' : 'bg-blue-100'} rounded-full items-center justify-center mb-4`}>
                     <View className="w-12 h-12 bg-blue-600 rounded-lg items-center justify-center">
                       <User size={24} color="white" />
                     </View>
                   </View>
-                  <Text className="text-3xl font-bold text-gray-900 mb-2 text-center">
-                    Create Account
-                  </Text>
-                  <Text className="text-gray-600 text-center">
-                    Sign up to start your journey
-                  </Text>
+                  <AppText variant="h1" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
+                    {translate('create_account')}
+                  </AppText>
+                  <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center`}>
+                    {translate('sign_up_sub')}
+                  </AppText>
                 </View>
               </View>
               {success && (
@@ -284,7 +289,7 @@ export default function Register() {
                   <View className="flex-row items-start">
                     <CheckCircle size={20} color="#10B981" className="mt-0.5 mr-3" />
                     <View className="flex-1">
-                      <Text className="font-medium text-green-700">{success}</Text>
+                      <AppText weight="medium" className="text-green-700">{success}</AppText>
                     </View>
                   </View>
                 </Card>
@@ -294,16 +299,16 @@ export default function Register() {
                   <View className="flex-row items-start">
                     <AlertCircle size={20} color="#EF4444" className="mt-0.5 mr-3" />
                     <View className="flex-1">
-                      <Text className="font-medium text-red-600">Registration failed</Text>
-                      <Text className="text-sm text-red-600 mt-1">{error}</Text>
+                      <AppText weight="medium" className="text-red-600">{translate('registration_failed')}</AppText>
+                      <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
                     </View>
                   </View>
                 </Card>
               )}
               <View className="mb-6">
-                <Text className="text-lg font-semibold text-gray-800 mb-4">
-                  Personal Information
-                </Text>
+                <AppText variant="h3" weight="semibold" className={`${isDark ? 'text-white' : 'text-gray-800'} mb-4`}>
+                  {translate('personal_info')}
+                </AppText>
 
                 <View className="space-y-4">
                   <Controller
@@ -313,8 +318,8 @@ export default function Register() {
                       <View>
                         <Input
                           ref={nameInputRef}
-                          label="Full Name *"
-                          placeholder="Enter your full name (first and last)"
+                          label={translate('full_name') + " *"}
+                          placeholder={translate('full_name_placeholder')}
                           value={value}
                           onChangeText={(text) => {
                             onChange(text);
@@ -344,8 +349,8 @@ export default function Register() {
                       <View>
                         <Input
                           ref={emailInputRef}
-                          label="Email Address *"
-                          placeholder="name@example.com"
+                          label={translate('email_address') + " *"}
+                          placeholder={translate('email_placeholder')}
                           value={value}
                           onChangeText={(text) => {
                             onChange(text);
@@ -370,24 +375,24 @@ export default function Register() {
                     )}
                   />
                   <View>
-                    <Text className="text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </Text>
+                    <AppText variant="bodySmall" weight="medium" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      {translate('phone_number')} *
+                    </AppText>
                     <View className="flex-row space-x-2">
                       <View className="flex-1 max-w-[140px]">
                         <TouchableOpacity
                           onPress={() => setIsCountryOpen(true)}
                           disabled={loading}
-                          className="flex-row items-center justify-between bg-gray-50 border border-gray-300 rounded-lg px-3 py-3"
+                          className={`flex-row items-center justify-between ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'} border rounded-lg px-3 py-3`}
                           activeOpacity={0.7}
                         >
                           <View className="flex-row items-center space-x-2">
-                            <Text className="text-lg">{selectedCountry.flag}</Text>
-                            <Text className="font-medium text-sm">
+                            <AppText className="text-lg">{selectedCountry.flag}</AppText>
+                            <AppText weight="medium" className="text-sm">
                               {selectedCountry.code.length > 5 ?
                                 selectedCountry.code.substring(0, 5) + '...' :
                                 selectedCountry.code}
-                            </Text>
+                            </AppText>
                           </View>
                           <ChevronDown size={16} color="#6B7280" />
                         </TouchableOpacity>
@@ -400,7 +405,7 @@ export default function Register() {
                             <View>
                               <Input
                                 ref={phoneInputRef}
-                                placeholder={`${selectedCountry.minLength} digits`}
+                                placeholder={translate('phone_placeholder')}
                                 value={value?.replace(selectedCountry.code, '') || ''}
                                 onChangeText={(text) => handlePhoneChange(text, onChange)}
                                 onBlur={onBlur}
@@ -422,15 +427,15 @@ export default function Register() {
                         />
                       </View>
                     </View>
-                    <Text className="text-xs text-gray-500 mt-1">
-                      Format: {selectedCountry.code} followed by {selectedCountry.minLength} digits
-                      {selectedCountry.pattern ? ` starting with ${selectedCountry.pattern}` : ''}
-                    </Text>
+                    <AppText variant="bodySmall" className="text-gray-500 mt-1">
+                      {translate('phone_format_desc', { code: selectedCountry.code, count: selectedCountry.minLength })}
+                      {selectedCountry.pattern ? ` ${translate('starting_with')} ${selectedCountry.pattern}` : ''}
+                    </AppText>
                   </View>
                   <View>
-                    <Text className="text-sm font-medium text-gray-700 mb-2">
-                      Emergency Contact (Optional)
-                    </Text>
+                    <AppText variant="bodySmall" weight="medium" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      {translate('emergency_contact')}
+                    </AppText>
                     <Controller
                       name="emergencyContact"
                       control={control}
@@ -458,9 +463,9 @@ export default function Register() {
                         </View>
                       )}
                     />
-                    <Text className="text-xs text-gray-500 mt-1">
-                      Contact person in case of emergency
-                    </Text>
+                    <AppText variant="caption" className="text-gray-500 mt-1">
+                      {translate('emergency_desc')}
+                    </AppText>
                   </View>
                 </View>
               </View>
@@ -473,8 +478,8 @@ export default function Register() {
                       <View>
                         <Input
                           ref={passwordInputRef}
-                          label="Password *"
-                          placeholder="Create a strong password"
+                          label={translate('password_label') + " *"}
+                          placeholder={translate('password_placeholder')}
                           value={value}
                           onChangeText={(text) => {
                             onChange(text);
@@ -517,12 +522,12 @@ export default function Register() {
                   />
 
                   {password && (
-                    <View className="bg-gray-50 p-4 rounded-lg">
+                    <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-4 rounded-lg`}>
                       <View className="flex-row justify-between items-center mb-2">
-                        <Text className="text-sm font-medium text-gray-700">
-                          Password Strength
-                        </Text>
-                        <Text className={`text-sm font-bold ${passwordStrength?.score === 0 ? 'text-red-600' :
+                        <AppText variant="bodySmall" weight="medium" className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {translate('password_strength')}
+                        </AppText>
+                        <AppText variant="bodySmall" weight="bold" className={`${passwordStrength?.score === 0 ? 'text-red-600' :
                             passwordStrength?.score === 1 ? 'text-red-500' :
                               passwordStrength?.score === 2 ? 'text-yellow-600' :
                                 passwordStrength?.score === 3 ? 'text-yellow-500' :
@@ -530,8 +535,8 @@ export default function Register() {
                                     passwordStrength?.score === 5 ? 'text-green-600' :
                                       'text-gray-500'
                           }`}>
-                          {passwordStrength?.label || 'None'}
-                        </Text>
+                          {passwordStrength?.label || translate('not_set')}
+                        </AppText>
                       </View>
                       <View className="h-2.5 bg-gray-200 rounded-full overflow-hidden mb-3">
                         <View
@@ -546,38 +551,38 @@ export default function Register() {
                         />
                       </View>
                       <View className="space-y-2">
-                        <Text className="text-xs font-medium text-gray-700 mb-1">
-                          Must include:
-                        </Text>
+                        <AppText variant="caption" weight="medium" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                          {translate('must_include')}
+                        </AppText>
 
                         {[
                           {
                             check: password.length >= 8,
-                            text: 'At least 8 characters',
+                            text: translate('char_min'),
                             description: `${password.length}/8`,
                             required: true
                           },
                           {
                             check: /[a-z]/.test(password),
-                            text: 'One lowercase letter',
+                            text: translate('lowercase_req'),
                             description: /[a-z]/.test(password) ? '✓' : '✗',
                             required: true
                           },
                           {
                             check: /[A-Z]/.test(password),
-                            text: 'One uppercase letter',
+                            text: translate('uppercase_req'),
                             description: /[A-Z]/.test(password) ? '✓' : '✗',
                             required: true
                           },
                           {
                             check: /\d/.test(password),
-                            text: 'One number',
+                            text: translate('number_req'),
                             description: /\d/.test(password) ? '✓' : '✗',
                             required: true
                           },
                           {
                             check: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-                            text: 'One special character',
+                            text: translate('one_special'),
                             description: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '✗',
                             required: true
                           },
@@ -585,13 +590,13 @@ export default function Register() {
                           <View key={index} className="flex-row items-center justify-between">
                             <View className="flex-row items-center">
                               <View className={`w-3 h-3 rounded-full mr-2 ${req.check ? 'bg-green-500' : 'bg-gray-300'}`} />
-                              <Text className={`text-xs ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
+                              <AppText variant="caption" className={`${req.check ? 'text-green-600' : 'text-gray-500'}`}>
                                 {req.text}
-                              </Text>
+                              </AppText>
                             </View>
-                            <Text className={`text-xs font-medium ${req.check ? 'text-green-600' : 'text-gray-400'}`}>
+                            <AppText variant="caption" weight="medium" className={`${req.check ? 'text-green-600' : 'text-gray-400'}`}>
                               {req.description}
-                            </Text>
+                            </AppText>
                           </View>
                         ))}
                       </View>
@@ -600,12 +605,12 @@ export default function Register() {
                           <View className="flex-row items-center">
                             <CheckCircle size={18} color="#059669" className="mr-2" />
                             <View className="flex-1">
-                              <Text className="text-sm font-bold text-green-800">
-                                Password Strength: Full
-                              </Text>
-                              <Text className="text-xs text-green-700 mt-1">
-                                Your password meets all security requirements. Excellent!
-                              </Text>
+                              <AppText weight="bold" className="text-green-800">
+                                {translate('password_strength')}: {translate('strength_full')}
+                              </AppText>
+                              <AppText variant="caption" className="text-green-700 mt-1">
+                                {translate('strength_desc')}
+                              </AppText>
                             </View>
                           </View>
                         </View>
@@ -620,8 +625,8 @@ export default function Register() {
                       <View>
                         <Input
                           ref={confirmPasswordInputRef}
-                          label="Confirm Password *"
-                          placeholder="Re-enter your password"
+                          label={translate('confirm_new_password') + " *"}
+                          placeholder={translate('confirm_new_password')}
                           value={value}
                           onChangeText={(text) => {
                             onChange(text);
@@ -682,21 +687,21 @@ export default function Register() {
                       </TouchableOpacity>
                       <View className="flex-1">
                         <View className="flex-row flex-wrap items-center">
-                          <Text className="text-sm text-gray-700 mr-1">
-                            I agree to the
-                          </Text>
+                          <AppText variant="bodySmall" className="text-gray-700 mr-1">
+                            {translate('i_agree')}
+                          </AppText>
                           <TouchableOpacity
                             onPress={() => router.push('/terms')}
                             disabled={loading}
                             activeOpacity={0.7}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           >
-                            <Text className="text-blue-600 font-medium text-sm underline">
-                              Terms of Service
-                            </Text>
+                            <AppText variant="bodySmall" weight="medium" className="text-blue-600 underline">
+                              {translate('terms_service')}
+                            </AppText>
                           </TouchableOpacity>
 
-                          <Text className="text-sm text-gray-700 mx-1">and</Text>
+                          <AppText variant="bodySmall" className="text-gray-700 mx-1">{translate('and')}</AppText>
 
                           <TouchableOpacity
                             onPress={() => router.push('/privacy')}
@@ -704,27 +709,27 @@ export default function Register() {
                             activeOpacity={0.7}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           >
-                            <Text className="text-blue-600 font-medium text-sm underline">
-                              Privacy Policy
-                            </Text>
+                            <AppText variant="bodySmall" weight="medium" className="text-blue-600 underline">
+                              {translate('privacy_policy')}
+                            </AppText>
                           </TouchableOpacity>
 
-                          <Text className="text-sm text-gray-700 ml-1">.*</Text>
+                          <AppText variant="bodySmall" className="text-gray-700 ml-1">.*</AppText>
                         </View>
                       </View>
                     </View>
 
                     {errors.termsAccepted && (
-                      <Text className="text-red-500 text-xs mt-1 ml-8">
+                      <AppText variant="caption" className="text-red-500 mt-1 ml-8">
                         {errors.termsAccepted.message}
-                      </Text>
+                      </AppText>
                     )}
                   </View>
                 )}
               />
 
               <Button
-                title="Create Account"
+                title={translate('create_account')}
                 onPress={handleSubmit(handleRegister)}
                 loading={loading}
                 disabled={loading || !passwordMeetsAllCriteria || confirmPassword !== password}
@@ -733,15 +738,15 @@ export default function Register() {
                 className="mb-6"
                 fullWidth
               />
-              <View className="pt-6 border-t border-gray-200">
+              <View className={`pt-6 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <View className="flex-row justify-center">
-                  <Text className="text-gray-600">Already have an account? </Text>
+                  <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{translate('already_have_account')} </AppText>
                   <TouchableOpacity
                     onPress={() => router.push('/auth/Login')}
                     disabled={loading}
                     activeOpacity={0.7}
                   >
-                    <Text className="text-blue-600 font-bold">Sign in</Text>
+                    <AppText weight="bold" className="text-blue-600">{translate('sign_in')}</AppText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -764,16 +769,16 @@ export default function Register() {
         }}>
           <View className="flex-1 bg-black/50 justify-end">
             <TouchableWithoutFeedback onPress={() => { }}>
-              <View className="bg-white rounded-t-3xl max-h-3/4">
-                <View className="p-4 border-b border-gray-200">
+              <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-t-3xl max-h-3/4`}>
+                <View className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                   <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mb-4" />
-                  <Text className="text-lg font-semibold text-center">Select Country</Text>
+                  <AppText variant="h3" weight="semibold" className={`text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>{translate('select_country')}</AppText>
 
                   <View className="mt-4">
                     <View className="flex-row items-center bg-gray-50 rounded-lg px-3 py-3 border border-gray-300">
                       <Search size={20} color="#6B7280" className="mr-3" />
                       <TextInput
-                        placeholder="Search by country name or code..."
+                        placeholder={translate('search_country')}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         className="flex-1 text-gray-800 text-base"
@@ -794,12 +799,12 @@ export default function Register() {
                       activeOpacity={0.5}
                     >
                       <View className="flex-row items-center">
-                        <Text className="text-2xl mr-3">{item.flag}</Text>
+                        <AppText className="text-2xl mr-3">{item.flag}</AppText>
                         <View className="flex-1">
-                          <Text className="font-medium text-gray-800">{item.name}</Text>
-                          <Text className="text-gray-600 text-sm">
-                            {item.code} • {item.minLength} digits{item.pattern ? ` • Starts with ${item.pattern}` : ''}
-                          </Text>
+                          <AppText weight="medium" className="text-gray-800">{item.name}</AppText>
+                          <AppText variant="caption" className="text-gray-600">
+                            {item.code} • {item.minLength} {translate('digits')}{item.pattern ? ` • ${translate('starting_with')} ${item.pattern}` : ''}
+                          </AppText>
                         </View>
                         {selectedCountry.code === item.code && selectedCountry.name === item.name && (
                           <CheckCircle size={20} color="#3B82F6" />
@@ -810,10 +815,12 @@ export default function Register() {
                   ListEmptyComponent={
                     <View className="p-8 items-center">
                       <Search size={40} color="#9CA3AF" className="mb-3" />
-                      <Text className="text-gray-500 text-lg font-medium">No countries found</Text>
-                      <Text className="text-gray-400 text-sm mt-1">
-                        Try searching with country name or code
-                      </Text>
+                      <AppText variant="h3" weight="medium" className="text-gray-500">
+                        {translate('no_results_found')}
+                      </AppText>
+                      <AppText variant="bodySmall" className="text-gray-400 mt-1 text-center">
+                        {translate('try_searching_country')}
+                      </AppText>
                     </View>
                   }
                   showsVerticalScrollIndicator={false}
@@ -827,7 +834,9 @@ export default function Register() {
                   className="p-4 border-t border-gray-200 active:bg-gray-50"
                   activeOpacity={0.7}
                 >
-                  <Text className="text-center text-blue-600 font-medium text-lg">Cancel</Text>
+                  <AppText variant="h3" weight="medium" className="text-center text-blue-600">
+                    {translate('cancel')}
+                  </AppText>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>

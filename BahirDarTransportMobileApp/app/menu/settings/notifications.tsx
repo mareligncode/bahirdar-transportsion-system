@@ -8,58 +8,63 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/common/Card';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
+import { useNotificationStore } from '@/store/notificationStore';
+import { AppText } from '@/components/common/AppText';
 
 export default function NotificationsScreen() {
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [bookingUpdates, setBookingUpdates] = useState(true);
-  const [paymentUpdates, setPaymentUpdates] = useState(true);
-  const [promotional, setPromotional] = useState(false);
-  const [tripAlerts, setTripAlerts] = useState(true);
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
+  const { preferences, updatePreferences } = useNotificationStore();
 
   const notificationSettings = [
     {
-      title: 'Push Notifications',
-      description: 'Receive push notifications on your device',
-      value: pushNotifications,
-      onChange: setPushNotifications,
+      title: translate('push_notifications' as any),
+      description: translate('push_notifications_desc' as any),
+      key: 'push_enabled',
+      value: preferences.push_enabled,
     },
     {
-      title: 'Email Notifications',
-      description: 'Receive notifications via email',
-      value: emailNotifications,
-      onChange: setEmailNotifications,
+      title: translate('email_notifications' as any),
+      description: translate('email_notifications_desc' as any),
+      key: 'email_enabled',
+      value: preferences.email_enabled,
     },
     {
-      title: 'Booking Updates',
-      description: 'Updates about your bookings and reservations',
-      value: bookingUpdates,
-      onChange: setBookingUpdates,
+      title: translate('booking_updates' as any),
+      description: translate('booking_updates_desc' as any),
+      key: 'booking_updates',
+      value: preferences.booking_updates,
     },
     {
-      title: 'Payment Updates',
-      description: 'Notifications about payments and transactions',
-      value: paymentUpdates,
-      onChange: setPaymentUpdates,
+      title: translate('payment_updates' as any),
+      description: translate('payment_updates_desc' as any),
+      key: 'payment_updates',
+      value: preferences.payment_updates,
     },
     {
-      title: 'Promotional Offers',
-      description: 'Special offers and discounts',
-      value: promotional,
-      onChange: setPromotional,
+      title: translate('promotional_offers' as any),
+      description: translate('promotional_offers_desc' as any),
+      key: 'promotions',
+      value: preferences.promotions,
     },
     {
-      title: 'Trip Alerts',
-      description: 'Real-time updates about your trips',
-      value: tripAlerts,
-      onChange: setTripAlerts,
+      title: translate('trip_alerts' as any),
+      description: translate('trip_alerts_desc' as any),
+      key: 'trip_updates',
+      value: preferences.trip_updates,
     },
   ];
 
+  const handleToggle = (key: string, value: boolean) => {
+    updatePreferences({ [key]: value });
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <Header 
-        title="Notifications" 
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Header
+        title={translate('notifications' as any)}
         showBackButton
       />
 
@@ -67,12 +72,12 @@ export default function NotificationsScreen() {
         <View className="px-6 py-6">
           <Card className="mb-6">
             <View className="items-center py-4">
-              <Text className="text-lg font-semibold text-gray-800 mb-2">
-                Notification Preferences
-              </Text>
-              <Text className="text-gray-600 text-center">
-                Manage how and when you receive notifications
-              </Text>
+              <AppText variant="h3" weight="semibold" color="textPrimary" className="mb-2">
+                {translate('notification_pref' as any)}
+              </AppText>
+              <AppText color="textSecondary" align="center">
+                {translate('manage_notif_desc' as any)}
+              </AppText>
             </View>
           </Card>
 
@@ -80,18 +85,18 @@ export default function NotificationsScreen() {
             <Card key={index} className="mb-3">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="font-semibold text-gray-800">
+                  <AppText weight="semibold" color="textPrimary">
                     {setting.title}
-                  </Text>
-                  <Text className="text-gray-600 text-sm mt-1">
+                  </AppText>
+                  <AppText variant="bodySmall" color="textSecondary" className="mt-1">
                     {setting.description}
-                  </Text>
+                  </AppText>
                 </View>
-                
+
                 <Switch
                   value={setting.value}
-                  onValueChange={setting.onChange}
-                  trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+                  onValueChange={(value) => handleToggle(setting.key, value)}
+                  trackColor={{ false: isDark ? '#374151' : '#D1D5DB', true: '#2563EB' }}
                   thumbColor="#FFFFFF"
                 />
               </View>

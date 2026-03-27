@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Notification, NotificationPreferences } from '../types/notification';
-import { getMyBookings } from '../lib/api/bookings';
+import { notificationsApi } from '../lib/api/notification';
 
 interface NotificationState {
   notifications: Notification[];
@@ -46,31 +46,16 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       fetchNotifications: async (unreadOnly?: boolean) => {
         set({ isLoading: true, error: null });
         try {
-          // Get real bookings to generate notifications from
-          const bookingsResponse = await getMyBookings();
+          const res = await notificationsApi.getNotifications({ page: 1, limit: 50 });
+          const items = res.mobile || [];
+          const filtered = unreadOnly ? items.filter((n: any) => !n.is_read) : items;
+          const unreadRes = await notificationsApi.getUnreadCount();
+          const unreadCount = unreadRes?.data?.unreadCount ?? filtered.filter((n: any) => !n.is_read).length;
           
-          if (bookingsResponse.success && bookingsResponse.data) {
-            // Generate notifications from real booking data
-            const notifications: Notification[] = bookingsResponse.data.map((booking: any, index: number) => ({
-              id: `notification_${booking._id}`,
-              type: 'booking',
-              title: 'Booking Confirmed',
-              message: `Your booking for seat ${booking.seatNumber || booking.seatNumbers?.join(', ')} has been confirmed.`,
-              is_read: false,
-              created_at: booking.createdAt || new Date().toISOString(),
-              data: {
-                bookingId: booking._id,
-                tripId: booking.tripID,
-                seatNumber: booking.seatNumber,
-                seatNumbers: booking.seatNumbers,
-              }
-            }));
-
-            set({ 
-              notifications: unreadOnly ? notifications : notifications.filter((n: any) => !n.is_read),
-              unreadCount: notifications.filter((n: any) => !n.is_read).length 
-            });
-          }
+          set({
+            notifications: filtered,
+            unreadCount,
+          });
         } catch (error: any) {
           console.error('Error fetching notifications:', error);
           set({ error: error.message || 'Failed to fetch notifications' });
@@ -79,23 +64,38 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         }
       },
 
+      // New method to refresh notifications on login
+      refreshOnLogin: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await notificationsApi.getNotifications({ page: 1, limit: 50 });
+          const items = res.mobile || [];
+          const unreadRes = await notificationsApi.getUnreadCount();
+          const unreadCount = unreadRes?.data?.unreadCount ?? items.filter((n: any) => !n.is_read).length;
+          
+          set({
+            notifications: items,
+            unreadCount,
+          });
+        } catch (error: any) {
+          console.error('Error refreshing notifications on login:', error);
+          set({ error: error.message || 'Failed to refresh notifications' });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
       markAsRead: async (notificationId: string) => {
         try {
+          await notificationsApi.markAsRead(notificationId);
           const { notifications, unreadCount } = get();
-          const notification = notifications.find((n: any) => n.id === notificationId);
-          
-          if (notification) {
-            const updatedNotifications = notifications.map((n: any) =>
-              n.id === notificationId ? { ...n, is_read: true } : n
-            );
-
-            const newUnreadCount = Math.max(0, unreadCount - 1);
-
-            set({
-              notifications: updatedNotifications,
-              unreadCount: newUnreadCount,
-            });
-          }
+          const updated = notifications.map((n: any) =>
+            n.id === notificationId ? { ...n, is_read: true } : n
+          );
+          set({
+            notifications: updated,
+            unreadCount: Math.max(0, unreadCount - 1),
+          });
         } catch (error: any) {
           console.error('Error marking notification as read:', error);
         }
@@ -104,15 +104,10 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       markAllAsRead: async () => {
         try {
           const { notifications } = get();
-          const updatedNotifications = notifications.map((notification: any) => ({
-            ...notification,
-            is_read: true,
-          }));
-
-          set({
-            notifications: updatedNotifications,
-            unreadCount: 0,
-          });
+          const unread = notifications.filter((n: any) => !n.is_read);
+          await Promise.all(unread.map((n: any) => notificationsApi.markAsRead(n.id)));
+          const updated = notifications.map((n: any) => ({ ...n, is_read: true }));
+          set({ notifications: updated, unreadCount: 0 });
         } catch (error: any) {
           console.error('Error marking all notifications as read:', error);
         }
@@ -120,23 +115,12 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
       deleteNotification: async (notificationId: string) => {
         try {
+          await notificationsApi.deleteNotification(notificationId);
           const { notifications, unreadCount } = get();
-          const notificationToDelete = notifications.find((n: any) => n.id === notificationId);
-          
-          if (notificationToDelete) {
-            const updatedNotifications = notifications.filter(
-              (notification: any) => notification.id !== notificationId
-            );
-
-            const newUnreadCount = notificationToDelete?.is_read 
-              ? unreadCount 
-              : Math.max(0, unreadCount - 1);
-
-            set({
-              notifications: updatedNotifications,
-              unreadCount: newUnreadCount,
-            });
-          }
+          const toDelete = notifications.find((n: any) => n.id === notificationId);
+          const updated = notifications.filter((n: any) => n.id !== notificationId);
+          const newUnread = toDelete?.is_read ? unreadCount : Math.max(0, unreadCount - 1);
+          set({ notifications: updated, unreadCount: newUnread });
         } catch (error: any) {
           console.error('Error deleting notification:', error);
         }

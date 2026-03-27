@@ -1,4 +1,3 @@
-// app/(screens)/payment/history.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -26,15 +25,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { usePayment } from '../../../hooks/usePayment';
 import { useAuth } from '../../../hooks/useAuth';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { Payment, Booking, Trip } from '../../../types';
 import { formatCurrency } from '../../../utils/helpers';
-import { COLORS } from '../../../constants/colors';
+import { AppText } from '../../../components/common/AppText';
+import { useTheme } from '../../../context/ThemeContext';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const { payments, getPaymentHistory, loading } = usePayment();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'success' | 'pending' | 'failed'>('all');
@@ -79,41 +82,45 @@ export default function PaymentHistoryScreen() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
-        return <CheckCircle size={20} color="#16a34a" />;
+        return <CheckCircle size={20} color={isDark ? '#4ade80' : "#16a34a"} />;
       case 'pending':
       case 'processing':
-        return <Clock size={20} color="#ca8a04" />;
+        return <Clock size={20} color={isDark ? '#fbbf24' : "#ca8a04"} />;
       case 'failed':
       case 'cancelled':
-        return <XCircle size={20} color="#dc2626" />;
+        return <XCircle size={20} color={isDark ? '#f87171' : "#dc2626"} />;
       case 'refunded':
-        return <Receipt size={20} color="#6b7280" />;
+        return <Receipt size={20} color={colors.textSecondary} />;
       default:
-        return <AlertCircle size={20} color="#6b7280" />;
+        return <AlertCircle size={20} color={colors.textSecondary} />;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'success': return 'bg-green-100 text-green-700';
+      case 'success': return {
+        badge: isDark ? 'bg-green-900/20 border-green-800/30' : 'bg-green-50 border-green-200',
+        text: isDark ? '#4ade80' : '#166534'
+      };
       case 'pending':
-      case 'processing': return 'bg-yellow-100 text-yellow-700';
+      case 'processing': return {
+        badge: isDark ? 'bg-yellow-900/20 border-yellow-800/30' : 'bg-yellow-50 border-yellow-200',
+        text: isDark ? '#fbbf24' : '#92400e'
+      };
       case 'failed':
-      case 'cancelled': return 'bg-red-100 text-red-700';
-      case 'refunded': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStatusBadgeStyle = (status: string) => {
-    switch (status) {
-      case 'success': return 'bg-green-50 border-green-200';
-      case 'pending':
-      case 'processing': return 'bg-yellow-50 border-yellow-200';
-      case 'failed':
-      case 'cancelled': return 'bg-red-50 border-red-200';
-      case 'refunded': return 'bg-gray-50 border-gray-200';
-      default: return 'bg-gray-50 border-gray-200';
+      case 'cancelled': return {
+        badge: isDark ? 'bg-red-900/20 border-red-800/30' : 'bg-red-50 border-red-200',
+        text: isDark ? '#f87171' : '#b91c1c'
+      };
+      case 'refunded':
+      case 'default': return {
+        badge: isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200',
+        text: isDark ? colors.textSecondary : colors.textSecondary
+      };
+      default: return {
+        badge: isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200',
+        text: colors.textSecondary
+      };
     }
   };
 
@@ -139,9 +146,8 @@ export default function PaymentHistoryScreen() {
 
     const originName = trip?.origin?.stationName || 'N/A';
     const destinationName = trip?.destination?.stationName || 'N/A';
+    const statusStyles = getStatusStyles(item.paymentStatus);
     const bookingId = booking?._id;
-    const statusColors = getStatusColor(item.paymentStatus);
-    const badgeStyle = getStatusBadgeStyle(item.paymentStatus);
 
     return (
       <TouchableOpacity
@@ -156,45 +162,46 @@ export default function PaymentHistoryScreen() {
           }
         }}
         disabled={!bookingId}
-        className="bg-white p-4 mb-3 rounded-xl border border-gray-200 shadow-sm"
+        style={{ backgroundColor: colors.card, borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border }}
+        className="p-4 mb-3 rounded-xl border shadow-sm"
       >
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
-            <Text className="font-semibold text-gray-800 text-base">
+            <AppText variant="bodyMedium" weight="bold" color={colors.text}>
               {originName} → {destinationName}
-            </Text>
+            </AppText>
             <View className="flex-row items-center mt-1">
-              <Calendar size={12} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-1">
+              <Calendar size={12} color={colors.textTertiary} />
+              <AppText variant="caption" color={colors.textSecondary} className="ml-1">
                 {formatDate(item.createdAt)}
-              </Text>
+              </AppText>
             </View>
           </View>
-          <View className={`px-3 py-1.5 rounded-full border ${badgeStyle} flex-row items-center gap-1.5`}>
+          <View className={`px-3 py-1.5 rounded-full border ${statusStyles.badge} flex-row items-center gap-1.5`}>
             {getStatusIcon(item.paymentStatus)}
-            <Text className={`text-xs font-medium ${statusColors.split(' ')[1]}`}>
-              {item.paymentStatus?.toUpperCase()}
-            </Text>
+            <AppText variant="caption" weight="bold" style={{ color: statusStyles.text }}>
+              {translate(`status_${item.paymentStatus?.toLowerCase()}` as any).toUpperCase()}
+            </AppText>
           </View>
         </View>
 
-        <View className="flex-row justify-between items-center mt-2 pt-2 border-t border-gray-100">
+        <View style={{ borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : colors.borderLight }} className="flex-row justify-between items-center mt-2 pt-2 border-t">
           <View className="flex-row items-center gap-2">
-            <CreditCard size={14} color="#6b7280" />
-            <Text className="text-xs text-gray-500">
-              {item.paymentMethod === 'mobile_money' ? 'Mobile Money' : 
-               item.paymentMethod === 'card' ? 'Card' : 'Cash'}
-            </Text>
+            <CreditCard size={14} color={colors.textSecondary} />
+            <AppText variant="caption" color={colors.textSecondary}>
+              {item.paymentMethod === 'mobile_money' ? translate('mobile_money') : 
+               item.paymentMethod === 'card' ? translate('card_payment') : translate('cash_payment')}
+            </AppText>
           </View>
-          <Text className="font-bold text-blue-600 text-lg">
+          <AppText variant="bodyLarge" weight="bold" color={isDark ? '#60a5fa' : colors.primary}>
             {formatCurrency(item.amount)}
-          </Text>
+          </AppText>
         </View>
 
         {item.gatewayTransactionID && (
-          <Text className="text-xs text-gray-400 mt-2">
+          <AppText variant="caption" color={colors.textTertiary} className="mt-2">
             Ref: {item.gatewayTransactionID}
-          </Text>
+          </AppText>
         )}
       </TouchableOpacity>
     );
@@ -209,7 +216,7 @@ export default function PaymentHistoryScreen() {
     return (
       <View>
         <LinearGradient
-          colors={['#1e40af', '#3b82f6']}
+          colors={isDark ? ['#1e1e1e', '#2d2d2d'] : ['#1e40af', '#3b82f6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           className="px-4 pt-2 pb-6"
@@ -217,34 +224,33 @@ export default function PaymentHistoryScreen() {
           <View className="flex-row items-center justify-between mb-4">
             <TouchableOpacity 
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+              className={`w-10 h-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white/20'} items-center justify-center`}
             >
               <ArrowLeft size={20} color="white" />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-white">Payments</Text>
+            <AppText color="white" variant="h2" weight="bold">{translate('payments')}</AppText>
             <View className="w-10" />
           </View>
 
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-blue-100 text-sm">Total Spent</Text>
-              <Text className="text-white text-3xl font-bold">
+              <AppText color="white" variant="caption" style={{ opacity: 0.8 }}>{translate('total_spent_label')}</AppText>
+              <AppText color="white" variant="h1" weight="bold">
                 {formatCurrency(totalSpent)}
-              </Text>
+              </AppText>
             </View>
-            <View className="bg-white/20 px-4 py-2 rounded-full">
-              <Text className="text-white font-medium">
-                {filteredPayments.length} transactions
-              </Text>
+            <View className={`${isDark ? 'bg-gray-700' : 'bg-white/20'} px-4 py-2 rounded-full`}>
+              <AppText color="white" weight="medium">
+                {translate('transactions_count', { count: filteredPayments.length })}
+              </AppText>
             </View>
           </View>
         </LinearGradient>
-
-        {/* Filter Chips */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
-          className="px-4 py-3 bg-white border-b border-gray-100"
+          style={{ backgroundColor: colors.card, borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}
+          className="px-4 py-3 border-b"
         >
           <View className="flex-row gap-2">
             {(['all', 'success', 'pending', 'failed'] as const).map((filterType) => (
@@ -258,16 +264,17 @@ export default function PaymentHistoryScreen() {
                   px-5 py-2.5 rounded-full
                   ${filter === filterType
                     ? 'bg-blue-600 shadow-md'
-                    : 'bg-gray-100'
+                    : isDark ? 'bg-gray-800' : 'bg-gray-100'
                   }
                 `}
               >
-                <Text className={`
-                  text-sm font-medium capitalize
-                  ${filter === filterType ? 'text-white' : 'text-gray-700'}
-                `}>
-                  {filterType}
-                </Text>
+                <AppText weight="medium" style={{ 
+                  color: filter === filterType ? 'white' : colors.textSecondary,
+                  fontSize: 14,
+                  textTransform: 'capitalize'
+                }}>
+                  {translate(`filter_${filterType}` as any)}
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -283,17 +290,17 @@ export default function PaymentHistoryScreen() {
 
     return (
       <View className="flex-1 justify-center items-center px-6 mt-10">
-        <View className="bg-gray-100 w-24 h-24 rounded-full items-center justify-center mb-4">
-          <Receipt size={48} color={COLORS.textTertiary} />
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} w-24 h-24 rounded-full items-center justify-center mb-4`}>
+          <Receipt size={48} color={colors.textTertiary} />
         </View>
-        <Text className="text-2xl font-bold text-gray-800 text-center">
-          No {filter !== 'all' ? filter : ''} Payments
-        </Text>
-        <Text className="text-gray-500 text-center mt-2 text-base">
+        <AppText variant="h2" weight="bold" color={colors.text} className="text-center">
+          {translate('no_payments_title', { filter: filter !== 'all' ? translate(`filter_${filter}` as any) : '' })}
+        </AppText>
+        <AppText color={colors.textSecondary} className="text-center mt-2">
           {filter !== 'all'
-            ? `You don't have any ${filter} payments.`
-            : "You haven't made any payments yet."}
-        </Text>
+            ? translate('no_payments_desc', { filter: translate(`filter_${filter}` as any) })
+            : translate('no_payments_general_desc')}
+        </AppText>
         {filter !== 'all' ? (
           <TouchableOpacity
             onPress={() => {
@@ -302,7 +309,7 @@ export default function PaymentHistoryScreen() {
             }}
             className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold text-base">Show All Payments</Text>
+            <Text className="text-white font-semibold text-base">{translate('show_all_payments')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -312,7 +319,7 @@ export default function PaymentHistoryScreen() {
             }}
             className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold text-base">Book Your First Trip</Text>
+            <AppText color="white" weight="semibold" className="text-base">{translate('book_first_trip')}</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -323,17 +330,17 @@ export default function PaymentHistoryScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right']}>
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-600 font-medium">Redirecting...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText color={colors.textSecondary} weight="medium" className="mt-4">{translate('redirecting_login')}</AppText>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right']}>
       <FlatList
         data={filteredPayments}
         renderItem={renderPaymentItem}
@@ -347,8 +354,8 @@ export default function PaymentHistoryScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -357,9 +364,9 @@ export default function PaymentHistoryScreen() {
       />
 
       {loading && !refreshing && filteredPayments.length === 0 && (
-        <View className="absolute inset-0 bg-white/80 items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-600 font-medium">Loading payment history...</Text>
+        <View className={`absolute inset-0 ${isDark ? 'bg-black/50' : 'bg-white/80'} items-center justify-center`}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText color={colors.textSecondary} weight="medium" className="mt-4">{translate('loading_payment_history')}</AppText>
         </View>
       )}
     </SafeAreaView>

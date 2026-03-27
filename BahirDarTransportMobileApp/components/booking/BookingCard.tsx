@@ -1,6 +1,7 @@
 // components/booking/BookingCard.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { AppText } from '../common/AppText';
 import {
   Bus,
   Clock,
@@ -65,12 +66,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             <Bus size={20} color={COLORS.primary} />
           </View>
           <View className="flex-1">
-            <Text className="font-bold text-gray-900" numberOfLines={1}>
+            <AppText weight="bold" color="#111827" numberOfLines={1}>
               {origin.stationName} → {destination.stationName}
-            </Text>
-            <Text className="text-xs text-gray-500">
+            </AppText>
+            <AppText variant="caption" color="#6b7280">
               {formatBookingNumber(booking._id)}
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -79,12 +80,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           style={{ backgroundColor: statusColors.bg }}
         >
           {getStatusIcon(booking.status)}
-          <Text
-            className="ml-1 text-xs font-medium"
+          <AppText
+            variant="label"
+            weight="500"
+            className="ml-1"
             style={{ color: statusColors.text }}
           >
             {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1)}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -93,31 +96,31 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Time and Route */}
         <View className="flex-row justify-between mb-3">
           <View className="flex-1">
-            <Text className="text-xs text-gray-500">Departure</Text>
-            <Text className="font-semibold text-gray-900">
+            <AppText variant="caption" color="#6b7280">Departure</AppText>
+            <AppText weight="semibold" color="#111827">
               {trip?.departureTime ? formatTime(trip.departureTime) : 'N/A'}
-            </Text>
-            <Text className="text-xs text-gray-500">
+            </AppText>
+            <AppText variant="caption" color="#6b7280">
               {trip?.departureTime ? formatDate(trip.departureTime) : 'N/A'}
-            </Text>
+            </AppText>
           </View>
 
           <View className="items-center px-2">
             <Clock size={14} color={COLORS.gray400} />
-            <Text className="text-xs text-gray-500 mt-1">Duration</Text>
-            <Text className="text-xs font-medium text-gray-700">
+            <AppText variant="caption" color="#6b7280" className="mt-1">Duration</AppText>
+            <AppText variant="caption" weight="500" color="#374151">
               {duration}
-            </Text>
+            </AppText>
           </View>
 
           <View className="flex-1 items-end">
-            <Text className="text-xs text-gray-500">Arrival</Text>
-            <Text className="font-semibold text-gray-900">
+            <AppText variant="caption" color="#6b7280">Arrival</AppText>
+            <AppText weight="semibold" color="#111827">
               {trip?.arrivalTime ? formatTime(trip.arrivalTime) : 'N/A'}
-            </Text>
-            <Text className="text-xs text-gray-500">
+            </AppText>
+            <AppText variant="caption" color="#6b7280">
               {trip?.arrivalTime ? formatDate(trip.arrivalTime) : 'N/A'}
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -125,9 +128,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         <View className="flex-row justify-between items-center mb-3">
           <View className="flex-row items-center flex-wrap flex-1">
             <User size={14} color={COLORS.gray500} />
-            <Text className="ml-1 text-sm text-gray-700">
+            <AppText variant="bodySmall" color="#374151" className="ml-1">
               {booking.seatNumbers?.length || 1} seat(s)
-            </Text>
+            </AppText>
             <View className="flex-row ml-2 flex-wrap">
               {booking.seatNumbers && booking.seatNumbers.length > 0 ? (
                 booking.seatNumbers.map((seat, index) => (
@@ -135,30 +138,30 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                     key={index}
                     className="bg-gray-100 px-2 py-0.5 rounded mr-1 mb-1"
                   >
-                    <Text className="text-xs font-medium text-gray-700">
+                    <AppText variant="caption" weight="500" color="#374151">
                       {seat}
-                    </Text>
+                    </AppText>
                   </View>
                 ))
               ) : (
                 <View className="bg-gray-100 px-2 py-0.5 rounded mr-1">
-                  <Text className="text-xs font-medium text-gray-700">
+                  <AppText variant="caption" weight="500" color="#374151">
                     Seat {booking.seatNumber || 'N/A'}
-                  </Text>
+                  </AppText>
                 </View>
               )}
             </View>
           </View>
 
           <View>
-            <Text className="text-xs text-gray-500 text-right">Total Price</Text>
-            <Text className="font-bold text-blue-600">
+            <AppText variant="caption" color="#6b7280" className="text-right">Total Price</AppText>
+            <AppText weight="bold" color="#2563eb">
               {formatCurrency(booking.totalPrice || booking.amount || (trip?.price ? trip.price * (booking.seatNumbers?.length || 1) : 0))}
-            </Text>
+            </AppText>
             {trip?.price && (booking.seatNumbers?.length || 0) > 1 && (
-              <Text className="text-xs text-gray-500 text-right">
+              <AppText variant="caption" color="#6b7280" className="text-right">
                 {formatCurrency(trip.price)}/seat
-              </Text>
+              </AppText>
             )}
           </View>
         </View>
@@ -166,9 +169,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Vehicle Info */}
         <View className="flex-row items-center mb-4">
           <MapPin size={14} color={COLORS.gray500} />
-          <Text className="ml-1 text-xs text-gray-600">
+          <AppText variant="caption" color="#4b5563" className="ml-1">
             {vehicle.carType} • {vehicle.plateNumber}
-          </Text>
+          </AppText>
         </View>
 
         {/* Actions */}
@@ -179,7 +182,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             style={{ backgroundColor: `${COLORS.primary}10` }}
           >
             <CreditCard size={16} color={COLORS.primary} />
-            <Text className="ml-2 text-blue-600 font-medium">View Ticket</Text>
+            <AppText weight="500" color="#2563eb" className="ml-2">View Ticket</AppText>
             <ChevronRight size={16} color={COLORS.primary} />
           </TouchableOpacity>
 
@@ -190,7 +193,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               style={{ backgroundColor: `${COLORS.danger}10` }}
             >
               <XCircle size={16} color={COLORS.danger} />
-              <Text className="ml-2 text-red-600 font-medium">Cancel</Text>
+              <AppText weight="500" color="#dc2626" className="ml-2">Cancel</AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -198,8 +201,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Special Requests if any */}
         {booking.specialRequests && (
           <View className="mt-3 pt-3 border-t border-gray-100">
-            <Text className="text-xs text-gray-500">Special Requests:</Text>
-            <Text className="text-sm text-gray-700 mt-1">{booking.specialRequests}</Text>
+            <AppText variant="caption" color="#6b7280">Special Requests:</AppText>
+            <AppText variant="bodySmall" color="#374151" className="mt-1">{booking.specialRequests}</AppText>
           </View>
         )}
       </View>

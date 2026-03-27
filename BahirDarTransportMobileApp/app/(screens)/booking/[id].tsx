@@ -1,8 +1,6 @@
-// app/(screens)/booking/[id].tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -16,6 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppText } from '../../../components/common/AppText';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { useTheme } from '../../../context/ThemeContext';
 import {
   ArrowLeft,
   Bus,
@@ -47,6 +48,8 @@ export default function BookingDetailScreen() {
   const { user } = useAuth();
   const { getBookingById, cancelBooking, canCancelBooking, loading } = useBooking();
   const { showToast } = useToast();
+  const { translate } = useTranslation();
+  const { colors, isDark } = useTheme();
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,7 +102,7 @@ export default function BookingDetailScreen() {
     setCopySuccess(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => setCopySuccess(false), 2000);
-    showToast('Booking code copied!', 'success');
+    showToast(translate('booking_code_copied'), 'success');
   };
 
   const handleShare = async () => {
@@ -114,21 +117,21 @@ export default function BookingDetailScreen() {
     const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
     const totalAmount = booking.totalPrice || booking.amount || 0;
 
-    const message = `🚌 *Bahir Dar Transport - Booking Details*\n\n` +
+    const message = `🚌 *${translate('share_booking_header')}*\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `*From:* ${origin.stationName || 'Origin'}\n` +
-      `*To:* ${destination.stationName || 'Destination'}\n` +
-      `*Date:* ${departureTime ? departureTime.toLocaleDateString() : 'N/A'}\n` +
-      `*Time:* ${departureTime ? departureTime.toLocaleTimeString() : 'N/A'}\n` +
-      `*Seat:* ${seatNumbers.join(', ')}\n` +
-      `*Booking #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
-      `*Amount:* ${formatCurrency(totalAmount)}\n` +
-      `*Status:* ${booking.status?.toUpperCase() || 'PENDING'}\n\n` +
+      `*${translate('from')}:* ${origin.stationName || translate('not_available')}\n` +
+      `*${translate('to')}:* ${destination.stationName || translate('not_available')}\n` +
+      `*${translate('date')}:* ${departureTime ? departureTime.toLocaleDateString() : translate('not_available')}\n` +
+      `*${translate('time')}:* ${departureTime ? departureTime.toLocaleTimeString() : translate('not_available')}\n` +
+      `*${translate('seats')}:* ${seatNumbers.join(', ')}\n` +
+      `*${translate('booking')} #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
+      `*${translate('price')}:* ${formatCurrency(totalAmount)}\n` +
+      `*${translate('status')}:* ${booking.status?.toUpperCase() || translate('status_pending')}\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Thank you for choosing Bahir Dar Transport System!`;
+      `${translate('share_thank_you')}`;
 
     try {
-      await Share.share({ message, title: 'Booking Details' });
+      await Share.share({ message, title: translate('share_booking_title') });
     } catch (error) {
       console.error('Share error:', error);
     }
@@ -155,13 +158,13 @@ export default function BookingDetailScreen() {
     const amount = booking.totalPrice || booking.amount || 0;
 
     const message =
-      `Are you sure you want to cancel this booking?\n\n` +
-      `${originData.stationName || 'Unknown'} → ${destData.stationName || 'Unknown'}\n` +
+      `${translate('cancel_booking_msg')}\n\n` +
+      `${originData.stationName || translate('unknown')} → ${destData.stationName || translate('unknown')}\n` +
       `${dateStr}\n\n` +
-      `Refund Amount: ETB ${amount.toLocaleString()}`;
+      `${translate('refund_amount_label')}: ETB ${amount.toLocaleString()}`;
 
     Alert.alert(
-      'Cancel Booking',
+      translate('cancel_booking_btn'),
       message,
       [
         { text: 'Keep Booking', style: 'cancel' },
@@ -174,7 +177,7 @@ export default function BookingDetailScreen() {
             const success = await cancelBooking(id);
             setCancelling(false);
             if (success) {
-              showToast('Booking cancelled successfully! Seat(s) released.', 'success');
+              showToast(translate('booking_cancelled_success_msg'), 'success');
               // Navigate back to booking list since the booking will be deleted
               router.replace('/(screens)/booking');
             }
@@ -204,10 +207,10 @@ export default function BookingDetailScreen() {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-600 font-medium">Loading booking details...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText variant="bodyMedium" color={colors.textSecondary} className="mt-4">{translate('loading')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -215,30 +218,32 @@ export default function BookingDetailScreen() {
 
   if (!booking) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
         <View className="px-4 py-3">
           <TouchableOpacity
             onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}
-            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+            style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }}
+            className="w-10 h-10 rounded-full items-center justify-center"
           >
-            <ArrowLeft size={20} color="#4b5563" />
+            <ArrowLeft size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
         <View className="flex-1 justify-center items-center p-6">
-          <View className="bg-red-100 w-20 h-20 rounded-full items-center justify-center mb-4">
+          <View style={{ backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fee2e2' }} className="w-20 h-20 rounded-full items-center justify-center mb-4">
             <XCircle size={40} color="#ef4444" />
           </View>
-          <Text className="text-2xl font-bold text-gray-800 mt-4">
-            Booking Not Found
-          </Text>
-          <Text className="text-gray-500 text-center mt-2 text-base">
-            The booking you're looking for doesn't exist.
-          </Text>
+          <AppText variant="h2" weight="bold" color={colors.text} className="mt-4">
+            {translate('booking_not_found')}
+          </AppText>
+          <AppText variant="bodyMedium" color={colors.textSecondary} className="text-center mt-2">
+            {translate('booking_not_found_msg')}
+          </AppText>
           <TouchableOpacity
             onPress={() => router.push('/(screens)/booking')}
-            className="mt-8 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
+            style={{ backgroundColor: colors.primary }}
+            className="mt-8 py-3 px-8 rounded-xl shadow-lg"
           >
-            <Text className="text-white font-semibold text-base">View My Bookings</Text>
+            <AppText variant="bodyMedium" weight="semibold" color="white">{translate('my_bookings')}</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -271,12 +276,17 @@ export default function BookingDetailScreen() {
   const StatusIcon = statusConfig.icon;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
       <LinearGradient
-        colors={isConfirmed ? ['#16a34a', '#15803d'] :
-          isPending ? ['#ca8a04', '#854d0e'] :
-            isCancelled ? ['#dc2626', '#991b1b'] :
-              ['#1e40af', '#3b82f6']}
+        colors={isDark ? 
+          (isConfirmed ? ['#065f46', '#064e3b'] :
+           isPending ? ['#854d0e', '#713f12'] :
+           isCancelled ? ['#7f1d1d', '#991b1b'] :
+           ['#1e3a8a', '#1e40af']) :
+          (isConfirmed ? ['#16a34a', '#15803d'] :
+           isPending ? ['#ca8a04', '#854d0e'] :
+           isCancelled ? ['#dc2626', '#991b1b'] :
+           ['#1e40af', '#3b82f6'])}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         className="px-4 py-3"
@@ -288,9 +298,9 @@ export default function BookingDetailScreen() {
           >
             <ArrowLeft size={20} color="white" />
           </TouchableOpacity>
-          <Text className="flex-1 text-center text-xl font-bold text-white">
-            Booking Details
-          </Text>
+          <AppText variant="h2" weight="bold" color="white" className="flex-1 text-center">
+            {translate('booking_details') || 'Booking Details'}
+          </AppText>
           <TouchableOpacity
             onPress={handleShare}
             className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
@@ -305,8 +315,13 @@ export default function BookingDetailScreen() {
               <StatusIcon size={20} color="white" />
             </View>
             <View>
-              <Text className="text-white text-xs opacity-80">Booking Status</Text>
-              <Text className="text-white font-bold text-lg">{statusConfig.text}</Text>
+              <AppText variant="caption" color="rgba(255,255,255,0.8)">{translate('booking_status') || 'Booking Status'}</AppText>
+                <AppText variant="bodyLarge" weight="bold" color="white">
+                  {isCancelled ? translate('cancelled_status') :
+                    isConfirmed ? translate('confirmed_status') :
+                      isCompleted ? translate('status_completed') :
+                        booking.status?.toUpperCase()}
+                </AppText>
             </View>
           </View>
           <TouchableOpacity
@@ -314,15 +329,15 @@ export default function BookingDetailScreen() {
             className="bg-white/20 px-3 py-2 rounded-lg flex-row items-center"
           >
             <Copy size={14} color="white" />
-            <Text className="text-white text-xs ml-1 font-medium">
+            <AppText variant="caption" weight="medium" color="white" className="ml-1">
               {booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </View>
         {copySuccess && (
-          <Text className="text-white text-xs mt-1 text-center bg-black/20 py-1 rounded">
-            Copied to clipboard!
-          </Text>
+          <AppText variant="caption" color="white" className="mt-1 text-center bg-black/20 py-1 rounded">
+            {translate('booking_code_copied')}
+          </AppText>
         )}
       </LinearGradient>
 
@@ -347,7 +362,7 @@ export default function BookingDetailScreen() {
           }}
           className="mx-4 mt-4"
         >
-          <View className="bg-white rounded-2xl overflow-hidden shadow-lg">
+          <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-transparent'} rounded-2xl overflow-hidden shadow-lg border`}>
             <LinearGradient
               colors={['#3b82f6', '#1e40af']}
               start={{ x: 0, y: 0 }}
@@ -356,10 +371,10 @@ export default function BookingDetailScreen() {
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 items-center">
-                  <Text className="text-white text-xs opacity-80">From</Text>
-                  <Text className="text-white font-bold text-lg text-center">
+                  <AppText variant="caption" color="rgba(255,255,255,0.8)">{translate('from')}</AppText>
+                  <AppText variant="bodyLarge" weight="bold" color="white" className="text-center">
                     {origin.stationName || 'N/A'}
-                  </Text>
+                  </AppText>
                 </View>
                 <View className="px-4">
                   <View className="bg-white/20 p-2 rounded-full">
@@ -367,39 +382,39 @@ export default function BookingDetailScreen() {
                   </View>
                 </View>
                 <View className="flex-1 items-center">
-                  <Text className="text-white text-xs opacity-80">To</Text>
-                  <Text className="text-white font-bold text-lg text-center">
+                  <AppText variant="caption" color="rgba(255,255,255,0.8)">{translate('to')}</AppText>
+                  <AppText variant="bodyLarge" weight="bold" color="white" className="text-center">
                     {destination.stationName || 'N/A'}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </LinearGradient>
 
-            <View className="p-4 border-b border-gray-100">
+            <View style={{ borderColor: colors.border, borderBottomWidth: 1 }} className="p-4">
               <View className="flex-row justify-between">
                 <View className="items-center flex-1">
-                  <View className="bg-blue-100 w-10 h-10 rounded-full items-center justify-center mb-2">
-                    <Clock size={20} color={COLORS.primary} />
+                  <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }} className="w-10 h-10 rounded-full items-center justify-center mb-2">
+                    <Clock size={20} color={isDark ? '#60a5fa' : colors.primary} />
                   </View>
-                  <Text className="text-xs text-gray-500">Departure</Text>
-                  <Text className="font-bold text-gray-800 text-sm mt-1">
+                  <AppText variant="caption" color={colors.textSecondary}>{translate('departure') || 'Departure'}</AppText>
+                  <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mt-1">
                     {formatTime(trip.departureTime)}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
+                  </AppText>
+                  <AppText variant="caption" color={colors.textSecondary}>
                     {formatDate(trip.departureTime)}
-                  </Text>
+                  </AppText>
                 </View>
                 <View className="items-center flex-1">
-                  <View className="bg-green-100 w-10 h-10 rounded-full items-center justify-center mb-2">
+                  <View style={{ backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#d1fae5' }} className="w-10 h-10 rounded-full items-center justify-center mb-2">
                     <Clock size={20} color="#10b981" />
                   </View>
-                  <Text className="text-xs text-gray-500">Arrival</Text>
-                  <Text className="font-bold text-gray-800 text-sm mt-1">
+                  <AppText variant="caption" color={colors.textSecondary}>{translate('arrival') || 'Arrival'}</AppText>
+                  <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mt-1">
                     {formatTime(trip.arrivalTime)}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
+                  </AppText>
+                  <AppText variant="caption" color={colors.textSecondary}>
                     {formatDate(trip.arrivalTime)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>
@@ -407,45 +422,45 @@ export default function BookingDetailScreen() {
             <View className="p-4">
               <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center">
-                  <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-3">
-                    <MapPin size={16} color={COLORS.primary} />
+                  <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }} className="w-8 h-8 rounded-full items-center justify-center mr-3">
+                    <MapPin size={16} color={colors.primary} />
                   </View>
-                  <Text className="text-sm font-medium text-gray-700">Seat Number(s)</Text>
+                  <AppText variant="bodyMedium" weight="medium" color={colors.text}>{translate('seat')} Number(s)</AppText>
                 </View>
                 <View className="flex-row gap-1">
                   {seatNumbers.map((seat: number, index: number) => (
-                    <View key={index} className="bg-blue-500 px-4 py-2 rounded-lg shadow-sm">
-                      <Text className="text-white text-base font-bold">{seat}</Text>
+                    <View key={index} style={{ backgroundColor: colors.primary }} className="px-4 py-2 rounded-lg shadow-sm">
+                      <AppText variant="bodyLarge" weight="bold" color="white">{seat}</AppText>
                     </View>
                   ))}
                 </View>
               </View>
 
-              <View className="bg-blue-50 p-4 rounded-xl">
-                <Text className="text-sm font-bold text-gray-700 mb-3">Payment Information</Text>
+              <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.05)' : '#eff6ff' }} className="p-4 rounded-xl">
+                <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mb-3">{translate('payment_information')}</AppText>
                 <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-sm text-gray-600">Status</Text>
-                  <View className={`px-3 py-1 rounded-full ${booking.paymentStatus === 'success' ? 'bg-green-100' :
-                      booking.paymentStatus === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
+                  <AppText variant="bodySmall" color={colors.textSecondary}>{translate('status') || 'Status'}</AppText>
+                  <View className={`px-3 py-1 rounded-full ${booking.paymentStatus === 'success' ? (isDark ? 'bg-green-900/30' : 'bg-green-100') :
+                      booking.paymentStatus === 'pending' ? (isDark ? 'bg-yellow-900/30' : 'bg-yellow-100') : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                     }`}>
-                    <Text className={`text-xs font-bold ${booking.paymentStatus === 'success' ? 'text-green-700' :
-                        booking.paymentStatus === 'pending' ? 'text-yellow-700' : 'text-gray-700'
-                      }`}>
+                    <AppText variant="caption" weight="bold" color={booking.paymentStatus === 'success' ? (isDark ? '#4ade80' : '#16a34a') :
+                        booking.paymentStatus === 'pending' ? (isDark ? '#fbbf24' : '#ca8a04') : colors.textSecondary
+                      }>
                       {(booking.paymentStatus || 'PENDING').toUpperCase()}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
-                <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-blue-200">
-                  <Text className="text-base font-bold text-gray-800">Total Amount</Text>
+                <View style={{ borderTopWidth: 1, borderTopColor: isDark ? 'rgba(59,130,246,0.2)' : '#bfdbfe' }} className="flex-row justify-between items-center mt-3 pt-3">
+                  <AppText variant="bodyLarge" weight="bold" color={colors.text}>{translate('total_amount') || 'Total Amount'}</AppText>
                   <View className="items-end">
-                    <Text className="text-2xl font-bold text-blue-600">
+                    <AppText variant="h2" weight="bold" color={isDark ? '#60a5fa' : colors.primary}>
                       {formatCurrency(totalAmount)}
-                    </Text>
+                    </AppText>
                     {seatNumbers.length > 1 && (
-                      <Text className="text-xs text-gray-500 mt-1">
-                        {seatNumbers.length} seats × {formatCurrency(totalAmount / seatNumbers.length)}
-                      </Text>
+                      <AppText variant="caption" color={colors.textSecondary} className="mt-1">
+                        {seatNumbers.length} {translate('seats') || 'seats'} × {formatCurrency(totalAmount / seatNumbers.length)}
+                      </AppText>
                     )}
                   </View>
                 </View>
@@ -461,17 +476,18 @@ export default function BookingDetailScreen() {
               className="mt-4 bg-yellow-500 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
             >
               <CreditCard size={20} color="white" />
-              <Text className="font-bold text-white text-lg ml-2">Complete Payment Now</Text>
+              <AppText variant="bodyLarge" weight="bold" color="white" className="ml-2">{translate('complete_payment_now')}</AppText>
             </TouchableOpacity>
           )}
 
           {(isConfirmed || isCompleted) && (
             <TouchableOpacity
               onPress={handleViewTicket}
-              className="mt-4 bg-blue-600 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+              style={{ backgroundColor: colors.primary }}
+              className="mt-4 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
             >
               <Ticket size={20} color="white" />
-              <Text className="font-bold text-white text-lg ml-2">View Ticket</Text>
+              <AppText variant="bodyLarge" weight="bold" color="white" className="ml-2">{translate('view_ticket') || 'View Ticket'}</AppText>
             </TouchableOpacity>
           )}
 
@@ -487,19 +503,19 @@ export default function BookingDetailScreen() {
               ) : (
                 <>
                   <XCircle size={20} color="white" />
-                  <Text className="font-medium text-white text-base ml-2">Cancel Booking</Text>
+                  <AppText variant="bodyMedium" weight="medium" color="white" className="ml-2">{translate('cancel_booking')}</AppText>
                 </>
               )}
             </TouchableOpacity>
           )}
 
           {isCancelled && (
-            <View className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
+            <View style={{ backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', borderColor: isDark ? 'rgba(239,68,68,0.2)' : '#fecaca', borderWidth: 1 }} className="mt-4 p-4 rounded-xl">
               <View className="flex-row items-center gap-2">
                 <AlertTriangle size={20} color="#dc2626" />
-                <Text className="flex-1 text-red-700 text-sm font-medium">
-                  This booking has been cancelled.
-                </Text>
+                  <AppText variant="bodySmall" weight="medium" color="#dc2626" className="flex-1">
+                    {translate('cancelled_status')}
+                  </AppText>
               </View>
             </View>
           )}
