@@ -1,8 +1,6 @@
-// app/(screens)/booking/confirmation.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -29,6 +27,9 @@ import {
 import { useBooking } from '../../../hooks/useBooking';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../components/common/Toast';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { AppText } from '../../../components/common/AppText';
+import { useTheme } from '../../../context/ThemeContext';
 import { Booking, Trip, Station } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { COLORS } from '../../../constants/colors';
@@ -44,6 +45,8 @@ export default function BookingConfirmationScreen() {
   const { user } = useAuth();
   const { getBookingById, cancelBooking, canCancelBooking, currentBooking, loading } = useBooking();
   const { showToast } = useToast();
+  const { translate } = useTranslation();
+  const { colors, isDark } = useTheme();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -106,7 +109,7 @@ export default function BookingConfirmationScreen() {
     setCopySuccess(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTimeout(() => setCopySuccess(false), 2000);
-    showToast('Booking code copied!', 'success');
+    showToast(translate('booking_code_copied'), 'success');
   };
 
   const handleViewTicketDetail = () => {
@@ -141,18 +144,18 @@ export default function BookingConfirmationScreen() {
     const amount = booking.totalPrice || booking.amount || 0;
 
     const message =
-      `Are you sure you want to cancel this booking?\n\n` +
-      `${originData.stationName || 'Unknown'} → ${destData.stationName || 'Unknown'}\n` +
+      `${translate('cancel_booking_msg')}\n\n` +
+      `${originData.stationName || translate('unknown')} → ${destData.stationName || translate('unknown')}\n` +
       `${dateStr}\n\n` +
-      `Refund Amount: ETB ${amount.toLocaleString()}`;
+      `${translate('refund_amount_label')}: ${formatCurrency(amount)}`;
 
     Alert.alert(
-      'Cancel Booking',
+      translate('cancel_booking_confirm'),
       message,
       [
-        { text: 'Keep Booking', style: 'cancel' },
+        { text: translate('keep_booking_btn'), style: 'cancel' },
         {
-          text: 'Yes, Cancel',
+          text: translate('yes_cancel_btn'),
           style: 'destructive',
           onPress: async () => {
             setCancelling(true);
@@ -160,7 +163,7 @@ export default function BookingConfirmationScreen() {
             const success = await cancelBooking(booking._id);
             setCancelling(false);
             if (success) {
-              showToast('Booking cancelled successfully! Seat(s) released.', 'success');
+              showToast(translate('booking_cancelled_success'), 'success');
               // Redirect to booking list to see updated availability
               router.replace('/(screens)/booking');
             }
@@ -184,29 +187,29 @@ export default function BookingConfirmationScreen() {
 
   if (loading && bookings.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-600">Loading booking details...</Text>
+      <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <AppText color={colors.textSecondary} className="mt-4">{translate('loading')}</AppText>
       </SafeAreaView>
     );
   }
 
   if (bookings.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1">
         <View className="p-4">
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')}>
-            <ArrowLeft size={24} color="#4b5563" />
+            <ArrowLeft size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
         <View className="flex-1 justify-center items-center p-6">
           <XCircle size={60} color="#ef4444" />
-          <Text className="text-xl font-semibold text-gray-800 mt-4">
-            Booking Not Found
-          </Text>
-          <Text className="text-gray-600 text-center mt-2">
-            We couldn't find your booking details.
-          </Text>
+          <AppText variant="h2" weight="bold" color={colors.text} className="mt-4">
+            {translate('booking_not_found')}
+          </AppText>
+          <AppText color={colors.textSecondary} className="text-center mt-2">
+            {translate('booking_not_found_desc')}
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -233,167 +236,163 @@ export default function BookingConfirmationScreen() {
   const totalAmount = booking.totalPrice || booking.amount || 0;
   const pricePerSeat = seatNumbers.length > 0 ? totalAmount / seatNumbers.length : 0;
 
-  const statusCardBg = isCancelled ? 'bg-red-50' :
-    isConfirmed ? 'bg-green-50' :
-      isPending ? 'bg-yellow-50' :
-        'bg-gray-50';
-
-  const statusTextColor = isCancelled ? 'text-red-700' :
-    isConfirmed ? 'text-green-700' :
-      isPending ? 'text-yellow-700' :
-        'text-gray-700';
-
-  const cancelBtnClass = cancelling ? 'bg-gray-400' : 'bg-red-500';
+  const cancelBtnClass = cancelling ? 'bg-gray-400' : 'bg-red-600';
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
-      <View className="px-4 py-3 bg-white border-b border-gray-200 flex-row items-center">
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
-          <ArrowLeft size={24} color="#4b5563" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-lg font-semibold text-gray-800">
-          Booking Details
-        </Text>
-      </View>
+    <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right']}>
+        <View style={{ borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} className="px-4 py-3 border-b flex-row items-center">
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <AppText variant="bodyLarge" weight="bold" color={colors.text}>
+            {translate('share_booking_details')}
+          </AppText>
+        </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {success === 'true' && !isCancelled && (
-          <View className="mx-4 mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
-            <View className="flex-row items-center gap-2">
-              <CheckCircle size={24} color="#16a34a" />
-              <View className="flex-1">
-                <Text className="font-semibold text-green-800">
-                  Payment Successful!
-                </Text>
-                <Text className="text-sm text-green-600">
-                  Your booking has been confirmed.
-                </Text>
-              </View>
+          <View className={`mx-4 mt-4 p-4 ${isDark ? 'bg-green-900/20 border-green-800/30' : 'bg-green-50 border-green-200'} rounded-xl border`}>
+          <View className="flex-row items-center gap-2">
+            <CheckCircle size={24} color="#16a34a" />
+            <View className="flex-1">
+              <AppText weight="bold" color={isDark ? '#4ade80' : '#166534'}>
+                {translate('payment_successful_title')}
+              </AppText>
+              <AppText variant="caption" color={isDark ? '#4ade80' : '#15803d'} style={{ opacity: 0.8 }}>
+                {translate('booking_confirmed_desc')}
+              </AppText>
             </View>
+          </View>
           </View>
         )}
 
-        <View className="mx-4 mt-4 bg-white rounded-2xl overflow-hidden border border-gray-200">
-          <View className={`p-4 ${statusCardBg}`}>
+        <View style={{ backgroundColor: colors.card, borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} className="mx-4 mt-4 rounded-2xl overflow-hidden border">
+          <View className={`p-4 ${isCancelled ? (isDark ? 'bg-red-900/20' : 'bg-red-50') :
+            isConfirmed ? (isDark ? 'bg-green-900/20' : 'bg-green-50') :
+              isPending ? (isDark ? 'bg-yellow-900/20' : 'bg-yellow-50') :
+                (isDark ? 'bg-gray-800' : 'bg-gray-50')}`}>
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 {isCancelled && <XCircle size={24} color="#dc2626" />}
                 {isConfirmed && !isCancelled && <CheckCircle size={24} color="#16a34a" />}
                 {isPending && !isCancelled && <Clock size={24} color="#ca8a04" />}
                 <View>
-                  <Text className={`text-lg font-bold ${statusTextColor}`}>
-                    {isCancelled ? 'CANCELLED' :
-                      isConfirmed ? 'CONFIRMED' :
+                  <AppText variant="h3" weight="bold" color={isCancelled ? (isDark ? '#f87171' : '#b91c1c') :
+                    isConfirmed ? (isDark ? '#4ade80' : '#15803d') :
+                      isPending ? (isDark ? '#fbbf24' : '#a16207') :
+                        colors.text}>
+                    {isCancelled ? translate('cancelled_status') :
+                      isConfirmed ? translate('confirmed_status') :
                         booking.status?.toUpperCase()}
-                  </Text>
-                  <Text className="text-sm text-gray-600">
+                  </AppText>
+                  <AppText variant="caption" color={colors.textSecondary}>
                     #{booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
               <TouchableOpacity onPress={handleCopyCode} className="p-2">
-                <Copy size={18} color="#6b7280" />
+                <Copy size={18} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
             {copySuccess && (
-              <Text className="text-xs text-green-600 mt-1">Copied to clipboard!</Text>
+                <AppText variant="caption" color={isDark ? '#4ade80' : '#166534'} className="mt-1">{translate('copied_to_clipboard')}</AppText>
             )}
           </View>
 
           <View className="p-4">
             <View className="mb-4">
               <View className="flex-row items-center gap-2 mb-2">
-                <MapPin size={16} color={COLORS.primary} />
-                <Text className="text-sm text-gray-600">From</Text>
+                <MapPin size={16} color={isDark ? '#60a5fa' : colors.primary} />
+                <AppText variant="caption" color={colors.textSecondary}>{translate('from')}</AppText>
               </View>
-              <Text className="text-lg font-semibold text-gray-800 ml-6">
-                {origin.stationName || 'N/A'}
-              </Text>
+              <AppText variant="bodyLarge" weight="bold" color={colors.text} className="ml-6">
+                {origin.stationName || translate('not_available')}
+              </AppText>
 
               <View className="flex-row items-center ml-6 my-2">
-                <View className="w-2 h-2 bg-gray-300 rounded-full" />
-                <View className="flex-1 h-0.5 bg-gray-300 mx-2" />
-                <Bus size={16} color={COLORS.primary} />
-                <View className="flex-1 h-0.5 bg-gray-300 mx-2" />
-                <View className="w-2 h-2 bg-gray-300 rounded-full" />
+                <View className={`w-2 h-2 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} rounded-full`} />
+                <View className={`flex-1 h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} mx-2`} />
+                <Bus size={16} color={isDark ? '#60a5fa' : colors.primary} />
+                <View className={`flex-1 h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} mx-2`} />
+                <View className={`w-2 h-2 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} rounded-full`} />
               </View>
 
               <View className="flex-row items-center gap-2 mb-2 ml-6">
                 <MapPin size={16} color="#ef4444" />
-                <Text className="text-sm text-gray-600">To</Text>
+                <AppText variant="caption" color={colors.textSecondary}>{translate('to')}</AppText>
               </View>
-              <Text className="text-lg font-semibold text-gray-800 ml-12">
-                {destination.stationName || 'N/A'}
-              </Text>
+              <AppText variant="bodyLarge" weight="bold" color={colors.text} className="ml-12">
+                {destination.stationName || translate('not_available')}
+              </AppText>
             </View>
 
-            <View className="flex-row justify-between mb-3 bg-gray-50 p-3 rounded-lg">
+            <View className={`flex-row justify-between mb-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-3 rounded-lg`}>
               <View className="items-center flex-1">
-                <Calendar size={16} color={COLORS.primary} />
-                <Text className="text-xs text-gray-500 mt-1">Date</Text>
-                <Text className="text-sm font-semibold text-gray-800">
+                <Calendar size={16} color={isDark ? '#60a5fa' : colors.primary} />
+                <AppText variant="caption" color={colors.textTertiary} className="mt-1">{translate('date')}</AppText>
+                <AppText variant="bodySmall" weight="bold" color={colors.text}>
                   {formatDate(trip.departureTime)}
-                </Text>
+                </AppText>
               </View>
               <View className="items-center flex-1">
-                <Clock size={16} color={COLORS.primary} />
-                <Text className="text-xs text-gray-500 mt-1">Departure</Text>
-                <Text className="text-sm font-semibold text-gray-800">
+                <Clock size={16} color={isDark ? '#60a5fa' : colors.primary} />
+                <AppText variant="caption" color={colors.textTertiary} className="mt-1">{translate('departure')}</AppText>
+                <AppText variant="bodySmall" weight="bold" color={colors.text}>
                   {formatTime(trip.departureTime)}
-                </Text>
+                </AppText>
               </View>
               <View className="items-center flex-1">
                 <Clock size={16} color="#10b981" />
-                <Text className="text-xs text-gray-500 mt-1">Arrival</Text>
-                <Text className="text-sm font-semibold text-gray-800">
+                <AppText variant="caption" color={colors.textTertiary} className="mt-1">{translate('arrival')}</AppText>
+                <AppText variant="bodySmall" weight="bold" color={colors.text}>
                   {formatTime(trip.arrivalTime)}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-gray-600">Seat Number(s)</Text>
+              <AppText color={colors.textSecondary}>{translate('seat_label', { number: '1' })}</AppText>
               <View className="flex-row gap-1">
                 {seatNumbers.length > 0 ? (
                   seatNumbers.map((seat: number, index: number) => (
-                    <View key={index} className="bg-blue-500 px-3 py-1 rounded-full">
-                      <Text className="text-white text-sm font-bold">{seat}</Text>
+                    <View key={index} className="bg-blue-600 px-3 py-1 rounded-full">
+                      <AppText variant="bodySmall" weight="bold" color="white">{seat}</AppText>
                     </View>
                   ))
                 ) : (
-                  <View className="bg-gray-300 px-3 py-1 rounded-full">
-                    <Text className="text-white text-sm font-bold">Not assigned</Text>
+                  <View className={`${isDark ? 'bg-gray-700' : 'bg-gray-300'} px-3 py-1 rounded-full`}>
+                    <AppText variant="bodySmall" weight="bold" color="white">{translate('not_assigned')}</AppText>
                   </View>
                 )}
               </View>
             </View>
 
             <View className="flex-row items-center mb-3">
-              <User size={16} color="#6b7280" />
-              <Text className="ml-2 text-gray-700">
+              <User size={16} color={colors.textTertiary} />
+              <AppText color={colors.textSecondary} className="ml-2">
                 {booking.passengerDetails?.fullName || user?.fullName}
-              </Text>
+              </AppText>
             </View>
 
-            <View className="flex-row justify-between items-center pt-3 border-t border-gray-200">
+            <View style={{ borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} className="flex-row justify-between items-center pt-3 border-t">
               <View>
-                <Text className="text-base font-medium text-gray-700">
-                  Total Amount
-                </Text>
+                <AppText weight="medium" color={colors.textSecondary}>
+                  {translate('total_amount')}
+                </AppText>
                 {seatNumbers.length > 1 && (
-                  <Text className="text-xs text-gray-500">
-                    {seatNumbers.length} seats
-                  </Text>
+                  <AppText variant="caption" color={colors.textTertiary}>
+                    {translate('passenger_count', { count: seatNumbers.length })}
+                  </AppText>
                 )}
               </View>
               <View className="items-end">
-                <Text className="text-2xl font-bold text-blue-600">
+                <AppText variant="h2" weight="bold" color={isDark ? '#60a5fa' : colors.primary}>
                   {formatCurrency(totalAmount)}
-                </Text>
+                </AppText>
                 {seatNumbers.length > 1 && (
-                  <Text className="text-xs text-gray-500">
-                    {formatCurrency(pricePerSeat)} per seat
-                  </Text>
+                  <AppText variant="caption" color={colors.textTertiary}>
+                    {translate('price_per_seat')}
+                  </AppText>
                 )}
               </View>
             </View>
@@ -404,17 +403,17 @@ export default function BookingConfirmationScreen() {
           {isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending') && (
             <TouchableOpacity
               onPress={handleMakePayment}
-              className="flex-row items-center justify-center py-4 bg-yellow-500 rounded-xl gap-2"
+              className="flex-row items-center justify-center py-4 bg-amber-500 rounded-xl gap-2"
             >
               <CreditCard size={20} color="white" />
-              <Text className="font-semibold text-white text-lg">Complete Payment Now</Text>
+              <AppText variant="bodyLarge" weight="bold" color="white">{translate('complete_payment')}</AppText>
             </TouchableOpacity>
           )}
 
           {isPending && booking.paymentStatus === 'success' && (
-            <View className="flex-row items-center justify-center py-4 bg-green-500 rounded-xl gap-2">
+            <View className="flex-row items-center justify-center py-4 bg-green-600 rounded-xl gap-2">
               <CheckCircle size={20} color="white" />
-              <Text className="font-semibold text-white text-lg">Payment Completed - Awaiting Confirmation</Text>
+              <AppText variant="bodyLarge" weight="bold" color="white">{translate('payment_completed_awaiting')}</AppText>
             </View>
           )}
 
@@ -424,7 +423,7 @@ export default function BookingConfirmationScreen() {
               className="flex-row items-center justify-center py-4 bg-blue-600 rounded-xl gap-2"
             >
               <Ticket size={20} color="white" />
-              <Text className="font-semibold text-white text-lg">View Ticket Details</Text>
+              <AppText variant="bodyLarge" weight="bold" color="white">{translate('view_ticket_details_btn')}</AppText>
             </TouchableOpacity>
           )}
 
@@ -439,7 +438,7 @@ export default function BookingConfirmationScreen() {
               ) : (
                 <>
                   <XCircle size={20} color="white" />
-                  <Text className="font-medium text-white text-lg">Cancel Booking</Text>
+                  <AppText variant="bodyLarge" weight="medium" color="white">{translate('cancel_booking_btn')}</AppText>
                 </>
               )}
             </TouchableOpacity>
@@ -447,10 +446,10 @@ export default function BookingConfirmationScreen() {
 
           <TouchableOpacity
             onPress={handleViewAllBookings}
-            className="flex-row items-center justify-center py-4 bg-gray-700 rounded-xl gap-2"
+            className={`flex-row items-center justify-center py-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-700'} border rounded-xl gap-2`}
           >
             <Eye size={20} color="white" />
-            <Text className="font-medium text-white text-lg">View All Bookings</Text>
+              <AppText variant="bodyLarge" weight="medium" color="white">{translate('view_all_bookings_btn')}</AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>

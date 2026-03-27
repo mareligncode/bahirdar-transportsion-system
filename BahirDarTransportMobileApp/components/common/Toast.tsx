@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, TouchableOpacity, Animated } from 'react-native';
+import { AppText } from './AppText';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react-native';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -111,9 +112,9 @@ export function Toast({
           <View className="mr-3">
             {getTypeIcon()}
           </View>
-          <Text className="text-gray-900 text-sm flex-1">{message}</Text>
+          <AppText variant="bodySmall" color="textPrimary" className="flex-1">{message}</AppText>
         </View>
-        
+
         <TouchableOpacity onPress={hideToast} className="ml-2">
           <X size={18} color="#6B7280" />
         </TouchableOpacity>

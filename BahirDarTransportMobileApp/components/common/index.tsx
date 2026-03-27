@@ -8,3 +8,4 @@ export {Loader, Spinner, PageLoader, ContentLoader } from './Loader';
 export { PasswordRequirements } from './passwordRequirements';
 export { Select } from './Select';
 export { Toast } from './Toast';
+export { AppText } from './AppText';

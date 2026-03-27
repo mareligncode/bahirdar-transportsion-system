@@ -1,8 +1,6 @@
-// app/tabs/tickets/index.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -11,6 +9,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import {
@@ -33,23 +32,25 @@ import { useBooking } from '../../../hooks/useBooking';
 import { useAuth } from '../../../hooks/useAuth';
 import { Booking, Trip } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
-import { COLORS } from '../../../constants/colors';
+import { useTheme } from '../../../context/ThemeContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { Loader } from '../../../components/common/Loader';
 
 const { width } = Dimensions.get('window');
 
 export default function TicketsScreen() {
   const router = useRouter();
+  const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const { bookings, fetchMyBookings, loading } = useBooking();
+  const { colors, isDark } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -57,7 +58,6 @@ export default function TicketsScreen() {
     useCallback(() => {
       if (isAuthenticated) {
         fetchMyBookings();
-        // Entrance animation
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -82,8 +82,6 @@ export default function TicketsScreen() {
     const now = new Date();
 
     let filtered = [...bookings];
-
-    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(b => {
         const originName = getOriginName(b).toLowerCase();
@@ -96,8 +94,6 @@ export default function TicketsScreen() {
                bookingNumber.includes(query);
       });
     }
-
-    // Apply status filter
     switch (filter) {
       case 'upcoming':
         filtered = filtered.filter(b => {
@@ -117,8 +113,6 @@ export default function TicketsScreen() {
       default:
         filtered = filtered;
     }
-
-    // Sort by date (most recent first)
     filtered.sort((a, b) => {
       const dateA = getDepartureTime(a) ? new Date(getDepartureTime(a)!).getTime() : 0;
       const dateB = getDepartureTime(b) ? new Date(getDepartureTime(b)!).getTime() : 0;
@@ -140,7 +134,6 @@ export default function TicketsScreen() {
     setFilter(newFilter);
   };
 
-  // Helper functions to safely get data
   const getTripFromBooking = (booking: Booking): Trip | null => {
     if (!booking.tripID) return null;
     return typeof booking.tripID === 'object' && booking.tripID !== null
@@ -150,12 +143,12 @@ export default function TicketsScreen() {
 
   const getOriginName = (booking: Booking): string => {
     const trip = getTripFromBooking(booking);
-    return trip?.origin?.stationName || 'Unknown';
+    return trip?.origin?.stationName || translate('unknown');
   };
 
   const getDestinationName = (booking: Booking): string => {
     const trip = getTripFromBooking(booking);
-    return trip?.destination?.stationName || 'Unknown';
+    return trip?.destination?.stationName || translate('unknown');
   };
 
   const getDepartureTime = (booking: Booking): string | null => {
@@ -197,20 +190,20 @@ export default function TicketsScreen() {
   };
 
   const getTimeStatus = (departureTime: string | null) => {
-    if (!departureTime) return { label: 'Unknown', color: 'text-gray-500' };
+    if (!departureTime) return { label: translate('unknown'), color: 'text-gray-500' };
     
     const now = new Date();
     const departure = new Date(departureTime);
     const diffHours = (departure.getTime() - now.getTime()) / (1000 * 60 * 60);
     
     if (diffHours < 0) {
-      return { label: 'Departed', color: 'text-gray-500' };
+      return { label: translate('departed'), color: 'text-gray-500' };
     } else if (diffHours < 2) {
-      return { label: 'Boarding soon', color: 'text-orange-500 font-bold' };
+      return { label: translate('boarding_soon'), color: 'text-orange-500 font-bold' };
     } else if (diffHours < 24) {
-      return { label: `${Math.round(diffHours)}h left`, color: 'text-green-600' };
+      return { label: translate('hours_left', { count: Math.round(diffHours) }), color: 'text-green-600' };
     } else {
-      return { label: `${Math.round(diffHours / 24)}d left`, color: 'text-blue-600' };
+      return { label: translate('days_left', { count: Math.round(diffHours / 24) }), color: 'text-blue-600' };
     }
   };
 
@@ -230,7 +223,6 @@ export default function TicketsScreen() {
     const needsPayment = item.status === 'pending' && (!item.paymentStatus || item.paymentStatus === 'pending');
     const isPaid = item.paymentStatus === 'success';
     
-    // Create animated style for card
     const cardStyle = {
       opacity: fadeAnim,
       transform: [{ translateY: slideAnim }]
@@ -244,7 +236,7 @@ export default function TicketsScreen() {
             router.push(`/tabs/tickets/${item._id}`);
           }}
           activeOpacity={0.95}
-          className="bg-white mb-4 rounded-2xl overflow-hidden shadow-lg"
+          className={`${isDark ? 'bg-gray-800' : 'bg-white'} mb-4 rounded-2xl overflow-hidden shadow-lg`}
           style={{
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
@@ -253,7 +245,6 @@ export default function TicketsScreen() {
             elevation: 5,
           }}
         >
-          {/* Gradient Header with Route */}
           <LinearGradient
             colors={isUpcoming ? ['#3b82f6', '#1e40af'] : ['#6b7280', '#4b5563']}
             start={{ x: 0, y: 0 }}
@@ -266,105 +257,100 @@ export default function TicketsScreen() {
                   <Bus size={20} color="white" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white text-xs opacity-80">From → To</Text>
-                  <Text className="text-white font-bold text-base" numberOfLines={1}>
+                  <AppText variant="caption" color="rgba(255,255,255,0.8)">{translate('from')} → {translate('to')}</AppText>
+                  <AppText variant="bodyMedium" weight="bold" color="white" numberOfLines={1}>
                     {originName} → {destinationName}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
               <View className="bg-white/20 px-3 py-1 rounded-full">
-                <Text className="text-white text-xs font-medium">
+                <AppText variant="caption" weight="500" color="white">
                   #{item.bookingNumber?.slice(-8) || item._id?.slice(-8).toUpperCase()}
-                </Text>
+                </AppText>
               </View>
             </View>
           </LinearGradient>
-
-          {/* Ticket Content */}
           <View className="p-4">
-            {/* Date and Time Row */}
             <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center bg-blue-50 px-3 py-2 rounded-xl">
-                <Calendar size={16} color={COLORS.primary} />
-                <Text className="text-sm font-medium text-gray-700 ml-2">
-                  {departureTime ? formatDate(departureTime) : 'N/A'}
-                </Text>
+              <View className={`flex-row items-center ${isDark ? 'bg-blue-900/40' : 'bg-blue-50'} px-3 py-2 rounded-xl`}>
+                <Calendar size={16} color={colors.primary} />
+                <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="ml-2">
+                  {departureTime ? formatDate(departureTime) : translate('not_available')}
+                </AppText>
               </View>
-              <View className="flex-row items-center bg-purple-50 px-3 py-2 rounded-xl">
+              <View className={`flex-row items-center ${isDark ? 'bg-purple-900/40' : 'bg-purple-50'} px-3 py-2 rounded-xl`}>
                 <Clock size={16} color="#8b5cf6" />
-                <Text className="text-sm font-medium text-gray-700 ml-2">
-                  {departureTime ? formatTime(departureTime) : 'N/A'}
-                </Text>
+                <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="ml-2">
+                  {departureTime ? formatTime(departureTime) : translate('not_available')}
+                </AppText>
               </View>
             </View>
 
-            {/* Time Status Badge */}
             {isUpcoming && (
               <View className="mb-4">
-                <View className={`bg-orange-50 px-4 py-2 rounded-xl border border-orange-200 flex-row items-center`}>
+                <View className={`${isDark ? 'bg-orange-900/40 border-orange-800' : 'bg-orange-50 border-orange-200'} px-4 py-2 rounded-xl border flex-row items-center`}>
                   <Clock size={16} color="#f97316" />
-                  <Text className={`ml-2 font-medium ${timeStatus.color}`}>
+                  <AppText weight="500" color={timeStatus.color} className="ml-2">
                     {timeStatus.label}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             )}
 
-            {/* Seats and Vehicle Info */}
             <View className="flex-row justify-between items-center mb-4">
               <View>
-                <Text className="text-xs text-gray-500 mb-1">Seats</Text>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="mb-1">{translate('seats')}</AppText>
                 <View className="flex-row gap-1">
                   {seatNumbers.map((seat, idx) => (
                     <View key={idx} className="bg-blue-500 px-3 py-1.5 rounded-lg">
-                      <Text className="text-white text-sm font-bold">{seat}</Text>
+                      <AppText variant="bodySmall" weight="bold" color="white">{seat}</AppText>
                     </View>
                   ))}
                 </View>
               </View>
               <View className="items-end">
-                <Text className="text-xs text-gray-500 mb-1">Bus</Text>
-                <Text className="text-sm font-medium text-gray-800">
-                  {vehicle.carType || 'Standard'}
-                </Text>
-                <Text className="text-xs text-gray-500">
-                  {vehicle.plateNumber || 'N/A'}
-                </Text>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="mb-1">{translate('vehicle')}</AppText>
+                <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray200 : colors.gray800}>
+                  {vehicle.carType || translate('standard')}
+                </AppText>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>
+                  {vehicle.plateNumber || translate('not_available')}
+                </AppText>
               </View>
             </View>
 
             {/* Status and Amount */}
-            <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
+            <View className={`flex-row justify-between items-center pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
               <View className="flex-row gap-2">
                 <View className={`px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ${statusColors.bg} border ${statusColors.border}`}>
                   {getStatusIcon(item.status || 'pending', 14)}
-                  <Text className={`text-xs font-bold ${statusColors.text}`}>
-                    {item.status?.toUpperCase()}
-                  </Text>
+                  <AppText variant="caption" weight="bold" color={statusColors.text}>
+                    {translate(`ticket_status_${item.status?.toLowerCase()}` as any)}
+                  </AppText>
                 </View>
                 {needsPayment && (
                   <View className="bg-yellow-100 px-3 py-1.5 rounded-full">
-                    <Text className="text-yellow-700 text-xs font-bold">PAYMENT DUE</Text>
+                    <AppText variant="caption" weight="bold" color="#a16207">{translate('payment_due')}</AppText>
                   </View>
                 )}
               </View>
-              <Text className="text-xl font-bold text-blue-600">
+              <AppText variant="h3" weight="bold" color={colors.primary}>
                 {formatCurrency(totalAmount)}
-              </Text>
+              </AppText>
             </View>
           </View>
 
           {/* Quick Action Buttons */}
-          <View className="flex-row border-t border-gray-100 bg-gray-50">
+          <View className={`flex-row border-t ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50'}`}>
             <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push(`/tabs/tickets/${item._id}?action=download`);
               }}
-              className="flex-1 flex-row items-center justify-center py-3 border-r border-gray-200"
+              className={`flex-1 flex-row items-center justify-center py-3 border-r ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
             >
-              <Download size={16} color={COLORS.primary} />
-              <Text className="text-sm font-medium text-gray-700 ml-2">Download</Text>
+              <Download size={16} color={colors.primary} />
+              <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="ml-2">{translate('download_ticket')}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -374,8 +360,8 @@ export default function TicketsScreen() {
               }}
               className="flex-1 flex-row items-center justify-center py-3"
             >
-              <Share2 size={16} color={COLORS.primary} />
-              <Text className="text-sm font-medium text-gray-700 ml-2">Share</Text>
+              <Share2 size={16} color={colors.primary} />
+              <AppText variant="bodySmall" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="ml-2">{translate('share')}</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -396,26 +382,26 @@ export default function TicketsScreen() {
         end={{ x: 1, y: 1 }}
         className="px-4 pt-2 pb-6"
       >
-        <Text className="text-3xl font-bold text-white mb-1">My Tickets</Text>
-        <Text className="text-blue-100 text-sm">
-          {filteredBookings.length} {filteredBookings.length === 1 ? 'ticket' : 'tickets'} found
-        </Text>
+        <AppText variant="h1" weight="bold" color="white" className="mb-1">{translate('tickets_title')}</AppText>
+        <AppText variant="bodySmall" color="rgba(255,255,255,0.8)">
+          {translate('ticket_count', { count: filteredBookings.length })}
+        </AppText>
       </LinearGradient>
 
       {/* Search Bar */}
       <View className="px-4 -mt-5 mb-3">
-        <View className="bg-white rounded-xl shadow-lg flex-row items-center px-4 py-3">
-          <Search size={20} color={COLORS.textSecondary} />
+        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg flex-row items-center px-4 py-3`}>
+          <Search size={20} color={colors.textSecondary} />
           <TextInput
-            placeholder="Search by route or booking #"
-            placeholderTextColor={COLORS.textTertiary}
+            placeholder={translate('search_tickets_placeholder')}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 ml-3 text-gray-800 text-base"
+            className={`flex-1 ml-3 ${isDark ? 'text-white' : 'text-gray-800'} text-base`}
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={18} color={COLORS.textSecondary} />
+              <X size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -439,16 +425,13 @@ export default function TicketsScreen() {
                 px-5 py-2.5 rounded-full mr-2
                 ${filter === filterType
                   ? 'bg-blue-600 shadow-md'
-                  : 'bg-gray-100 border border-gray-200'
+                  : isDark ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'
                 }
               `}
             >
-              <Text className={`
-                text-sm font-medium capitalize
-                ${filter === filterType ? 'text-white' : 'text-gray-700'}
-              `}>
-                {filterType}
-              </Text>
+              <AppText variant="bodySmall" weight="500" color={filter === filterType ? 'white' : (isDark ? colors.gray300 : colors.gray700)} className="capitalize">
+                {translate(`${filterType}_tickets` as any)}
+              </AppText>
             </TouchableOpacity>
           ))}
         </View>
@@ -464,17 +447,17 @@ export default function TicketsScreen() {
       }}
       className="flex-1 justify-center items-center px-6 mt-10"
     >
-      <View className="bg-gray-100 w-24 h-24 rounded-full items-center justify-center mb-4">
-        <Ticket size={48} color={COLORS.textTertiary} />
+      <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} w-24 h-24 rounded-full items-center justify-center mb-4`}>
+        <Ticket size={48} color={colors.textTertiary} />
       </View>
-      <Text className="text-2xl font-bold text-gray-800 text-center">
-        No Tickets Found
-      </Text>
-      <Text className="text-gray-500 text-center mt-2 text-base">
+      <AppText variant="h2" weight="bold" color={isDark ? 'white' : colors.gray800} className="text-center">
+        {translate('no_tickets')}
+      </AppText>
+      <AppText variant="bodyMedium" color={colors.gray500} className="text-center mt-2">
         {filter !== 'all'
-          ? `You don't have any ${filter} tickets.`
-          : "You haven't booked any trips yet."}
-      </Text>
+          ? translate('no_tickets_filter_desc', { filter: translate(`${filter}_tickets` as any) })
+          : translate('no_tickets_general_desc')}
+      </AppText>
       {filter !== 'all' ? (
         <TouchableOpacity
           onPress={() => {
@@ -483,7 +466,7 @@ export default function TicketsScreen() {
           }}
           className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
         >
-          <Text className="text-white font-semibold text-base">Show All Tickets</Text>
+          <AppText variant="bodyMedium" weight="semibold" color="white">{translate('show_all_tickets')}</AppText>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
@@ -493,7 +476,7 @@ export default function TicketsScreen() {
           }}
           className="mt-6 bg-blue-600 py-3 px-8 rounded-xl shadow-lg"
         >
-          <Text className="text-white font-semibold text-base">Book Your First Trip</Text>
+          <AppText variant="bodyMedium" weight="semibold" color="white">{translate('book_first_trip')}</AppText>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -503,14 +486,14 @@ export default function TicketsScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
         <View className="flex-1 justify-center items-center">
-          <Loader message="Checking authentication..." />
+          <Loader message={translate('checking_auth')} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top', 'left', 'right']}>
       <FlatList
         data={filteredBookings}
         renderItem={renderTicketCard}
@@ -524,8 +507,8 @@ export default function TicketsScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary as any]}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -536,7 +519,7 @@ export default function TicketsScreen() {
 
       {loading && !refreshing && (
         <View className="absolute inset-0 bg-white/80 items-center justify-center">
-          <Loader message="Loading your tickets..." />
+          <Loader message={translate('loading_tickets')} />
         </View>
       )}
     </SafeAreaView>

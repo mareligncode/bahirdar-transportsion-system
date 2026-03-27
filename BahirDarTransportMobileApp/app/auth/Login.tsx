@@ -13,7 +13,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Loader } from '@/components/common/Loader';
+import { useTheme } from '@/context/ThemeContext';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -28,15 +30,17 @@ import {
   EyeOff
 } from 'lucide-react-native';
 import { LoginFormData } from '@/types/auth';
+import { AppText } from '@/components/common/AppText';
 
 export default function Login() {
   const insets = useSafeAreaInsets();
+  const { login, isLoading: authLoading } = useAuth();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const { login, isLoading: authLoading } = useAuth();
 
   const {
     control,
@@ -76,24 +80,24 @@ export default function Login() {
       });
 
       if (result.success) {
-        setSuccess('Login successful! Redirecting...');
+        setSuccess(translate('login_success'));
 
         setTimeout(() => {
           router.replace('/tabs/home');
         }, 1000);
       } else {
-        throw new Error(result.message || 'Login failed');
+        throw new Error(result.message || translate('login_failed'));
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Login failed. Please try again.';
+      const errorMessage = err.message || translate('login_failed_desc');
       setError(errorMessage);
 
       if (errorMessage.includes('email') || errorMessage.includes('not found')) {
-        setFormError('email', { message: 'Invalid email or password' });
-        setFieldErrors(prev => ({ ...prev, email: 'Invalid email or password' }));
+        setFormError('email', { message: translate('invalid_credentials') });
+        setFieldErrors(prev => ({ ...prev, email: translate('invalid_credentials') }));
       } else if (errorMessage.includes('password')) {
-        setFormError('password', { message: 'Invalid email or password' });
-        setFieldErrors(prev => ({ ...prev, password: 'Invalid email or password' }));
+        setFormError('password', { message: translate('invalid_credentials') });
+        setFieldErrors(prev => ({ ...prev, password: translate('invalid_credentials') }));
       }
     }
   };
@@ -107,9 +111,9 @@ export default function Login() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
-          <Loader message="Signing in..." />
+          <Loader message={translate('signing_in')} />
         </View>
       </SafeAreaView>
     );
@@ -117,7 +121,7 @@ export default function Login() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -146,17 +150,17 @@ export default function Login() {
                 </TouchableOpacity>
 
                 <View className="items-center mb-6">
-                  <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
-                    <View className="w-12 h-12 bg-blue-600 rounded-lg items-center justify-center">
-                      <Text className="text-white font-bold text-xl">B</Text>
+                  <View className={`w-16 h-16 ${isDark ? 'bg-blue-900/50' : 'bg-blue-100'} rounded-full items-center justify-center mb-4`}>
+                    <View className={`w-12 h-12 bg-blue-600 rounded-lg items-center justify-center`}>
+                      <AppText className="text-white font-bold text-xl">B</AppText>
                     </View>
                   </View>
-                  <Text className="text-3xl font-bold text-gray-900 mb-2 text-center">
-                    Welcome Back
-                  </Text>
-                  <Text className="text-gray-600 text-center">
-                    Sign in to your account
-                  </Text>
+                  <AppText variant="h1" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
+                    {translate('welcome_back')}
+                  </AppText>
+                  <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center`}>
+                    {translate('sign_in_sub')}
+                  </AppText>
                 </View>
               </View>
 
@@ -165,7 +169,7 @@ export default function Login() {
                   <View className="flex-row items-start">
                     <CheckCircle size={20} color="#10B981" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
-                      <Text className="font-medium text-green-700">{success}</Text>
+                      <AppText weight="medium" className="text-green-700">{success}</AppText>
                     </View>
                   </View>
                 </Card>
@@ -176,8 +180,8 @@ export default function Login() {
                   <View className="flex-row items-start">
                     <AlertCircle size={20} color="#EF4444" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
-                      <Text className="font-medium text-red-600">Login failed</Text>
-                      <Text className="text-sm text-red-600 mt-1">{error}</Text>
+                      <AppText weight="medium" className="text-red-600">{translate('login_failed')}</AppText>
+                      <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
                     </View>
                   </View>
                 </Card>
@@ -190,7 +194,7 @@ export default function Login() {
                   render={({ field: { onChange, value, onBlur } }) => (
                     <View>
                       <Input
-                        label="Email Address *"
+                        label={translate('email_address') + " *"}
                         placeholder="name@example.com"
                         value={value}
                         onChangeText={(text) => {
@@ -216,8 +220,8 @@ export default function Login() {
                   render={({ field: { onChange, value, onBlur } }) => (
                     <View>
                       <Input
-                        label="Password *"
-                        placeholder="Enter your password"
+                        label={translate('password_label') + " *"}
+                        placeholder={translate('password_placeholder')}
                         value={value}
                         onChangeText={(text) => {
                           clearAllErrors();
@@ -250,14 +254,14 @@ export default function Login() {
                   className="self-end mb-6"
                   activeOpacity={0.7}
                 >
-                  <Text className="text-blue-600 font-medium text-sm">
-                    Forgot Password?
-                  </Text>
+                  <AppText variant="bodySmall" weight="medium" className="text-blue-600">
+                    {translate('forgot_password_link')}
+                  </AppText>
                 </TouchableOpacity>
               </View>
 
               <Button
-                title="Sign In"
+                title={translate('sign_in')}
                 onPress={handleSubmit(handleLogin)}
                 loading={loading}
                 disabled={loading}
@@ -266,15 +270,15 @@ export default function Login() {
                 className="mb-6"
                 fullWidth
               />
-              <View className="pt-6 border-t border-gray-200">
+                <View className={`pt-6 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <View className="flex-row justify-center">
-                  <Text className="text-gray-600">Don't have an account? </Text>
+                  <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{translate('dont_have_account')} </AppText>
                   <TouchableOpacity
                     onPress={() => router.push('/auth/Register')}
                     disabled={loading}
                     activeOpacity={0.7}
                   >
-                    <Text className="text-blue-600 font-bold">Sign up</Text>
+                    <AppText weight="bold" className="text-blue-600">{translate('sign_up')}</AppText>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -5,6 +5,7 @@ import { usePaymentStore } from '../store/paymentStore';
 import { useAuth } from './useAuth';
 import { useToast } from '../components/common/Toast';
 import { Payment, PaymentStatus, PaymentVerifyResult } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 export const usePayment = () => {
   const [loading, setLoading] = useState(false);
@@ -140,6 +141,9 @@ export const usePayment = () => {
   }, [addPayment, setCurrentPayment, showToast]);
 
   const getPaymentHistory = useCallback(async (): Promise<Payment[]> => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) return [];
+
     setLoading(true);
     setError(null);
 

@@ -1,9 +1,8 @@
 // config/api.ts
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
-import { Platform } from 'react-native';
 
 export const getPlatformBaseUrl = (): string => {
   let url = '';
@@ -11,7 +10,7 @@ export const getPlatformBaseUrl = (): string => {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
     // Use your actual backend IP address
-    url = 'http://10.161.142.191:5000/api';
+    url = 'http://10.161.142.162:5000/api';
   }
   return url;
 };
@@ -86,7 +85,7 @@ api.interceptors.response.use(
     if (!refreshToken) {
       console.log('🔑 No refresh token available');
       await clearAuthData();
-      router.replace('/auth/Login');
+      router.replace('/');
       return Promise.reject(error);
     }
 
@@ -115,10 +114,14 @@ api.interceptors.response.use(
         }
       });
 
-      if (response.data?.success && response.data?.data?.token) {
-        const newToken = response.data.data.token;
-        const newRefreshToken = response.data.data.refreshToken || refreshToken;
+      console.log('🔄 Refresh token response:', JSON.stringify(response.data));
 
+      // Backend returns: { success: true, data: { tokens: { accessToken, refreshToken } } }
+      const tokens = response.data?.data?.tokens;
+      const newToken = tokens?.accessToken;
+      const newRefreshToken = tokens?.refreshToken || refreshToken;
+
+      if (response.data?.success && newToken) {
         await AsyncStorage.setItem('auth_token', newToken);
         await AsyncStorage.setItem('refresh_token', newRefreshToken);
 
@@ -141,10 +144,10 @@ api.interceptors.response.use(
         Alert.alert(
           'Session Expired',
           'Please login again',
-          [{ text: 'OK', onPress: () => router.replace('/auth/Login') }]
+          [{ text: 'OK', onPress: () => router.replace('/') }]
         );
       } else {
-        router.replace('/auth/Login');
+        router.replace('/');
       }
 
       return Promise.reject(refreshError);

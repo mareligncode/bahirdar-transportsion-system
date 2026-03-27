@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Alert,
   Dimensions,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,6 +34,8 @@ import {
 } from 'lucide-react-native';
 import { useTrips } from '../../../hooks/useTrips';
 import { useBooking } from '../../../hooks/useBooking';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { useTheme } from '../../../context/ThemeContext';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
 import { formatTime, formatDate, formatCurrency } from '../../../utils/helpers';
@@ -46,6 +48,8 @@ type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' |
 export default function TripDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { translate } = useTranslation();
+  const { colors, isDark } = useTheme();
   const { id } = useLocalSearchParams();
   const tripId = Array.isArray(id) ? id[0] : id;
   const { getTripById, loading, error } = useTrips();
@@ -81,17 +85,15 @@ export default function TripDetailsScreen() {
       setTrip(data);
       selectTrip(data);
     } catch (err: any) {
-      let errorMessage = 'Failed to load trip details. Please try again.';
+      let errorMessage = translate('something_went_wrong');
 
       if (err.response?.status === 500) {
-        errorMessage = 'Server error occurred. Please try again later.';
+        errorMessage = translate('error');
       } else if (err.response?.status === 404) {
-        errorMessage = 'Trip not found. It may have been removed.';
-      } else if (err.response?.status === 400) {
-        errorMessage = 'Invalid trip ID.';
+        errorMessage = translate('no_trips_found');
       }
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert(translate('error'), errorMessage);
 
       // Navigate back after error
       setTimeout(() => {
@@ -110,7 +112,7 @@ export default function TripDetailsScreen() {
     const availableSeats = trip.availableSeats ?? 0;
 
     if (availableSeats === 0) {
-      Alert.alert('No seats available', 'This trip is fully booked.');
+      Alert.alert(translate('fully_booked'), translate('fully_booked'));
       return;
     }
 
@@ -178,9 +180,9 @@ export default function TripDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
-          <Loader message="Loading trip details..." />
+          <Loader message={translate('loading_trips')} />
         </View>
       </SafeAreaView>
     );
@@ -188,20 +190,21 @@ export default function TripDetailsScreen() {
 
   if (error || !trip) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
         <View className="flex-1 justify-center items-center p-8">
-          <AlertCircle size={64} color="#ef4444" />
-          <Text className="text-xl font-semibold text-gray-900 mt-4">
-            Trip not found
-          </Text>
-          <Text className="text-gray-600 text-center mt-2">
-            The trip you're looking for doesn't exist or has been removed.
-          </Text>
+          <AlertCircle size={64} color={colors.error} />
+          <AppText variant="h2" weight="bold" color={colors.text} className="mt-4">
+            {translate('no_trips_found')}
+          </AppText>
+          <AppText variant="bodyMedium" color={colors.textSecondary} className="text-center mt-2">
+            {translate('no_trips_found_desc') || translate('no_trips_found')}
+          </AppText>
           <TouchableOpacity
             onPress={handleGoBack}
-            className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
+            style={{ backgroundColor: colors.primary }}
+            className="mt-6 py-3 px-6 rounded-xl"
           >
-            <Text className="text-white font-semibold">Go Back</Text>
+            <AppText variant="bodyMedium" weight="bold" color="white">{translate('back')}</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -209,13 +212,13 @@ export default function TripDetailsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ backgroundColor: isDark ? colors.background : '#f9fafb' }} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
         <StatusBar style="light" />
 
         {/* Header with Gradient */}
         <LinearGradient
-          colors={['#1e40af', '#3b82f6']}
+          colors={isDark ? ['#1e3a8a', '#1e40af'] : ['#1e40af', '#3b82f6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           className="px-4 py-3"
@@ -228,36 +231,36 @@ export default function TripDetailsScreen() {
               <ArrowLeft size={20} color="white" />
             </TouchableOpacity>
             <View className="flex-1">
-              <Text className="text-white text-sm opacity-80">Trip Details</Text>
-              <Text className="text-white font-bold text-lg" numberOfLines={1}>
+              <AppText variant="caption" color="rgba(255,255,255,0.8)">{translate('trip_details')}</AppText>
+              <AppText variant="bodyLarge" weight="bold" color="white" numberOfLines={1}>
                 {originName} → {destinationName}
-              </Text>
+              </AppText>
             </View>
             <Badge
               variant={getStatusBadgeVariant(tripStatus)}
-              text={tripStatus.toUpperCase()}
+              text={translate(tripStatus?.toLowerCase())?.toUpperCase() || tripStatus.toUpperCase()}
             />
           </View>
 
           {/* Quick Stats */}
           <View className="flex-row mt-3 pt-3 border-t border-white/20">
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Date</Text>
-              <Text className="text-sm font-semibold text-white">
+              <AppText variant="caption" color="#bfdbfe">{translate('date')}</AppText>
+              <AppText variant="bodySmall" weight="bold" color="white">
                 {formatDate(departureTime)}
-              </Text>
+              </AppText>
             </View>
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Time</Text>
-              <Text className="text-sm font-semibold text-white">
+              <AppText variant="caption" color="#bfdbfe">{translate('time')}</AppText>
+              <AppText variant="bodySmall" weight="bold" color="white">
                 {formatTime(departureTime)}
-              </Text>
+              </AppText>
             </View>
             <View className="flex-1">
-              <Text className="text-xs text-blue-200">Price</Text>
-              <Text className="text-sm font-semibold text-white">
+              <AppText variant="caption" color="#bfdbfe">{translate('price')}</AppText>
+              <AppText variant="bodySmall" weight="bold" color="white">
                 {formatCurrency(price)}
-              </Text>
+              </AppText>
             </View>
           </View>
         </LinearGradient>
@@ -271,38 +274,37 @@ export default function TripDetailsScreen() {
         >
           {/* Quick Info Cards */}
           <View className="flex-row px-4 mt-4 mb-3">
-            <View className="flex-1 bg-white rounded-xl p-3 mr-2 border border-gray-200">
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="flex-1 rounded-xl p-3 mr-2 border">
               <View className="flex-row items-center">
-                <Clock size={16} color="#3b82f6" />
-                <Text className="text-xs text-gray-500 ml-2">Duration</Text>
+                <Clock size={16} color={colors.primary} />
+                <AppText variant="caption" color={colors.textSecondary} className="ml-2">{translate('duration')}</AppText>
               </View>
-              <Text className="text-lg font-bold text-gray-900 mt-1">
+              <AppText variant="h3" weight="bold" color={colors.text} className="mt-1">
                 {Math.ceil((new Date(arrivalTime).getTime() - new Date(departureTime).getTime()) / (1000 * 60 * 60))}h
-              </Text>
+              </AppText>
             </View>
-            <View className="flex-1 bg-white rounded-xl p-3 mr-2 border border-gray-200">
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="flex-1 rounded-xl p-3 mr-2 border">
               <View className="flex-row items-center">
                 <Users size={16} color="#f59e0b" />
-                <Text className="text-xs text-gray-500 ml-2">Available</Text>
+                <AppText variant="caption" color={colors.textSecondary} className="ml-2">{translate('available')}</AppText>
               </View>
-              <Text className="text-lg font-bold text-gray-900 mt-1">
+              <AppText variant="h3" weight="bold" color={colors.text} className="mt-1">
                 {availableSeats}/{totalSeats}
-              </Text>
+              </AppText>
             </View>
-            <View className="flex-1 bg-white rounded-xl p-3 border border-gray-200">
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="flex-1 rounded-xl p-3 border">
               <View className="flex-row items-center">
-                <Star size={16} color="#10b981" />
-                <Text className="text-xs text-gray-500 ml-2">Rating</Text>
+                <Star size={16} color={colors.success} />
+                <AppText variant="caption" color={colors.textSecondary} className="ml-2">{translate('rating')}</AppText>
               </View>
-              <Text className="text-lg font-bold text-gray-900 mt-1">4.8</Text>
+              <AppText variant="h3" weight="bold" color={colors.text} className="mt-1">4.8</AppText>
             </View>
           </View>
 
-          {/* Trip Summary Card */}
-          <View className="bg-white p-4 mx-4 mb-3 rounded-xl border border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
-              Journey Details
-            </Text>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="p-4 mx-4 mb-3 rounded-xl border">
+            <AppText variant="bodyLarge" weight="semibold" color={colors.text} className="mb-3">
+              {translate('journey_details')}
+            </AppText>
 
             <View className="space-y-4">
               {/* Origin */}
@@ -311,17 +313,17 @@ export default function TripDetailsScreen() {
                   <View className="w-3 h-3 rounded-full bg-green-500" />
                 </View>
                 <View className="flex-1 ml-2 pb-4">
-                  <Text className="text-sm text-gray-500">Departure</Text>
-                  <Text className="font-semibold text-gray-900">{originName}</Text>
-                  <Text className="text-sm text-gray-600">{originCity}</Text>
-                  <Text className="text-sm text-blue-600 font-medium mt-1">
+                  <AppText variant="caption" color={colors.textSecondary}>{translate('departure')}</AppText>
+                  <AppText variant="bodyMedium" weight="semibold" color={colors.text}>{originName}</AppText>
+                  <AppText variant="bodySmall" color={colors.textSecondary}>{originCity}</AppText>
+                  <AppText variant="bodySmall" weight="500" color={colors.primary} className="mt-1">
                     {formatTime(departureTime)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
               {/* Line connecting dots */}
-              <View className="absolute left-3 top-6 bottom-6 w-0.5 bg-gray-300" style={{ transform: [{ translateX: -1.5 }] }} />
+              <View style={{ backgroundColor: isDark ? '#374151' : '#e5e7eb' }} className="absolute left-3 top-6 bottom-6 w-0.5" />
 
               {/* Destination */}
               <View className="flex-row">
@@ -329,61 +331,62 @@ export default function TripDetailsScreen() {
                   <View className="w-3 h-3 rounded-full bg-red-500" />
                 </View>
                 <View className="flex-1 ml-2">
-                  <Text className="text-sm text-gray-500">Arrival</Text>
-                  <Text className="font-semibold text-gray-900">{destinationName}</Text>
-                  <Text className="text-sm text-gray-600">{destinationCity}</Text>
-                  <Text className="text-sm text-green-600 font-medium mt-1">
+                  <AppText variant="caption" color={colors.textSecondary}>{translate('arrival')}</AppText>
+                  <AppText variant="bodyMedium" weight="semibold" color={colors.text}>{destinationName}</AppText>
+                  <AppText variant="bodySmall" color={colors.textSecondary}>{destinationCity}</AppText>
+                  <AppText variant="bodySmall" weight="500" color={colors.success} className="mt-1">
                     {formatTime(arrivalTime)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Vehicle & Driver Card */}
-          <View className="bg-white p-4 mx-4 mb-3 rounded-xl border border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
-              Vehicle & Driver
-            </Text>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="p-4 mx-4 mb-3 rounded-xl border">
+            <AppText variant="bodyLarge" weight="semibold" color={colors.text} className="mb-3">
+              {translate('vehicle_driver')}
+            </AppText>
 
             <View className="space-y-4">
               <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-blue-100 rounded-lg items-center justify-center">
-                  <Car size={20} color="#3b82f6" />
+                <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }} className="w-10 h-10 rounded-lg items-center justify-center">
+                  <Car size={20} color={colors.primary} />
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="font-medium text-gray-900">
+                  <AppText variant="bodyMedium" weight="500" color={colors.text}>
                     {vehiclePlate}
-                  </Text>
-                  <Text className="text-gray-600">
-                    {vehicleType} • {totalSeats} seats
-                  </Text>
+                  </AppText>
+                  <AppText variant="bodySmall" color={colors.textSecondary}>
+                    {translate(vehicleType?.toLowerCase()) || vehicleType} • {totalSeats} {translate('seats')}
+                  </AppText>
                 </View>
               </View>
 
               <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-green-100 rounded-lg items-center justify-center">
-                  <User size={20} color="#10b981" />
+                <View style={{ backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#f0fdf4' }} className="w-10 h-10 rounded-lg items-center justify-center">
+                  <User size={20} color={colors.success} />
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="font-medium text-gray-900">
+                  <AppText variant="bodyMedium" weight="500" color={colors.text}>
                     {driverName}
-                  </Text>
-                  <Text className="text-gray-600">
-                    Licensed Driver
-                  </Text>
+                  </AppText>
+                  <AppText variant="bodySmall" color={colors.textSecondary}>
+                    {translate('driver')}
+                  </AppText>
                 </View>
                 {driverPhone && (
                   <TouchableOpacity
-                    className="p-2 bg-blue-50 rounded-lg"
+                    style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }}
+                    className="p-2 rounded-lg"
                     onPress={() => {
-                      Alert.alert('Call Driver', `Call ${driverName}?`, [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Call', onPress: () => console.log('Calling...') }
+                      Alert.alert(translate('call_driver') || 'Call Driver', `${translate('call') || 'Call'} ${driverName}?`, [
+                        { text: translate('cancel'), style: 'cancel' },
+                        { text: translate('call') || 'Call', onPress: () => console.log('Calling...') }
                       ]);
                     }}
                   >
-                    <Phone size={18} color="#3b82f6" />
+                    <Phone size={18} color={colors.primary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -391,58 +394,56 @@ export default function TripDetailsScreen() {
           </View>
 
           {/* Amenities Card */}
-          <View className="bg-white p-4 mx-4 mb-3 rounded-xl border border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
-              Amenities
-            </Text>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="p-4 mx-4 mb-3 rounded-xl border">
+            <AppText variant="bodyLarge" weight="semibold" color={colors.text} className="mb-3">
+              {translate('amenities')}
+            </AppText>
             <View className="flex-row flex-wrap">
               {vehicle?.features && vehicle.features.length > 0 ? (
                 vehicle.features.map((feature, index) => (
-                  <View key={index} className="bg-blue-50 px-3 py-2 rounded-full mr-2 mb-2 flex-row items-center">
+                  <View key={index} style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }} className="px-3 py-2 rounded-full mr-2 mb-2 flex-row items-center">
                     {getFeatureIcon(feature)}
-                    <Text className="text-blue-600 text-sm font-medium ml-1">{feature}</Text>
+                    <AppText variant="bodySmall" weight="500" color={colors.primary} className="ml-1">{translate(feature.toLowerCase()) || feature}</AppText>
                   </View>
                 ))
               ) : (
-                <Text className="text-gray-500">Standard amenities included</Text>
+                <AppText variant="bodyMedium" color={colors.textSecondary}>{translate('standard_amenities')}</AppText>
               )}
             </View>
           </View>
 
           {/* Notes Card */}
           {trip.notes && (
-            <View className="bg-yellow-50 p-4 mx-4 mb-4 rounded-xl border border-yellow-200">
-              <Text className="text-sm text-gray-700">
-                <Text className="font-medium text-yellow-800">Note:</Text> {trip.notes}
-              </Text>
+            <View style={{ backgroundColor: isDark ? 'rgba(234,179,8,0.1)' : '#fefce8', borderColor: isDark ? 'rgba(234,179,8,0.2)' : '#fef08a' }} className="p-4 mx-4 mb-4 rounded-xl border">
+              <AppText variant="bodySmall" color={isDark ? colors.gray300 : "#374151"}>
+                <AppText variant="bodySmall" weight="semibold" color={isDark ? '#eab308' : "#854d0e"}>{translate('note') || 'Note'}:</AppText> {trip.notes}
+              </AppText>
             </View>
           )}
 
           {/* Price Summary Card */}
-          <View className="bg-white p-4 mx-4 mb-3 rounded-xl border border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">
-              Price Summary
-            </Text>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="p-4 mx-4 mb-3 rounded-xl border">
+            <AppText variant="bodyLarge" weight="semibold" color={colors.text} className="mb-3">
+              {translate('price_summary')}
+            </AppText>
             <View className="space-y-2">
               <View className="flex-row justify-between py-2">
-                <Text className="text-gray-700">Price per seat</Text>
-                <Text className="text-lg font-bold text-blue-600">
+                <AppText variant="bodyMedium" color={colors.textSecondary}>{translate('price_per_seat')}</AppText>
+                <AppText variant="h3" weight="bold" color={colors.primary}>
                   {formatCurrency(price)}
-                </Text>
+                </AppText>
               </View>
-
-              <View className="flex-row justify-between py-2 border-t border-gray-100">
-                <Text className="text-gray-700">Available seats</Text>
-                <Text className={`font-medium ${availableSeats > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {availableSeats} of {totalSeats}
-                </Text>
+              <View style={{ borderTopColor: colors.border }} className="flex-row justify-between py-2 border-t">
+                <AppText variant="bodyMedium" color={colors.textSecondary}>{translate('available_today')}</AppText>
+                <AppText variant="bodyMedium" weight="500" color={availableSeats > 0 ? colors.success : colors.error}>
+                  {availableSeats} / {totalSeats}
+                </AppText>
               </View>
-
-              <View className="flex-row justify-between py-2 border-t border-gray-100">
-                <Text className="text-gray-700">Total for 1 seat</Text>
-                <Text className="text-xl font-bold text-blue-600">
+              <View style={{ borderTopColor: colors.border }} className="flex-row justify-between py-2 border-t">
+                <AppText variant="bodyMedium" color={colors.textSecondary}>{translate('total_for_1_seat')}</AppText>
+                <AppText variant="h2" weight="bold" color={colors.primary}>
                   {formatCurrency(price)}
-                </Text>
+                </AppText>
               </View>
             </View>
           </View>
@@ -452,37 +453,42 @@ export default function TripDetailsScreen() {
             <TouchableOpacity
               onPress={handleSelectSeats}
               disabled={!canBook}
-              className={`
-                py-4 rounded-xl flex-row items-center justify-center shadow-lg
-                ${!canBook ? 'bg-gray-400' : 'bg-blue-600'}
-              `}
+              style={{
+                backgroundColor: !canBook ? (isDark ? '#4b5563' : '#d1d5db') : colors.primary,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 5
+              }}
+              className="py-4 rounded-xl flex-row items-center justify-center"
             >
               <Bus size={22} color="white" />
-              <Text className="text-white font-bold ml-2 text-lg">
+              <AppText variant="bodyLarge" weight="bold" color="white" className="ml-2">
                 {!canBook
                   ? (trip?.tripStatus !== 'scheduled' && trip?.tripStatus !== 'boarding')
-                    ? 'Trip Unavailable'
-                    : 'Fully Booked'
-                  : 'Select Seats'}
-              </Text>
+                    ? translate('trip_unavailable')
+                    : translate('fully_booked')
+                  : translate('select_seats')}
+              </AppText>
               {canBook && <ChevronRight size={22} color="white" className="ml-2" />}
             </TouchableOpacity>
 
             {/* Booking Info */}
             {canBook && (
               <View className="mt-3 flex-row justify-center items-center">
-                <Shield size={14} color="#10b981" />
-                <Text className="text-xs text-gray-500 ml-1">
-                  Secure booking • Free cancellation within 2 hours
-                </Text>
+                <Shield size={14} color={colors.success} />
+                <AppText variant="caption" color={colors.textSecondary} className="ml-1">
+                  {translate('secure_booking_info')}
+                </AppText>
               </View>
             )}
 
             {!canBook && trip?.tripStatus === 'scheduled' && availableSeats === 0 && (
-              <View className="mt-3 bg-red-50 p-3 rounded-lg border border-red-200">
-                <Text className="text-red-600 text-xs text-center">
-                  This trip is fully booked. Please check other available trips.
-                </Text>
+              <View style={{ backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', borderColor: isDark ? 'rgba(239,68,68,0.2)' : '#f87171' }} className="mt-3 p-3 rounded-lg border">
+                <AppText variant="caption" color={isDark ? '#f87171' : "#dc2626"} className="text-center">
+                  {translate('fully_booked_desc') || "This trip is fully booked. Please check other available trips."}
+                </AppText>
               </View>
             )}
           </View>

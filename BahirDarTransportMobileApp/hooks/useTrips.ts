@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { tripsApi } from '../lib/api/trips';
+import { useAuthStore } from '../store/authStore';
 import {
   Trip,
   SearchTripParams,
@@ -92,6 +93,9 @@ export const useTrips = () => {
   }, []);
 
   const fetchAllTrips = useCallback(async (filters?: any): Promise<Trip[]> => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) return [];
+
     try {
       setLoading(true);
       const response = await tripsApi.getAllTrips(filters);
@@ -123,6 +127,12 @@ export const useTrips = () => {
   }, []);
 
   const fetchStations = useCallback(async (forceRefresh = false): Promise<StationOption[]> => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      console.log('📍 fetchStations: Not authenticated, skipping fetch');
+      return [];
+    }
+
     if (stations.length > 0 && !forceRefresh) {
       console.log(`📍 Using ${stations.length} cached stations`);
       return stations;

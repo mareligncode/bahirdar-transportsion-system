@@ -10,12 +10,15 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
+import { AppText } from '@/components/common/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authAPI } from '@/lib/api/auth';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme } from '@/context/ThemeContext';
 import { Loader } from '@/components/common/Loader';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -23,21 +26,23 @@ import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-r
 
 const resetPasswordSchema = z.object({
   password: z.string()
-    .min(6, 'Password must be at least 6 characters')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number')
-    .regex(/[^a-zA-Z0-9]/, 'Must contain at least one special character'),
+    .min(6, 'pass_req_min_6')
+    .regex(/[a-z]/, 'lowercase_req')
+    .regex(/[A-Z]/, 'uppercase_req')
+    .regex(/[0-9]/, 'number_req')
+    .regex(/[^a-zA-Z0-9]/, 'one_special'),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "pass_mismatch",
   path: ["confirmPassword"],
 });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPassword() {
+  const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { isDark, colors } = useTheme();
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,7 +77,7 @@ export default function ResetPassword() {
       } else {
         setTokenValid(false);
         setValidatingToken(false);
-        setError('Invalid or missing reset token');
+        setError(translate('invalid_link'));
       }
     };
 
@@ -94,12 +99,12 @@ export default function ResetPassword() {
           setError('');
         } else {
           setTokenValid(false);
-          setError(result.message || 'Invalid or expired reset token');
+          setError(result.message || translate('invalid_link'));
         }
       } catch (err: any) {
         console.error('❌ Token validation error:', err);
         setTokenValid(false);
-        const errorMessage = err.message || 'Failed to validate reset token';
+        const errorMessage = err.message || translate('val_token_failed');
         setError(errorMessage);
       } finally {
         setValidatingToken(false);
@@ -124,20 +129,20 @@ export default function ResetPassword() {
       const result = await authAPI.resetPassword(token, data.password);
 
       if (result.success) {
-        setSuccess(result.message || 'Password has been reset successfully');
+        setSuccess(result.message || translate('reset_success'));
         setTimeout(() => {
           router.replace('/auth/Login');
         }, 3000);
       } else {
-        setError(result.message || 'Failed to reset password');
+        setError(result.message || translate('reset_failed'));
       }
 
     } catch (err: any) {
 
-      const errorMessage = err.message || 'Something went wrong. Please try again.';
+      const errorMessage = err.message || translate('something_went_wrong');
       setError(errorMessage);
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert(translate('error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,13 +158,13 @@ export default function ResetPassword() {
     if (/[0-9]/.test(password)) strength++;
     if (/[^a-zA-Z0-9]/.test(password)) strength++;
 
-    const strengthMap = {
-      0: { label: 'Very Weak', color: '#EF4444' },
-      1: { label: 'Weak', color: '#F59E0B' },
-      2: { label: 'Fair', color: '#F59E0B' },
-      3: { label: 'Good', color: '#10B981' },
-      4: { label: 'Strong', color: '#10B981' },
-      5: { label: 'Very Strong', color: '#10B981' }
+     const strengthMap = {
+      0: { label: translate('strength_very_weak'), color: '#EF4444' },
+      1: { label: translate('strength_weak'), color: '#F59E0B' },
+      2: { label: translate('strength_fair'), color: '#F59E0B' },
+      3: { label: translate('strength_good'), color: '#10B981' },
+      4: { label: translate('strength_strong'), color: '#10B981' },
+      5: { label: translate('strength_very_strong'), color: '#10B981' }
     };
 
     const width = (strength / 5) * 100;
@@ -176,11 +181,11 @@ export default function ResetPassword() {
 
   if (validatingToken) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 items-center justify-center">
           <View className="items-center">
-            <View className="w-16 h-16 bg-gray-200 rounded-full mb-4 animate-pulse" />
-            <Text className="text-gray-600 text-base">Validating reset token...</Text>
+             <View className={`w-16 h-16 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full mb-4 animate-pulse`} />
+            <AppText className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-base`}>{translate('validating_token')}</AppText>
           </View>
         </View>
       </SafeAreaView>
@@ -188,20 +193,20 @@ export default function ResetPassword() {
   }
   if (!tokenValid) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center mb-8">
-            <View className="w-20 h-20 bg-red-100 rounded-full items-center justify-center mb-4">
+             <View className="w-20 h-20 bg-red-100 rounded-full items-center justify-center mb-4">
               <AlertCircle size={40} color="#DC2626" />
             </View>
-            <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">
-              Invalid Reset Link
-            </Text>
-            <Text className="text-gray-600 text-center mb-6">
-              {error || 'This password reset link is invalid or has expired.'}
-            </Text>
-            <Button
-              title="Request New Link"
+            <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
+              {translate('invalid_link')}
+            </AppText>
+            <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center mb-6`}>
+              {error || translate('invalid_link_desc')}
+            </AppText>
+             <Button
+              title={translate('request_new_link')}
               onPress={() => router.replace('/auth/Forgot-Password')}
               variant="primary"
               size="large"
@@ -215,23 +220,23 @@ export default function ResetPassword() {
   }
   if (success) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center">
-            <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
+             <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
               <CheckCircle size={40} color="#10B981" />
             </View>
-            <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">
-              Password Reset Successfully!
-            </Text>
-            <Text className="text-gray-600 text-center mb-4">
+            <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
+              {translate('reset_success')}
+            </AppText>
+            <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center mb-4`}>
               {success}
-            </Text>
-            <Text className="text-gray-500 text-sm text-center mb-8">
-              Redirecting to login page...
-            </Text>
-            <Button
-              title="Go to Login Now"
+            </AppText>
+             <AppText variant="bodySmall" className={`${isDark ? 'text-gray-500' : 'text-gray-500'} text-center mb-8`}>
+              {translate('redirecting_login')}
+            </AppText>
+             <Button
+              title={translate('go_to_login')}
               onPress={() => router.replace('/auth/Login')}
               variant="primary"
               size="large"
@@ -244,7 +249,7 @@ export default function ResetPassword() {
   }
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -271,23 +276,23 @@ export default function ResetPassword() {
                 <View className="items-center mb-4">
                   <View className="w-20 h-20 bg-blue-100 rounded-full items-center justify-center mb-4">
                     <View className="w-16 h-16 bg-blue-600 rounded-lg items-center justify-center">
-                      <Text className="text-white font-bold text-2xl">B</Text>
+                      <AppText weight="bold" variant="h1" className="text-white">B</AppText>
                     </View>
                   </View>
-                  <Text className="text-3xl font-bold text-gray-900 mb-2 text-center">
-                    Reset Password
-                  </Text>
-                  <Text className="text-gray-600 text-base text-center">
-                    Enter your new password
-                  </Text>
+                    <AppText variant="h1" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
+                     {translate('reset_password_title')}
+                   </AppText>
+                   <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-base text-center`}>
+                     {translate('new_password_prompt')}
+                   </AppText>
                 </View>
               </View>
               {error ? (
                 <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex-row items-start">
-                  <AlertCircle size={20} color="#DC2626" style={{ marginTop: 2 }} />
-                  <View className="flex-1 ml-3">
-                    <Text className="font-medium text-red-600">Error</Text>
-                    <Text className="text-sm text-red-600 mt-1">{error}</Text>
+                   <AlertCircle size={20} color="#DC2626" style={{ marginTop: 2 }} />
+                   <View className="flex-1 ml-3">
+                    <AppText weight="medium" className="text-red-600">{translate('error')}</AppText>
+                    <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
                   </View>
                 </View>
               ) : null}
@@ -298,18 +303,18 @@ export default function ResetPassword() {
                   control={control}
                   render={({ field: { onChange, value, onBlur } }) => (
                     <View>
-                      <Text className="text-sm font-medium text-gray-700 mb-2">
-                        New Password
+                       <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                        {translate('new_password')}
                       </Text>
-                      <Input
-                        placeholder="Enter new password"
+                       <Input
+                        placeholder={translate('password_placeholder')}
                         value={value}
-                        onChangeText={(text) => {
+                         onChangeText={(text) => {
                           onChange(text);
                           setError('');
                         }}
                         onBlur={onBlur}
-                        error={errors.password?.message}
+                        error={errors.password?.message ? translate(errors.password.message as any) : undefined}
                         secureTextEntry={!showPassword}
                         leftIcon={<Lock size={20} color="#9CA3AF" />}
                         rightIcon={
@@ -326,12 +331,12 @@ export default function ResetPassword() {
                       {value ? (
                         <View className="mt-2">
                           <View className="flex-row justify-between mb-1">
-                            <Text className="text-xs text-gray-500">
-                              Password strength:
-                            </Text>
-                            <Text style={{ color: strength.color }} className="text-xs font-semibold">
-                              {strength.label}
-                            </Text>
+                              <AppText variant="caption" className="text-gray-500">
+                               {translate('password_strength')}:
+                             </AppText>
+                             <AppText variant="caption" weight="semibold" style={{ color: strength.color }}>
+                               {strength.label}
+                             </AppText>
                           </View>
                           <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                             <View
@@ -342,15 +347,15 @@ export default function ResetPassword() {
                               }}
                             />
                           </View>
-                          <Text className="text-xs text-gray-500 mt-2">
-                            Must be at least 6 characters long
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text className="text-xs text-gray-500 mt-2">
-                          Must be at least 6 characters long
-                        </Text>
-                      )}
+                            <AppText variant="caption" className="text-gray-500 mt-2">
+                             {translate('pass_min_6_desc')}
+                           </AppText>
+                         </View>
+                       ) : (
+                          <AppText variant="caption" className="text-gray-500 mt-2">
+                           {translate('pass_min_6_desc')}
+                         </AppText>
+                       )}
                     </View>
                   )}
                 />
@@ -359,18 +364,18 @@ export default function ResetPassword() {
                   control={control}
                   render={({ field: { onChange, value, onBlur } }) => (
                     <View>
-                      <Text className="text-sm font-medium text-gray-700 mb-2">
-                        Confirm New Password
+                       <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                        {translate('confirm_new_password')}
                       </Text>
-                      <Input
-                        placeholder="Confirm new password"
+                       <Input
+                        placeholder={translate('confirm_new_password_placeholder')}
                         value={value}
                         onChangeText={(text) => {
                           onChange(text);
                           setError('');
                         }}
                         onBlur={onBlur}
-                        error={errors.confirmPassword?.message}
+                        error={errors.confirmPassword?.message ? translate(errors.confirmPassword.message as any) : undefined}
                         secureTextEntry={!showConfirmPassword}
                         leftIcon={<Lock size={20} color="#9CA3AF" />}
                         rightIcon={
@@ -387,30 +392,30 @@ export default function ResetPassword() {
                     </View>
                   )}
                 />
-                <View className="bg-blue-50 p-4 rounded-lg">
-                  <Text className="text-blue-800 font-semibold mb-2">
-                    Password Requirements:
-                  </Text>
+                 <View className="bg-blue-50 p-4 rounded-lg">
+                  <AppText weight="semibold" className="text-blue-800 mb-2">
+                    {translate('pass_requirements')}
+                  </AppText>
                   <View className="space-y-1">
-                    <Text className="text-blue-700 text-sm">
-                      ✓ At least 6 characters
-                    </Text>
-                    <Text className="text-blue-700 text-sm">
-                      ✓ At least 1 uppercase letter
-                    </Text>
-                    <Text className="text-blue-700 text-sm">
-                      ✓ At least 1 lowercase letter
-                    </Text>
-                    <Text className="text-blue-700 text-sm">
-                      ✓ At least 1 number
-                    </Text>
-                    <Text className="text-blue-700 text-sm">
-                      ✓ At least 1 special character
-                    </Text>
+                    <AppText variant="bodySmall" className="text-blue-700">
+                      {translate('pass_req_min_6')}
+                    </AppText>
+                    <AppText variant="bodySmall" className="text-blue-700">
+                      {translate('pass_req_uppercase')}
+                    </AppText>
+                    <AppText variant="bodySmall" className="text-blue-700">
+                      {translate('pass_req_lowercase')}
+                    </AppText>
+                    <AppText variant="bodySmall" className="text-blue-700">
+                      {translate('pass_req_number')}
+                    </AppText>
+                    <AppText variant="bodySmall" className="text-blue-700">
+                      {translate('pass_req_special')}
+                    </AppText>
                   </View>
                 </View>
-                <Button
-                  title={loading ? 'Resetting...' : 'Reset Password'}
+                 <Button
+                  title={loading ? translate('resetting') : translate('reset_password_title')}
                   onPress={handleSubmit(handleResetPassword)}
                   loading={loading}
                   disabled={loading}
@@ -419,15 +424,15 @@ export default function ResetPassword() {
                   fullWidth
                   className="mt-4"
                 />
-                <TouchableOpacity
-                  onPress={() => router.replace('/auth/Forgot-Password')}
-                  className="mt-6 py-4"
-                  disabled={loading}
-                >
-                  <Text className="text-blue-600 font-bold text-center">
-                    Request a new reset link
-                  </Text>
-                </TouchableOpacity>
+                 <TouchableOpacity
+                   onPress={() => router.replace('/auth/Forgot-Password')}
+                   className="mt-6 py-4"
+                   disabled={loading}
+                 >
+                    <AppText weight="bold" className="text-blue-600 text-center">
+                     {translate('request_new_reset_link')}
+                   </AppText>
+                 </TouchableOpacity>
               </View>
             </View>
           </ScrollView>

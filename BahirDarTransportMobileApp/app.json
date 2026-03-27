@@ -3,14 +3,15 @@
     "name": "BahirDar Transport",
     "slug": "bahirdar-transport",
     "version": "1.0.0",
+    "scripts": {
+      "update-translations": "node scripts/update-translations.js"
+    },
     "orientation": "portrait",
-    "jsEngine": "jsc",
-    "icon": "./assets/icon.png",
+    "jsEngine": "hermes",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#3B82F6",
-      "resizeMode": "contain",
-      "image": "./assets/splash.png"
+      "resizeMode": "contain"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -22,8 +23,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bahirdartransport.app",
       "associatedDomains": [
-        "applinks:10.161.142.191",
-        "applinks:localhost"
+        "applinks:10.161.142.162"
       ],
       "infoPlist": {
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save QR codes to your photo library",
@@ -40,7 +40,6 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.bahirdartransport.app",
@@ -55,37 +54,25 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.191",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.191",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "http",
-              "host": "10.161.142.191",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.191",
-              "port": "8081",
-              "pathPrefix": "/redirect.html"
-            },
-            {
-              "scheme": "http",
-              "host": "localhost",
-              "port": "8081",
-              "pathPrefix": "/redirect.html"
-            },
-            {
-              "scheme": "https",
-              "host": "localhost",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
@@ -106,25 +93,13 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.191",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.191",
-              "port": "8081",
-              "pathPattern": ".*reset-password.*"
-            },
-            {
-              "scheme": "http",
-              "host": "localhost",
-              "port": "8081",
-              "pathPattern": ".*reset-password.*"
-            },
-            {
-              "scheme": "https",
-              "host": "localhost",
+              "host": "10.161.142.162",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             }
@@ -137,7 +112,6 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -154,7 +128,7 @@
     "scheme": "bahirdartransport",
     "extra": {
       "router": {
-        "origin": "https://10.161.142.191:8081"
+        "origin": "https://10.161.142.162:8081"
       }
     }
   }

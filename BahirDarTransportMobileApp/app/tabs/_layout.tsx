@@ -4,12 +4,14 @@ import { Tabs } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
 import { BottomTab } from '@/components/layout/BottomTab';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function TabsLayout() {
+  const { translate } = useTranslation();
   const { isLoading: authLoading, isAuthenticated } = useAuth();
 
   if (authLoading) {
-    return <Loader message="Loading..." />;
+    return <Loader message={translate('loading')} />;
   }
 
   if (!isAuthenticated) {
@@ -30,28 +32,28 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="home/index"
           options={{
-            title: 'Home',
+            title: translate('home'),
             href: '/tabs/home',
           }}
         />
         <Tabs.Screen
           name="trips"
           options={{
-            title: 'Trips',
+            title: translate('trips'),
             href: '/tabs/trips',
           }}
         />
         <Tabs.Screen
           name="tickets/index"
           options={{
-            title: 'Tickets',
+            title: translate('tickets'),
             href: '/tabs/tickets',
           }}
         />
         <Tabs.Screen
           name="profile/index"
           options={{
-            title: 'Profile',
+            title: translate('profile'),
             href: '/tabs/profile',
           }}
         />
