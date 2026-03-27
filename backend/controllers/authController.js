@@ -1,6 +1,6 @@
 import User from '../models/Users.js';
 import { generateTokens, verifyRefreshToken } from '../utils/jwtUtils.js';
-import { sendPasswordResetEmail, sendPasswordChangedEmail } from '../utils/emailService.js';
+import { sendPasswordResetEmail, sendPasswordChangedEmail, sendPasswordResetCode } from '../utils/emailService.js';
 import crypto from 'crypto';
 
 export const register = async (req, res) => {
@@ -23,7 +23,7 @@ export const register = async (req, res) => {
             email,
             phoneNumber,
             password,
-            role: 'passenger' 
+            role: 'passenger'
         });
 
         await user.save();
@@ -56,7 +56,6 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Find user
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({
@@ -65,7 +64,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Check if user is active
         if (!user.isActive) {
             return res.status(401).json({
                 success: false,
@@ -73,7 +71,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Verify password
         const isValidPassword = await user.comparePassword(password);
         if (!isValidPassword) {
             return res.status(401).json({
@@ -82,10 +79,8 @@ export const login = async (req, res) => {
             });
         }
 
-        // Generate tokens
         const tokens = generateTokens(user);
 
-        // Save refresh token and update last login
         user.refreshToken = tokens.refreshToken;
         user.lastLogin = new Date();
         await user.save();
@@ -119,7 +114,6 @@ export const refreshToken = async (req, res) => {
             });
         }
 
-        // Verify refresh token
         const decoded = verifyRefreshToken(refreshToken);
         if (!decoded) {
             return res.status(401).json({
@@ -128,7 +122,6 @@ export const refreshToken = async (req, res) => {
             });
         }
 
-        // Find user with this refresh token
         const user = await User.findOne({
             _id: decoded.id,
             refreshToken: refreshToken
@@ -141,10 +134,8 @@ export const refreshToken = async (req, res) => {
             });
         }
 
-        // Generate new tokens
         const tokens = generateTokens(user);
 
-        // Update refresh token in database
         user.refreshToken = tokens.refreshToken;
         await user.save();
 
@@ -176,7 +167,6 @@ export const logout = async (req, res) => {
             });
         }
 
-        // Find user with this refresh token and clear it
         await User.findOneAndUpdate(
             { refreshToken: refreshToken },
             { $set: { refreshToken: '' } }
@@ -227,21 +217,9 @@ export const updateProfile = async (req, res) => {
             });
         }
 
-        // Update fields if provided
         if (fullName) user.fullName = fullName;
         if (phoneNumber) {
 
-            // // Check if phone number is already taken by another user
-            // const existingUser = await User.findOne({
-            //     phoneNumber,
-            //     _id: { $ne: userId }
-            // });
-            // if (existingUser) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message: 'Phone number already in use'
-            //     });
-            // }
             user.phoneNumber = phoneNumber;
         }
         if (emergencyContact !== undefined) user.emergencyContact = emergencyContact;
@@ -278,7 +256,6 @@ export const changePassword = async (req, res) => {
             });
         }
 
-        // Verify current password
         const isValidPassword = await user.comparePassword(currentPassword);
         if (!isValidPassword) {
             return res.status(400).json({
@@ -503,5 +480,181 @@ export const incrementResetAttempts = async (token) => {
         );
     } catch (error) {
         console.error('Error incrementing reset attempts:', error);
+    }
+};
+
+export const forgotPasswordMobile = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.json({
+                success: true,
+                message: 'If your email is registered, you will receive a verification code'
+            });
+        }
+
+        if (!user.isActive) {
+            return res.status(400).json({
+                success: false,
+                message: 'Account is deactivated. Please contact support'
+            });
+        }
+
+        // Generate 6-digit code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Hash the code
+        const resetCodeHash = crypto
+            .createHash('sha256')
+            .update(resetCode)
+            .digest('hex');
+
+        const resetCodeExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+        user.passwordResetCode = resetCodeHash;
+        user.passwordResetCodeExpires = resetCodeExpiry;
+        user.passwordResetAttempts = 0;
+        await user.save();
+
+        // Send reset email with code
+        await sendPasswordResetCode(user.email, resetCode, user.fullName);
+
+        res.json({
+            success: true,
+            message: 'Password reset code has been sent to your email',
+            data: {
+                email: user.email,
+                expiresIn: '10 minutes'
+            }
+        });
+    } catch (error) {
+        console.error('Forgot password mobile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process password reset request',
+            error: error.message
+        });
+    }
+};
+
+export const verifyResetCode = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        if (!email || !code) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and verification code are required'
+            });
+        }
+
+        const hashedCode = crypto
+            .createHash('sha256')
+            .update(code)
+            .digest('hex');
+
+        const user = await User.findOne({
+            email,
+            passwordResetCode: hashedCode,
+            passwordResetCodeExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification code'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Verification code is valid'
+        });
+    } catch (error) {
+        console.error('Verify reset code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify reset code',
+            error: error.message
+        });
+    }
+};
+
+export const resetPasswordMobile = async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, verification code, and new password are required'
+            });
+        }
+
+        const hashedCode = crypto
+            .createHash('sha256')
+            .update(code)
+            .digest('hex');
+
+        const user = await User.findOne({
+            email,
+            passwordResetCode: hashedCode,
+            passwordResetCodeExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification code'
+            });
+        }
+
+        // Check reset attempts
+        if (user.passwordResetAttempts >= 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'Too many reset attempts. Please request a new code'
+            });
+        }
+
+        // Check if new password is same as old password
+        const isSamePassword = await user.comparePassword(newPassword);
+        if (isSamePassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password cannot be the same as old password'
+            });
+        }
+
+        user.password = newPassword;
+        user.passwordResetCode = null;
+        user.passwordResetCodeExpires = null;
+        user.passwordResetToken = null; // Also clear web token if exists
+        user.passwordResetExpires = null;
+        user.passwordResetAttempts = 0;
+        user.lastPasswordReset = new Date();
+        user.refreshToken = '';
+
+        await user.save();
+
+        try {
+            await sendPasswordChangedEmail(user.email, user.fullName);
+        } catch (emailError) {
+            console.warn('Failed to send password changed email:', emailError);
+        }
+
+        res.json({
+            success: true,
+            message: 'Password has been reset successfully'
+        });
+    } catch (error) {
+        console.error('Reset password mobile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset password',
+            error: error.message
+        });
     }
 };

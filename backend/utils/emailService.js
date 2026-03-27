@@ -89,6 +89,58 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     }
 };
 
+export const sendPasswordResetCode = async (email, code, userName) => {
+    try {
+        const expiryTime = '10 minutes';
+
+        const mailOptions = {
+            from: `"Bahir Dar Transport System" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Password Reset Verification Code - Bahir Dar Transport System',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background-color: #2c3e50; color: white; padding: 20px; text-align: center;">
+                        <h1>Bahir Dar Transport System</h1>
+                    </div>
+                    <div style="padding: 30px; background-color: #f8f9fa;">
+                        <h2>Hello ${userName},</h2>
+                        <p>We received a request to reset your password for your mobile app account. Use the verification code below to proceed:</p>
+                        
+                        <div style="background-color: white; border-left: 4px solid #e67e22; padding: 20px; margin: 20px 0; text-align: center;">
+                            <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Your Verification Code:</p>
+                            <h1 style="font-size: 36px; letter-spacing: 5px; color: #e67e22; margin: 0;">${code}</h1>
+                            <p style="color: #666; font-size: 12px; margin-top: 10px;">
+                                This code will expire in ${expiryTime}
+                            </p>
+                        </div>
+                        
+                        <p>If you didn't make this request, please ignore this email or contact support if you're concerned about your account security.</p>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
+                            <p><strong>Security Reminder:</strong></p>
+                            <ul style="padding-left: 20px;">
+                                <li>Never share this code with anyone.</li>
+                                <li>Our staff will never ask you for this code.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div style="background-color: #ecf0f1; padding: 15px; text-align: center; color: #7f8c8d;">
+                        <p>© ${new Date().getFullYear()} Bahir Dar Transport System. All rights reserved.</p>
+                    </div>
+                </div>
+            `,
+            text: `Hello ${userName},\n\nYour password reset verification code is: ${code}\n\nThis code will expire in ${expiryTime}.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nBahir Dar Transport System Team`
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Password reset code email sent:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending password reset code email:', error);
+        throw new Error('Failed to send password reset code email');
+    }
+};
+
 export const sendPasswordChangedEmail = async (email, userName) => {
     try {
         const mailOptions = {
@@ -145,7 +197,6 @@ export const sendPasswordChangedEmail = async (email, userName) => {
     }
 };
 
-// General email sending function for notifications
 export const sendEmail = async (options) => {
     try {
         const mailOptions = {
