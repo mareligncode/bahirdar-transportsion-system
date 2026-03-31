@@ -1,4 +1,3 @@
-// hooks/useTrips.ts
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { tripsApi } from '../lib/api/trips';
@@ -40,8 +39,6 @@ export const useTrips = () => {
       setTrips(tripsData);
       return tripsData;
     } catch (err: any) {
-      console.error('❌ Search failed:', err.message);
-      console.error('Error response:', err.response?.data);
       const message = err.response?.data?.message || 'Failed to search trips';
       setError(message);
       Alert.alert('Search Failed', message);
@@ -51,13 +48,11 @@ export const useTrips = () => {
     }
   }, []);
 
-  // Get trip by ID - using /trip/:id
   const getTripById = useCallback(async (id: string): Promise<Trip | null> => {
     try {
       setLoading(true);
       const response = await tripsApi.getTripById(id);
 
-      // Extract trip data from response
       let tripData: Trip | null = null;
 
       if (response?.data?.data) {
@@ -69,14 +64,12 @@ export const useTrips = () => {
       }
 
       if (!tripData) {
-        console.error('❌ No trip data found in response');
         Alert.alert('Error', 'Trip not found');
         return null;
       }
 
       return tripData;
     } catch (err: any) {
-      console.error('❌ getTripById error:', err.message);
 
       let errorMessage = 'Failed to load trip details. Please try again.';
       if (err.response?.status === 404) {
@@ -117,8 +110,6 @@ export const useTrips = () => {
       setTrips(tripsData);
       return tripsData;
     } catch (err: any) {
-      console.error('❌ Failed to fetch trips:', err.message);
-      console.error('Error details:', err.response?.data);
       setError(err.message);
       return [];
     } finally {
@@ -129,43 +120,30 @@ export const useTrips = () => {
   const fetchStations = useCallback(async (forceRefresh = false): Promise<StationOption[]> => {
     const { isAuthenticated } = useAuthStore.getState();
     if (!isAuthenticated) {
-      console.log('📍 fetchStations: Not authenticated, skipping fetch');
       return [];
     }
 
     if (stations.length > 0 && !forceRefresh) {
-      console.log(`📍 Using ${stations.length} cached stations`);
       return stations;
     }
 
     setStationsLoading(true);
     try {
-      console.log('📍 Fetching active stations from API...');
       const responseData = await tripsApi.getStations();
-
-      console.log('📍 Response data type:', typeof responseData);
-      console.log('📍 Response data keys:', Object.keys(responseData || {}));
 
       let stationsArray: Station[] = [];
 
       if (responseData?.stations && Array.isArray(responseData.stations)) {
         stationsArray = responseData.stations;
-        console.log(`📍 Found ${stationsArray.length} stations in responseData.stations`);
       }
       else if (Array.isArray(responseData)) {
         stationsArray = responseData;
-        console.log(`📍 Found ${stationsArray.length} stations in responseData array`);
       }
       else if (responseData?.data?.stations && Array.isArray(responseData.data.stations)) {
         stationsArray = responseData.data.stations;
-        console.log(`📍 Found ${stationsArray.length} stations in responseData.data.stations`);
       }
 
-      console.log(`📍 Processing ${stationsArray.length} stations`);
-
       if (stationsArray.length === 0) {
-        console.warn('⚠️ No stations found in response');
-        console.log('📦 Full response:', JSON.stringify(responseData, null, 2));
         return [];
       }
 
@@ -202,8 +180,6 @@ export const useTrips = () => {
       return [];
     }
   }, []);
-
-  // Get vehicle details
   const getVehicleById = useCallback(async (vehicleId: string) => {
     try {
       const response = await tripsApi.getVehicleById(vehicleId);
@@ -214,13 +190,11 @@ export const useTrips = () => {
     }
   }, []);
 
-  // Load stations on mount
   useEffect(() => {
     fetchStations();
   }, []);
 
   return {
-    // State
     trips,
     loading,
     error,
@@ -228,7 +202,6 @@ export const useTrips = () => {
     stationsLoading,
     bookedSeats,
 
-    // Actions
     searchTrips,
     getTripById,
     fetchAllTrips,
@@ -236,7 +209,6 @@ export const useTrips = () => {
     getBookedSeats,
     getVehicleById,
 
-    // Setters
     setTrips,
     setBookedSeats,
   };

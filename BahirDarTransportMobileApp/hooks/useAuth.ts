@@ -1,4 +1,3 @@
-// hooks/useAuth.ts - COMPLETE FIXED VERSION
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';

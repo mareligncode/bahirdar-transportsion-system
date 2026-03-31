@@ -1,4 +1,3 @@
-// app/tabs/trips/[id].tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -238,7 +237,7 @@ export default function TripDetailsScreen() {
             </View>
             <Badge
               variant={getStatusBadgeVariant(tripStatus)}
-              text={translate(tripStatus?.toLowerCase())?.toUpperCase() || tripStatus.toUpperCase()}
+              text={translate(tripStatus?.toLowerCase() as any)?.toUpperCase() || tripStatus.toUpperCase()}
             />
           </View>
 
@@ -358,7 +357,7 @@ export default function TripDetailsScreen() {
                     {vehiclePlate}
                   </AppText>
                   <AppText variant="bodySmall" color={colors.textSecondary}>
-                    {translate(vehicleType?.toLowerCase()) || vehicleType} • {totalSeats} {translate('seats')}
+                    {translate(vehicleType?.toLowerCase() as any) || vehicleType} • {totalSeats} {translate('seats')}
                   </AppText>
                 </View>
               </View>
@@ -403,7 +402,7 @@ export default function TripDetailsScreen() {
                 vehicle.features.map((feature, index) => (
                   <View key={index} style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }} className="px-3 py-2 rounded-full mr-2 mb-2 flex-row items-center">
                     {getFeatureIcon(feature)}
-                    <AppText variant="bodySmall" weight="500" color={colors.primary} className="ml-1">{translate(feature.toLowerCase()) || feature}</AppText>
+                    <AppText variant="bodySmall" weight="500" color={colors.primary} className="ml-1">{translate(feature.toLowerCase() as any) || feature}</AppText>
                   </View>
                 ))
               ) : (

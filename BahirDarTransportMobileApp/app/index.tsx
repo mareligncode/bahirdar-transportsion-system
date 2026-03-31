@@ -50,14 +50,12 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// Use your existing images
 const HERO_IMAGES = [
   require('@/assets/images/image1.png'),
   require('@/assets/images/image2.png'),
   require('@/assets/images/image3.png'),
 ];
 
-// Fallback color if image fails to load
 const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 
 export default function LandingPage() {
@@ -72,7 +70,6 @@ export default function LandingPage() {
   const { trips, fetchAllTrips, stations, fetchStations, loading: dataLoading } = useTrips();
   const [stats, setStats] = useState({ activeTrips: 0, totalStations: 0 });
 
-  // Animated styles must be at the top level to follow Rules of Hooks
   const fadeAnimatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
   }));
@@ -81,7 +78,6 @@ export default function LandingPage() {
     transform: [{ scale: withRepeat(withSpring(1.05, { damping: 2, stiffness: 80 }), -1, true) }]
   }));
 
-  // If already authenticated, redirect to home
   useEffect(() => {
     if (isAuthenticated) {
       router.replace('/tabs/home');
@@ -195,8 +191,6 @@ export default function LandingPage() {
     },
   ];
 
-  // Mock testimonials removed as requested
-
   const quickDemos = [
     {
       id: 1,
@@ -243,7 +237,6 @@ export default function LandingPage() {
         showsVerticalScrollIndicator={false}
         className="flex-1"
       >
-        {/* Hero Section with Auto-sliding Images */}
         <View className="relative h-80">
           {imageError ? (
             <View
@@ -266,7 +259,6 @@ export default function LandingPage() {
             />
           )}
 
-          {/* Overlay gradient */}
           <View className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
 
           <View className="absolute top-6 left-4 right-4">
@@ -314,7 +306,6 @@ export default function LandingPage() {
             </Animated.View>
           </View>
 
-          {/* Dots indicator */}
           <View className="absolute bottom-32 left-0 right-0 flex-row justify-center">
             {HERO_IMAGES.map((_, index) => (
               <TouchableOpacity
@@ -331,7 +322,6 @@ export default function LandingPage() {
           </View>
         </View>
 
-        {/* App Features / Quick Stats */}
         <View className="px-4 py-4 -mt-8">
           <AppText variant="h3" weight="bold" color="textPrimary" className="mb-4">
             {translate('quick_highlights' as any) || 'Quick Highlights'}
@@ -370,7 +360,6 @@ export default function LandingPage() {
           </Animated.View>
         </View>
 
-        {/* How It Works */}
         <View className="px-4 py-4">
           <View className="flex-row justify-between items-center mb-4">
             <AppText variant="h3" weight="bold" color="textPrimary">
@@ -415,8 +404,6 @@ export default function LandingPage() {
             ))}
           </ScrollView>
         </View>
-
-        {/* Interactive Demos / Features */}
         <View className={`px-4 py-6 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
           <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-8">
             {translate('try_features')}
@@ -460,8 +447,6 @@ export default function LandingPage() {
             </AppText>
           </TouchableOpacity>
         </View>
-
-        {/* Live Stats instead of testimonials */}
         <View className="px-4 py-8">
           <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-10">
             {translate('live_stats' as any) || 'System Activity'}
@@ -486,10 +471,8 @@ export default function LandingPage() {
           </View>
         </View>
 
-        {/* Final CTA */}
         <View className="px-4 py-6">
           <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-3xl p-8 shadow-sm relative overflow-hidden border ${isDark ? 'border-transparent' : 'border-blue-100'}`}>
-            {/* Background design elements */}
             <View className={`absolute -top-10 -right-10 w-40 h-40 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
             <View className={`absolute -bottom-10 -left-10 w-32 h-32 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
 
@@ -554,7 +537,6 @@ export default function LandingPage() {
           </View>
         </View>
 
-        {/* Contact & Support */}
         <View className={`px-4 py-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
           <View className="items-center">
             <AppText variant="h2" weight="bold" color={isDark ? 'white' : 'textPrimary'} className="mb-8">

@@ -1,20 +1,23 @@
 {
   "expo": {
     "name": "BahirDar Transport",
-    "slug": "bahirdar-transport",
+    "slug": "bd-transport-4svdhx",
     "version": "1.0.0",
-    "scripts": {
-      "update-translations": "node scripts/update-translations.js"
-    },
+    "icon": "./assets/images/icon.png",
     "orientation": "portrait",
     "jsEngine": "hermes",
+    "newArchEnabled": false,
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/images/icon.png",
       "backgroundColor": "#3B82F6",
       "resizeMode": "contain"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "url": "https://u.expo.dev/671e7939-7848-4df0-a58f-1162bd5ec1a5"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -23,7 +26,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bahirdartransport.app",
       "associatedDomains": [
-        "applinks:10.161.142.162"
+        "applinks:10.161.142.189"
       ],
       "infoPlist": {
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save QR codes to your photo library",
@@ -40,13 +43,18 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.bahirdartransport.app",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
       ],
       "intentFilters": [
         {
@@ -54,25 +62,25 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "http",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPrefix": "/redirect.html"
             },
@@ -93,13 +101,13 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.162",
+              "host": "10.161.142.189",
               "port": "8081",
               "pathPattern": ".*reset-password.*"
             }
@@ -128,8 +136,12 @@
     "scheme": "bahirdartransport",
     "extra": {
       "router": {
-        "origin": "https://10.161.142.162:8081"
+        "origin": "https://10.161.142.189:8081"
+      },
+      "eas": {
+        "projectId": "671e7939-7848-4df0-a58f-1162bd5ec1a5"
       }
-    }
+    },
+    "owner": "melka21s-organization"
   }
 }

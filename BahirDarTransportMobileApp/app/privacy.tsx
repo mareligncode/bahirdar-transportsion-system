@@ -1,4 +1,4 @@
-// app/privacy.tsx - Privacy Policy Page
+
 import React from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { AppText } from '../components/common/AppText';
@@ -17,7 +17,6 @@ export default function PrivacyPolicy() {
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
       <ScrollView className="flex-1">
-        {/* Header */}
         <View className="px-6 pt-4">
           <TouchableOpacity 
             onPress={() => router.back()}
@@ -31,7 +30,6 @@ export default function PrivacyPolicy() {
             {t('privacy_policy')}
           </AppText>
           
-          {/* Content */}
           <View className="space-y-4">
             <AppText variant="bodyLarge" weight="medium" color="textSecondary">
               {t('privacy_effective_date', { date: effectiveDate })}

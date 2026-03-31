@@ -6,40 +6,32 @@ import { useEffect, useCallback } from 'react';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 
-// Import hooks and components
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from '@/components/common/Loader';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// Import contexts
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { FontProvider } from '@/context/FontContext';
 
-// Suppress non-fatal SDK 54+ development warnings
 LogBox.ignoreLogs(['Unable to activate keep awake']);
 
-// Prevent splash screen from auto-hiding before auth is checked
 SplashScreen.preventAutoHideAsync();
 
-// Inner component — lives inside all providers so hooks work correctly
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const { translate } = useTranslation();
   const segments = useSegments();
   const router = useRouter();
 
-  // Handle deep links
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
       const { url } = event;
       console.log('🔗 Deep link received in _layout:', url);
 
-      // Parse the URL
       const parsed = Linking.parse(url);
       const queryParams = parsed.queryParams;
 
-      // Handle reset password links
       if (url.includes('reset-password') || url.includes('redirect.html')) {
         let token: string | null = null;
 
@@ -62,7 +54,6 @@ function AppContent() {
             });
           }, 100);
         } else {
-          console.log('❌ No token found in deep link:', url);
         }
       } else if (url.includes('booking/confirmation')) {
         let bookingId: string | null = null;
@@ -77,7 +68,6 @@ function AppContent() {
         }
 
         if (bookingId) {
-          console.log('✅ Found booking Id in deep link:', bookingId);
           setTimeout(() => {
             router.push({
               pathname: '/(screens)/booking/confirmation',
@@ -92,7 +82,6 @@ function AppContent() {
 
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('🔗 Initial URL:', url);
         handleDeepLink({ url });
       }
     });
@@ -142,7 +131,6 @@ function AppContent() {
       try {
         await SplashScreen.hideAsync();
       } catch (e) {
-        console.warn('SplashScreen.hideAsync error:', e);
       }
     };
 
@@ -157,18 +145,16 @@ function AppContent() {
 
   const content = (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* Public / Root */}
+
       <Stack.Screen name="index" />
       <Stack.Screen name="privacy" />
       <Stack.Screen name="terms" />
 
-      {/* Auth Screens */}
       <Stack.Screen name="auth/Login" />
       <Stack.Screen name="auth/Register" />
       <Stack.Screen name="auth/Forgot-Password" />
       <Stack.Screen name="auth/reset-password" />
 
-      {/* Tabs (Main App Navigation) */}
       <Stack.Screen
         name="tabs"
         options={{
@@ -177,7 +163,6 @@ function AppContent() {
         }}
       />
 
-      {/* Screens (Modal/Stack screens) */}
       <Stack.Screen
         name="(screens)"
         options={{
@@ -186,7 +171,6 @@ function AppContent() {
         }}
       />
 
-      {/* Menu Screens */}
       <Stack.Screen
         name="menu"
         options={{
@@ -196,7 +180,6 @@ function AppContent() {
     </Stack>
   );
 
-  // Wrap the entire app with both providers
   return (
     Platform.OS === 'web' ? (
       <View style={{
@@ -222,7 +205,6 @@ function AppContent() {
   );
 }
 
-// Outer layout — just providers, no hooks that require them
 export default function RootLayout() {
   return (
     <SafeAreaProvider>

@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp/types/notification.ts
 export interface Notification {
   id: string;
   user_id: string;

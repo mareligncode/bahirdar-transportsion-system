@@ -26,7 +26,7 @@ export function NotificationList({
   const { isDark } = useTheme();
   
   const handleNotificationPress = (item: Notification) => {
-    // Show alert with notification details
+
     Alert.alert(
       item.title,
       item.message,

@@ -46,7 +46,6 @@ export interface FontSize {
   name: 'small' | 'normal' | 'large' | 'extra-large';
 }
 
-// Simplified PrivacySetting - only privacy toggles, no security features
 export interface PrivacySetting {
   shareLocation: boolean;
   saveHistory: boolean;

@@ -1,4 +1,3 @@
-// components/ui/QrCodeDisplay.tsx
 import React, { useState, useRef } from 'react';
 import {
     View,
@@ -189,3 +188,5 @@ export const QrCodeDisplay: React.FC<QrCodeDisplayProps> = ({
         </View>
     );
 };
+
+export default QrCodeDisplay;

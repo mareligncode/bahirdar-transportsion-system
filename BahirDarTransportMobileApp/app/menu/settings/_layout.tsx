@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp/app/settings/_layout.tsx
 import React from 'react';
 import { Stack } from 'expo-router';
 import { Header } from '@/components/layout/Header';
@@ -11,35 +10,35 @@ export default function SettingsLayout() {
         animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen 
-        name="index" 
-        options={{ 
+      <Stack.Screen
+        name="index"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="notifications" 
-        options={{ 
+      <Stack.Screen
+        name="notifications"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="language" 
-        options={{ 
+      <Stack.Screen
+        name="language"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="privacy-security" 
-        options={{ 
+      <Stack.Screen
+        name="privacy-security"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="about" 
-        options={{ 
+      <Stack.Screen
+        name="about"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
     </Stack>
   );

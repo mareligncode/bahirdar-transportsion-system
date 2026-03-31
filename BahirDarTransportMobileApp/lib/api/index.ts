@@ -1,7 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api as apiClient, API_ENDPOINTS, getPlatformBaseUrl } from '../../config/api';
-
-// Utility functions
+import { api as apiClient, getPlatformBaseUrl } from '../../config/api';
 export const handleApiError = (error: any): {
   message: string;
   status?: number;
@@ -95,7 +93,6 @@ export const removeAuthToken = async (): Promise<void> => {
   }
 };
 
-// Test API connection
 export const testApiConnection = async (): Promise<{
   success: boolean;
   message: string;
@@ -107,7 +104,6 @@ export const testApiConnection = async (): Promise<{
   const url = `${baseURL}/health`;
 
   try {
-    // Use the apiClient (axios instance) instead of fetch
     const response = await apiClient.get('/health', {
       timeout: 5000,
     });

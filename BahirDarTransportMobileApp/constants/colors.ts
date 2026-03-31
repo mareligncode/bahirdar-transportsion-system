@@ -4,17 +4,15 @@ export const COLORS = {
   primaryLight: '#60a5fa',
   secondary: '#10b981',
   accent: '#f59e0b',
-  
-  // Status colors
+
   success: '#10b981',
   danger: '#ef4444',
   error: "#ef4444",
   warning: '#f59e0b',
   info: '#3b82f6',
-  soldOut: '#6b7280', 
+  soldOut: '#6b7280',
   available: '#10b981',
 
-  // Status background colors (ADD THESE)
   successLight: '#d1fae5',
   dangerLight: '#fee2e2',
   warningLight: '#fef3c7',
@@ -25,12 +23,12 @@ export const COLORS = {
     availableBorder: '#d1d5db',
     selected: '#10b981',
     selectedBorder: '#059669',
-    booked: '#fecaca', // Light red color for fade red effect
-    bookedBorder: '#f87171', // Darker red border for visibility
+    booked: '#fecaca',
+    bookedBorder: '#f87171',
     driver: '#fef3c7',
     driverBorder: '#f59e0b',
   },
-  
+
   tripStatus: {
     scheduled: '#10b981',
     boarding: '#3b82f6',
@@ -38,8 +36,7 @@ export const COLORS = {
     arrived: '#6b7280',
     cancelled: '#ef4444',
   },
-  
-  // Neutral colors
+
   white: '#ffffff',
   black: '#000000',
   gray50: '#f9fafb',
@@ -52,24 +49,20 @@ export const COLORS = {
   gray700: '#374151',
   gray800: '#1f2937',
   gray900: '#111827',
-  
-  // Backgrounds
+
   background: '#f9fafb',
   cardBackground: '#ffffff',
   inputBackground: '#f9fafb',
-  
-  // Text colors
+
   textPrimary: '#111827',
   textSecondary: '#6b7280',
   textTertiary: '#9ca3af',
   textInverse: '#ffffff',
-  
-  // Borders
+
   border: '#e5e7eb',
   borderLight: '#f3f4f6',
   borderDark: '#d1d5db',
-  
-  // Booking specific
+
   booking: {
     pending: '#fef3c7',
     pendingText: '#b45309',
@@ -80,8 +73,7 @@ export const COLORS = {
     completed: '#dbeafe',
     completedText: '#1e40af',
   },
-  
-  // Farewell/Empty states
+
   overlay: 'rgba(0, 0, 0, 0.5)',
   highlight: '#fef3c7',
 } as const;
@@ -91,9 +83,6 @@ export type SeatColorKey = keyof typeof COLORS.seat;
 export type TripStatusColorKey = keyof typeof COLORS.tripStatus;
 export type BookingStatusColorKey = keyof typeof COLORS.booking;
 
-/**
- * Get seat status colors
- */
 export const getSeatColors = (status: 'available' | 'selected' | 'booked' | 'driver') => {
   switch (status) {
     case 'available':
@@ -123,9 +112,6 @@ export const getSeatColors = (status: 'available' | 'selected' | 'booked' | 'dri
   }
 };
 
-/**
- * Get booking status colors
- */
 export const getBookingStatusColors = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'pending':
@@ -156,40 +142,37 @@ export const getBookingStatusColors = (status: string) => {
   }
 };
 
-/**
- * Get trip status colors - ✅ FIXED VERSION
- */
 export const getTripStatusColors = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'scheduled':
-      return { 
-        bg: COLORS.successLight || '#d1fae5', 
-        text: COLORS.tripStatus.scheduled 
+      return {
+        bg: COLORS.successLight || '#d1fae5',
+        text: COLORS.tripStatus.scheduled
       };
     case 'boarding':
-      return { 
-        bg: COLORS.infoLight || '#dbeafe', 
-        text: COLORS.tripStatus.boarding 
+      return {
+        bg: COLORS.infoLight || '#dbeafe',
+        text: COLORS.tripStatus.boarding
       };
     case 'departed':
-      return { 
-        bg: COLORS.warningLight || '#fef3c7', 
-        text: COLORS.tripStatus.departed 
+      return {
+        bg: COLORS.warningLight || '#fef3c7',
+        text: COLORS.tripStatus.departed
       };
     case 'arrived':
-      return { 
-        bg: COLORS.gray100, 
-        text: COLORS.tripStatus.arrived 
+      return {
+        bg: COLORS.gray100,
+        text: COLORS.tripStatus.arrived
       };
     case 'cancelled':
-      return { 
-        bg: COLORS.dangerLight || '#fee2e2', 
-        text: COLORS.tripStatus.cancelled 
+      return {
+        bg: COLORS.dangerLight || '#fee2e2',
+        text: COLORS.tripStatus.cancelled
       };
     default:
-      return { 
-        bg: COLORS.gray100, 
-        text: COLORS.gray700 
+      return {
+        bg: COLORS.gray100,
+        text: COLORS.gray700
       };
   }
 };

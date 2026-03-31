@@ -19,7 +19,6 @@ export function Badge({
   className = '',
   textClassName = '',
 }: BadgeProps) {
-  // Get variant classes
   const getVariantClasses = () => {
     switch (variant) {
       case 'secondary':
@@ -56,7 +55,6 @@ export function Badge({
     }
   };
 
-  // Get size classes
   const getSizeClasses = () => {
     switch (size) {
       case 'small':
@@ -85,7 +83,7 @@ export function Badge({
         ${className}
       `}
     >
-      <AppText 
+      <AppText
         variant={getTextVariant()}
         weight="500"
         className={`${getTextVariantClasses()} ${textClassName}`}

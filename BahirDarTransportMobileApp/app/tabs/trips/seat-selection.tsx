@@ -1,4 +1,3 @@
-// app/(screens)/trips/seat-selection.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,

@@ -59,18 +59,16 @@ export default function ForgotPassword() {
     setSubmittedEmail(data.email);
 
     try {
-
-      forgotPasswordFn(data.email)
-        .then(result => {
-        })
-        .catch(error => {
+      const result = await forgotPasswordFn(data.email);
+      if (result.success || result.message) {
+        // According to the backend response, even if the email doesn't exist, it returns success
+        router.push({
+          pathname: '/auth/reset-password',
+          params: { email: data.email }
         });
-
-      setSubmitted(true);
-
+      }
     } catch (error: any) {
-
-      setSubmitted(true);
+      Alert.alert(translate('error'), error.message || translate('something_went_wrong'));
     } finally {
       setLoading(false);
     }

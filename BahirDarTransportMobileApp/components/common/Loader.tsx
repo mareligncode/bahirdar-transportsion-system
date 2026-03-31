@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp/components/common/Loader.tsx
 import React from 'react';
 import { View, ActivityIndicator, Modal } from 'react-native';
 import { AppText } from './AppText';
@@ -25,7 +24,6 @@ export function Loader({
   const { isDark } = useTheme();
   const displayMessage = message || translate('loading' as any);
 
-  // Full screen loader with overlay
   if (fullScreen) {
     return (
       <Modal
@@ -50,7 +48,6 @@ export function Loader({
     );
   }
 
-  // Inline loader (for inside screens)
   return (
     <View className={`flex-1 justify-center items-center ${isDark ? 'bg-gray-900' : 'bg-white'} min-h-[200px]`}>
       <ActivityIndicator size={size} color={color} />
@@ -63,7 +60,6 @@ export function Loader({
   );
 }
 
-// Alternative: Simple spinner without text
 export function Spinner({
   size = 'large',
   color = '#3B82F6',
@@ -80,7 +76,6 @@ export function Spinner({
   );
 }
 
-// Page loader with custom styling
 export function PageLoader({ message }: { message?: string }) {
   const { translate } = useTranslation();
   const { isDark } = useTheme();
@@ -95,7 +90,6 @@ export function PageLoader({ message }: { message?: string }) {
   );
 }
 
-// Content loader (for lazy loading sections)
 export function ContentLoader({ message }: { message?: string }) {
   const { translate } = useTranslation();
   const displayMessage = message || translate('loading_content' as any);

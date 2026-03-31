@@ -25,6 +25,7 @@ import { Button } from '@/components/common/Button';
 import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react-native';
 
 const resetPasswordSchema = z.object({
+  code: z.string().min(6, 'field_required_error'),
   password: z.string()
     .min(6, 'pass_req_min_6')
     .regex(/[a-z]/, 'lowercase_req')
@@ -44,10 +45,8 @@ export default function ResetPassword() {
   const insets = useSafeAreaInsets();
   const { isDark, colors } = useTheme();
   const params = useLocalSearchParams();
-  const [token, setToken] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [validatingToken, setValidatingToken] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -61,6 +60,7 @@ export default function ResetPassword() {
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
+      code: '',
       password: '',
       confirmPassword: '',
     },
@@ -69,52 +69,18 @@ export default function ResetPassword() {
   const password = watch('password');
 
   useEffect(() => {
-    const extractToken = () => {
+    const extractEmail = () => {
       console.log('🔐 Reset password params:', params);
 
-      if (params.token) {
-        setToken(params.token as string);
+      if (params.email) {
+        setEmail(params.email as string);
       } else {
-        setTokenValid(false);
-        setValidatingToken(false);
-        setError(translate('invalid_link'));
+        setError(translate('email_required'));
       }
     };
 
-    extractToken();
-  }, [params]);
-  useEffect(() => {
-    const validateToken = async () => {
-      if (!token) {
-        setTokenValid(false);
-        setValidatingToken(false);
-        return;
-      }
-
-      try {
-        const result = await authAPI.validateResetToken(token);
-
-        if (result.valid) {
-          setTokenValid(true);
-          setError('');
-        } else {
-          setTokenValid(false);
-          setError(result.message || translate('invalid_link'));
-        }
-      } catch (err: any) {
-        console.error('❌ Token validation error:', err);
-        setTokenValid(false);
-        const errorMessage = err.message || translate('val_token_failed');
-        setError(errorMessage);
-      } finally {
-        setValidatingToken(false);
-      }
-    };
-
-    if (token) {
-      validateToken();
-    }
-  }, [token]);
+    extractEmail();
+  }, [params, translate]);
 
   const handleResetPassword = async (data: ResetPasswordFormData) => {
     setError('');
@@ -122,11 +88,11 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      if (!token) {
-        throw new Error('Reset token is missing');
+      if (!email) {
+        throw new Error('Email is missing');
       }
 
-      const result = await authAPI.resetPassword(token, data.password);
+      const result = await authAPI.resetPassword(email, data.code, data.password);
 
       if (result.success) {
         setSuccess(result.message || translate('reset_success'));
@@ -179,19 +145,7 @@ export default function ResetPassword() {
 
   const strength = getPasswordStrength(password || '');
 
-  if (validatingToken) {
-    return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
-        <View className="flex-1 items-center justify-center">
-          <View className="items-center">
-             <View className={`w-16 h-16 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full mb-4 animate-pulse`} />
-            <AppText className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-base`}>{translate('validating_token')}</AppText>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  if (!tokenValid) {
+  if (!email) {
     return (
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
@@ -200,10 +154,10 @@ export default function ResetPassword() {
               <AlertCircle size={40} color="#DC2626" />
             </View>
             <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
-              {translate('invalid_link')}
+              {translate('error')}
             </AppText>
             <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center mb-6`}>
-              {error || translate('invalid_link_desc')}
+              {error || translate('email_required')}
             </AppText>
              <Button
               title={translate('request_new_link')}
@@ -298,6 +252,31 @@ export default function ResetPassword() {
               ) : null}
 
               <View className="space-y-6">
+                <Controller
+                  name="code"
+                  control={control}
+                  render={({ field: { onChange, value, onBlur } }) => (
+                    <View>
+                       <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                        {translate('verification_code')}
+                      </Text>
+                       <Input
+                        placeholder={translate('6_digit_code')}
+                        value={value}
+                        onChangeText={(text) => {
+                          onChange(text);
+                          setError('');
+                        }}
+                        onBlur={onBlur}
+                        error={errors.code?.message ? translate(errors.code.message as any) : undefined}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        className="bg-white border border-gray-300"
+                        editable={!loading}
+                      />
+                    </View>
+                  )}
+                />
                 <Controller
                   name="password"
                   control={control}

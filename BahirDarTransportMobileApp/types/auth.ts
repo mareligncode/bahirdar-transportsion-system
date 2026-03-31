@@ -1,23 +1,21 @@
 
-// ==================== USER TYPES ====================
 export interface User {
   _id: string;
   id?: string;
   email: string;
   firstName: string;
   lastName: string;
-  fullName?: string; // Added for compatibility
+  fullName?: string;
   phoneNumber: string;
   stationId?: string;
   role: 'passenger' | 'driver' | 'station_admin' | 'super_admin' | string;
   isActive: boolean;
   profileImage?: string;
-  emergencyContact?: string; // Added
+  emergencyContact?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// ==================== AUTH CREDENTIAL TYPES ====================
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -26,13 +24,12 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   email: string;
   password: string;
-  name: string; // Backend expects first/last name separately
+  name: string;
   phone: string;
   emergencyContact?: string;
   termsAccepted: boolean;
 }
 
-// ==================== FORM DATA TYPES ====================
 export interface LoginFormData {
   email: string;
   password: string;
@@ -67,8 +64,6 @@ export interface UpdateProfileFormData {
   newPassword?: string;
   confirmNewPassword?: string;
 }
-
-// ==================== VALIDATION ERROR TYPES ====================
 export interface ValidationErrors {
   name?: string;
   email?: string;
@@ -92,18 +87,15 @@ export interface ZodError {
   message: string;
 }
 
-// ==================== API REQUEST TYPES ====================
 export interface LoginData {
   email: string;
   password: string;
 }
-
-// BahirDarTransportMobileApp\types\auth.ts - Update
 export interface RegisterApiRequest {
   email: string;
   password: string;
-  fullName: string; // Changed from 'name'
-  phoneNumber: string; // Changed from 'phone'
+  fullName: string;
+  phoneNumber: string;
   role?: 'passenger';
   emergencyContact?: string;
 }
@@ -111,8 +103,8 @@ export interface RegisterApiRequest {
 export interface RegisterBackendData {
   email: string;
   password: string;
-  fullName: string; // Changed
-  phoneNumber: string; // Changed
+  fullName: string;
+  phoneNumber: string;
   role?: string;
   emergencyContact?: string;
 }
@@ -125,8 +117,6 @@ export interface ResetPasswordData {
   token: string;
   newPassword: string;
 }
-
-// ==================== API RESPONSE TYPES ====================
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -158,7 +148,6 @@ export interface LogoutResponse extends ApiResponse {
   timestamp: string;
 }
 
-// ==================== API ERROR TYPES ====================
 export interface ApiError {
   message: string;
   status?: number;
@@ -166,7 +155,6 @@ export interface ApiError {
   code?: string;
 }
 
-// ==================== PAGINATION TYPES ====================
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -186,7 +174,6 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// ==================== STORE/AUTH STATE TYPES ====================
 export interface AuthState {
   user: User | null;
   token: string | null;
@@ -197,7 +184,6 @@ export interface AuthState {
   lastLogin: string | null;
 }
 
-// ==================== MUTATION RESULT TYPES ====================
 export interface AuthMutationResult {
   success: boolean;
   message: string;
@@ -206,7 +192,6 @@ export interface AuthMutationResult {
   token?: string;
 }
 
-// ==================== SECURITY TYPES ====================
 export type UserRole = 'passenger';
 
 export interface TokenData {
@@ -224,7 +209,6 @@ export interface JWTDecoded {
   exp: number;
 }
 
-// ==================== SESSION TYPES ====================
 export interface SessionData {
   user: User;
   token: string;
@@ -243,16 +227,13 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
-// ==================== HOOK RETURN TYPES ====================
 export interface UseAuthReturn {
-  // State
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
 
-  // Actions
   register: (data: RegisterFormData) => Promise<AuthMutationResult>;
   login: (credentials: LoginCredentials) => Promise<AuthMutationResult>;
   logout: () => Promise<void>;
@@ -260,7 +241,6 @@ export interface UseAuthReturn {
   checkAuth: () => Promise<boolean>;
   clearError: () => void;
 
-  // Mutation status
   isRegistering: boolean;
   isLoggingIn: boolean;
   isForgotPassword: boolean;

@@ -1,4 +1,3 @@
-// components/booking/BookingCard.tsx
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { AppText } from '../common/AppText';
@@ -91,7 +90,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         </View>
       </View>
 
-      {/* Trip Details */}
       <View className="p-4">
         {/* Time and Route */}
         <View className="flex-row justify-between mb-3">
@@ -124,7 +122,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </View>
         </View>
 
-        {/* Seats and Price */}
         <View className="flex-row justify-between items-center mb-3">
           <View className="flex-row items-center flex-wrap flex-1">
             <User size={14} color={COLORS.gray500} />
@@ -166,7 +163,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </View>
         </View>
 
-        {/* Vehicle Info */}
         <View className="flex-row items-center mb-4">
           <MapPin size={14} color={COLORS.gray500} />
           <AppText variant="caption" color="#4b5563" className="ml-1">
@@ -174,7 +170,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </AppText>
         </View>
 
-        {/* Actions */}
         <View className="flex-row pt-3 border-t border-gray-100">
           <TouchableOpacity
             onPress={onViewTicket}
@@ -198,7 +193,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           )}
         </View>
 
-        {/* Special Requests if any */}
         {booking.specialRequests && (
           <View className="mt-3 pt-3 border-t border-gray-100">
             <AppText variant="caption" color="#6b7280">Special Requests:</AppText>

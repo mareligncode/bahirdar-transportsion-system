@@ -1,4 +1,3 @@
-// components/booking/SeatMap.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
@@ -27,7 +26,7 @@ interface SeatMapProps {
   selectedSeats: number[];
   onSeatSelect: (seatNumber: number) => void;
   maxSelectable?: number;
-  userBookedSeats?: string[]; // User's own booked seats
+  userBookedSeats?: string[];
 }
 
 export default function SeatMap({
@@ -58,10 +57,9 @@ export default function SeatMap({
     return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 40;
   }, [trip]);
 
-  // Fetch booked seats from the server
   const fetchBookedSeats = useCallback(async () => {
     if (!trip?._id) return;
-    
+
     setLoading(true);
     try {
       const bookedSeatNumbers = await bookingsApi.getBookedSeatsForTrip(trip._id);
@@ -74,32 +72,28 @@ export default function SeatMap({
     }
   }, [trip?._id]);
 
-  // Initial fetch and periodic refresh
   useEffect(() => {
     fetchBookedSeats();
-    
+
     const interval = setInterval(fetchBookedSeats, 15000);
     return () => clearInterval(interval);
   }, [trip?._id]);
 
   const getSeatStatus = useCallback((seatId: string): 'available' | 'selected' | 'booked' => {
     const seatNum = parseInt(seatId, 10);
-    
-    // Check if seat is booked by ANYONE (from the API)
+
     if (bookedSeats.has(seatNum)) {
       return 'booked';
     }
-    
-    // Also check user's own booked seats (as backup)
+
     if (userBookedSeats.includes(seatId)) {
       return 'booked';
     }
-    
-    // If it's selected in current session
+
     if (selectedSeatsStr.includes(seatId)) {
       return 'selected';
     }
-    
+
     return 'available';
   }, [bookedSeats, userBookedSeats, selectedSeatsStr]);
 
@@ -117,7 +111,6 @@ export default function SeatMap({
         const id = String(seatNum + col);
         const status = getSeatStatus(id);
 
-        // Log first few seats for debugging
         if (seatNum <= 4 && col < 4) {
           console.log(`🪑 Seat ${id}: ${status}${status === 'booked' ? ' (BOOKED)' : ''}`);
         }
@@ -297,13 +290,12 @@ export default function SeatMap({
                       disabled={seat.status === 'booked' || isFullyBooked}
                       layout={Layout.springify()}
                       style={{ backgroundColor: style.bg, borderColor: style.border }}
-                      className={`w-14 h-14 mx-1 rounded-xl items-center justify-center border-2 ${
-                        isFullyBooked && seat.status === 'available' ? 'opacity-40' : ''
-                      }`}
+                      className={`w-14 h-14 mx-1 rounded-xl items-center justify-center border-2 ${isFullyBooked && seat.status === 'available' ? 'opacity-40' : ''
+                        }`}
                     >
                       <Armchair size={20} color={style.icon as any} />
-                      <AppText 
-                        variant="caption" 
+                      <AppText
+                        variant="caption"
                         weight="semibold"
                         color={style.text as any}
                         className="mt-1"
@@ -327,13 +319,12 @@ export default function SeatMap({
                       disabled={seat.status === 'booked' || isFullyBooked}
                       layout={Layout.springify()}
                       style={{ backgroundColor: style.bg, borderColor: style.border }}
-                      className={`w-14 h-14 mx-1 rounded-xl items-center justify-center border-2 ${
-                        isFullyBooked && seat.status === 'available' ? 'opacity-40' : ''
-                      }`}
+                      className={`w-14 h-14 mx-1 rounded-xl items-center justify-center border-2 ${isFullyBooked && seat.status === 'available' ? 'opacity-40' : ''
+                        }`}
                     >
                       <Armchair size={20} color={style.icon as any} />
-                      <AppText 
-                        variant="caption" 
+                      <AppText
+                        variant="caption"
                         weight="semibold"
                         color={style.text as any}
                         className="mt-1"

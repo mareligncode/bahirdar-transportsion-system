@@ -1,4 +1,3 @@
-// BahirDarTransportMobileApp/store/notificationStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,7 +50,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
           const filtered = unreadOnly ? items.filter((n: any) => !n.is_read) : items;
           const unreadRes = await notificationsApi.getUnreadCount();
           const unreadCount = unreadRes?.data?.unreadCount ?? filtered.filter((n: any) => !n.is_read).length;
-          
+
           set({
             notifications: filtered,
             unreadCount,
@@ -64,7 +63,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         }
       },
 
-      // New method to refresh notifications on login
       refreshOnLogin: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -72,7 +70,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
           const items = res.mobile || [];
           const unreadRes = await notificationsApi.getUnreadCount();
           const unreadCount = unreadRes?.data?.unreadCount ?? items.filter((n: any) => !n.is_read).length;
-          
+
           set({
             notifications: items,
             unreadCount,
@@ -138,7 +136,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         try {
           const currentPreferences = get().preferences;
           const updatedPreferences = { ...currentPreferences, ...preferences };
-          
+
           set({ preferences: updatedPreferences });
         } catch (error: any) {
           console.error('Error updating notification preferences:', error);
@@ -148,7 +146,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       addNotification: (notification: Notification) => {
         const { notifications, unreadCount } = get();
         const newUnreadCount = (notification as any).is_read ? unreadCount : unreadCount + 1;
-        
+
         set({
           notifications: [notification, ...notifications],
           unreadCount: newUnreadCount,
@@ -176,7 +174,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   )
 );
 
-// ✅ Export selectors for better performance
 export const useNotifications = () => useNotificationStore((state) => state.notifications);
 export const useUnreadCount = () => useNotificationStore((state) => state.unreadCount);
 export const useNotificationPreferences = () => useNotificationStore((state) => state.preferences);
