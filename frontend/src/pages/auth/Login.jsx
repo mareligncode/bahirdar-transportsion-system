@@ -73,18 +73,18 @@ export default function Login() {
   };
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto p-8 sm:p-10 bg-white dark:bg-gray-800 rounded-2xl sm:shadow-xl sm:dark:shadow-gray-900/50 border border-gray-100 sm:border-0 dark:border-gray-700 transition-all duration-300">
       <div className="text-center mb-8">
-        <div className="mb-4">
-          <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+        <div className="mb-6">
+          <div className="w-20 h-20 bg-primary-50 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-primary-50/50 dark:ring-primary-900/10">
+            <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-primary-500/30">
               B
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
             {t('welcomeBack')}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-500 dark:text-gray-400 font-medium">
             {t('signInToSystem')}
           </p>
         </div>
@@ -92,21 +92,21 @@ export default function Login() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-start gap-3">
+          <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium">{t('loginFailed')}</p>
-              <p className="text-sm mt-1">{error}</p>
+              <p className="font-semibold text-sm">{t('loginFailed')}</p>
+              <p className="text-sm mt-1 opacity-90">{error}</p>
             </div>
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
             {t('emailAddress')}
           </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className="relative group">
+            <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 dark:group-focus-within:text-primary-400 transition-colors pointer-events-none" />
             <input
               type="email"
               value={email}
@@ -114,7 +114,7 @@ export default function Login() {
                 setEmail(e.target.value);
                 setError('');
               }}
-              className="input-field pl-10"
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-500 transition-all placeholder-gray-400 dark:placeholder-gray-500"
               placeholder={t('emailPlaceholder')}
               required
               disabled={isLoading}
@@ -122,12 +122,20 @@ export default function Login() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            {t('password')}
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {t('password')}
+            </label>
+            <Link 
+              to="/forgot-password" 
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition-colors"
+            >
+              {t('forgotPassword')}
+            </Link>
+          </div>
+          <div className="relative group">
+            <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 dark:group-focus-within:text-primary-400 transition-colors pointer-events-none" />
             <input
               type={showPassword ? "text" : "password"}
               value={password}
@@ -135,7 +143,7 @@ export default function Login() {
                 setPassword(e.target.value);
                 setError('');
               }}
-              className="input-field pl-10 pr-10"
+              className="w-full pl-11 pr-12 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-500 transition-all placeholder-gray-400 dark:placeholder-gray-500"
               placeholder={t('passwordPlaceholder')}
               required
               disabled={isLoading}
@@ -143,7 +151,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              className="absolute right-3.5 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-colors"
               disabled={isLoading}
               aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             >
@@ -156,21 +164,22 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="text-right">
-          <Link 
-            to="/forgot-password" 
-            className="text-sm text-primary-600 hover:text-primary-800 font-medium"
-          >
-            {t('forgotPassword')}
-          </Link>
-        </div>
-
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50"
+          className="w-full mt-8 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white py-3.5 px-4 rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
         >
-          {isLoading ? t('signingIn') : t('signIn')}
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{t('signingIn')}</span>
+            </div>
+          ) : (
+            <span>{t('signIn')}</span>
+          )}
         </button>
       </form>
     </div>
