@@ -27,6 +27,7 @@
     "axios": "^1.13.4",
     "date-fns": "^4.1.0",
     "expo": "~54.0.33",
+    "expo-build-properties": "~1.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.20",

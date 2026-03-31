@@ -131,7 +131,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to save QR codes.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save QR codes to your photo library."
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "scheme": "bahirdartransport",
     "extra": {
