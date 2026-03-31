@@ -34,26 +34,22 @@ const SeatSelection = ({
   onProceedToPayment,
   onBack,
   loading = false,
-  maxSeats = 8
+  maxSeats = 8,
+  bookedSeats = [] // Add prop to receive actual booked seats from parent
 }) => {
   const { t } = useTranslation();
   const [localSelectedSeats, setLocalSelectedSeats] = useState(selectedSeats || []);
   const [error, setError] = useState('');
 
-  // Generate seats with numbers (1 to totalSeats)
+  // Generate seats with numbers and actual booked status
   const generateSeats = useCallback(() => {
     if (!trip) return [];
     
     const totalSeats = trip.totalSeats || 40;
-    const availableSeats = trip.availableSeats || 0;
     const rows = Math.ceil(totalSeats / 4);
     
-    // Create a set of booked seats (seats that are not available)
-    const bookedSeats = new Set();
-    // For demo: assume first (totalSeats - availableSeats) seats are booked
-    for (let i = 1; i <= totalSeats - availableSeats; i++) {
-      bookedSeats.add(i);
-    }
+    // Create a Set of booked seat numbers from the prop (actual booked seats from backend)
+    const bookedSeatsSet = new Set(bookedSeats || []);
     
     const seats = [];
     for (let row = 1; row <= rows; row++) {
@@ -65,15 +61,15 @@ const SeatSelection = ({
             number: seatNumber,
             row: row,
             col: col,
-            label: seatNumber.toString(), // Just use the number as label
-            isBooked: bookedSeats.has(seatNumber),
-            isAvailable: !bookedSeats.has(seatNumber)
+            label: seatNumber.toString(),
+            isBooked: bookedSeatsSet.has(seatNumber),
+            isAvailable: !bookedSeatsSet.has(seatNumber)
           });
         }
       }
     }
     return seats;
-  }, [trip]);
+  }, [trip, bookedSeats]);
 
   const seats = useMemo(() => generateSeats(), [generateSeats]);
 
@@ -141,6 +137,9 @@ const SeatSelection = ({
     onProceedToPayment();
   };
 
+  // Calculate available seats count from actual booked seats
+  const availableSeatsCount = seats.filter(seat => !seat.isBooked).length;
+
   return (
     <Box sx={{ mt: 2 }}>
       {/* Back Button */}
@@ -185,7 +184,7 @@ const SeatSelection = ({
               }}>
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                    {t('available_seats')}: {trip?.availableSeats || 0}
+                    {t('available_seats')}: {availableSeatsCount}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {t('select_up_to', { count: maxSeats })} seats

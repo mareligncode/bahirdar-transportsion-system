@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   Container,
@@ -51,7 +51,7 @@ export default function BookTrip() {
   const location = useLocation();
   const { tripId } = useParams();
   const theme = useTheme();
-  const queryParams = new URLSearchParams(location.search);
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   // State
   const [activeStep, setActiveStep] = useState(0);
@@ -64,7 +64,8 @@ export default function BookTrip() {
   const [availableTrips, setAvailableTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
-  const [createdBookings, setCreatedBookings] = useState([]);
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [bookedSeats, setBookedSeats] = useState([]); // NEW: State for booked seats
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -83,6 +84,13 @@ export default function BookTrip() {
       fetchTripDetails(tripId);
     }
   }, [tripId]);
+
+  // NEW: Fetch booked seats when trip is selected
+  useEffect(() => {
+    if (selectedTrip?._id) {
+      fetchBookedSeats(selectedTrip._id);
+    }
+  }, [selectedTrip]);
 
   // Check authentication
   useEffect(() => {
@@ -111,7 +119,7 @@ export default function BookTrip() {
       const trip = response.data?.data || response.data;
       if (trip) {
         setSelectedTrip(trip);
-        setActiveStep(2); // Go to seat selection
+        setActiveStep(2);
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -119,6 +127,23 @@ export default function BookTrip() {
       navigate('/passenger/book-trip');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Fetch booked seats for the selected trip
+  const fetchBookedSeats = async (tripId) => {
+    try {
+      console.log('🔍 Fetching booked seats for trip:', tripId);
+      const response = await api.get(`/api/booking/trip/${tripId}/booked-seats`);
+      
+      // The API returns an array of booked seat numbers
+      const bookedSeatsArray = response.data?.data || [];
+      console.log('📊 Booked seats from backend:', bookedSeatsArray);
+      setBookedSeats(bookedSeatsArray);
+    } catch (error) {
+      console.error('Error fetching booked seats:', error);
+      // Don't show error to user, just set empty array
+      setBookedSeats([]);
     }
   };
 
@@ -132,11 +157,23 @@ export default function BookTrip() {
     setError(null);
 
     try {
+      // Handle date that might already be a string (YYYY-MM-DD) or a Date object
+      let formattedDate;
+      if (typeof searchParams.date === 'string') {
+        formattedDate = searchParams.date;
+      } else if (searchParams.date instanceof Date) {
+        formattedDate = searchParams.date.toISOString().split('T')[0];
+      } else {
+        formattedDate = String(searchParams.date);
+      }
+
       const params = {
         origin: searchParams.origin,
         destination: searchParams.destination,
-        date: searchParams.date.toISOString().split('T')[0]
+        date: formattedDate
       };
+
+      console.log('🔍 Searching trips with params:', params);
 
       const response = await api.get('/api/trip/search', { params });
 
@@ -147,17 +184,23 @@ export default function BookTrip() {
         trips = response.data;
       }
 
+      console.log('🎫 Found trips:', trips.length);
+
       setAvailableTrips(trips);
 
       if (trips.length === 0) {
-        toast.info(t('No trips found for your search criteria'));
+        toast.success(t('No trips found for your search criteria'), {
+          icon: 'ℹ️',
+          duration: 4000
+        });
       } else {
         toast.success(t('Found {{count}} trips', { count: trips.length }));
       }
       
-      setActiveStep(1); // Move to results step
+      setActiveStep(1);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('❌ Search error:', error);
+      console.error('Error response:', error.response?.data);
       const errorMessage = error.response?.data?.message || t('Failed to search trips');
       setError(errorMessage);
       toast.error(errorMessage);
@@ -173,12 +216,14 @@ export default function BookTrip() {
     }
     setSelectedTrip(trip);
     setSelectedSeats([]);
-    setActiveStep(2); // Move to seat selection
+    setCreatedBooking(null);
+    setBookedSeats([]); // Reset booked seats when selecting new trip
+    setActiveStep(2);
     navigate(`/passenger/book-trip/${trip._id}`, { replace: true });
   }, [t, navigate]);
 
   const handleSeatSelection = useCallback((seats) => {
-    console.log('Selected seats (numbers):', seats); // Debug log
+    console.log('Selected seats (numbers):', seats);
     setSelectedSeats(seats);
   }, []);
 
@@ -198,46 +243,57 @@ export default function BookTrip() {
     setPaymentDialogOpen(true);
 
     try {
-      console.log('Creating bookings for seats:', selectedSeats); // Debug log
+      console.log('Creating booking for seats:', selectedSeats);
       
-      // Create bookings for each selected seat
-      const bookingPromises = selectedSeats.map(async (seatNumber) => {
-        // Ensure seatNumber is a number
-        const seatNum = parseInt(seatNumber, 10);
-        
+      const passengerDetails = {
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        emergencyContact: user.emergencyContact || ''
+      };
+
+      let bookingResponse;
+      
+      if (selectedSeats.length === 1) {
         const bookingData = {
           tripID: selectedTrip._id,
-          seatNumber: seatNum, // Now guaranteed to be a number
-          passengerDetails: {
-            fullName: user.fullName,
-            phoneNumber: user.phoneNumber,
-            email: user.email,
-            emergencyContact: user.emergencyContact || ''
-          }
+          seatNumber: parseInt(selectedSeats[0], 10),
+          passengerDetails
         };
-
-        console.log('Sending booking data:', bookingData); // Debug log
-
+        
+        console.log('Sending single seat booking data:', bookingData);
         const response = await api.post('/api/booking', bookingData);
-        return response.data?.data || response.data;
-      });
-
-      const bookings = await Promise.all(bookingPromises);
-      
-      console.log('Bookings created:', bookings); // Debug log
-      setCreatedBookings(bookings);
-      toast.success(t('{{count}} seat(s) booked successfully!', { count: selectedSeats.length }));
-
-      // If only one booking, proceed directly to payment
-      if (bookings.length === 1) {
-        setActiveStep(3);
+        bookingResponse = response.data?.data;
+        
       } else {
-        // For multiple bookings, show payment step
-        setActiveStep(3);
+        const seatsPayload = selectedSeats.map(seatNumber => ({
+          seatNumber: parseInt(seatNumber, 10)
+        }));
+        
+        const batchData = {
+          tripID: selectedTrip._id,
+          seats: seatsPayload,
+          passengerDetails
+        };
+        
+        console.log('Sending batch booking data:', batchData);
+        const response = await api.post('/api/booking/batch', batchData);
+        
+        const bookingArray = response.data?.data || [];
+        bookingResponse = bookingArray[0];
       }
+      
+      console.log('Booking created:', bookingResponse);
+      setCreatedBooking(bookingResponse);
+      
+      const seatCount = selectedSeats.length;
+      toast.success(t('{{count}} seat(s) booked successfully!', { count: seatCount }));
+      
+      setActiveStep(3);
+      
     } catch (error) {
       console.error('Booking error:', error);
-      console.error('Error details:', error.response?.data); // Debug log
+      console.error('Error details:', error.response?.data);
       
       let errorMessage = t('Failed to create booking');
       
@@ -259,14 +315,12 @@ export default function BookTrip() {
     setPaymentStatus('success');
     toast.success(t('Payment completed successfully!'));
     
-    // Get the first booking ID to show in confirmation
-    const bookingId = createdBookings[0]?._id;
+    const bookingId = createdBooking?._id;
     
-    // Redirect to booking confirmation page
     setTimeout(() => {
       navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
     }, 1500);
-  }, [navigate, createdBookings]);
+  }, [navigate, createdBooking]);
 
   const handlePaymentError = useCallback((error) => {
     console.error('Payment error in BookTrip:', error);
@@ -282,7 +336,8 @@ export default function BookTrip() {
       setActiveStep(1);
       setSelectedTrip(null);
       setSelectedSeats([]);
-      setCreatedBookings([]);
+      setCreatedBooking(null);
+      setBookedSeats([]);
       navigate('/passenger/book-trip', { replace: true });
     } else if (activeStep === 3) {
       setActiveStep(2);
@@ -291,32 +346,50 @@ export default function BookTrip() {
     }
   }, [activeStep, navigate]);
 
-  const handleNewSearch = () => {
+  const handleNewSearch = useCallback(() => {
     setActiveStep(0);
     setSelectedTrip(null);
     setSelectedSeats([]);
-    setCreatedBookings([]);
+    setCreatedBooking(null);
+    setBookedSeats([]);
     setAvailableTrips([]);
     setSearchData({ origin: '', destination: '', date: null });
     setPaymentStatus(null);
     navigate('/passenger/book-trip', { replace: true });
-  };
+  }, [navigate]);
 
-  const handleClosePaymentDialog = () => {
+  const handleClosePaymentDialog = useCallback(() => {
     setPaymentDialogOpen(false);
     if (paymentStatus === 'success') {
-      const bookingId = createdBookings[0]?._id;
+      const bookingId = createdBooking?._id;
       navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
     } else {
       setPaymentStatus(null);
     }
-  };
+  }, [navigate, createdBooking, paymentStatus]);
 
-  const getStepContent = (step) => {
-    switch (step) {
+  const getSeatNumbers = useCallback((booking) => {
+    if (booking?.seatNumbers && Array.isArray(booking.seatNumbers) && booking.seatNumbers.length > 0) {
+      return booking.seatNumbers;
+    }
+    if (booking?.seatNumber) {
+      return [booking.seatNumber];
+    }
+    return [];
+  }, []);
+
+  const getTotalAmount = useCallback(() => {
+    if (!selectedTrip) return 0;
+    return selectedTrip.price * selectedSeats.length;
+  }, [selectedTrip, selectedSeats]);
+
+  // Memoized step content to prevent infinite re-renders
+  const stepContent = useMemo(() => {
+    switch (activeStep) {
       case 0:
         return (
           <TripSearch
+            key="trip-search"
             stations={stations}
             initialData={searchData}
             onSearch={handleSearch}
@@ -327,6 +400,7 @@ export default function BookTrip() {
       case 1:
         return (
           <TripResults
+            key="trip-results"
             trips={availableTrips}
             searchData={searchData}
             stations={stations}
@@ -339,6 +413,7 @@ export default function BookTrip() {
       case 2:
         return selectedTrip ? (
           <SeatSelection
+            key="seat-selection"
             trip={selectedTrip}
             selectedSeats={selectedSeats}
             onSeatSelect={handleSeatSelection}
@@ -346,23 +421,25 @@ export default function BookTrip() {
             onBack={handleBack}
             loading={bookingLoading}
             maxSeats={8}
+            bookedSeats={bookedSeats} // Pass the booked seats to SeatSelection
           />
         ) : null;
       
-      case 3:
-        const totalAmount = selectedTrip?.price * selectedSeats.length;
-        const firstBookingId = createdBookings[0]?._id;
+      case 3: {
+        const totalAmount = getTotalAmount();
+        const bookingId = createdBooking?._id;
+        const seatNumbers = createdBooking ? getSeatNumbers(createdBooking) : selectedSeats;
+        const seatCount = seatNumbers.length;
 
         return (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Paper key="payment-step" sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
               {t('Complete Payment')}
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              {t('You have {{count}} booking(s) to pay for.', { count: selectedSeats.length })}
+              {t('You have {{count}} seat(s) to pay for.', { count: seatCount })}
             </Typography>
             
-            {/* Booking Summary */}
             <Box sx={{ 
               my: 4, 
               p: 3, 
@@ -378,10 +455,9 @@ export default function BookTrip() {
                 ETB {totalAmount.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {selectedSeats.length} {t('seat(s)')} × ETB {selectedTrip?.price.toLocaleString()}
+                {seatCount} {t('seat(s)')} × ETB {selectedTrip?.price.toLocaleString()}
               </Typography>
               
-              {/* Selected Seats - Now showing numbers */}
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'center', 
@@ -389,7 +465,7 @@ export default function BookTrip() {
                 mt: 2,
                 flexWrap: 'wrap'
               }}>
-                {selectedSeats.map((seat, index) => (
+                {seatNumbers.map((seat, index) => (
                   <Typography
                     key={index}
                     variant="caption"
@@ -406,12 +482,17 @@ export default function BookTrip() {
                   </Typography>
                 ))}
               </Box>
+              
+              {seatCount > 1 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                  {t('Group booking - all seats in one transaction')}
+                </Typography>
+              )}
             </Box>
 
-            {/* Payment Button */}
-            {firstBookingId ? (
+            {bookingId ? (
               <PaymentButton
-                bookingId={firstBookingId}
+                bookingId={bookingId}
                 amount={totalAmount}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
@@ -424,7 +505,6 @@ export default function BookTrip() {
               </Alert>
             )}
 
-            {/* Back Button */}
             <Button
               variant="text"
               onClick={handleBack}
@@ -435,11 +515,19 @@ export default function BookTrip() {
             </Button>
           </Paper>
         );
+      }
       
       default:
         return null;
     }
-  };
+  }, [
+    activeStep, stations, searchData, handleSearch, searching,
+    availableTrips, handleTripSelect, handleBack, selectedTrip,
+    selectedSeats, handleSeatSelection, handleProceedToPayment,
+    bookingLoading, getTotalAmount, createdBooking, getSeatNumbers,
+    t, theme, handlePaymentSuccess, handlePaymentError, selectedTrip?.price,
+    bookedSeats // Add bookedSeats to dependencies
+  ]);
 
   if (loading) {
     return (
@@ -452,7 +540,6 @@ export default function BookTrip() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
           {t('Book Your Trip')}
@@ -462,7 +549,6 @@ export default function BookTrip() {
         </Typography>
       </Box>
 
-      {/* Stepper */}
       <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
         {steps.map((label) => (
           <Step key={label}>
@@ -471,14 +557,12 @@ export default function BookTrip() {
         ))}
       </Stepper>
 
-      {/* Main Content */}
       <Fade in={true} timeout={500}>
         <Box>
-          {getStepContent(activeStep)}
+          {stepContent}
         </Box>
       </Fade>
 
-      {/* New Search Button (visible after step 0) */}
       {activeStep > 0 && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Button
@@ -492,7 +576,6 @@ export default function BookTrip() {
         </Box>
       )}
 
-      {/* Payment Processing Dialog */}
       <Dialog 
         open={paymentDialogOpen && activeStep !== 3} 
         onClose={handleClosePaymentDialog}

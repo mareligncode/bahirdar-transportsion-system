@@ -95,6 +95,68 @@ export default function BookingConfirmation() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Helper function to get seat numbers from booking
+  const getSeatNumbers = (booking) => {
+    // Priority 1: seatNumbers array (for group bookings)
+    if (booking.seatNumbers && Array.isArray(booking.seatNumbers) && booking.seatNumbers.length > 0) {
+      return booking.seatNumbers;
+    }
+    // Priority 2: single seatNumber
+    if (booking.seatNumber) {
+      return [booking.seatNumber];
+    }
+    // Fallback: empty array
+    return [];
+  };
+
+  // Helper function to get seat count
+  const getSeatCount = (booking) => {
+    return getSeatNumbers(booking).length;
+  };
+
+  // Helper function to get total amount correctly
+  const getTotalAmount = () => {
+    if (!booking) return 0;
+    
+    // Priority 1: Use totalPrice from booking (already includes all seats)
+    if (booking.totalPrice && booking.totalPrice > 0) {
+      return booking.totalPrice;
+    }
+    
+    // Priority 2: Calculate from trip price and seat count
+    const seatCount = getSeatCount(booking);
+    const pricePerSeat = booking.tripID?.price || booking.pricePerSeat || 0;
+    if (seatCount > 0 && pricePerSeat > 0) {
+      return seatCount * pricePerSeat;
+    }
+    
+    // Priority 3: Fallback to amount or batchTotalPrice
+    return booking.amount || booking.batchTotalPrice || 0;
+  };
+
+  // Helper function to get price per seat
+  const getPricePerSeat = () => {
+    if (!booking) return 0;
+    
+    const totalAmount = getTotalAmount();
+    const seatCount = getSeatCount(booking);
+    
+    if (seatCount > 0 && totalAmount > 0) {
+      return totalAmount / seatCount;
+    }
+    
+    return booking.tripID?.price || booking.pricePerSeat || 0;
+  };
+
+  // Helper function to format seat numbers for display
+  const getSeatDisplay = () => {
+    if (!booking) return 'N/A';
+    const seats = getSeatNumbers(booking);
+    if (seats.length === 0) return 'N/A';
+    if (seats.length === 1) return seats[0].toString();
+    return seats.join(', ');
+  };
+
   // Confetti effect
   useEffect(() => {
     if (paymentSuccess) {
@@ -132,6 +194,8 @@ export default function BookingConfirmation() {
         const response = await api.get(`/api/booking/${bookingId}`);
         const bookingData = response.data?.data || response.data;
         console.log('Booking data:', bookingData);
+        console.log('Seat numbers:', bookingData.seatNumbers);
+        console.log('Total price:', bookingData.totalPrice);
         setBooking(bookingData);
 
         // Clear sessionStorage after successful fetch
@@ -166,6 +230,10 @@ export default function BookingConfirmation() {
     const destination = trip.destination?.stationName || 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
     const arrivalTime = trip.arrivalTime ? new Date(trip.arrivalTime) : null;
+    const seatNumbers = getSeatNumbers(booking);
+    const seatCount = seatNumbers.length;
+    const totalAmount = getTotalAmount();
+    const pricePerSeat = getPricePerSeat();
 
     // Add logo or title
     doc.setFontSize(20);
@@ -179,46 +247,57 @@ export default function BookingConfirmation() {
     // Booking details
     doc.setFontSize(12);
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
-    doc.text(`Ticket #: ${booking.ticketNumber || 'N/A'}`, 20, 52);
+    doc.text(`Ticket #: ${booking.ticketNumber || (seatCount > 1 ? booking.groupTicketNumber || 'N/A' : 'N/A')}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
+    if (seatCount > 1) {
+      doc.text(`Group Booking: ${seatCount} seats`, 20, 66);
+    }
 
     // Passenger details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Passenger Information', 20, 75);
+    doc.text('Passenger Information', 20, 75 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85);
-    doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92);
-    doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99);
+    doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99 + (seatCount > 1 ? 10 : 0));
 
     // Journey details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Journey Information', 20, 115);
+    doc.text('Journey Information', 20, 115 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`From: ${origin}`, 20, 125);
-    doc.text(`To: ${destination}`, 20, 132);
+    doc.text(`From: ${origin}`, 20, 125 + (seatCount > 1 ? 10 : 0));
+    doc.text(`To: ${destination}`, 20, 132 + (seatCount > 1 ? 10 : 0));
 
     if (departureTime) {
-      doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139);
+      doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139 + (seatCount > 1 ? 10 : 0));
     }
     if (arrivalTime) {
-      doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146);
+      doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146 + (seatCount > 1 ? 10 : 0));
     }
 
-    doc.text(`Seat: ${booking.seatNumber || 'N/A'}`, 20, 153);
+    // Seat information
+    if (seatCount === 1) {
+      doc.text(`Seat: ${seatNumbers[0]}`, 20, 153 + (seatCount > 1 ? 10 : 0));
+    } else {
+      doc.text(`Seats: ${seatNumbers.join(', ')}`, 20, 153 + (seatCount > 1 ? 10 : 0));
+    }
 
     // Payment details
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Payment Information', 20, 170);
+    doc.text('Payment Information', 20, 170 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    const finalAmount = booking.tripID?.price || booking.totalPrice || booking.amount || 0;
-    doc.text(`Amount: ETB ${finalAmount.toLocaleString()}`, 20, 180);
-    doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 187);
+    doc.text(`Price per Seat: ETB ${pricePerSeat.toLocaleString()}`, 20, 180 + (seatCount > 1 ? 10 : 0));
+    if (seatCount > 1) {
+      doc.text(`Number of Seats: ${seatCount}`, 20, 187 + (seatCount > 1 ? 10 : 0));
+    }
+    doc.text(`Total Amount: ETB ${totalAmount.toLocaleString()}`, 20, 194 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 201 + (seatCount > 1 ? 10 : 0));
 
     // Footer
     doc.setFontSize(10);
@@ -234,7 +313,6 @@ export default function BookingConfirmation() {
   const handleDownload = async () => {
     toast.loading('Generating PDF...', { id: 'pdf' });
     try {
-      // Generate PDF directly in frontend
       generatePDF();
       toast.success('PDF downloaded successfully!', { id: 'pdf' });
     } catch (error) {
@@ -250,10 +328,8 @@ export default function BookingConfirmation() {
     if (!booking) return;
     setEmailSending(true);
     try {
-      // Generate PDF and send as attachment
       const pdf = generatePDFForEmail();
 
-      // Convert PDF to blob for sending
       const pdfBlob = pdf.output('blob');
       const formData = new FormData();
       formData.append('pdf', pdfBlob, `ticket-${booking.bookingNumber || 'booking'}.pdf`);
@@ -284,6 +360,10 @@ export default function BookingConfirmation() {
     const destination = trip.destination?.stationName || 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
     const arrivalTime = trip.arrivalTime ? new Date(trip.arrivalTime) : null;
+    const seatNumbers = getSeatNumbers(booking);
+    const seatCount = seatNumbers.length;
+    const totalAmount = getTotalAmount();
+    const pricePerSeat = getPricePerSeat();
 
     doc.setFontSize(20);
     doc.setTextColor(41, 128, 185);
@@ -295,43 +375,53 @@ export default function BookingConfirmation() {
 
     doc.setFontSize(12);
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
-    doc.text(`Ticket #: ${booking.ticketNumber || 'N/A'}`, 20, 52);
+    doc.text(`Ticket #: ${booking.ticketNumber || (seatCount > 1 ? booking.groupTicketNumber || 'N/A' : 'N/A')}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
+    if (seatCount > 1) {
+      doc.text(`Group Booking: ${seatCount} seats`, 20, 66);
+    }
 
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Passenger Information', 20, 75);
+    doc.text('Passenger Information', 20, 75 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85);
-    doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92);
-    doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99);
+    doc.text(`Name: ${booking.passengerDetails?.fullName || user?.fullName || 'N/A'}`, 20, 85 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Email: ${booking.passengerDetails?.email || user?.email || 'N/A'}`, 20, 92 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Phone: ${booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}`, 20, 99 + (seatCount > 1 ? 10 : 0));
 
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Journey Information', 20, 115);
+    doc.text('Journey Information', 20, 115 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text(`From: ${origin}`, 20, 125);
-    doc.text(`To: ${destination}`, 20, 132);
+    doc.text(`From: ${origin}`, 20, 125 + (seatCount > 1 ? 10 : 0));
+    doc.text(`To: ${destination}`, 20, 132 + (seatCount > 1 ? 10 : 0));
 
     if (departureTime) {
-      doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139);
+      doc.text(`Departure: ${departureTime.toLocaleDateString()} at ${departureTime.toLocaleTimeString()}`, 20, 139 + (seatCount > 1 ? 10 : 0));
     }
     if (arrivalTime) {
-      doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146);
+      doc.text(`Arrival: ${arrivalTime.toLocaleDateString()} at ${arrivalTime.toLocaleTimeString()}`, 20, 146 + (seatCount > 1 ? 10 : 0));
     }
 
-    doc.text(`Seat: ${booking.seatNumber || 'N/A'}`, 20, 153);
+    if (seatCount === 1) {
+      doc.text(`Seat: ${seatNumbers[0]}`, 20, 153 + (seatCount > 1 ? 10 : 0));
+    } else {
+      doc.text(`Seats: ${seatNumbers.join(', ')}`, 20, 153 + (seatCount > 1 ? 10 : 0));
+    }
 
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text('Payment Information', 20, 170);
+    doc.text('Payment Information', 20, 170 + (seatCount > 1 ? 10 : 0));
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    const finalAmount = booking.tripID?.price || booking.totalPrice || booking.amount || 0;
-    doc.text(`Amount: ETB ${finalAmount.toLocaleString()}`, 20, 180);
-    doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 187);
+    doc.text(`Price per Seat: ETB ${pricePerSeat.toLocaleString()}`, 20, 180 + (seatCount > 1 ? 10 : 0));
+    if (seatCount > 1) {
+      doc.text(`Number of Seats: ${seatCount}`, 20, 187 + (seatCount > 1 ? 10 : 0));
+    }
+    doc.text(`Total Amount: ETB ${totalAmount.toLocaleString()}`, 20, 194 + (seatCount > 1 ? 10 : 0));
+    doc.text(`Payment Status: ${booking.paymentStatus?.toUpperCase() || 'N/A'}`, 20, 201 + (seatCount > 1 ? 10 : 0));
 
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128);
@@ -349,6 +439,9 @@ export default function BookingConfirmation() {
     const destination = trip.destination?.stationName || 'Destination';
     const departureDate = trip.departureTime ? new Date(trip.departureTime).toLocaleDateString() : 'N/A';
     const departureTime = trip.departureTime ? new Date(trip.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+    const seatNumbers = getSeatNumbers(booking);
+    const seatDisplay = seatNumbers.length === 1 ? seatNumbers[0] : seatNumbers.join(', ');
+    const totalAmount = getTotalAmount();
 
     const message = `🚌 *Bahir Dar Transport System - Ticket*\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -356,10 +449,10 @@ export default function BookingConfirmation() {
       `*To:* ${destination}\n` +
       `*Date:* ${departureDate}\n` +
       `*Time:* ${departureTime}\n` +
-      `*Seat:* ${booking.seatNumber}\n` +
+      `*Seat(s):* ${seatDisplay}\n` +
       `*Booking #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
-      `*Ticket #:* ${booking.ticketNumber || 'N/A'}\n` +
-      `*Amount:* ETB ${(booking.tripID?.price || booking.totalPrice || booking.amount || 0).toLocaleString()}\n\n` +
+      `*Ticket #:* ${booking.ticketNumber || (seatNumbers.length > 1 ? booking.groupTicketNumber || 'N/A' : 'N/A')}\n` +
+      `*Total Amount:* ETB ${totalAmount.toLocaleString()}\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n\n` +
       `Thank you for choosing Bahir Dar Transport System!`;
 
@@ -385,9 +478,7 @@ export default function BookingConfirmation() {
       if (response.data?.success) {
         toast.success('Booking cancelled successfully', { duration: 4000 });
         setCancelDialogOpen(false);
-        // Update local state
         setBooking(prev => ({ ...prev, status: 'cancelled' }));
-        // Refresh booking data
         const refreshResponse = await api.get(`/api/booking/${bookingId}`);
         setBooking(refreshResponse.data?.data || refreshResponse.data);
       } else {
@@ -417,7 +508,6 @@ export default function BookingConfirmation() {
       if (response.data?.success) {
         toast.success('Refund processed successfully', { duration: 4000 });
         setRefundDialogOpen(false);
-        // Refresh booking data
         const refreshResponse = await api.get(`/api/booking/${bookingId}`);
         setBooking(refreshResponse.data?.data || refreshResponse.data);
         setRefundAmount('');
@@ -499,7 +589,6 @@ export default function BookingConfirmation() {
     }
   };
 
-  // Cancel button condition (removed 2-hour restriction for testing)
   const canCancel = () => {
     if (!booking) return false;
     const cancellableStatuses = ['pending', 'confirmed'];
@@ -514,10 +603,12 @@ export default function BookingConfirmation() {
 
   const isAdmin = user?.role === 'super_admin' || user?.role === 'station_admin';
 
-  // Get total amount correctly
-  const getTotalAmount = () => {
-    return booking?.tripID?.price || booking?.totalPrice || booking?.amount || 0;
-  };
+  // Get data for display
+  const seatNumbers = booking ? getSeatNumbers(booking) : [];
+  const seatCount = seatNumbers.length;
+  const totalAmount = getTotalAmount();
+  const pricePerSeat = getPricePerSeat();
+  const isGroupBooking = seatCount > 1;
 
   // Loading
   if (loading) {
@@ -583,11 +674,8 @@ export default function BookingConfirmation() {
   const isPending = booking.status?.toLowerCase() === 'pending';
   const isCancelled = booking.status?.toLowerCase() === 'cancelled';
 
-  const totalAmount = getTotalAmount();
-
   return (
     <>
-      {/* Confetti canvas */}
       {showConfetti && (
         <canvas
           id="confetti-canvas"
@@ -604,7 +692,6 @@ export default function BookingConfirmation() {
       )}
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header with back button and refresh */}
         <Box sx={{
           mb: 3,
           display: 'flex',
@@ -631,7 +718,6 @@ export default function BookingConfirmation() {
           </Tooltip>
         </Box>
 
-        {/* Success Banner */}
         {paymentSuccess && (
           <Fade in={true}>
             <Alert
@@ -671,7 +757,6 @@ export default function BookingConfirmation() {
           </Fade>
         )}
 
-        {/* Main Ticket Card */}
         <Zoom in={true}>
           <Paper
             sx={{
@@ -701,7 +786,6 @@ export default function BookingConfirmation() {
               } : {}
             }}
           >
-            {/* Ticket Header */}
             <Box sx={{
               p: 3,
               background: isConfirmed ? 'linear-gradient(135deg, #f0f9ff, #e6f7e6)' :
@@ -740,6 +824,14 @@ export default function BookingConfirmation() {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1 }}>
+                {isGroupBooking && (
+                  <Chip
+                    icon={<EventSeat />}
+                    label={`${seatCount} Seats`}
+                    color="primary"
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
                 <Chip
                   icon={getStatusIcon(booking.status)}
                   label={booking.status?.toUpperCase()}
@@ -756,12 +848,9 @@ export default function BookingConfirmation() {
               </Box>
             </Box>
 
-            {/* Ticket Content */}
             <CardContent sx={{ p: 4 }}>
               <Grid container spacing={4}>
-                {/* Left Section - Journey Details */}
                 <Grid item xs={12} md={8}>
-                  {/* Route */}
                   <Box sx={{ mb: 4 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                       <Box sx={{ flex: 1, textAlign: 'center' }}>
@@ -795,7 +884,6 @@ export default function BookingConfirmation() {
                       </Box>
                     </Box>
 
-                    {/* Timeline */}
                     <Paper sx={{ p: 3, bgcolor: '#f8fafc', borderRadius: '12px' }}>
                       <Grid container spacing={3}>
                         <Grid item xs={6}>
@@ -834,7 +922,6 @@ export default function BookingConfirmation() {
                     </Paper>
                   </Box>
 
-                  {/* Passenger & Seat Info */}
                   <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
@@ -853,11 +940,6 @@ export default function BookingConfirmation() {
                         <Typography variant="caption" color="text.secondary" display="block">
                           {booking.passengerDetails?.phoneNumber || user?.phoneNumber}
                         </Typography>
-                        {booking.passengerDetails?.emergencyContact && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Emergency: {booking.passengerDetails.emergencyContact}
-                          </Typography>
-                        )}
                       </Paper>
                     </Grid>
 
@@ -876,8 +958,13 @@ export default function BookingConfirmation() {
                           </Avatar>
                           <Box>
                             <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
-                              {booking.seatNumber}
+                              {seatCount === 1 ? seatNumbers[0] : `${seatCount} Seats`}
                             </Typography>
+                            {isGroupBooking && (
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                Seats: {seatNumbers.join(', ')}
+                              </Typography>
+                            )}
                             <Typography variant="caption" color="text.secondary">
                               {vehicle.carType || 'Standard'} • {vehicle.plateNumber || 'N/A'}
                             </Typography>
@@ -887,7 +974,6 @@ export default function BookingConfirmation() {
                     </Grid>
                   </Grid>
 
-                  {/* Driver Info */}
                   {driver.fullName && (
                     <Box sx={{ mt: 3 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
@@ -909,7 +995,6 @@ export default function BookingConfirmation() {
                     </Box>
                   )}
 
-                  {/* Payment Info */}
                   {booking.paymentID && (
                     <Box sx={{ mt: 3 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
@@ -942,7 +1027,6 @@ export default function BookingConfirmation() {
                   )}
                 </Grid>
 
-                {/* Right Section - QR Code & Actions */}
                 <Grid item xs={12} md={4}>
                   <Box sx={{
                     p: 3,
@@ -953,7 +1037,6 @@ export default function BookingConfirmation() {
                     display: 'flex',
                     flexDirection: 'column'
                   }}>
-                    {/* QR Code */}
                     <Box sx={{ mb: 3 }}>
                       <Paper sx={{
                         p: 2,
@@ -971,7 +1054,6 @@ export default function BookingConfirmation() {
                       </Typography>
                     </Box>
 
-                    {/* Price - FIXED */}
                     <Box sx={{ mb: 3 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         Total Amount
@@ -983,9 +1065,11 @@ export default function BookingConfirmation() {
                       }}>
                         ETB {totalAmount.toLocaleString()}
                       </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                        {seatCount} seat(s) × ETB {pricePerSeat.toLocaleString()}
+                      </Typography>
                     </Box>
 
-                    {/* Action Buttons */}
                     <Stack spacing={2} sx={{ mt: 'auto' }}>
                       <Tooltip title="Print your ticket">
                         <Button
@@ -1058,7 +1142,6 @@ export default function BookingConfirmation() {
 
                       <Divider sx={{ my: 1 }} />
 
-                      {/* Cancel Button - FIXED: Now shows */}
                       {canCancel() && (
                         <Button
                           variant="contained"
@@ -1077,7 +1160,6 @@ export default function BookingConfirmation() {
                         </Button>
                       )}
 
-                      {/* Refund Button - Admin Only */}
                       {canRefund() && (
                         <Button
                           variant="contained"
@@ -1101,7 +1183,6 @@ export default function BookingConfirmation() {
               </Grid>
             </CardContent>
 
-            {/* Footer */}
             <Box sx={{
               p: 2,
               bgcolor: '#f8fafc',
@@ -1115,6 +1196,11 @@ export default function BookingConfirmation() {
               <Typography variant="caption" color="text.secondary">
                 Booking Date: {formatDate(booking.bookingDate || booking.createdAt)}
               </Typography>
+              {isGroupBooking && (
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 500 }}>
+                  Group Booking • {seatCount} seats
+                </Typography>
+              )}
               <Typography variant="caption" color="text.secondary">
                 Terms & Conditions apply
               </Typography>
@@ -1122,7 +1208,6 @@ export default function BookingConfirmation() {
           </Paper>
         </Zoom>
 
-        {/* Cancel Dialog */}
         <Dialog
           open={cancelDialogOpen}
           onClose={() => setCancelDialogOpen(false)}
@@ -1182,7 +1267,6 @@ export default function BookingConfirmation() {
           </DialogActions>
         </Dialog>
 
-        {/* Refund Dialog */}
         <Dialog
           open={refundDialogOpen}
           onClose={() => setRefundDialogOpen(false)}
@@ -1252,7 +1336,6 @@ export default function BookingConfirmation() {
           </DialogActions>
         </Dialog>
 
-        {/* Email Dialog */}
         <Dialog
           open={emailDialogOpen}
           onClose={() => setEmailDialogOpen(false)}
@@ -1301,7 +1384,6 @@ export default function BookingConfirmation() {
           </DialogActions>
         </Dialog>
 
-        {/* Copy Success Snackbar */}
         <Snackbar
           open={copySuccess}
           autoHideDuration={2000}
@@ -1313,7 +1395,6 @@ export default function BookingConfirmation() {
           </Alert>
         </Snackbar>
 
-        {/* Bottom Navigation */}
         <Box sx={{
           mt: 4,
           display: 'flex',

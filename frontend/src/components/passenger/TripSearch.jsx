@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Paper,
   Typography,
@@ -41,26 +41,30 @@ const TripSearch = ({
   showRecentSearches = true
 }) => {
   const { t } = useTranslation();
+  const isSubmittingRef = useRef(false);
   
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     origin: initialData?.origin || '',
     destination: initialData?.destination || '',
     date: initialData?.date ? new Date(initialData.date) : null,
-  });
+  }));
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [recentSearches, setRecentSearches] = useState([]);
   const [touched, setTouched] = useState({});
 
-  // Load recent searches from localStorage
+  // Load recent searches from localStorage - runs once on mount
   useEffect(() => {
     if (showRecentSearches) {
       try {
         const saved = localStorage.getItem('recentTripSearches');
         if (saved) {
-          setRecentSearches(JSON.parse(saved).slice(0, 5));
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setRecentSearches(parsed.slice(0, 5));
+          }
         }
       } catch (error) {
         console.error('Error loading recent searches:', error);
@@ -102,38 +106,36 @@ const TripSearch = ({
   }, [formData, t]);
 
   // Handle field change
-  const handleChange = (field, value) => {
+  const handleChange = useCallback((field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     
-    // Mark field as touched
     setTouched(prev => ({
       ...prev,
       [field]: true
     }));
 
-    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
         [field]: null
       }));
     }
-  };
+  }, [errors]);
 
   // Swap origin and destination
-  const handleSwap = () => {
+  const handleSwap = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       origin: prev.destination,
       destination: prev.origin
     }));
-  };
+  }, []);
 
   // Clear form
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setFormData({
       origin: '',
       destination: '',
@@ -141,10 +143,10 @@ const TripSearch = ({
     });
     setErrors({});
     setTouched({});
-  };
+  }, []);
 
   // Save search to recent
-  const saveRecentSearch = (searchData) => {
+  const saveRecentSearch = useCallback((searchData) => {
     try {
       const originStation = stations.find(s => s._id === searchData.origin);
       const destStation = stations.find(s => s._id === searchData.destination);
@@ -158,21 +160,43 @@ const TripSearch = ({
         timestamp: Date.now()
       };
 
-      const updated = [searchEntry, ...recentSearches.filter(s => 
-        s.origin !== searchData.origin || 
-        s.destination !== searchData.destination
-      )].slice(0, 5);
-      
-      setRecentSearches(updated);
-      localStorage.setItem('recentTripSearches', JSON.stringify(updated));
+      setRecentSearches(prev => {
+        const filtered = prev.filter(s => 
+          s.origin !== searchData.origin || 
+          s.destination !== searchData.destination
+        );
+        const updated = [searchEntry, ...filtered].slice(0, 5);
+        try {
+          localStorage.setItem('recentTripSearches', JSON.stringify(updated));
+        } catch (error) {
+          console.error('Error saving to localStorage:', error);
+        }
+        return updated;
+      });
     } catch (error) {
       console.error('Error saving recent search:', error);
     }
+  }, [stations]);
+
+  // Format date for backend (YYYY-MM-DD)
+  const formatDateForBackend = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (event) => {
+    // Prevent multiple submissions
+    if (isSubmittingRef.current) return;
+    
+    // Handle both real events and synthetic calls
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
     
     // Mark all fields as touched
     setTouched({
@@ -185,41 +209,129 @@ const TripSearch = ({
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
+    
     try {
-      await onSearch(formData);
-      saveRecentSearch(formData);
+      // Prepare search data for backend - format date correctly
+      const searchData = {
+        origin: formData.origin,
+        destination: formData.destination,
+        date: formatDateForBackend(formData.date)
+      };
+      
+      console.log('🔍 Sending search request to backend:', searchData);
+      await onSearch(searchData);
+      saveRecentSearch({
+        origin: formData.origin,
+        destination: formData.destination,
+        date: formatDateForBackend(formData.date)
+      });
     } catch (error) {
       console.error('Search error:', error);
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
-  };
+  }, [validateForm, onSearch, formData, saveRecentSearch]);
 
   // Handle recent search click
-  const handleRecentSearchClick = (search) => {
+  const handleRecentSearchClick = useCallback((search) => {
+    // Update form data
     setFormData({
       origin: search.origin,
       destination: search.destination,
-      date: new Date(search.date)
+      date: search.date ? new Date(search.date) : null
     });
     
-    // Auto-submit after a short delay
-    setTimeout(() => {
-      handleSubmit(new Event('submit'));
-    }, 100);
-  };
+    // Clear any existing errors
+    setErrors({});
+    setTouched({
+      origin: true,
+      destination: true,
+      date: true
+    });
+    
+    // Submit the search
+    const performSearch = async () => {
+      if (isSubmittingRef.current) return;
+      
+      isSubmittingRef.current = true;
+      setLoading(true);
+      
+      try {
+        const searchData = {
+          origin: search.origin,
+          destination: search.destination,
+          date: formatDateForBackend(search.date)
+        };
+        console.log('🔍 Recent search clicked, sending:', searchData);
+        await onSearch(searchData);
+        saveRecentSearch(searchData);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setLoading(false);
+        isSubmittingRef.current = false;
+      }
+    };
+    
+    performSearch();
+  }, [onSearch, saveRecentSearch]);
 
-  // Get station name by ID
-  const getStationName = (id) => {
-    const station = stations.find(s => s._id === id);
-    return station ? `${station.stationName} (${station.city})` : '';
-  };
-
-  const isFormValid = formData.origin && formData.destination && formData.date && 
-                     formData.origin !== formData.destination;
+  const isFormValid = useMemo(() => {
+    return formData.origin && formData.destination && formData.date && 
+           formData.origin !== formData.destination;
+  }, [formData.origin, formData.destination, formData.date]);
 
   const isProcessing = loading || externalLoading;
+
+  // Memoize station options to prevent unnecessary re-renders
+  const originStationOptions = useMemo(() => {
+    return stations.map((station) => (
+      <MenuItem 
+        key={station._id} 
+        value={station._id}
+        disabled={station._id === formData.destination}
+      >
+        {station.stationName} ({station.city})
+      </MenuItem>
+    ));
+  }, [stations, formData.destination]);
+
+  const destinationStationOptions = useMemo(() => {
+    return stations.map((station) => (
+      <MenuItem 
+        key={station._id} 
+        value={station._id}
+        disabled={station._id === formData.origin}
+      >
+        {station.stationName} ({station.city})
+      </MenuItem>
+    ));
+  }, [stations, formData.origin]);
+
+  const recentSearchesList = useMemo(() => {
+    return recentSearches.map((search, index) => (
+      <Chip
+        key={`${search.origin}-${search.destination}-${index}`}
+        label={`${search.originName || '?'} → ${search.destinationName || '?'}`}
+        onClick={() => handleRecentSearchClick(search)}
+        size="small"
+        icon={<History />}
+        sx={{ 
+          borderRadius: '6px',
+          bgcolor: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: '#f1f5f9',
+            borderColor: '#3b82f6'
+          }
+        }}
+      />
+    ));
+  }, [recentSearches, handleRecentSearchClick]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -248,7 +360,7 @@ const TripSearch = ({
             {t('search_trips')}
           </Typography>
           
-          {formData.origin || formData.destination || formData.date ? (
+          {(formData.origin || formData.destination || formData.date) && (
             <Tooltip title={t('clear_form')}>
               <IconButton 
                 size="small" 
@@ -261,7 +373,7 @@ const TripSearch = ({
                 <Clear fontSize="small" />
               </IconButton>
             </Tooltip>
-          ) : null}
+          )}
         </Box>
 
         <Divider sx={{ mb: 3 }} />
@@ -292,15 +404,7 @@ const TripSearch = ({
                   <MenuItem value="">
                     <em>{t('select_origin')}</em>
                   </MenuItem>
-                  {stations.map((station) => (
-                    <MenuItem 
-                      key={station._id} 
-                      value={station._id}
-                      disabled={station._id === formData.destination}
-                    >
-                      {station.stationName} ({station.city})
-                    </MenuItem>
-                  ))}
+                  {originStationOptions}
                 </Select>
                 {touched.origin && errors.origin && (
                   <FormHelperText>{errors.origin}</FormHelperText>
@@ -355,15 +459,7 @@ const TripSearch = ({
                   <MenuItem value="">
                     <em>{t('select_destination')}</em>
                   </MenuItem>
-                  {stations.map((station) => (
-                    <MenuItem 
-                      key={station._id} 
-                      value={station._id}
-                      disabled={station._id === formData.origin}
-                    >
-                      {station.stationName} ({station.city})
-                    </MenuItem>
-                  ))}
+                  {destinationStationOptions}
                 </Select>
                 {touched.destination && errors.destination && (
                   <FormHelperText>{errors.destination}</FormHelperText>
@@ -447,24 +543,7 @@ const TripSearch = ({
               {t('recent_searches')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {recentSearches.map((search, index) => (
-                <Chip
-                  key={index}
-                  label={`${search.originName || '?'} → ${search.destinationName || '?'}`}
-                  onClick={() => handleRecentSearchClick(search)}
-                  size="small"
-                  icon={<History />}
-                  sx={{ 
-                    borderRadius: '6px',
-                    bgcolor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    '&:hover': {
-                      bgcolor: '#f1f5f9',
-                      borderColor: '#3b82f6'
-                    }
-                  }}
-                />
-              ))}
+              {recentSearchesList}
             </Box>
           </Box>
         )}
