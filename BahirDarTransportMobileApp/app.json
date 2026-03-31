@@ -48,13 +48,11 @@
       },
       "package": "com.bahirdartransport.app",
       "permissions": [
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO"
+        "android.permission.READ_MEDIA_VIDEO"
       ],
       "intentFilters": [
         {
@@ -132,7 +130,17 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save QR codes to your photo library."
         }
       ],
-      "expo-build-properties"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24,
+            "buildToolsVersion": "34.0.0"
+          }
+        }
+      ]
     ],
     "scheme": "bahirdartransport",
     "extra": {
