@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
@@ -9,7 +9,7 @@ export const getPlatformBaseUrl = (): string => {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
 
-    url = 'http://10.161.142.189:5000/api';
+    url = 'http://10.161.142.220:5000/api';
   }
   return url;
 };
