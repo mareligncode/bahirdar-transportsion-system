@@ -1,4 +1,3 @@
-// app/terms.tsx - Terms of Service Page
 import React from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { AppText } from '../components/common/AppText';
@@ -17,7 +16,6 @@ export default function TermsOfService() {
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
       <ScrollView className="flex-1">
-        {/* Header */}
         <View className="px-6 pt-4">
           <TouchableOpacity 
             onPress={() => router.back()}
@@ -31,7 +29,6 @@ export default function TermsOfService() {
             {t('terms_of_service_title')}
           </AppText>
           
-          {/* Content */}
           <View className="space-y-4">
             <AppText variant="bodyLarge" weight="medium" color="textSecondary">
               {t('terms_last_updated', { date: lastUpdated })}

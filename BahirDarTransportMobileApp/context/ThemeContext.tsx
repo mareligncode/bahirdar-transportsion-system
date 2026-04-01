@@ -33,7 +33,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadTheme();
   }, []);
 
-  // Synchronize NativeWind with our theme state
   useEffect(() => {
     const isDark = theme === 'dark' || (theme === 'system' && systemColorScheme === 'dark');
     setColorScheme(isDark ? 'dark' : 'light');
@@ -71,4 +70,4 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-
+

@@ -21,17 +21,17 @@ export interface Vehicle {
   totalCapacity: number;
   features?: string[];
   images?: string[];
-  color?: string; // Add this for compatibility
+  color?: string;
 }
 
 export interface Driver {
   _id: string;
   fullName: string;
-  phoneNumber?: string; // This exists
+  phoneNumber?: string;
   profilePicture?: string;
   rating?: number;
   yearsOfExperience?: number;
-  licenseNumber?: string; // Add for compatibility
+  licenseNumber?: string;
 }
 
 export interface Trip {
@@ -43,7 +43,7 @@ export interface Trip {
   departureTime: string;
   arrivalTime: string;
   vehicle: Vehicle;
-  vehicleID?: Vehicle; // Add for backward compatibility
+  vehicleID?: Vehicle;
   driver: Driver;
   price: number;
   availableSeats: number;

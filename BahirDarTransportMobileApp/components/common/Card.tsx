@@ -1,4 +1,3 @@
-// components/common/Card.tsx - SIMPLIFIED VERSION
 import React, { ReactNode } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 
@@ -8,13 +7,13 @@ interface CardProps {
   onPress?: () => void;
 }
 
-export function Card({ 
-  children, 
-  className = '', 
+export function Card({
+  children,
+  className = '',
   onPress,
 }: CardProps) {
   const baseClasses = 'bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700';
-  
+
   if (onPress) {
     return (
       <TouchableOpacity

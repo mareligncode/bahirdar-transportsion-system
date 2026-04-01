@@ -1,4 +1,3 @@
-// components/common/IconButton.tsx
 import React from 'react';
 import { TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AppText } from './AppText';
@@ -71,20 +70,20 @@ export function IconButton({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={variant === 'outline' ? '#4B5563' : '#FFFFFF'} 
+        <ActivityIndicator
+          size="small"
+          color={variant === 'outline' ? '#4B5563' : '#FFFFFF'}
           className="mr-2"
         />
       ) : Icon && iconPosition === 'left' && (
-        <Icon 
-          size={iconSize[size]} 
+        <Icon
+          size={iconSize[size]}
           color={variant === 'outline' ? '#4B5563' : '#FFFFFF'}
           className="mr-2"
         />
       )}
-      
-      <AppText 
+
+      <AppText
         weight="semibold"
         color={variant === 'outline' ? '#1f2937' : 'white'}
         variant={size === 'small' ? 'bodySmall' : size === 'large' ? 'bodyLarge' : 'bodyMedium'}
@@ -92,10 +91,10 @@ export function IconButton({
       >
         {title}
       </AppText>
-      
+
       {!loading && Icon && iconPosition === 'right' && (
-        <Icon 
-          size={iconSize[size]} 
+        <Icon
+          size={iconSize[size]}
           color={variant === 'outline' ? '#4B5563' : '#FFFFFF'}
           className="ml-2"
         />

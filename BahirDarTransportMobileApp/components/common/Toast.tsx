@@ -51,7 +51,6 @@ export function Toast({
 
   React.useEffect(() => {
     if (show) {
-      // Animate in
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -65,7 +64,6 @@ export function Toast({
         }),
       ]).start();
 
-      // Auto close after duration
       const timer = setTimeout(() => {
         hideToast();
       }, duration);
@@ -123,7 +121,6 @@ export function Toast({
   );
 }
 
-// Toast Manager Hook
 export const useToast = () => {
   const [toast, setToast] = useState<{
     message: string;
@@ -150,7 +147,6 @@ export const useToast = () => {
   };
 };
 
-// Toast Provider Component
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast, hideToast } = useToast();
 

@@ -1,4 +1,3 @@
-// components/booking/TripCard.tsx
 import React from 'react';
 import { View, TouchableOpacity, Alert } from 'react-native';
 import { AppText } from '../common/AppText';
@@ -57,7 +56,6 @@ export const TripCard: React.FC<TripCardProps> = ({
     const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(tripId);
 
     if (tripId === 'index' || !isValidMongoId) {
-      console.error('❌ Invalid trip ID:', tripId);
       Alert.alert(translate('error'), translate('invalid_trip_data') || 'Invalid trip data. Please try searching again.');
       return;
     }
@@ -126,7 +124,6 @@ export const TripCard: React.FC<TripCardProps> = ({
         </View>
       </View>
 
-      {/* Time Information */}
       <View className={`${isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-transparent'} border p-4 rounded-xl mb-4`}>
         <View className="flex-row justify-between">
           <View className="flex-1">
@@ -179,7 +176,6 @@ export const TripCard: React.FC<TripCardProps> = ({
           </View>
         </View>
 
-        {/* Vehicle Info */}
         <View className={`flex-row items-center justify-between pt-3 mt-3 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
           <View className="flex-row items-center">
             <View className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} p-1.5 rounded-full mr-2`}>
@@ -200,7 +196,6 @@ export const TripCard: React.FC<TripCardProps> = ({
         </View>
       </View>
 
-      {/* Price - Just display price, no button here */}
       <View className="flex-row justify-between items-center">
         <View>
           <AppText variant="caption" color={colors.textSecondary} className="mb-1">{translate('price_per_seat') || 'Price per seat'}</AppText>
@@ -211,13 +206,11 @@ export const TripCard: React.FC<TripCardProps> = ({
           </View>
         </View>
 
-        {/* Simple indicator that this card is clickable */}
         <View className={`${isDark ? 'bg-blue-900/40' : 'bg-blue-50'} px-4 py-2 rounded-full`}>
           <AppText variant="bodySmall" weight="bold" color={isDark ? '#93c5fd' : '#2563eb'}>{translate('view_details') || 'View Details'}</AppText>
         </View>
       </View>
 
-      {/* Notes */}
       {trip.notes && (
         <View className={`mt-3 ${isDark ? 'bg-blue-900/20' : 'bg-blue-50'} p-3 rounded-lg flex-row items-start`}>
           <AlertCircle size={16} color={isDark ? '#60a5fa' : colors.primary} />

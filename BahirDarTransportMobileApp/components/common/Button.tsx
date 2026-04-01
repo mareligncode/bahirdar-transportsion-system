@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  TouchableOpacity, 
+import {
+  TouchableOpacity,
   ActivityIndicator,
   TouchableOpacityProps,
-  View 
+  View
 } from 'react-native';
 import { AppText } from './AppText';
 
@@ -11,7 +11,7 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'title'> {
   title?: string;
   loading?: boolean;
   disabled?: boolean;
-  icon?: React.ReactNode; 
+  icon?: React.ReactNode;
   className?: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
@@ -20,10 +20,10 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'title'> {
   leftIcon?: React.ReactNode;
 }
 
-export function Button({ 
-  title, 
+export function Button({
+  title,
   children,
-  loading = false, 
+  loading = false,
   disabled = false,
   variant = 'primary',
   size = 'medium',
@@ -33,8 +33,7 @@ export function Button({
   onPress,
   ...props
 }: ButtonProps) {
-  
-  // Use static class mappings
+
   const variantClasses = {
     primary: 'bg-blue-600',
     secondary: 'bg-gray-600',
@@ -68,25 +67,23 @@ export function Button({
   const buttonContent = children || title;
   const isDisabled = disabled || loading;
 
-  // Get the specific classes based on props
   const variantClass = variantClasses[variant] || variantClasses.primary;
   const sizeClass = sizeClasses[size] || sizeClasses.medium;
   const textVariantClass = textVariantClasses[variant] || textVariantClasses.primary;
   const textSizeVariant = textSizeVariants[size] || textSizeVariants.medium;
 
-  // Build className safely - use conditional logic instead of template literals with booleans
   let buttonClassName = 'rounded-lg items-center justify-center flex-row';
   buttonClassName += ` ${variantClass}`;
   buttonClassName += ` ${sizeClass}`;
-  
+
   if (fullWidth) {
     buttonClassName += ' w-full';
   }
-  
+
   if (isDisabled) {
     buttonClassName += ' opacity-50';
   }
-  
+
   if (className) {
     buttonClassName += ` ${className}`;
   }
@@ -100,15 +97,15 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator 
-          color={variant === 'outline' ? '#3B82F6' : '#FFFFFF'} 
+        <ActivityIndicator
+          color={variant === 'outline' ? '#3B82F6' : '#FFFFFF'}
           size="small"
         />
       ) : (
         <>
           {leftIcon && <View className="mr-2">{leftIcon}</View>}
           {typeof buttonContent === 'string' ? (
-            <AppText 
+            <AppText
               variant={textSizeVariant}
               weight="600"
               color={variant === 'outline' ? '#1a56db' : '#FFFFFF'}

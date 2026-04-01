@@ -1,4 +1,3 @@
-// components/layout/CustomDrawerContent.tsx
 import React from 'react';
 import {
   View,
@@ -74,7 +73,6 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
         ))}
       </View>
 
-      {/* Logout Button */}
       <TouchableOpacity
         onPress={handleLogout}
         className={`flex-row items-center px-6 py-5 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}
@@ -83,7 +81,6 @@ export function CustomDrawerContent({ onClose }: CustomDrawerContentProps) {
         <AppText weight="medium" color="#dc2626" variant="bodyLarge" className="ml-4">{translate('logout')}</AppText>
       </TouchableOpacity>
 
-      {/* Version */}
       <View className="px-6 py-3">
         <AppText variant="caption" color={isDark ? '#6b7280' : '#9ca3af'}>{translate('version')} {APP_CONSTANTS.VERSION}</AppText>
       </View>

@@ -1,10 +1,9 @@
-// lib/api/trips.ts
+
 import { api as apiClient, API_ENDPOINTS } from '../../config/api';
 import { SearchTripParams } from '../../types/trip';
 
 export const tripsApi = {
   searchTrips: async (params: SearchTripParams) => {
-    console.log('🔍 Searching trips with params:', params);
 
     try {
       const dateOnly = params.date?.includes('T') ? params.date.split('T')[0] : params.date;
@@ -19,20 +18,16 @@ export const tripsApi = {
 
       return response.data;
     } catch (error) {
-      console.error('❌ Search failed:', error);
       throw error;
     }
   },
 
   getTripById: async (id: string) => {
-    console.log('📡 tripsApi.getTripById called with ID:', id);
-
     try {
       const url = API_ENDPOINTS.TRIPS.BY_ID(id);
       const response = await apiClient.get(url);
       return response.data;
     } catch (error: any) {
-      console.error('❌ tripsApi.getTripById error:', error.message);
       throw error;
     }
   },
@@ -46,7 +41,6 @@ export const tripsApi = {
     fromStation?: string;
     toStation?: string;
   } = {}): Promise<any> => {
-    console.log('📅 Fetching trips with filters:', filters);
     const origin = filters?.origin ?? filters?.fromStation;
     const destination = filters?.destination ?? filters?.toStation;
 
@@ -62,14 +56,11 @@ export const tripsApi = {
       });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch trips:', error.response?.data || error.message);
       throw error;
     }
   },
 
   getStations: async () => {
-    console.log('📍 Fetching active stations');
-    console.log('🔍 API Base URL:', apiClient.defaults.baseURL);
     try {
       const response = await apiClient.get(API_ENDPOINTS.STATIONS.ACTIVE);
       return response.data;
@@ -79,8 +70,6 @@ export const tripsApi = {
   },
 
   getStationById: async (stationId: string) => {
-    console.log('📍 Fetching station:', stationId);
-
     try {
       const response = await apiClient.get(API_ENDPOINTS.STATIONS.BY_ID(stationId));
       return response.data;
@@ -146,7 +135,6 @@ export const tripsApi = {
           const result = await tryBookings(forTrip);
           return { data: result };
         } catch (err) {
-          console.warn('Could not fetch booked seats for trip', tripId, err);
           return { data: { bookedSeats: [] } };
         }
       }
@@ -187,13 +175,10 @@ export const tripsApi = {
   },
 
   getVehicleImages: async (vehicleId: string) => {
-    console.log('🖼️ Fetching vehicle images:', vehicleId);
-
     try {
       const response = await apiClient.get(API_ENDPOINTS.VEHICLES.GET_IMAGES(vehicleId));
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching vehicle images:', error);
       throw error;
     }
   }

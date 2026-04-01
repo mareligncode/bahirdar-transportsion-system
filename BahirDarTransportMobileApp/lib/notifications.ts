@@ -46,21 +46,18 @@ export const registerForPushNotificationsAsync = async (): Promise<string | null
 
     const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
     if (!projectId) {
-      console.warn('Project ID not found. Push notifications may not work properly.');
       return null;
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     return tokenData?.data ?? null;
   } catch (error) {
-    console.error('Error registering for push notifications:', error);
     return null;
   }
 };
 
 export const setupNotificationListeners = () => {
   if (isExpoGo || !Notifications) {
-    console.log('Notification listeners not set up in Expo Go (local notifications only)');
     return () => { };
   }
 
@@ -121,10 +118,8 @@ export const scheduleTripReminders = async (tripId: string, departureTime: strin
           date: reminderTime,
         },
       });
-      console.log(`Trip reminder scheduled for ${reminderTime.toLocaleString()}`);
     }
   } catch (error) {
-    console.error('Error scheduling trip reminder:', error);
   }
 };
 
@@ -146,9 +141,7 @@ export const scheduleBookingConfirmation = async (bookingId: string, bookingTime
         date: confirmationTime,
       },
     });
-    console.log(`Booking confirmation reminder scheduled for ${confirmationTime.toLocaleString()}`);
   } catch (error) {
-    console.error('Error scheduling booking confirmation:', error);
   }
 };
 
@@ -156,9 +149,7 @@ export const cancelScheduledNotifications = async (identifier: string) => {
   if (isExpoGo || !Notifications) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(identifier);
-    console.log(`Cancelled scheduled notification: ${identifier}`);
   } catch (error) {
-    console.error('Error cancelling scheduled notification:', error);
   }
 };
 
@@ -168,7 +159,6 @@ export const getScheduledNotifications = async () => {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     return scheduled;
   } catch (error) {
-    console.error('Error getting scheduled notifications:', error);
     return [];
   }
 };
@@ -186,6 +176,5 @@ export const presentLocalNotification = async (title: string, body: string, data
       trigger: null,
     });
   } catch (error) {
-    console.error('Error presenting local notification:', error);
   }
 };

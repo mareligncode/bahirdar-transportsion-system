@@ -34,19 +34,19 @@ export function ScreenLayout({
   const content = (
     <View className={`flex-1 bg-white dark:bg-gray-900 ${className}`}>
       {showHeader && (
-        <Header 
-          title={headerTitle} 
+        <Header
+          title={headerTitle}
           showBackButton={showBackButton}
           onBackPress={onBackPress}
           rightAction={rightAction}
           className={headerClassName}
         />
       )}
-      
+
       <View className={`flex-1 ${showBottomTab ? 'pb-16' : ''}`}>
         {children}
       </View>
-      
+
       {showBottomTab && <BottomTab />}
     </View>
   );
@@ -54,9 +54,9 @@ export function ScreenLayout({
   if (safeArea) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-        <StatusBar 
-          barStyle={isDark ? "light-content" : "dark-content"} 
-          backgroundColor={isDark ? "#111827" : "#FFFFFF"} 
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={isDark ? "#111827" : "#FFFFFF"}
         />
         {content}
       </SafeAreaView>
@@ -65,9 +65,9 @@ export function ScreenLayout({
 
   return (
     <>
-      <StatusBar 
-        barStyle={isDark ? "light-content" : "dark-content"} 
-        backgroundColor={isDark ? "#111827" : "#FFFFFF"} 
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#111827" : "#FFFFFF"}
       />
       {content}
     </>

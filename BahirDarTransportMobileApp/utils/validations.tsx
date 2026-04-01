@@ -1,11 +1,10 @@
-// utils/validations.tsx - FIXED VERSION
-import { 
-  LoginFormData, 
-  RegisterFormData, 
+import {
+  LoginFormData,
+  RegisterFormData,
   ForgotPasswordFormData,
   UpdateProfileFormData,
   ResetPasswordFormData,
-  ValidationErrors 
+  ValidationErrors
 } from '@/types/auth';
 
 export const validateLoginForm = (data: LoginFormData): ValidationErrors => {
@@ -29,7 +28,6 @@ export const validateLoginForm = (data: LoginFormData): ValidationErrors => {
 export const validateRegisterForm = (data: RegisterFormData): ValidationErrors => {
   const errors: ValidationErrors = {};
 
-  // Full name validation - FIXED FIELD NAME
   if (!data.fullName || data.fullName.trim() === '') {
     errors.name = 'Full name is required';
   } else if (data.fullName.trim().length < 2) {
@@ -38,22 +36,19 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
     errors.name = 'Please enter your first and last name';
   }
 
-  // Email validation
   if (!data.email || data.email.trim() === '') {
     errors.email = 'Email is required';
   } else if (!/\S+@\S+\.\S+/.test(data.email)) {
     errors.email = 'Please enter a valid email address';
   }
 
-  // Phone validation - FIXED FIELD NAME
   if (!data.phoneNumber || data.phoneNumber.trim() === '') {
     errors.phone = 'Phone number is required';
   } else {
-    // Remove country code and check digits
     const phoneDigits = data.phoneNumber.replace(/\D/g, '');
     const countryCode = data.phoneNumber.includes('+251') ? '251' : '';
     const numberWithoutCode = phoneDigits.replace(countryCode, '');
-    
+
     if (numberWithoutCode.length < 9) {
       errors.phone = 'Phone number must be at least 9 digits';
     } else if (!/^[79]/.test(numberWithoutCode)) {
@@ -61,7 +56,6 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
     }
   }
 
-  // Password validation
   if (!data.password || data.password.trim() === '') {
     errors.password = 'Password is required';
   } else if (data.password.length < 8) {
@@ -76,19 +70,16 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
     errors.password = 'Password must contain at least one special character';
   }
 
-  // Confirm password
   if (!data.confirmPassword || data.confirmPassword.trim() === '') {
     errors.confirmPassword = 'Please confirm your password';
   } else if (data.password !== data.confirmPassword) {
     errors.confirmPassword = 'Passwords do not match';
   }
 
-  // Terms and conditions
   if (!data.termsAccepted) {
     errors.termsAccepted = 'You must accept the terms and conditions';
   }
 
-  // Emergency contact (optional)
   if (data.emergencyContact && data.emergencyContact.trim() !== '') {
     const emergencyDigits = data.emergencyContact.replace(/\D/g, '');
     if (emergencyDigits.length < 9) {
@@ -162,7 +153,7 @@ export const extractPhoneNumber = (phoneWithCode: string, countryCode: string): 
 export const validatePhoneWithCountryCode = (phone: string, countryCode: string): boolean => {
   const numberWithoutCode = extractPhoneNumber(phone, countryCode);
   const digitsOnly = numberWithoutCode.replace(/\D/g, '');
-  
+
   return digitsOnly.length >= 9 && digitsOnly.length <= 15;
 };
 
@@ -185,7 +176,6 @@ export const formatDate = (dateString: string): string => {
   }).format(date);
 };
 
-// Add to utils/validations.tsx
 export const validatePassengerDetails = (data: {
   fullName: string;
   phoneNumber: string;
@@ -194,14 +184,12 @@ export const validatePassengerDetails = (data: {
 }): Record<string, string> => {
   const errors: Record<string, string> = {};
 
-  // Full Name validation
   if (!data.fullName.trim()) {
     errors.fullName = 'Full name is required';
   } else if (data.fullName.trim().length < 3) {
     errors.fullName = 'Name must be at least 3 characters';
   }
 
-  // Phone Number validation
   const phoneDigits = data.phoneNumber.replace(/\D/g, '');
   if (!data.phoneNumber.trim()) {
     errors.phoneNumber = 'Phone number is required';
@@ -211,7 +199,6 @@ export const validatePassengerDetails = (data: {
     errors.phoneNumber = 'Ethiopian numbers must start with 7 or 9';
   }
 
-  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!data.email.trim()) {
     errors.email = 'Email is required';
@@ -219,7 +206,6 @@ export const validatePassengerDetails = (data: {
     errors.email = 'Enter a valid email address';
   }
 
-  // Emergency Contact (optional)
   if (data.emergencyContact && data.emergencyContact.trim()) {
     const emergencyDigits = data.emergencyContact.replace(/\D/g, '');
     if (emergencyDigits.length < 9) {

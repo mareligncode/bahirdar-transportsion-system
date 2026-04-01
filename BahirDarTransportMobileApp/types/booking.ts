@@ -1,4 +1,3 @@
-// types/booking.ts
 import { Trip, Vehicle } from './trip';
 import { User } from './auth';
 import { PaymentStatus } from './payment';
@@ -12,7 +11,6 @@ export interface PassengerDetails {
   idType?: 'passport' | 'national_id' | 'drivers_license';
 }
 
-// Booking status type
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'refunded';
 export type BookingPaymentStatus = 'pending' | 'success' | 'failed' | 'cancelled' | 'refunded';
 
@@ -23,11 +21,11 @@ export interface Booking {
   passengerID: string | User;
   tripID: string | Trip;
   vehicleID?: string | Vehicle;
-  seatNumber?: number; // Keep for backward compatibility
-  seatNumbers?: number[]; // Add for multi-seat support
-  totalPrice?: number; // Total amount for all seats
-  amount?: number; // Legacy field
-  pricePerSeat?: number; // Price per individual seat
+  seatNumber?: number;
+  seatNumbers?: number[];
+  totalPrice?: number;
+  amount?: number;
+  pricePerSeat?: number;
   status: BookingStatus;
   paymentStatus?: BookingPaymentStatus;
   paymentMethod?: string;
@@ -48,7 +46,6 @@ export interface Booking {
   refundAmount?: number;
   createdBy?: string | User;
   
-  // New fields for group bookings
   isGroupBooking?: boolean;
   groupBookingId?: string;
   groupTicketNumber?: string;

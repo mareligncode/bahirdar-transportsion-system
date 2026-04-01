@@ -1,4 +1,3 @@
-// app/tabs/trips/index.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -48,12 +47,6 @@ export default function TripsScreen() {
   const params = useLocalSearchParams();
   const { colors, isDark } = useTheme();
 
-  // Fix: Handle case when params.id is 'index'
-  if (params.id === 'index' || params.tripId === 'index') {
-    router.replace('/tabs/trips');
-    return null;
-  }
-
   const { trips, loading, searchTrips, fetchAllTrips, stations, fetchStations } = useTrips();
 
   const origin = Array.isArray(params.origin) ? params.origin[0] : params.origin;
@@ -80,6 +73,13 @@ export default function TripsScreen() {
     sortBy: 'departureTime',
     sortOrder: 'asc',
   });
+
+  // Handle case when params.id is 'index' - moved to useEffect
+  useEffect(() => {
+    if (params.id === 'index' || params.tripId === 'index') {
+      router.replace('/tabs/trips');
+    }
+  }, [params.id, params.tripId]);
 
   useEffect(() => {
     loadStations();
@@ -210,6 +210,11 @@ export default function TripsScreen() {
 
     return filtered;
   }, [trips, filters]);
+
+  // Early return after all hooks are declared
+  if (params.id === 'index' || params.tripId === 'index') {
+    return null;
+  }
 
   const handleSwapLocations = () => {
     setSearchParams(prev => ({

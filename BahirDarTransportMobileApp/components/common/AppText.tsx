@@ -33,7 +33,6 @@ export const AppText: React.FC<AppTextProps> = ({
     textAlign: align,
   };
 
-  // Label variant has uppercase transformation
   if (variant === 'label') {
     customStyle.textTransform = 'uppercase';
   }

@@ -1,4 +1,3 @@
- // components/common/EmptyState.tsx
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { AppText } from './AppText';

@@ -82,3 +82,5 @@ export const Input = forwardRef<RNTextInput, InputProps>(({
     </View>
   );
 });
+
+Input.displayName = 'Input';

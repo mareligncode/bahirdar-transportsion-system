@@ -1,4 +1,3 @@
-// config/api.ts
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -9,13 +8,13 @@ export const getPlatformBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
-    // Use your actual backend IP address
-    url = 'http://10.161.142.162:5000/api';
+
+    url = 'http://10.161.142.189:5000/api';
   }
   return url;
 };
 
-export const API_BASE_URL = getPlatformBaseUrl(); // Make sure this is exported
+export const API_BASE_URL = getPlatformBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -116,7 +115,6 @@ api.interceptors.response.use(
 
       console.log('🔄 Refresh token response:', JSON.stringify(response.data));
 
-      // Backend returns: { success: true, data: { tokens: { accessToken, refreshToken } } }
       const tokens = response.data?.data?.tokens;
       const newToken = tokens?.accessToken;
       const newRefreshToken = tokens?.refreshToken || refreshToken;
@@ -177,8 +175,11 @@ export const API_ENDPOINTS = {
     LOGOUT: `/auth/logout`,
     REFRESH_TOKEN: `/auth/refresh-token`,
     FORGOT_PASSWORD: `/auth/forgot-password`,
+    FORGOT_PASSWORD_MOBILE: `/auth/forgot-password-mobile`,
     VALIDATE_RESET_TOKEN: `/auth/validate-reset-token`,
+    VERIFY_RESET_CODE: `/auth/verify-reset-code`,
     RESET_PASSWORD: `/auth/reset-password`,
+    RESET_PASSWORD_MOBILE: `/auth/reset-password-mobile`,
     VERIFY_EMAIL: `/auth/verify-email`,
     PROFILE: `/auth/profile`,
     UPDATE_PROFILE: `/auth/profile`,

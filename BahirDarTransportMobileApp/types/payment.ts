@@ -1,9 +1,6 @@
-// types/payment.ts
-
 import { Booking } from './booking';
 import { User } from './auth';
 
-// Define a single, consistent PaymentStatus type
 export type PaymentStatus = 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'refunded';
 
 export interface Payment {
@@ -63,7 +60,6 @@ export interface PaymentVerifyResponse {
   };
 }
 
-// Add a more flexible response type for cases where the backend returns different structures
 export interface PaymentVerifyResult {
   payment: Payment | null;
   booking: Booking | null;

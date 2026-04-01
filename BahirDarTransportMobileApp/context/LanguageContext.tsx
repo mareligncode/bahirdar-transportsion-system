@@ -4,7 +4,6 @@ import { translations } from '../constants/translations';
 
 export type Language = 'en' | 'am';
 
-// Create a type for the translation object structure
 export type TranslationType = typeof translations.en;
 
 interface LanguageContextType {

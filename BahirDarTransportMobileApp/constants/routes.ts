@@ -1,4 +1,3 @@
-// Authentication Routes (match app/auth/ and Expo Router)
 export const AUTH_ROUTES = {
   LOGIN: '/auth/Login',
   REGISTER: '/auth/Register',
@@ -6,7 +5,6 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: '/auth/reset-password',
 } as const;
 
-// Main App Routes (match app/tabs/ and app/(screens)/)
 export const MAIN_ROUTES = {
   HOME: '/tabs/home',
   TRIPS: {
@@ -40,10 +38,10 @@ export const MAIN_ROUTES = {
   },
 } as const;
 
-// Profile & Settings Routes (match app/tabs/profile and app/menu/)
 export const PROFILE_ROUTES = {
   PROFILE: '/tabs/profile',
   SETTINGS: '/menu/settings',
+  BOOKINGS: '/tabs/tickets',
 } as const;
 
 export const SETTINGS_ROUTES = {
@@ -54,7 +52,6 @@ export const SETTINGS_ROUTES = {
   ABOUT: '/menu/about',
 } as const;
 
-// Navigation Constants
 export const TAB_ROUTES = [
   { name: 'Home', route: MAIN_ROUTES.HOME, icon: 'home' },
   { name: 'Trips', route: MAIN_ROUTES.TRIPS.INDEX, icon: 'bus' },
@@ -62,14 +59,12 @@ export const TAB_ROUTES = [
   { name: 'Profile', route: PROFILE_ROUTES.PROFILE, icon: 'user' },
 ] as const;
 
-// Unified route constants for backward compatibility or direct usage
 export const ROUTES = {
-  // Auth routes
+
   LOGIN: AUTH_ROUTES.LOGIN,
   REGISTER: AUTH_ROUTES.REGISTER,
   FORGOT_PASSWORD: AUTH_ROUTES.FORGOT_PASSWORD,
 
-  // Main routes
   HOME: MAIN_ROUTES.HOME,
   SEARCH: MAIN_ROUTES.TRIPS.SEARCH,
   TRIPS: MAIN_ROUTES.TRIPS.INDEX,
@@ -80,12 +75,10 @@ export const ROUTES = {
   CHECKOUT: MAIN_ROUTES.PAYMENT.CHECKOUT,
   TICKET_DETAILS: MAIN_ROUTES.TICKETS.DETAILS,
 
-  // Profile routes
   PROFILE: PROFILE_ROUTES.PROFILE,
   PROFILE_BOOKINGS: PROFILE_ROUTES.BOOKINGS,
 } as const;
 
-// Type definitions
 export type AuthRoute = typeof AUTH_ROUTES[keyof typeof AUTH_ROUTES];
 export type MainRoute = typeof MAIN_ROUTES[keyof typeof MAIN_ROUTES];
 export type ProfileRoute = typeof PROFILE_ROUTES[keyof typeof PROFILE_ROUTES];
@@ -93,7 +86,6 @@ export type SettingsRoute = typeof SETTINGS_ROUTES[keyof typeof SETTINGS_ROUTES]
 export type Route = typeof ROUTES[keyof typeof ROUTES];
 export type TabRoute = typeof TAB_ROUTES[number];
 
-// App Constants
 export const APP_CONSTANTS = {
   APP_NAME: 'Bahir Dar Transport',
   VERSION: '1.0.0',
@@ -104,7 +96,6 @@ export const APP_CONSTANTS = {
   PROFILE_PREFIX: '/tabs/profile',
 } as const;
 
-// Default export for easy imports
 export default {
   AUTH_ROUTES,
   MAIN_ROUTES,

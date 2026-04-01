@@ -1,4 +1,3 @@
-// hooks/useBooking.ts
 import { useState, useCallback } from 'react';
 import { bookingsApi } from '../lib/api/bookings';
 import { useBookingStore } from '../store/bookingStore';
@@ -6,7 +5,6 @@ import { useAuth } from './useAuth';
 import { Booking, BookingCreateData, Trip } from '../types';
 import { useToast } from '../components/common/Toast';
 import { useAuthStore } from '../store/authStore';
-
 
 export const useBooking = () => {
   const [loading, setLoading] = useState(false);
@@ -27,7 +25,6 @@ export const useBooking = () => {
     clearBookingState
   } = useBookingStore();
 
-  // Helper to check if error is the backend routing issue
   const isBackendRoutingIssue = (err: any): boolean => {
     const errorString = JSON.stringify(err?.response?.data || err?.message || '');
     return errorString.includes('Cast to ObjectId') &&
@@ -54,10 +51,7 @@ export const useBooking = () => {
         setBookings(enhancedBookings);
       }
     } catch (err: any) {
-      // Check if it's the backend routing issue
-      if (isBackendRoutingIssue(err)) {
-        console.log('⚠️ Backend routing issue detected for my-bookings. This is a known issue.');
-        // Don't show error toast, just set empty bookings
+      if (isBackendRoutingIssue(err)) {       // Don't show error toast, just set empty bookings
         setBookings([]);
       } else {
         const message = err.response?.data?.message || err.message || 'Failed to fetch bookings';
@@ -183,7 +177,7 @@ export const useBooking = () => {
   }, [user, addBooking, setCurrentBooking, showToast]);
 
   const cancelBooking = useCallback(async (bookingId: string, options?: { silent?: boolean }): Promise<boolean> => {
-    // ID Validation guard
+
     if (!bookingId || bookingId === 'undefined' || bookingId === 'null' || typeof bookingId !== 'string') {
       console.warn('⚠️ [useBooking.cancelBooking] Prevention: Invalid Booking ID format:', bookingId);
       if (!options?.silent) {
@@ -200,7 +194,6 @@ export const useBooking = () => {
 
       if (response.success) {
 
-        // Remove the cancelled booking from the list
         setBookings(bookings.filter(booking => booking._id !== bookingId));
 
         if (currentBooking?._id === bookingId) {
@@ -216,7 +209,6 @@ export const useBooking = () => {
       return false;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to cancel booking';
-      console.error('❌ Cancel booking error:', errorMessage);
 
       if (!options?.silent) {
         setError(errorMessage);
@@ -267,17 +259,13 @@ export const useBooking = () => {
       return null;
     } catch (err: any) {
       if (err.response?.status === 404) {
-        console.log(`ℹ️ Booking ${id} not found (404) - may have been deleted`);
         return null;
       }
 
       const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch booking';
 
-      // Fallback to locally cached booking if network request fails
       const cachedBooking = bookings.find(b => b._id === id);
       if (cachedBooking) {
-        console.log('ℹ️ Falling back to cached booking due to error:', errorMessage);
-        // Make sure to enhance it with expected structure
         const enhancedCached = {
           ...cachedBooking,
           seatNumbers: cachedBooking.seatNumbers || (cachedBooking.seatNumber ? [cachedBooking.seatNumber] : []),
@@ -337,7 +325,6 @@ export const useBooking = () => {
       const status = err.response?.status;
 
       if (status === 403) {
-        console.log('User is not authorized to fetch all trip bookings (expected for passengers)');
         return [];
       }
 
