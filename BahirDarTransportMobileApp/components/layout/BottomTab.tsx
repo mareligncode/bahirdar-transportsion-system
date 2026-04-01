@@ -38,11 +38,16 @@ export function BottomTab() {
 
   return (
     <View 
-      className="absolute bottom-0 left-0 right-0 border-t px-4 pt-3 shadow-lg"
+      className="absolute bottom-0 left-0 right-0 border-t-2 px-4 pt-3 shadow-2xl"
       style={{ 
-        paddingBottom: insets.bottom,
-        backgroundColor: colors.surface,
-        borderTopColor: colors.border
+        paddingBottom: insets.bottom + 4,
+        backgroundColor: colors.cardBackground,
+        borderTopColor: colors.border,
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
       }} 
     >
       <View className="flex-row justify-between items-center">
