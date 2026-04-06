@@ -101,7 +101,6 @@ export const initializePayment = async (req, res) => {
             });
         }
 
-        // Check if this booking is part of a legacy batch booking (multiple documents)
         const batchBookings = await Booking.find({
             tripID: booking.tripID,
             passengerID: userId,
@@ -112,7 +111,6 @@ export const initializePayment = async (req, res) => {
 
         const isLegacyBatchBooking = batchBookings.length > 0;
 
-        // Determine correct amount, considering group bookings (multiple seats in one document)
         let amount = booking.totalPrice;
 
         if (!amount || amount === 0) {
@@ -124,9 +122,7 @@ export const initializePayment = async (req, res) => {
             }
         }
 
-        // const formattedPhone = '+251911111111'; 
-        // console.log('📱 Using test phone:', formattedPhone);
-
+      
         const tx_ref = `CHAPA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         const originStation = trip.origin?.stationName || 'Origin';
@@ -154,13 +150,12 @@ export const initializePayment = async (req, res) => {
             email: user.email || "maru@gmail.com",
             first_name: user.fullName.split(' ')[0] || 'Customer',
             last_name: user.fullName.split(' ').slice(1).join(' ') || 'User',
-            // phone_number: formattedPhone,
             tx_ref: tx_ref,
             callback_url: `${process.env.BASE_URL}/api/payment/webhook`,
             return_url: `${process.env.BASE_URL}/api/payment/verify/${tx_ref}`,
             customization: {
-                title: 'BD Transport', // 13 characters
-                description: description // Clean description
+                title: 'BD Transport', 
+                description: description 
             }
         };
 
@@ -168,7 +163,6 @@ export const initializePayment = async (req, res) => {
         console.log('Request details:', {
             amount: amount,
             email: user.email,
-            // phone: formattedPhone,
             tx_ref: tx_ref,
             title: chapaRequest.customization.title,
             titleLength: chapaRequest.customization.title.length,
@@ -177,7 +171,6 @@ export const initializePayment = async (req, res) => {
             descValid: /^[a-zA-Z0-9\s\-_\.]*$/.test(chapaRequest.customization.description) ? '✅' : '❌'
         });
 
-        // Make request to Chapa API
         let chapaResponse;
         try {
             chapaResponse = await axios.post(
@@ -191,11 +184,10 @@ export const initializePayment = async (req, res) => {
                     timeout: 30000
                 }
             );
-            console.log('✅ Chapa API responded successfully');
+            console.log(' Chapa API responded successfully');
         } catch (chapaError) {
-            console.error('❌ Chapa API error:', chapaError.response?.data || chapaError.message);
+            console.error(' Chapa API error:', chapaError.response?.data || chapaError.message);
 
-            // Try to save error payment record
             try {
                 const failedPayment = new Payment({
                     bookingID: bookingId,
@@ -220,7 +212,6 @@ export const initializePayment = async (req, res) => {
             });
         }
 
-        // Check Chapa response
         if (!chapaResponse.data || !chapaResponse.data.data || !chapaResponse.data.data.checkout_url) {
             console.error('Invalid Chapa response:', chapaResponse.data);
             return res.status(500).json({
@@ -233,7 +224,6 @@ export const initializePayment = async (req, res) => {
         console.log('💰 Payment initialized successfully');
         console.log('🔗 Checkout URL:', chapaResponse.data.data.checkout_url);
 
-        // Create payment record
         const payment = new Payment({
             bookingID: bookingId,
             passengerID: userId,
@@ -251,7 +241,6 @@ export const initializePayment = async (req, res) => {
         await payment.save();
         console.log('💾 Payment record saved');
 
-        // Send booking confirmation notification
         try {
             const notificationData = {
                 userID: user._id,
@@ -281,7 +270,6 @@ export const initializePayment = async (req, res) => {
                         amount: booking.totalPrice,
                         currency: 'ETB',
                         status: 'pending',
-                        //paymentURL: paymentData.checkout_url
                         paymentURL: chapaResponse.data.data.checkout_url
                     },
                     vehicle: {
@@ -302,14 +290,12 @@ export const initializePayment = async (req, res) => {
         } catch (notificationError) {
             console.error(` Failed to send booking confirmation notification:`, notificationError.message);
         }
-        // end of notification
-        // Update booking with payment reference
+     
         booking.paymentID = payment._id;
         booking.paymentStatus = 'pending';
         await booking.save();
         console.log('📝 Booking updated');
 
-        // Return success response
         res.json({
             success: true,
             message: 'Payment initialized successfully',
