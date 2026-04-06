@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -18,13 +17,15 @@ import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { useTrips } from '@/hooks/useTrips';
 import { useBooking } from '@/hooks/useBooking';
 import { usePayment } from '@/hooks/usePayment';
+import { useUnreadCount } from '@/store/notificationStore';
 import { CustomDrawerContent } from '@/components/layout/CustomDrawerContent';
 import {
   Card,
   Badge,
   EmptyState,
   Button,
-  Loader
+  Loader,
+  AppText
 } from '@/components/common';
 import {
   Calendar,
@@ -60,10 +61,11 @@ import {
   Thermometer,
   Battery,
 } from 'lucide-react-native';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Trip } from '@/types/trip';
 import { Booking } from '@/types';
 import { APP_CONSTANTS } from '@/constants/routes';
-import { COLORS } from '@/constants/colors';
+import { useTheme } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.75;
@@ -94,11 +96,13 @@ const getBadgeVariant = (status: string): 'success' | 'warning' | 'error' | 'inf
 };
 
 export default function PassengerDashboard() {
+  const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
   const { trips, loading: tripsLoading, fetchAllTrips } = useTrips();
   const { bookings, fetchMyBookings, loading: bookingsLoading } = useBooking();
   const { payments, getPaymentHistory } = usePayment();
+  const { colors, isDark } = useTheme();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -154,7 +158,7 @@ export default function PassengerDashboard() {
         getPaymentHistory(),
         fetchAllTrips({ limit: 10 })
       ]);
-      const userBookingsList = bookings.filter(b =>
+      const userBookingsList = bookings.filter((b: Booking) =>
         (typeof b.passengerID === 'string' && b.passengerID === user?._id) ||
         (typeof b.passengerID === 'object' && b.passengerID?._id === user?._id)
       );
@@ -186,7 +190,7 @@ export default function PassengerDashboard() {
       setPopularRoutes(popular.length > 0 ? popular : upcoming);
 
     } catch (error) {
-      setError('Failed to load dashboard data');
+      setError(translate('something_went_wrong'));
     } finally {
       setLoading(false);
     }
@@ -200,12 +204,12 @@ export default function PassengerDashboard() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning ☀️';
-    if (hour < 18) return 'Good Afternoon 🌤️';
-    return 'Good Evening 🌙';
+    if (hour < 12) return translate('greeting_morning');
+    if (hour < 18) return translate('greeting_afternoon');
+    return translate('greeting_evening');
   };
 
-  const formatTime = (dateString: string) => {
+  const formatTimeStr = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleTimeString([], {
         hour: '2-digit',
@@ -216,30 +220,30 @@ export default function PassengerDashboard() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDateStr = (dateString: string) => {
     try {
       const date = new Date(dateString);
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (date.toDateString() === today.toDateString()) return 'Today';
-      if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (date.toDateString() === today.toDateString()) return translate('today');
+      if (date.toDateString() === tomorrow.toDateString()) return translate('tomorrow');
+      return date.toLocaleDateString(translate('language_code' as any) === 'am' ? 'am-ET' : 'en-US', { month: 'short', day: 'numeric' });
     } catch {
       return 'N/A';
     }
   };
 
   const formatDateTime = (dateString: string) => {
-    return `${formatDate(dateString)} at ${formatTime(dateString)}`;
+    return `${formatDateStr(dateString)} ${translate('at')} ${formatTimeStr(dateString)}`;
   };
 
   const navigationActions = {
     bookTrip: () => router.push('/tabs/trips/search'),
     myBookings: () => router.push('/(screens)/booking'),
     paymentHistory: () => router.push('/(screens)/payment/history'),
-    helpCenter: () => router.push('/menu/support/help'),
+    helpCenter: () => router.push('/menu/support'),
     notifications: () => router.push('/(screens)/notification'),
     profile: () => router.push('/tabs/profile'),
 
@@ -269,29 +273,29 @@ export default function PassengerDashboard() {
 
   const quickActions = [
     {
-      title: 'Book Trip',
-      description: 'Find your next journey',
+      title: translate('book_trip'),
+      description: translate('book_trip_desc'),
       icon: PlusCircle,
       onPress: navigationActions.bookTrip,
       bgColor: 'bg-blue-500',
     },
     {
-      title: 'My Bookings',
-      description: 'View all your trips',
+      title: translate('my_bookings'),
+      description: translate('my_bookings_desc'),
       icon: History,
       onPress: navigationActions.myBookings,
       bgColor: 'bg-green-500',
     },
     {
-      title: 'Payments',
-      description: 'History & pending',
+      title: translate('payment_history'),
+      description: translate('payment_history_desc'),
       icon: CreditCard,
       onPress: navigationActions.paymentHistory,
       bgColor: 'bg-purple-500',
     },
     {
-      title: 'Help',
-      description: 'Support & FAQs',
+      title: translate('help_center'),
+      description: translate('help_center_desc'),
       icon: HelpCircle,
       onPress: navigationActions.helpCenter,
       bgColor: 'bg-pink-500',
@@ -300,25 +304,25 @@ export default function PassengerDashboard() {
 
   const featureActions = [
     {
-      title: 'Search Trips',
+      title: translate('search_trips'),
       icon: Search,
       onPress: navigationActions.searchTrips,
       color: '#3b82f6',
     },
     {
-      title: 'Popular Routes',
+      title: translate('popular_routes'),
       icon: Compass,
       onPress: navigationActions.viewAllTrips,
       color: '#10b981',
     },
     {
-      title: 'Special Offers',
+      title: translate('special_offers'),
       icon: Percent,
       onPress: navigationActions.bookTrip,
       color: '#f59e0b',
     },
     {
-      title: 'Quick Book',
+      title: translate('quick_book'),
       icon: Zap,
       onPress: navigationActions.bookTrip,
       color: '#8b5cf6',
@@ -349,68 +353,76 @@ export default function PassengerDashboard() {
     {
       icon: Calendar,
       value: activeBookings.toString(),
-      label: 'Active',
-      color: COLORS.primary,
+      label: translate('stats_active'),
+      color: colors.primary,
       onPress: navigationActions.myBookings,
     },
     {
       icon: Timer,
       value: pendingCount.toString(),
-      label: 'Pending',
-      color: COLORS.warning,
+      label: translate('stats_pending'),
+      color: colors.warning,
       onPress: navigationActions.paymentHistory,
     },
     {
       icon: Award,
       value: completedCount.toString(),
-      label: 'Completed',
-      color: COLORS.success,
+      label: translate('status_completed_dashboard'),
+      color: colors.success,
       onPress: navigationActions.myBookings,
     },
     {
       icon: Wallet,
       value: formatCurrency(totalSpent),
-      label: 'Total Spent',
-      color: COLORS.accent,
+      label: translate('total_spent_label'),
+      color: colors.accent,
       onPress: navigationActions.paymentHistory,
     },
-  ], [activeBookings, pendingCount, completedCount, totalSpent]);
+  ], [activeBookings, pendingCount, completedCount, totalSpent, translate]);
 
   const amenities = [
-    { icon: Wifi, label: 'Free WiFi', color: '#3b82f6' },
-    { icon: Coffee, label: 'Refreshments', color: '#10b981' },
-    { icon: Thermometer, label: 'AC', color: '#f59e0b' },
-    { icon: Battery, label: 'Charging', color: '#8b5cf6' },
+    { icon: Wifi, label: translate('amenity_wifi'), color: '#3b82f6' },
+    { icon: Coffee, label: translate('amenity_refreshments'), color: '#10b981' },
+    { icon: Thermometer, label: translate('amenity_ac'), color: '#f59e0b' },
+    { icon: Battery, label: translate('amenity_charging'), color: '#8b5cf6' },
   ];
 
-  const HeaderRightActions = () => (
-    <View className="flex-row items-center gap-3">
-      <TouchableOpacity
-        onPress={navigationActions.notifications}
-        className="relative"
-        activeOpacity={0.7}
-      >
-        <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center">
-          <Bell size={20} color={COLORS.primary} />
-        </View>
-        <View className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white" />
-      </TouchableOpacity>
+  const HeaderRightActions = () => {
+    const unreadCount = useUnreadCount();
+    
+    return (
+      <View className="flex-row items-center gap-3">
+        <TouchableOpacity
+          onPress={navigationActions.notifications}
+          className="relative"
+          activeOpacity={0.7}
+        >
+          <View className={`w-10 h-10 ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} rounded-full items-center justify-center`}>
+            <Bell size={20} color={colors.primary} />
+          </View>
+          {unreadCount > 0 && (
+            <View className="absolute -top-1 -right-1 bg-red-500 rounded-full px-1 min-w-[18px] h-5 items-center justify-center">
+              <AppText variant="caption" weight="bold" color="white">{unreadCount}</AppText>
+            </View>
+          )}
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => {
-          logout();
-          router.replace('/auth/Login');
-        }}
-        className="w-10 h-10 bg-red-100 rounded-full items-center justify-center"
-        activeOpacity={0.7}
-      >
-        <LogOut size={20} color={COLORS.danger} />
-      </TouchableOpacity>
-    </View>
-  );
+        <TouchableOpacity
+          onPress={() => {
+            logout();
+            router.replace('/auth/Login');
+          }}
+          className={`w-10 h-10 ${isDark ? 'bg-red-900/30' : 'bg-red-100'} rounded-full items-center justify-center`}
+          activeOpacity={0.7}
+        >
+          <LogOut size={20} color={colors.danger} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const CustomHeader = () => (
-    <View className="bg-white px-4 pb-4 border-b border-gray-200">
+    <View className={`${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} px-4 pb-4 border-b`}>
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center">
           <TouchableOpacity
@@ -418,31 +430,31 @@ export default function PassengerDashboard() {
             className="mr-3 p-2 -ml-2"
             activeOpacity={0.7}
           >
-            <Menu size={24} color={COLORS.textPrimary} />
+            <Menu size={24} color={colors.textPrimary} />
           </TouchableOpacity>
 
           <View>
-            <Text className="text-2xl font-bold" style={{ color: COLORS.primary }}>
-              {APP_CONSTANTS.APP_NAME}
-            </Text>
+            <AppText variant="h2" color={colors.primary}>
+              {translate('app_name')}
+            </AppText>
           </View>
         </View>
         <HeaderRightActions />
       </View>
 
       <View className="mt-4">
-        <Text className="text-3xl font-bold text-gray-900">
+        <AppText variant="h1" color={isDark ? 'white' : 'black'}>
           {getGreeting()}
-        </Text>
-        <Text className="text-lg text-gray-600 mt-1">
-          {user?.fullName?.split(' ')[0] || 'Passenger'}! 👋
-        </Text>
+        </AppText>
+        <AppText variant="bodyLarge" color={isDark ? colors.gray400 : colors.gray600} className="mt-1">
+          {user?.fullName?.split(' ')[0] || translate('passenger_label')}! 👋
+        </AppText>
       </View>
       {showWelcome && pendingCount > 0 && (
         <View className="mt-4 bg-yellow-50 p-3 rounded-xl border border-yellow-200">
-          <Text className="text-yellow-700 text-sm">
-            ⚠️ You have {pendingCount} pending payment{pendingCount !== 1 ? 's' : ''}. Complete them to confirm your bookings.
-          </Text>
+          <AppText variant="bodySmall" color="#B45309">
+            {translate('pending_payment_warn', { count: pendingCount })}
+          </AppText>
         </View>
       )}
     </View>
@@ -457,58 +469,58 @@ export default function PassengerDashboard() {
         activeOpacity={0.9}
         className="mr-4 w-72"
       >
-        <Card className="border border-gray-200 overflow-hidden">
+        <Card className="border border-gray-200 dark:border-gray-700 overflow-hidden">
           <View className="bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1 flex-row items-center">
             <Sparkles size={14} color="white" />
-            <Text className="text-white text-xs font-medium ml-1">Featured Trip</Text>
+            <AppText variant="label" color="white" className="ml-1">{translate('featured_trip_badge')}</AppText>
           </View>
 
           <View className="p-4">
             <View className="flex-row items-center mb-3">
-              <View className="bg-blue-100 p-2 rounded-full mr-3">
-                <Car size={20} color={COLORS.primary} />
+              <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} p-2 rounded-full mr-3`}>
+                <Car size={20} color={colors.primary} />
               </View>
               <View className="flex-1">
-                <Text className="font-bold text-gray-900" numberOfLines={1}>
+                <AppText variant="bodyMedium" weight="bold" color={isDark ? 'white' : 'black'} numberOfLines={1}>
                   {item.origin?.stationName}
-                </Text>
+                </AppText>
                 <View className="flex-row items-center my-1">
-                  <View className="w-1 h-1 bg-gray-300 rounded-full" />
-                  <View className="w-8 h-0.5 bg-gray-300 mx-1" />
-                  <ArrowRight size={12} color={COLORS.textTertiary} />
-                  <View className="w-8 h-0.5 bg-gray-300 mx-1" />
-                  <View className="w-1 h-1 bg-gray-300 rounded-full" />
+                  <View className={`w-1 h-1 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} rounded-full`} />
+                  <View className={`w-8 h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} mx-1`} />
+                  <ArrowRight size={12} color={colors.textTertiary} />
+                  <View className={`w-8 h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} mx-1`} />
+                  <View className={`w-1 h-1 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} rounded-full`} />
                 </View>
-                <Text className="font-bold text-gray-900" numberOfLines={1}>
+                <AppText variant="bodyMedium" weight="bold" color={isDark ? 'white' : 'black'} numberOfLines={1}>
                   {item.destination?.stationName}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             <View className="flex-row justify-between items-center mb-3">
               <View className="flex-row items-center">
-                <Calendar size={14} color={COLORS.textSecondary} />
-                <Text className="text-xs text-gray-600 ml-1">
-                  {formatDate(item.departureTime)}
-                </Text>
+                <Calendar size={14} color={colors.textSecondary} />
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="ml-1">
+                  {formatDateStr(item.departureTime)}
+                </AppText>
               </View>
               <View className="flex-row items-center">
-                <Clock size={14} color={COLORS.textSecondary} />
-                <Text className="text-xs text-gray-600 ml-1">
-                  {formatTime(item.departureTime)}
-                </Text>
+                <Clock size={14} color={colors.textSecondary} />
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="ml-1">
+                  {formatTimeStr(item.departureTime)}
+                </AppText>
               </View>
             </View>
 
-            <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
+            <View className={`flex-row justify-between items-center pt-3 border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
               <View>
-                <Text className="text-xs text-gray-500">From</Text>
-                <Text className="text-lg font-bold text-blue-600">
+                <AppText variant="caption" color={colors.textSecondary}>{translate('from')}</AppText>
+                <AppText variant="h3" color={colors.primary}>
                   {formatCurrency(item.price || 0)}
-                </Text>
+                </AppText>
               </View>
               <Badge
-                text={`${availableSeats} seats`}
+                text={translate('seats_count', { count: availableSeats })}
                 variant={availableSeats > 5 ? 'success' : 'warning'}
               />
             </View>
@@ -520,30 +532,30 @@ export default function PassengerDashboard() {
 
   if (loading || authLoading || bookingsLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <Loader message="Loading your dashboard..." fullScreen />
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <Loader message={translate('dashboard_loading')} fullScreen />
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <CustomHeader />
         <View className="flex-1 justify-center items-center px-6">
-          <AlertCircle size={48} color={COLORS.danger} />
-          <Text className="text-lg font-semibold text-gray-900 mt-4 text-center">
-            Oops! Something went wrong
-          </Text>
-          <Text className="text-gray-600 text-center mt-2 mb-6">{error}</Text>
-          <Button title="Try Again" onPress={fetchUserData} variant="primary" />
+          <AlertCircle size={48} color={colors.danger} />
+          <AppText variant="h2" weight="semibold" color={isDark ? 'white' : colors.gray900} className="mt-4 text-center">
+            {translate('oops_error')}
+          </AppText>
+          <AppText color={isDark ? colors.gray400 : colors.gray600} className="text-center mt-2 mb-6">{error}</AppText>
+          <Button title={translate('try_again')} onPress={fetchUserData} variant="primary" />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top']}>
       <CustomHeader />
 
       <Modal
@@ -559,7 +571,7 @@ export default function PassengerDashboard() {
                 transform: [{ translateX: slideAnim }],
                 width: MENU_WIDTH,
                 height: '100%',
-                backgroundColor: 'white',
+                backgroundColor: isDark ? '#111827' : 'white',
               }}
             >
               <CustomDrawerContent onClose={() => setMenuVisible(false)} />
@@ -579,15 +591,15 @@ export default function PassengerDashboard() {
         <View className="px-4 mt-4">
           <TouchableOpacity
             onPress={navigationActions.searchTrips}
-            className="bg-white p-4 rounded-xl flex-row items-center border border-gray-200 shadow-sm"
+            className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-4 rounded-xl flex-row items-center border shadow-sm`}
             activeOpacity={0.8}
           >
-            <Search size={20} color={COLORS.textSecondary} />
-            <Text className="text-gray-500 ml-3 flex-1">
-              Where would you like to go?
-            </Text>
-            <View className="bg-blue-100 px-3 py-1 rounded-full">
-              <Text className="text-blue-600 text-xs font-medium">Search</Text>
+            <Search size={20} color={colors.textSecondary} />
+            <AppText variant="bodyMedium" color={isDark ? colors.gray400 : colors.gray500} className="ml-3 flex-1">
+              {translate('where_to')}
+            </AppText>
+            <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} px-3 py-1 rounded-full`}>
+              <AppText variant="label" color={colors.primary}>{translate('search')}</AppText>
             </View>
           </TouchableOpacity>
         </View>
@@ -600,19 +612,19 @@ export default function PassengerDashboard() {
                 onPress={stat.onPress}
                 activeOpacity={0.7}
               >
-                <Card className="border border-gray-200 p-2 items-center">
+                <Card className={`border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200'} p-2 items-center`}>
                   <View
                     className="w-10 h-10 rounded-full items-center justify-center mb-1"
                     style={{ backgroundColor: `${stat.color}15` }}
                   >
                     <stat.icon size={20} color={stat.color} />
                   </View>
-                  <Text className="text-base font-bold text-gray-900">
+                  <AppText variant="bodyLarge" weight="bold" color={isDark ? 'white' : colors.gray900}>
                     {stat.value}
-                  </Text>
-                  <Text className="text-xs text-gray-600 text-center">
+                  </AppText>
+                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">
                     {stat.label}
-                  </Text>
+                  </AppText>
                 </Card>
               </TouchableOpacity>
             ))}
@@ -633,18 +645,18 @@ export default function PassengerDashboard() {
                 >
                   <action.icon size={24} color={action.color} />
                 </View>
-                <Text className="text-xs text-gray-600">{action.title}</Text>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">{action.title}</AppText>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
         <View className="px-4 mt-6">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-gray-900">
-              🔥 Popular Trips
-            </Text>
+            <AppText variant="h3">
+              🔥 {translate('popular_trips')}
+            </AppText>
             <TouchableOpacity onPress={navigationActions.viewAllTrips}>
-              <Text className="text-sm text-blue-600">View All</Text>
+              <AppText variant="bodySmall" color={colors.primary}>{translate('view_all')}</AppText>
             </TouchableOpacity>
           </View>
 
@@ -658,18 +670,18 @@ export default function PassengerDashboard() {
               contentContainerStyle={{ paddingRight: 16 }}
             />
           ) : (
-            <Card className="border border-gray-200 p-6 items-center">
-              <MapPin size={32} color={COLORS.textTertiary} />
-              <Text className="text-gray-600 text-center mt-2">
-                No trips available at the moment
-              </Text>
+            <Card className="p-6 items-center">
+              <MapPin size={32} color={colors.textTertiary} />
+              <AppText color={isDark ? colors.gray400 : colors.gray600} className="text-center mt-2">
+                {translate('no_trips_now')}
+              </AppText>
             </Card>
           )}
         </View>
         <View className="px-4 mt-6">
-          <Text className="text-lg font-bold text-gray-900 mb-3">
-            ✨ Onboard Amenities
-          </Text>
+          <AppText variant="h3" className="mb-3">
+            ✨ {translate('onboard_amenities')}
+          </AppText>
           <View className="flex-row flex-wrap">
             {amenities.map((item, index) => (
               <View key={index} className="w-1/4 items-center mb-4">
@@ -679,15 +691,15 @@ export default function PassengerDashboard() {
                 >
                   <item.icon size={20} color={item.color} />
                 </View>
-                <Text className="text-xs text-gray-600">{item.label}</Text>
+                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">{item.label}</AppText>
               </View>
             ))}
           </View>
         </View>
         <View className="px-4 mt-6">
-          <Text className="text-lg font-bold text-gray-900 mb-3">
-            🚀 Quick Actions
-          </Text>
+          <AppText variant="h3" className="mb-3">
+            🚀 {translate('quick_actions')}
+          </AppText>
           <View className="flex-row flex-wrap -mx-1">
             {quickActions.map((action, index) => (
               <TouchableOpacity
@@ -696,18 +708,18 @@ export default function PassengerDashboard() {
                 onPress={action.onPress}
                 activeOpacity={0.8}
               >
-                <Card className="border border-gray-200 p-3">
+                <Card className="p-3">
                   <View className="flex-row items-center">
                     <View className={`w-10 h-10 rounded-full ${action.bgColor} items-center justify-center mr-2`}>
                       <action.icon size={18} color="white" />
                     </View>
                     <View className="flex-1">
-                      <Text className="font-semibold text-gray-900 text-sm">
+                      <AppText weight="semibold" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
                         {action.title}
-                      </Text>
-                      <Text className="text-xs text-gray-500">
+                      </AppText>
+                      <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>
                         {action.description}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                 </Card>
@@ -725,20 +737,20 @@ export default function PassengerDashboard() {
             <View className="flex-row items-center">
               <Gift size={24} color="white" />
               <View className="ml-3 flex-1">
-                <Text className="text-white font-bold text-lg">First Trip Special!</Text>
-                <Text className="text-white/90 text-sm">Get 15% off your first booking</Text>
+                <AppText variant="h3" weight="bold" color="white">{translate('promo_first_trip')}</AppText>
+                <AppText variant="bodySmall" color="rgba(255,255,255,0.9)">{translate('promo_desc')}</AppText>
               </View>
               <ArrowRight size={20} color="white" />
             </View>
           </TouchableOpacity>
         </View>
         <View className="px-4 mt-6 mb-8">
-          <Card className="bg-green-50 border border-green-200">
+          <Card className={`${isDark ? 'bg-green-900/20 border-green-900/50' : 'bg-green-50 border-green-200'}`}>
             <View className="p-3 flex-row items-center">
-              <Shield size={20} color={COLORS.success} />
-              <Text className="ml-2 text-sm text-gray-700 flex-1">
-                🛡️ Your safety is our priority. All vehicles are sanitized.
-              </Text>
+              <Shield size={20} color={colors.success} />
+              <AppText variant="bodySmall" color={isDark ? '#4ade80' : colors.gray700} className="ml-2 flex-1">
+                {translate('safety_priority')}
+              </AppText>
             </View>
           </Card>
         </View>

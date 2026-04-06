@@ -1,5 +1,5 @@
 // BahirDarTransportMobileApp\lib\api\auth.ts - REAL API VERSION
-import { API_ENDPOINTS, API_CONFIG, getFullUrl } from '../../config/api';
+import { API_ENDPOINTS, API_CONFIG, getFullUrl, api } from '../../config/api';
 import { storage } from '../storage';
 import {
   LoginCredentials,
@@ -173,25 +173,16 @@ export const authAPI = {
 
   async getProfile(): Promise<User> {
     try {
-      const token = await storage.getToken();
+      // Use axios api instance so the token-refresh interceptor handles 401s automatically
+      const response = await api.get(API_ENDPOINTS.AUTH.PROFILE);
+      const data = response.data;
 
-      if (!token) {
-        throw new Error('No authentication token');
-      }
+      console.log('🔍 [getProfile] Raw API response:', data);
 
-      const response: Response = await fetch(getFullUrl(API_ENDPOINTS.AUTH.PROFILE), {
-        method: 'GET',
-        headers: {
-          ...API_CONFIG.headers,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // The API returns { success: true, data: { user: {...} } }
+      const user: User = data.data?.user || data.user || data;
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-      }
-
-      const user: User = await response.json();
+      console.log('🔍 [getProfile] Extracted user:', user?.email);
       await storage.storeUser(user);
 
       return user;
@@ -283,5 +274,83 @@ export const authAPI = {
       return { success: false, message: error.message || 'Failed to reset password' };
     }
   },
-};
 
+  // Update user profile
+  async updateProfile(userData: Partial<User>): Promise<{ success: boolean; message: string; user?: User }> {
+    try {
+      const token = await storage.getToken();
+
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      console.log('🔄 Updating profile:', userData);
+
+      const response: Response = await fetch(getFullUrl(API_ENDPOINTS.AUTH.UPDATE_PROFILE), {
+        method: 'PUT',
+        headers: {
+          ...API_CONFIG.headers,
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+
+      const data: any = await response.json();
+      console.log('✅ Profile update successful:', data);
+
+      // Update user in storage
+      if (data.user) {
+        await storage.storeUser(data.user);
+      }
+
+      return { success: true, message: data.message || 'Profile updated successfully', user: data.user };
+    } catch (error: any) {
+      console.error('❌ Profile update error:', error);
+      return { success: false, message: error.message || 'Failed to update profile' };
+    }
+  },
+
+  // lib/api/auth.ts - Add this method to the authAPI object
+
+// lib/api/auth.ts - Update the changePassword method
+changePassword: async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const token = await storage.getToken();
+    
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    console.log('🔄 API: Changing password with PUT');
+
+    const response: Response = await fetch(getFullUrl(API_ENDPOINTS.AUTH.CHANGE_PASSWORD), {
+      method: 'PUT', // Changed from POST to PUT
+      headers: {
+        ...API_CONFIG.headers,
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to change password');
+    }
+
+    console.log('✅ API: Password changed successfully');
+    return { success: true, message: data.message || 'Password changed successfully' };
+  } catch (error: any) {
+    console.error('❌ API: Change password error:', error.message);
+    return { success: false, message: error.message || 'Failed to change password' };
+  }
+},
+};

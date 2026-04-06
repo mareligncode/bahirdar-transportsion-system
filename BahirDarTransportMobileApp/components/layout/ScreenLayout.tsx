@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { View, SafeAreaView, StatusBar } from 'react-native';
 import { Header } from './Header';
 import { BottomTab } from './BottomTab';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ScreenLayoutProps {
   children: ReactNode;
@@ -28,8 +29,10 @@ export function ScreenLayout({
   className = '',
   headerClassName = '',
 }: ScreenLayoutProps) {
+  const { isDark } = useTheme();
+
   const content = (
-    <View className={`flex-1 bg-white ${className}`}>
+    <View className={`flex-1 bg-white dark:bg-gray-900 ${className}`}>
       {showHeader && (
         <Header 
           title={headerTitle} 
@@ -50,8 +53,11 @@ export function ScreenLayout({
 
   if (safeArea) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+        <StatusBar 
+          barStyle={isDark ? "light-content" : "dark-content"} 
+          backgroundColor={isDark ? "#111827" : "#FFFFFF"} 
+        />
         {content}
       </SafeAreaView>
     );
@@ -59,7 +65,10 @@ export function ScreenLayout({
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar 
+        barStyle={isDark ? "light-content" : "dark-content"} 
+        backgroundColor={isDark ? "#111827" : "#FFFFFF"} 
+      />
       {content}
     </>
   );

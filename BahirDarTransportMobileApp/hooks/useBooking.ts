@@ -5,6 +5,8 @@ import { useBookingStore } from '../store/bookingStore';
 import { useAuth } from './useAuth';
 import { Booking, BookingCreateData, Trip } from '../types';
 import { useToast } from '../components/common/Toast';
+import { useAuthStore } from '../store/authStore';
+
 
 export const useBooking = () => {
   const [loading, setLoading] = useState(false);
@@ -33,7 +35,8 @@ export const useBooking = () => {
   };
 
   const fetchMyBookings = useCallback(async (): Promise<void> => {
-    if (!user) return;
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated || !user) return;
     setLoading(true);
     setError(null);
 
@@ -70,6 +73,9 @@ export const useBooking = () => {
   }, [user, setBookings, showToast]);
 
   const getMyBookings = useCallback(async (refresh: boolean = false): Promise<Booking[]> => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) return [];
+
     // If we already have bookings and don't need refresh, return them
     if (bookings.length > 0 && !refresh) {
       return bookings;

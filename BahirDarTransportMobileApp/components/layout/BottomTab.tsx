@@ -1,27 +1,30 @@
 import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { AppText } from '../common/AppText';
 import { usePathname, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Home, Ticket, Car, User } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 const tabs = [
   {
-    name: 'Home',
+    key: 'home',
     icon: Home,
     route: '/tabs/home',
   },
   {
-    name: 'Trips',
+    key: 'trips',
     icon: Car,
     route: '/tabs/trips',
   },
   {
-    name: 'Tickets',
+    key: 'tickets',
     icon: Ticket,
     route: '/tabs/tickets',
   },
   {
-    name: 'Profile',
+    key: 'profile',
     icon: User,
     route: '/tabs/profile',
   },
@@ -30,34 +33,46 @@ const tabs = [
 export function BottomTab() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { translate } = useTranslation();
+  const { isDark, colors } = useTheme();
 
   return (
     <View 
-      className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 pt-3 shadow-lg"
-      style={{ paddingBottom: insets.bottom }} // Only one style prop - acceptable!
+      className="absolute bottom-0 left-0 right-0 border-t px-4 pt-3 shadow-lg"
+      style={{ 
+        paddingBottom: insets.bottom,
+        backgroundColor: colors.surface,
+        borderTopColor: colors.border
+      }} 
     >
       <View className="flex-row justify-between items-center">
         {tabs.map((tab) => {
           const isActive = pathname === tab.route || 
                           pathname?.startsWith(`${tab.route}/`);
           
+          const activeColor = colors.primary;
+          const inactiveColor = colors.textSecondary;
+
           return (
             <TouchableOpacity
-              key={tab.name}
+              key={tab.key}
               onPress={() => router.push(tab.route)}
               className="items-center justify-center flex-1"
               activeOpacity={0.7}
             >
               <tab.icon
                 size={24}
-                color={isActive ? '#3B82F6' : '#9CA3AF'}
-                fill={isActive ? '#3B82F6' : 'transparent'}
+                color={isActive ? activeColor : inactiveColor}
+                fill={isActive ? activeColor : 'transparent'}
               />
-              <Text
-                className={`text-xs mt-1 ${isActive ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
+              <AppText
+                variant="caption"
+                weight={isActive ? 'bold' : 'medium'}
+                color={isActive ? colors.primary : colors.textSecondary}
+                className="mt-1"
               >
-                {tab.name}
-              </Text>
+                {translate(tab.key as any)}
+              </AppText>
             </TouchableOpacity>
           );
         })}
