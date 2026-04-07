@@ -3,9 +3,7 @@ import User from '../models/Users.js';
 import NotificationService from '../services/notificationService.js';
 class NotificationController {
     
-    /**
-     * Create a new notification
-     */
+   
     static async createNotification(req, res) {
         try {
             const {
@@ -18,7 +16,6 @@ class NotificationController {
                 metadata = {}
             } = req.body;
 
-            // Validate required fields
             if (!userID || !title || !message || !type) {
                 return res.status(400).json({
                     success: false,
@@ -26,7 +23,6 @@ class NotificationController {
                 });
             }
 
-            // Validate user exists
             const user = await User.findById(userID);
             if (!user) {
                 return res.status(404).json({
@@ -35,7 +31,6 @@ class NotificationController {
                 });
             }
 
-            // Validate notification type
             const validTypes = [
                 'booking_confirmation',
                 'payment_success',
@@ -60,7 +55,6 @@ class NotificationController {
                 });
             }
 
-            // Validate priority
             const validPriorities = ['low', 'medium', 'high', 'urgent'];
             if (!validPriorities.includes(priority)) {
                 return res.status(400).json({
@@ -69,7 +63,6 @@ class NotificationController {
                 });
             }
 
-            // Validate channel
             const validChannels = ['email', 'sms', 'in_app', 'push', 'all'];
             if (!validChannels.includes(channel)) {
                 return res.status(400).json({
@@ -78,7 +71,6 @@ class NotificationController {
                 });
             }
 
-            // Create notification
             const notificationData = {
                 userID,
                 title,

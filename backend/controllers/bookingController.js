@@ -771,7 +771,6 @@ export const getTripBookings = async (req, res) => {
 
 
 
-// bookingController.js - Updated createBatchBooking for group bookings
 export const createBatchBooking = async (req, res) => {
     try {
         const { tripID, seats, specialRequests, passengerDetails } = req.body;
@@ -995,7 +994,6 @@ export const createBatchBooking = async (req, res) => {
 };
 
 
-// Add this to your bookingController.js - place it before the module.exports
 export const getBookedSeatsForTrip = async (req, res) => {
     try {
         const { tripId } = req.params;
@@ -1049,4 +1047,3 @@ export const getBookedSeatsForTrip = async (req, res) => {
     }
 };
 
-//925 line of code

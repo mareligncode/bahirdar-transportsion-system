@@ -4,13 +4,14 @@ import User from '../models/Users.js';
 import Station from '../models/Station.js';
 import Booking from '../models/Booking.js';
 import NotificationService from '../services/notificationService.js';
+import Queue from '../models/Queue.js';
 
 export const createTrip = async (req, res) => {
     try {
         const {
             origin, destination, departureTime, arrivalTime,
             vehicleID, driverID, price, totalSeats, stationID,
-            routePoints, estimatedDuration, notes
+            routePoints, estimatedDuration, notes, queueID
         } = req.body;
 
         // Check vehicle exists
@@ -25,20 +26,8 @@ export const createTrip = async (req, res) => {
             return res.status(404).json({ message: 'Driver not found' });
         }
 
-        // // Check permissions
-        // if (req.user.role === 'station_admin') {
-        //     const station = await Station.findOne({ manager: req.user._id });
-
-        //     if (!station || station._id.toString() !== stationID) {
-        //         return res.status(403).json({
-        //             success: false,
-        //             message: 'Not authorized to create trip for this station'
-        //         });
-        //     }
-        // }
 
 
-        // Check stations exist
         const [originStation, destinationStation] = await Promise.all([
             Station.findById(origin),
             Station.findById(destination)
@@ -48,7 +37,6 @@ export const createTrip = async (req, res) => {
             return res.status(404).json({ message: 'Station not found' });
         }
 
-        // Check vehicle capacity
         if (vehicle.totalCapacity < totalSeats) {
             return res.status(400).json({
                 message: `Vehicle capacity is ${vehicle.totalCapacity}, requested ${totalSeats} seats`
@@ -75,14 +63,44 @@ export const createTrip = async (req, res) => {
 
         await trip.save();
 
+        // Update vehicle status
+        vehicle.currentStatus = 'on_trip';
+        await vehicle.save();
+
+        // Handle Queue Update if part of a queue
+        if (queueID) {
+            const queueEntry = await Queue.findById(queueID);
+            if (queueEntry) {
+                const oldPosition = queueEntry.queuePosition;
+                const stationIDOfQueue = queueEntry.station;
+                const destinationIDOfQueue = queueEntry.destination;
+
+                queueEntry.status = 'on_trip';
+                await queueEntry.save();
+
+                // Shift everyone else in this specific route queue up one position
+                await Queue.updateMany(
+                    {
+                        station: stationIDOfQueue,
+                        destination: destinationIDOfQueue,
+                        status: 'waiting',
+                        queuePosition: { $gt: oldPosition }
+                    },
+                    { $inc: { queuePosition: -1 } }
+                );
+
+                const io = req.app.get('io');
+                if (io) {
+                    io.to('admin-room').emit('queue-updated', {
+                        stationID: stationIDOfQueue,
+                        destinationID: destinationIDOfQueue
+                    });
+                }
+            }
+        }
+
         // Populate and return
         const populatedTrip = await Trip.findById(trip._id)
-            // .populate('origin', 'stationName city')
-            // .populate('destination', 'stationName city')
-            // .populate('vehicleID', 'plateNumber carType totalCapacity')
-            // .populate('driverID', 'fullName phoneNumber')
-            // .populate('stationID', 'stationName')
-        // .populate('createdBy', 'fullName');
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city')
             .populate('vehicle', 'plateNumber carType totalCapacity')
@@ -127,7 +145,7 @@ export const getAllTrips = async (req, res) => {
         // Driver can only see their trips
         if (req.user.role === 'driver') {
 
-               //leul
+            //leul
             query.driver = req.user.id;
         }
 
@@ -311,7 +329,7 @@ export const updateTrip = async (req, res) => {
             // Send notifications to all affected passengers (use Promise.all for better performance)
             if (bookings.length > 0) {
                 console.log('📧 Sending notifications to', bookings.length, 'passengers...');
-                
+
                 const notificationPromises = bookings.map(async (booking, index) => {
                     try {
                         console.log(`📤 Processing notification for booking ${index + 1}/${bookings.length}:`, {
@@ -399,7 +417,7 @@ export const updateTrip = async (req, res) => {
                 tripNumber: trip.tripNumber
             });
         }
-//end of notfication changes
+        //end of notfication changes
         // Get updated trip with populated data
         const updatedTrip = await Trip.findById(trip._id)
             .populate('origin', 'stationName city')
@@ -617,7 +635,7 @@ export const updateTripStatus = async (req, res) => {
             for (const booking of bookings) {
                 if (booking.passengerID) {
                     console.log(`📤 Creating notification for passenger: ${booking.passengerID.fullName} (${booking.passengerID.email})`);
-                    
+
                     const passengerNotificationData = {
                         userID: booking.passengerID._id,
                         title: notificationData.title,
@@ -671,7 +689,12 @@ export const updateTripStatus = async (req, res) => {
                 tripNumber: trip.tripNumber
             });
         }
-// end of notfication changes
+        // end of notfication changes
+
+        // Update vehicle status when trip is completed or cancelled
+        if (['completed', 'cancelled'].includes(status)) {
+            await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'available' });
+        }
         res.status(200).json({
             success: true,
             message: `Trip status updated to ${status}`,
