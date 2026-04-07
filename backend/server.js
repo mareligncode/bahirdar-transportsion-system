@@ -11,6 +11,7 @@ import tripRoutes from './routes/tripRoutes.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
+import queueRoutes from './routes/queueRoutes.js'
 connectDB()
    initSuperAdmin()
 
@@ -66,7 +67,7 @@ app.use('/api/trip', tripRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/payment',paymentRoutes)
 app.use('/api/notifications', notificationRoutes);
-// Socket.io instance for use in controllers
+app.use('/api/queue', queueRoutes);
 app.set('io', io);
 
 app.get("/", (req, res) => {
