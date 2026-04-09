@@ -11,6 +11,10 @@ const queueSchema = new mongoose.Schema({
         ref: 'Station',
         required: [true, 'Destination station is required']
     },
+    route: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Route'
+    },
     vehicle: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Vehicle',
@@ -55,7 +59,7 @@ queueSchema.index({ vehicle: 1, status: 1 }, {
 });
 
 // Index for efficient sorting by position per station AND destination route
-queueSchema.index({ station: 1, destination: 1, queuePosition: 1 });
+queueSchema.index({ station: 1, destination: 1, route: 1, queuePosition: 1 });
 
 const Queue = mongoose.model('Queue', queueSchema);
 export default Queue;

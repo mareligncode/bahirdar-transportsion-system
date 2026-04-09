@@ -5,6 +5,7 @@ import Station from '../models/Station.js';
 import Booking from '../models/Booking.js';
 import NotificationService from '../services/notificationService.js';
 import Queue from '../models/Queue.js';
+import QueueAutomator from '../services/queueAutomator.js';
 
 export const createTrip = async (req, res) => {
     try {
@@ -695,6 +696,15 @@ export const updateTripStatus = async (req, res) => {
         if (['completed', 'cancelled'].includes(status)) {
             await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'available' });
         }
+
+        // SMART AUTOMATION: If trip is departing (ongoing) or finished (completed/cancelled), 
+        // trigger the next vehicle in line for this route.
+        if (['ongoing', 'completed', 'cancelled'].includes(status) && trip.route) {
+            console.log(`🚀 Trip for route ${trip.route} is ${status}. Triggering next vehicle...`);
+            QueueAutomator.triggerNextTrip(trip.route, trip.station, req.user.id)
+                .catch(err => console.error('Automation Trigger Error:', err));
+        }
+
         res.status(200).json({
             success: true,
             message: `Trip status updated to ${status}`,

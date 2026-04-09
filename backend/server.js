@@ -12,8 +12,9 @@ import bookingRoutes from './routes/bookingRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
 import queueRoutes from './routes/queueRoutes.js'
+import routeRoutes from './routes/routeRoutes.js'
 connectDB()
-   initSuperAdmin()
+initSuperAdmin()
 
 const PORT = process.env.PORT || 5000
 const app = express();
@@ -25,6 +26,9 @@ const io = new Server(server, {
         credentials: true
     }
 });
+
+// Set global io for services
+global.io = io;
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -65,9 +69,10 @@ app.use('/api/station', stationRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/trip', tripRoutes);
 app.use('/api/booking', bookingRoutes);
-app.use('/api/payment',paymentRoutes)
+app.use('/api/payment', paymentRoutes)
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/queue', queueRoutes);
+app.use('/api/route', routeRoutes);
 app.set('io', io);
 
 app.get("/", (req, res) => {

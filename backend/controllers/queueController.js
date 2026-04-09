@@ -2,6 +2,8 @@ import Queue from '../models/Queue.js';
 import Vehicle from '../models/Vehicle.js';
 import Station from '../models/Station.js';
 import User from '../models/Users.js';
+import Route from '../models/Route.js';
+import QueueAutomator from '../services/queueAutomator.js';
 import NotificationService from '../services/notificationService.js';
 
 /**
@@ -9,7 +11,22 @@ import NotificationService from '../services/notificationService.js';
  */
 export const joinQueue = async (req, res) => {
     try {
-        const { stationID, destinationID, vehicleID, driverID, notes } = req.body;
+        const { stationID, destinationID, routeID, vehicleID, driverID, notes } = req.body;
+
+        let finalDestinationID = destinationID;
+
+        // SMART LOGIC: If routeID is provided, automatically find the destination
+        if (routeID && !finalDestinationID) {
+            const route = await Route.findById(routeID);
+            if (!route) {
+                return res.status(404).json({ success: false, message: 'Route not found' });
+            }
+            finalDestinationID = route.destination;
+        }
+
+        if (!finalDestinationID) {
+            return res.status(400).json({ success: false, message: 'Destination is required' });
+        }
 
         // Check if vehicle exists
         const vehicle = await Vehicle.findById(vehicleID);
@@ -36,7 +53,8 @@ export const joinQueue = async (req, res) => {
         // Get current max position for THIS SPECIFIC ROUTE (Station -> Destination)
         const lastInQueue = await Queue.findOne({
             station: stationID,
-            destination: destinationID,
+            destination: finalDestinationID,
+            route: routeID,
             status: { $in: ['waiting', 'loading'] }
         }).sort({ queuePosition: -1 });
 
@@ -44,7 +62,8 @@ export const joinQueue = async (req, res) => {
 
         const queueItem = new Queue({
             station: stationID,
-            destination: destinationID,
+            destination: finalDestinationID,
+            route: routeID,
             vehicle: vehicleID,
             driver: driverID,
             queuePosition: newPosition,
@@ -73,6 +92,14 @@ export const joinQueue = async (req, res) => {
                 destinationID,
                 data: populatedQueue
             });
+        }
+
+        // SMART AUTOMATION: If this is the FIRST vehicle in the queue and there is no active trip,
+        // automatically trigger the creation of the first trip.
+        if (newPosition === 1 && routeID) {
+            console.log(`🚀 Route ${routeID} has its first queue entry. Attempting to start the trip...`);
+            QueueAutomator.triggerNextTrip(routeID, stationID, req.user.id)
+                .catch(err => console.error('Initial Automation Error:', err));
         }
 
         res.status(201).json({
