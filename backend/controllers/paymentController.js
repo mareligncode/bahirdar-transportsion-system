@@ -4,6 +4,8 @@ import Payment from '../models/Payment.js';
 import Booking from '../models/Booking.js';
 import Trip from '../models/Trip.js';
 import User from '../models/Users.js';
+import Vehicle from '../models/Vehicle.js';
+import OCRProcessor from '../utils/ocrProcessor.js';
 import NotificationService from '../services/notificationService.js';
 
 export const initializePayment = async (req, res) => {

@@ -27,7 +27,7 @@ const paymentSchema = new mongoose.Schema({
     paymentGateway: {
         type: String,
         required: true,
-        enum: ['chapa', 'telebirr', 'cbe_birr', 'cash'],
+        enum: ['chapa', 'telebirr', 'cbe_birr', 'cash', 'bank_transfer_receipt'],
         default: 'chapa'
     },
     gatewayTransactionID: {
@@ -43,7 +43,7 @@ const paymentSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'processing', 'success', 'failed', 'cancelled', 'refunded'],
+        enum: ['pending', 'processing', 'success', 'under_review', 'failed', 'cancelled', 'refunded'],
         default: 'pending'
     },
     checkoutUrl: {

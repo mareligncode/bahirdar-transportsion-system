@@ -10,6 +10,7 @@ import {
     refundPayment,
     recordCashPayment
 } from '../controllers/paymentController.js';
+import upload from '../utils/multerConfig.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.use(protect);
 router.post('/initialize', authorize(['passenger']), initializePayment);
 router.get('/status', authorize(['passenger', 'station_admin', 'super_admin']), getPaymentStatus);
 router.get('/history', authorize(['passenger']), getPaymentHistory);
+router.get('/:bookingId/instructions', authorize(['passenger']), getPaymentInstructions);
 
 router.post('/:paymentId/verify', authorize(['super_admin', 'station_admin']), manualVerifyPayment);
 router.post('/cash-payment', authorize(['super_admin', 'station_admin']), recordCashPayment);

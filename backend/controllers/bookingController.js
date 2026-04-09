@@ -90,33 +90,27 @@ export const createBooking = async (req, res) => {
         await booking.save();
         // Send booking confirmation notification
         try {
+            const vehicle = await Vehicle.findById(trip.vehicle);
             const notificationData = {
                 userID: req.user.id,
-                title: 'Booking Confirmed - Your Trip is Ready!',
-                message: `Your booking ${booking.bookingNumber} has been created successfully. Please proceed to payment to confirm your reservation.`,
+                title: 'Booking Created - Action Required!',
+                message: `Booking ${booking.bookingNumber} created. To confirm your seat, please pay ETB ${trip.price} to CBE Account: ${vehicle?.ownerDetails?.bankDetails?.accountNumber} (${vehicle?.ownerDetails?.ownerName}).`,
                 type: 'booking_confirmation',
-                channel: 'all', // Send both email and in-app notification
-                priority: 'medium',
+                channel: 'all',
+                priority: 'high',
                 metadata: {
                     userName: req.user.fullName,
+                    paymentInfo: {
+                        amount: trip.price,
+                        accountNumber: vehicle?.ownerDetails?.bankDetails?.accountNumber,
+                        accountName: vehicle?.ownerDetails?.ownerName
+                    },
                     booking: {
                         bookingNumber: booking.bookingNumber,
-                        ticketNumber: booking.ticketNumber,
                         seatNumber: booking.seatNumber
                     },
-                    trip: {
-                        tripNumber: trip.tripNumber,
-                        origin: trip.origin?.stationName,
-                        destination: trip.destination?.stationName,
-                        departureTime: trip.departureTime,
-                        arrivalTime: trip.arrivalTime
-                    },
-                    vehicle: {
-                        plateNumber: trip.vehicle?.plateNumber,
-                        carType: trip.vehicle?.carType
-                    },
                     actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}/pay`,
-                    actionText: 'Complete Payment'
+                    actionText: 'Upload Receipt'
                 }
             };
 
