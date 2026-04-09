@@ -7,6 +7,7 @@ import User from '../models/Users.js';
 import Vehicle from '../models/Vehicle.js';
 import OCRProcessor from '../utils/ocrProcessor.js';
 import NotificationService from '../services/notificationService.js';
+import cloudinary from '../config/cloudinary.js';
 
 export const initializePayment = async (req, res) => {
     try {
@@ -1034,5 +1035,157 @@ export const recordCashPayment = async (req, res) => {
             message: 'Failed to record cash payment',
             error: error.message
         });
+    }
+};
+/**
+ * Verify CBE Bank Receipt Screenshot using OCR (Smart Review)
+ */
+export const verifyBankReceipt = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Please upload a receipt screenshot' });
+        }
+
+        const booking = await Booking.findById(bookingId).populate('tripID');
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const vehicle = await Vehicle.findById(booking.tripID?.vehicle);
+
+        // 1. OCR Extraction
+        console.log('🖼 Processing receipt with OCR...');
+        const extractedData = await OCRProcessor.processCBEReceipt(req.file.path || req.file.buffer);
+
+        // 2. Upload to Cloudinary for persistence
+        let cloudinaryUrl = '';
+        try {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: 'cbe_receipts',
+                    public_id: `receipt_${booking.bookingNumber}_${Date.now()}`
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+
+                if (req.file.buffer) {
+                    uploadStream.end(req.file.buffer);
+                } else if (req.file.path) {
+                    // If using multer DiskStorage
+                    cloudinary.uploader.upload(req.file.path).then(resolve).catch(reject);
+                }
+            });
+            cloudinaryUrl = result.secure_url;
+        } catch (cldErr) {
+            console.error('Cloudinary upload failed:', cldErr);
+        }
+
+        // 3. Prevent Duplicates
+        const existingPayment = await Payment.findOne({ gatewayTransactionID: extractedData.transactionID });
+        if (existingPayment) {
+            return res.status(400).json({ success: false, message: 'This transaction ID has already been used.' });
+        }
+
+        // 4. Validation & Smart Review Logic
+        const amountMatch = Math.abs(extractedData.amount - booking.totalPrice) < 2;
+        const ownerName = (vehicle?.ownerDetails?.ownerName || "").toLowerCase();
+        const extractedReceiver = (extractedData.receiverName || "").toLowerCase();
+        const ownerNameInReceipt = extractedReceiver && ownerName &&
+            (extractedReceiver.includes(ownerName) || ownerName.includes(extractedReceiver));
+
+        const isSuspicious = !ownerNameInReceipt || (extractedData.confidence < 60);
+
+        if (!amountMatch) {
+            return res.status(422).json({
+                success: false,
+                message: `Amount mismatch. Receipt: ${extractedData.amount}, Required: ${booking.totalPrice}`,
+                extracted: extractedData
+            });
+        }
+
+        // 5. Finalize Payment
+        const paymentStatus = isSuspicious ? 'under_review' : 'success';
+
+        const payment = new Payment({
+            bookingID: booking._id,
+            passengerID: req.user._id,
+            tripID: booking.tripID._id,
+            amount: extractedData.amount,
+            paymentGateway: 'bank_transfer_receipt',
+            paymentMethod: 'bank_transfer',
+            paymentStatus: paymentStatus,
+            gatewayTransactionID: extractedData.transactionID,
+            verifiedAt: isSuspicious ? null : new Date(),
+            metadata: {
+                extracted: extractedData,
+                receipt_url: cloudinaryUrl,
+                verificationMethod: 'OCR_Tesseract_SmartReview',
+                flags: {
+                    lowConfidence: (extractedData.confidence || 0) < 60,
+                    nameMismatch: !ownerNameInReceipt
+                }
+            },
+            createdBy: req.user._id
+        });
+
+        await payment.save();
+
+        if (paymentStatus === 'success') {
+            booking.paymentID = payment._id;
+            booking.paymentStatus = 'paid';
+            booking.status = 'confirmed';
+            await booking.save();
+        } else {
+            booking.paymentStatus = 'pending';
+            await booking.save();
+        }
+
+        res.status(200).json({
+            success: true,
+            isManualReview: isSuspicious,
+            message: isSuspicious
+                ? 'Receipt uploaded. An admin must verify this manually due to low quality or name mismatch.'
+                : 'Receipt verified and booking confirmed successfully!',
+            data: { payment, extracted: extractedData }
+        });
+
+    } catch (error) {
+        console.error('OCR Error:', error);
+        res.status(500).json({ success: false, message: 'Verification failed', error: error.message });
+    }
+};
+
+/**
+ * Get payment instructions for a booking (CBE details)
+ */
+export const getPaymentInstructions = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const booking = await Booking.findById(bookingId).populate('tripID');
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const vehicle = await Vehicle.findById(booking.tripID?.vehicle);
+        if (!vehicle || !vehicle.ownerDetails) {
+            return res.status(404).json({ success: false, message: 'Bank details for this vehicle are not configured' });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                amount: booking.totalPrice || booking.tripID?.price,
+                bankName: vehicle.ownerDetails.bankDetails?.bankName || "Commercial Bank of Ethiopia (CBE)",
+                accountNumber: vehicle.ownerDetails.bankDetails?.accountNumber,
+                accountName: vehicle.ownerDetails.ownerName,
+                instructions: `Please transfer ETB ${booking.totalPrice || booking.tripID?.price} to the account above. After payment, take a screenshot of the receipt and upload it here.`
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch payment instructions', error: error.message });
     }
 };

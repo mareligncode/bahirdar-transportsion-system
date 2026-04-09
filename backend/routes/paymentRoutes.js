@@ -8,12 +8,17 @@ import {
     getPaymentHistory,
     handleWebhook,
     refundPayment,
-    recordCashPayment
+    recordCashPayment,
+    verifyBankReceipt,
+    getPaymentInstructions
 } from '../controllers/paymentController.js';
 import upload from '../utils/multerConfig.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Registration of OCR route
+router.post('/verify-receipt', protect, authorize(['passenger']), upload.single('receipt'), verifyBankReceipt);
 
 router.post('/webhook', handleWebhook);
 

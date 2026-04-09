@@ -14,11 +14,11 @@ router.use(protect);
 
 router.route('/')
     .get(getAllRoutes)
-    .post(authorize('admin', 'station_admin'), createRoute);
+    .post(authorize('super_admin', 'station_admin'), createRoute);
 
 router.route('/:id')
     .get(getRouteById)
-    .put(authorize('admin', 'station_admin'), updateRoute)
-    .delete(authorize('admin', 'station_admin'), deleteRoute);
+    .put(authorize('super_admin', 'station_admin'), updateRoute)
+    .delete(authorize('super_admin', 'station_admin'), deleteRoute);
 
 export default router;

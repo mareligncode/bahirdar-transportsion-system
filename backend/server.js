@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import http from 'http'
+import mongoose from 'mongoose'
 import { Server } from 'socket.io'
 import initSuperAdmin from './config/initSuperAdmin.js'
 import authRoutes from './routes/authRoutes.js'

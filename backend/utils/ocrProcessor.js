@@ -17,6 +17,19 @@ class OCRProcessor {
             const parsedData = this.parseCBEText(text);
             parsedData.confidence = confidence;
 
+            // Display extracted info nicely in the terminal
+            console.log('\n' + '='.repeat(40));
+            console.log('💎 EXTRACTED RECEIPT INFORMATION');
+            console.log('='.repeat(40));
+            console.table({
+                'Confidence': `${confidence}%`,
+                'Transaction ID': parsedData.transactionID || '❌ NOT FOUND',
+                'Amount': parsedData.amount ? `ETB ${parsedData.amount}` : '❌ NOT FOUND',
+                'Receiver': parsedData.receiverName || '❌ NOT FOUND',
+                'Date': parsedData.date || '❌ NOT FOUND'
+            });
+            console.log('='.repeat(40) + '\n');
+
             return parsedData;
         } catch (error) {
             console.error('OCR Processing Error:', error);
@@ -29,8 +42,9 @@ class OCRProcessor {
      * @param {string} text 
      */
     static parseCBEText(text) {
-        // Clean text: remove extra spaces and standardize line breaks
-        const cleanText = text.replace(/\s+/g, ' ').trim();
+        // Standardize the text: replace newlines with spaces, uppercase everything
+        const rawText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+        const cleanText = rawText.toUpperCase();
 
         const result = {
             transactionID: null,
@@ -40,31 +54,50 @@ class OCRProcessor {
             date: null
         };
 
-        // 1. Match Amount (Matches "ETB 400.00" or "Amount: 400")
-        const amountMatch = cleanText.match(/ETB\s+([\d,.]+)/i) || cleanText.match(/Amount[:\s]+([\d,.]+)/i);
+        // 1. IMPROVED AMOUNT (Look for ETB followed by number, regardless of spaces)
+        // Matches "ETB 400", "ETB400", "ETB : 400.00"
+        const amountMatch = cleanText.match(/ETB[:\s]*([\d,.]+)/i) || cleanText.match(/AMOUNT[:\s]*([\d,.]+)/i);
         if (amountMatch) {
             result.amount = parseFloat(amountMatch[1].replace(/,/g, ''));
         }
 
-        // 2. Match Sender (Matches "debited from YOHANES DEBEBE MULATU")
-        const senderMatch = cleanText.match(/debited from\s+([A-Z\s]+?)\s+for/i) ||
-            cleanText.match(/From[:\s]+([A-Z\s]+?)(?:\s+to|\s+for|\s+on)/i);
-        if (senderMatch) result.senderName = senderMatch[1].trim();
+        // 2. IMPROVED DATE
+        const dateMatch = cleanText.match(/(\d{1,2}-[A-Z]{3}-\d{4})/i) || cleanText.match(/ON\s+(\d{1,2}\s+[A-Z]{3}\s+\d{4})/i);
+        if (dateMatch) result.date = dateMatch[1].replace(/\s+/g, '-');
 
-        // 3. Match Receiver (Matches "for YARED SHIMELIS TESHOME")
-        const receiverMatch = cleanText.match(/for\s+([A-Z\s]+?)(?:\s+on|-ETB|\d|$)/i) ||
-            cleanText.match(/to\s+([A-Z\s]+?)(?:\s+on|-ETB|\d|$)/i);
-        if (receiverMatch) result.receiverName = receiverMatch[1].trim();
+        // 3. IMPROVED TRANSACTION ID (The most critical part)
+        // Heuristic 1: Look for explicit labels
+        const idMatch = cleanText.match(/(?:REF|TXN ID|TXN|REFERENCE)[:\s#]*([A-Z0-9\s-]{6,20})/i);
+        if (idMatch) {
+            // Clean the ID: take the first continuous alphanumeric block
+            result.transactionID = idMatch[1].trim().split(' ')[0];
+        }
 
-        // 4. Match Date (Matches "16-Aug-2025")
-        const dateMatch = cleanText.match(/on\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/i);
-        if (dateMatch) result.date = dateMatch[1];
+        // Heuristic 2: If no label, look for things that LOOK like CBE IDs (e.g., FT25098X...)
+        if (!result.transactionID) {
+            const genericIDMatch = cleanText.match(/\b([A-Z0-9]{10,20})\b/i);
+            if (genericIDMatch) result.transactionID = genericIDMatch[1];
+        }
 
-        // 5. Match Transaction ID (Matches "Ref: XXXXX" or "Txn ID: XXXXX")
-        const txMatch = cleanText.match(/Ref[:\s]+(\w+)/i) ||
-            cleanText.match(/Transaction ID[:\s]+(\w+)/i) ||
-            cleanText.match(/Ref\s+No\.?\s*[:\s]*(\w+)/i);
-        if (txMatch) result.transactionID = txMatch[1];
+        // 4. IMPROVED RECEIVER NAME
+        // Look for names following "TO" or "FOR"
+        const receivePart = cleanText.match(/(?:TO|FOR)[:\s]+([A-Z\s]{5,40})/i);
+        if (receivePart) {
+            let potentialName = receivePart[1].trim();
+            // Remove common trail words that OCR might capture
+            potentialName = potentialName
+                .split(/\b(ON|ETB|FROM|AMOUNT|REF|DATE)\b/)[0]
+                .replace(/[^A-Z\s]/g, '')
+                .trim();
+
+            if (potentialName.length > 3) result.receiverName = potentialName;
+        }
+
+        // 5. SENDER NAME
+        const sendPart = cleanText.match(/(?:DEBITED FROM|FROM)[:\s]+([A-Z\s]{5,40})/i);
+        if (sendPart) {
+            result.senderName = sendPart[1].trim().split(/\b(FOR|TO|ETB|ON)\b/)[0].trim();
+        }
 
         return result;
     }
