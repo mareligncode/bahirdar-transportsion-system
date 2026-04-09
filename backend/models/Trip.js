@@ -16,6 +16,10 @@ const tripSchema = new mongoose.Schema({
         ref: 'Station',
         required: [true, 'Destination station is required']
     },
+    route: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Route'
+    },
     departureTime: {
         type: Date,
         required: [true, 'Departure time is required']
