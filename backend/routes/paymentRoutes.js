@@ -7,7 +7,8 @@ import {
     getPaymentStatus,
     getPaymentHistory,
     handleWebhook,
-    refundPayment
+    refundPayment,
+    recordCashPayment
 } from '../controllers/paymentController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -24,6 +25,7 @@ router.get('/status', authorize(['passenger', 'station_admin', 'super_admin']), 
 router.get('/history', authorize(['passenger']), getPaymentHistory);
 
 router.post('/:paymentId/verify', authorize(['super_admin', 'station_admin']), manualVerifyPayment);
+router.post('/cash-payment', authorize(['super_admin', 'station_admin']), recordCashPayment);
 router.post('/:paymentId/refund', authorize(['super_admin']), refundPayment);
 
 export default router;

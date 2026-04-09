@@ -122,7 +122,7 @@ export const initializePayment = async (req, res) => {
             }
         }
 
-      
+
         const tx_ref = `CHAPA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         const originStation = trip.origin?.stationName || 'Origin';
@@ -154,8 +154,8 @@ export const initializePayment = async (req, res) => {
             callback_url: `${process.env.BASE_URL}/api/payment/webhook`,
             return_url: `${process.env.BASE_URL}/api/payment/verify/${tx_ref}`,
             customization: {
-                title: 'BD Transport', 
-                description: description 
+                title: 'BD Transport',
+                description: description
             }
         };
 
@@ -290,7 +290,7 @@ export const initializePayment = async (req, res) => {
         } catch (notificationError) {
             console.error(` Failed to send booking confirmation notification:`, notificationError.message);
         }
-     
+
         booking.paymentID = payment._id;
         booking.paymentStatus = 'pending';
         await booking.save();
@@ -944,5 +944,93 @@ export const refundPayment = async (req, res) => {
     }
 };
 
+/**
+ * Record a manual cash payment (Station Admin / Super Admin only)
+ */
+export const recordCashPayment = async (req, res) => {
+    try {
+        const { bookingId, amount, notes } = req.body;
 
-//956 line of code
+        if (!bookingId) {
+            return res.status(400).json({ success: false, message: 'Booking ID is required' });
+        }
+
+        const booking = await Booking.findById(bookingId).populate('tripID');
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        if (booking.paymentStatus === 'paid') {
+            return res.status(400).json({ success: false, message: 'Booking is already paid' });
+        }
+
+        // Verify station admin has permission for this station
+        if (req.user.role === 'station_admin') {
+            const Station = (await import('../models/Station.js')).default;
+            const station = await Station.findOne({ manager: req.user._id });
+            if (!station || !booking.tripID.station.equals(station._id)) {
+                return res.status(403).json({ success: false, message: 'Not authorized for this station' });
+            }
+        }
+
+        // Create Payment record
+        const payment = new Payment({
+            bookingID: bookingId,
+            passengerID: booking.passengerID,
+            tripID: booking.tripID._id,
+            amount: amount || booking.totalPrice,
+            paymentGateway: 'cash',
+            paymentMethod: 'cash',
+            paymentStatus: 'success',
+            paymentDate: new Date(),
+            verifiedAt: new Date(),
+            metadata: {
+                notes,
+                recordedBy: req.user.id,
+                recordedByRole: req.user.role
+            },
+            createdBy: req.user.id
+        });
+
+        await payment.save();
+
+        // Update Booking
+        booking.paymentID = payment._id;
+        booking.paymentStatus = 'paid';
+        booking.status = 'confirmed';
+        await booking.save();
+
+        // Notify Passenger
+        try {
+            await NotificationService.createNotification({
+                userID: booking.passengerID,
+                title: 'Payment Received (Cash)',
+                message: `Your cash payment of ETB ${payment.amount} for booking ${booking.bookingNumber} has been recorded. Your ticket is now confirmed.`,
+                type: 'payment_success',
+                priority: 'medium',
+                channel: 'all',
+                metadata: {
+                    bookingNumber: booking.bookingNumber,
+                    amount: payment.amount,
+                    method: 'cash'
+                }
+            });
+        } catch (notifyErr) {
+            console.error('Failed to notify passenger of cash payment:', notifyErr);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Cash payment recorded successfully',
+            data: payment
+        });
+
+    } catch (error) {
+        console.error('Cash payment recording failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to record cash payment',
+            error: error.message
+        });
+    }
+};

@@ -39,7 +39,7 @@ const paymentSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['mobile_money', 'bank_transfer', 'card', 'chapa']
+        enum: ['mobile_money', 'bank_transfer', 'card', 'chapa', 'cash']
     },
     paymentStatus: {
         type: String,
@@ -73,11 +73,11 @@ const paymentSchema = new mongoose.Schema({
         default: {}
     },
     txRef: {
-        type: String, 
-    }  ,            // your generated reference
+        type: String,
+    },            // your generated reference
     chapaTransactionId: {
-        type: String 
-    } ,// chapa id (returned after success)
+        type: String
+    },// chapa id (returned after success)
 
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
