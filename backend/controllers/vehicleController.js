@@ -65,8 +65,8 @@ export const createVehicle = async (req, res) => {
 
         // Validate owner details for new vehicles
         const { ownerDetails } = req.body;
-        if (!ownerDetails || !ownerDetails.ownerName || !ownerDetails.phoneNumber || 
-            !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber || 
+        if (!ownerDetails || !ownerDetails.ownerName || !ownerDetails.phoneNumber ||
+            !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber ||
             !ownerDetails.bankDetails.bankName) {
             return res.status(400).json({
                 success: false,
@@ -541,8 +541,8 @@ export const updateVehicle = async (req, res) => {
         // Validate owner details if being updated
         if (updateData.ownerDetails) {
             const { ownerDetails } = updateData;
-            if (!ownerDetails.ownerName || !ownerDetails.phoneNumber || 
-                !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber || 
+            if (!ownerDetails.ownerName || !ownerDetails.phoneNumber ||
+                !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber ||
                 !ownerDetails.bankDetails.bankName) {
                 return res.status(400).json({
                     success: false,
@@ -590,7 +590,7 @@ export const updateVehicle = async (req, res) => {
                 console.error('Failed to send driver update notification:', notificationError);
             }
         }
-//end of notification changes
+        //end of notification changes
         // Populate updated data
         await vehicle.populate([
             {
@@ -1321,6 +1321,34 @@ export const getVehicleImages = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get vehicle images',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get all active vehicles for the Public Landing Page Map
+ * Returns only safe, non-private information
+ */
+export const getPublicLiveVehicles = async (req, res) => {
+    try {
+        const vehicles = await Vehicle.find({
+            isActive: true,
+            currentStatus: 'on_trip'
+        })
+            .select('_id plateNumber carType lastKnownLocation currentStatus stationID')
+            .populate('stationID', 'stationName')
+            .lean();
+
+        res.status(200).json({
+            success: true,
+            count: vehicles.length,
+            data: { vehicles }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch public map data',
             error: error.message
         });
     }

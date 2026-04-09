@@ -96,7 +96,7 @@ const vehicleSchema = new mongoose.Schema({
                 required: [true, 'Bank name is required'],
                 trim: true
             }
-           
+
         }
     },
 
@@ -125,6 +125,20 @@ const vehicleSchema = new mongoose.Schema({
         type: String,
         enum: ['ac', 'wifi', 'entertainment', 'charging_port', 'toilet', 'refreshments']
     }],
+    lastKnownLocation: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            default: [0, 0]
+        }
+    },
+    locationUpdatedAt: {
+        type: Date
+    },
     isActive: {
         type: Boolean,
         default: true
@@ -141,6 +155,9 @@ const vehicleSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Add Geospatial Index
+vehicleSchema.index({ lastKnownLocation: '2dsphere' });
 
 // Indexes
 vehicleSchema.index({ plateNumber: 1 }, { unique: true });

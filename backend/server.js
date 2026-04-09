@@ -40,6 +40,53 @@ io.on('connection', (socket) => {
         console.log(`User ${userID} joined room user-${userID}`);
     });
 
+    socket.on('join-trip', (tripID) => {
+        socket.join(`trip-${tripID}`);
+        console.log(`Socket ${socket.id} joined trip room: trip-${tripID}`);
+    });
+
+    socket.on('update-location', async (data) => {
+        const { tripID, vehicleID, latitude, longitude, speed } = data;
+
+        if (!tripID || !latitude || !longitude) return;
+
+        io.to(`trip-${tripID}`).emit('location-broadcast', {
+            vehicleID,
+            latitude,
+            longitude,
+            speed,
+            timestamp: new Date()
+        });
+
+        // 2. Broadcast to the PUBLIC Landing Page Map
+        // We only send minimal data for privacy
+        io.to('public-live-map').emit('public-location-update', {
+            vehicleID,
+            latitude,
+            longitude,
+            timestamp: new Date()
+        });
+
+        // 3. Periodically update the database (e.g., every 10-20 seconds) 
+        try {
+            await mongoose.model('Vehicle').findByIdAndUpdate(vehicleID, {
+                lastKnownLocation: {
+                    type: 'Point',
+                    coordinates: [longitude, latitude]
+                },
+                locationUpdatedAt: new Date()
+            });
+        } catch (err) {
+            console.error('Failed to save last known location:', err);
+        }
+    });
+
+    // Join the Public Map room (No auth needed)
+    socket.on('join-public-map', () => {
+        socket.join('public-live-map');
+        console.log(`Socket ${socket.id} joined public live map`);
+    });
+
     // Join admin to admin room
     socket.on('join-admin-room', (userID) => {
         socket.join('admin-room');
