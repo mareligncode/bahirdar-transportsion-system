@@ -8,9 +8,7 @@ import {
     getPaymentHistory,
     handleWebhook,
     refundPayment,
-    recordCashPayment,
-    verifyBankReceipt,
-    getPaymentInstructions
+    recordCashPayment
 } from '../controllers/paymentController.js';
 import upload from '../utils/multerConfig.js';
 import { protect, authorize } from '../middleware/auth.js';
@@ -30,7 +28,6 @@ router.get('/:bookingId/instructions', authorize(['passenger']), getPaymentInstr
 
 router.post('/:paymentId/verify', authorize(['super_admin', 'station_admin']), manualVerifyPayment);
 router.post('/cash-payment', authorize(['super_admin', 'station_admin']), recordCashPayment);
-router.post('/verify-receipt', authorize(['passenger']), upload.single('receipt'), verifyBankReceipt);
 router.post('/:paymentId/refund', authorize(['super_admin']), refundPayment);
 
 export default router;
