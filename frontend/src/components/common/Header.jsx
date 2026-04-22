@@ -85,11 +85,11 @@ export default function Header() {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-white group-hover:text-cyan-100 transition-colors">
-                  {t('bahir_dar_meneharia')}
+                  {t('Bahir dar meneharia')}
                 </span>
                 <span className="text-xs text-blue-200 flex items-center">
                   <MapPin className="w-3 h-3 mr-1" />
-                  {t('smart_city_transport')}
+                  {t('smart city transport')}
                 </span>
               </div>
             </Link>
@@ -249,13 +249,13 @@ export default function Header() {
                     to="/login" 
                     className="text-white/90 hover:text-white px-4 py-2 rounded-lg border border-white/30 hover:bg-white/10 transition-colors text-sm"
                   >
-                    {t('login')}
+                    {t('Login')}
                   </Link>
                   <Link 
                     to="/register" 
-                    className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+                    className="text-white/90 px-4 py-2 rounded-lg border border-white/30 text-sm font-medium hover:bg-white/10 transition-colors"
                   >
-                    {t('get_started')}
+                    {t('get started')}
                   </Link>
                 </div>
               )}

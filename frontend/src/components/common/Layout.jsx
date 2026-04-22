@@ -72,7 +72,8 @@ export default function Layout({ children, showSidebar = false }) {
         )}
         
         <main className="flex-1 min-h-0 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">
+          {/* Remove the py-8 padding to eliminate spacing, and add negative margin if needed */}
+          <div className="container mx-auto px-4">
             {children}
           </div>
         </main>

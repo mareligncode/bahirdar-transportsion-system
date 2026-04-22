@@ -328,6 +328,40 @@ const MyBookings = () => {
     return isPendingOrConfirmed && departureTime && departureTime > twoHoursFromNow;
   };
 
+  // Helper function to get seat numbers from booking
+  const getSeatNumbers = (booking) => {
+    // Priority 1: seatNumbers array (for group bookings)
+    if (booking.seatNumbers && Array.isArray(booking.seatNumbers) && booking.seatNumbers.length > 0) {
+      return booking.seatNumbers;
+    }
+    // Priority 2: single seatNumber
+    if (booking.seatNumber) {
+      return [booking.seatNumber];
+    }
+    // Fallback: empty array
+    return [];
+  };
+
+  // Helper function to get seat count
+  const getSeatCount = (booking) => {
+    return getSeatNumbers(booking).length;
+  };
+
+  // Helper function to get total price
+  const getTotalPrice = (booking) => {
+    return booking.totalPrice || booking.amount || 0;
+  };
+
+  // Helper function to get price per seat
+  const getPricePerSeat = (booking) => {
+    const totalPrice = getTotalPrice(booking);
+    const seatCount = getSeatCount(booking);
+    if (seatCount > 0 && totalPrice > 0) {
+      return totalPrice / seatCount;
+    }
+    return booking.pricePerSeat || booking.tripID?.price || 0;
+  };
+
   const getFilteredBookings = () => {
     let filtered = [...bookings];
 
@@ -362,10 +396,12 @@ const MyBookings = () => {
     const origin = trip.origin || {};
     const destination = trip.destination || {};
     
-    // Handle seat numbers (could be single number or array)
-    const seatNumbers = booking.seatNumber ? [booking.seatNumber] : (booking.seatNumbers || []);
-    const totalAmount = booking.totalPrice || booking.amount || 0;
-    const pricePerSeat = booking.pricePerSeat || trip.price || 0;
+    // Get seat numbers using helper function
+    const seatNumbers = getSeatNumbers(booking);
+    const seatCount = seatNumbers.length;
+    const totalAmount = getTotalPrice(booking);
+    const pricePerSeat = getPricePerSeat(booking);
+    const isGroupBooking = seatCount > 1;
 
     // Check if payment is needed (pending status and no payment or payment pending)
     const needsPayment = isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending');
@@ -402,6 +438,15 @@ const MyBookings = () => {
                 color="warning"
                 size="small"
                 sx={{ fontWeight: 600 }}
+              />
+            )}
+            {isGroupBooking && (
+              <Chip
+                icon={<EventSeat />}
+                label={`${seatCount} ${t('Seats')}`}
+                color="primary"
+                size="small"
+                sx={{ fontWeight: 600, bgcolor: '#3b82f6' }}
               />
             )}
             <Chip
@@ -442,6 +487,11 @@ const MyBookings = () => {
                     {booking.ticketNumber && (
                       <Typography variant="caption" color="text.secondary">
                         {t('Ticket')}: {booking.ticketNumber}
+                      </Typography>
+                    )}
+                    {isGroupBooking && booking.groupTicketNumber && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {t('Group Ticket')}: {booking.groupTicketNumber}
                       </Typography>
                     )}
                   </Box>
@@ -547,7 +597,7 @@ const MyBookings = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <AttachMoney fontSize="small" sx={{ color: '#64748b', fontSize: '16px' }} />
                       <Typography variant="caption" color="text.secondary">
-                        {seatNumbers.length} {t('seat(s)')} × ETB {pricePerSeat.toLocaleString()}
+                        {seatCount} {t('seat(s)')} × ETB {pricePerSeat.toLocaleString()}
                       </Typography>
                     </Box>
                     
@@ -958,7 +1008,7 @@ const MyBookings = () => {
                   {formatDateTime(selectedBooking.tripID?.departureTime)}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: '#1e40af' }}>
-                  {t('Refund Amount')}: ETB {(selectedBooking.totalPrice || selectedBooking.amount || 0).toLocaleString()}
+                  {t('Refund Amount')}: ETB {getTotalPrice(selectedBooking).toLocaleString()}
                 </Typography>
               </Box>
             )}
