@@ -1,5 +1,7 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import { rateLimit } from 'express-rate-limit'
 import http from 'http'
 import mongoose from 'mongoose'
 import { Server } from 'socket.io'
@@ -28,14 +30,9 @@ const io = new Server(server, {
     }
 });
 
-// Set global io for services
 global.io = io;
-
-// Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
-
-    // Join user to their notification room
     socket.on('join-user-room', (userID) => {
         socket.join(`user-${userID}`);
         console.log(`User ${userID} joined room user-${userID}`);
@@ -58,9 +55,6 @@ io.on('connection', (socket) => {
             speed,
             timestamp: new Date()
         });
-
-        // 2. Broadcast to the PUBLIC Landing Page Map
-        // We only send minimal data for privacy
         io.to('public-live-map').emit('public-location-update', {
             vehicleID,
             latitude,
@@ -68,7 +62,6 @@ io.on('connection', (socket) => {
             timestamp: new Date()
         });
 
-        // 3. Periodically update the database (e.g., every 10-20 seconds) 
         try {
             await mongoose.model('Vehicle').findByIdAndUpdate(vehicleID, {
                 lastKnownLocation: {
@@ -82,29 +75,51 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Join the Public Map room (No auth needed)
     socket.on('join-public-map', () => {
         socket.join('public-live-map');
         console.log(`Socket ${socket.id} joined public live map`);
     });
 
-    // Join admin to admin room
     socket.on('join-admin-room', (userID) => {
         socket.join('admin-room');
         console.log(`Admin ${userID} joined admin room`);
     });
 
-    // Leave room
     socket.on('leave-room', (room) => {
         socket.leave(room);
         console.log(`User left room: ${room}`);
     });
 
-    // Handle disconnection
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
 });
+
+app.use(helmet());
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    limit: 100, 
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many requests from this IP, please try again after 15 minutes'
+    }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 10, 
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many login attempts, please try again after an hour'
+    }
+});
+
+app.use('/api', generalLimiter);
+app.use('/api/auth', authLimiter);
 
 // Middleware
 app.use(cors());
