@@ -13,16 +13,26 @@ class QueueAutomator {
      */
     static async processNextInQueue(routeID, stationID, createdBy) {
         try {
-            // 1. Check if a trip is already active for this route (boarding or scheduled)
-            const activeTrip = await Trip.findOne({
+            // 1. Check if a trip is already active for this route TODAY with available seats
+            const today = new Date();
+            const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+            console.log(`[QueueAutomator] Checking route ${routeID} at station ${stationID}`);
+            console.log(`[QueueAutomator] Today range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+            const query = {
                 route: routeID,
                 tripStatus: { $in: ['scheduled', 'boarding'] },
-                isActive: true
-            });
+                isActive: true,
+                availableSeats: { $gt: 0 },
+                departureTime: { $gte: startOfDay, $lte: endOfDay }
+            };
+            console.log(`[QueueAutomator] Active trip query: ${JSON.stringify(query)}`);
+            const activeTripWithSeats = await Trip.findOne(query);
 
-            if (activeTrip) {
-                console.log(`Route ${routeID} already has an active trip. Skipping automation.`);
-                return { success: false, message: 'Existing active trip found' };
+            if (activeTripWithSeats) {
+                console.log(`[QueueAutomator] Route ${routeID} already has an active trip ${activeTripWithSeats._id}. Skipping.`);
+                return { success: false, message: 'Existing active trip with seats found' };
             }
 
             // 2. Get the next vehicle in the queue for this route
@@ -35,8 +45,17 @@ class QueueAutomator {
                 .populate('driver');
 
             if (!nextInLine) {
-                console.log(`No vehicles waiting in queue for route ${routeID}.`);
+                console.log(`[QueueAutomator] No 'waiting' vehicles found for route ${routeID} at station ${stationID}.`);
+                // Check if any exists with DIFFERENT status
+                const otherStatus = await Queue.find({ route: routeID, station: stationID });
+                console.log(`[QueueAutomator] DEBUG: Found ${otherStatus.length} total entries for this route. Statuses: ${otherStatus.map(o => o.status).join(', ')}`);
                 return { success: false, message: 'Queue is empty' };
+            }
+
+            console.log(`[QueueAutomator] Found vehicle ${nextInLine.vehicle?.plateNumber} in queue. Driver: ${nextInLine.driver?.fullName}`);
+            if (!nextInLine.driver) {
+                console.error(`[QueueAutomator] ERROR: Driver missing for queue entry ${nextInLine._id}`);
+                return { success: false, message: 'Driver missing' };
             }
 
             // 3. Get Route Details
@@ -48,8 +67,26 @@ class QueueAutomator {
             departureTime.setMinutes(departureTime.getMinutes() + 15); // Default 15 mins from now for boarding
 
             const arrivalTime = new Date(departureTime);
-            // Default estimated duration if not specified in route
-            const duration = routeDetails.estimatedDuration ? parseInt(routeDetails.estimatedDuration) : 120; // default 2 hours
+            
+            // IMPROVED DURATION PARSING: Handle strings like "2h 30m" or "150"
+            let duration = 120; // Default 2 hours
+            if (routeDetails.estimatedDuration) {
+                const rawDuration = routeDetails.estimatedDuration.toString();
+                if (rawDuration.includes('h')) {
+                    const hours = parseInt(rawDuration.split('h')[0]) || 0;
+                    const mins = parseInt(rawDuration.split('h')[1]) || 0;
+                    duration = (hours * 60) + mins;
+                } else {
+                    duration = parseInt(rawDuration) || 120;
+                }
+            }
+
+            // Ensure it meets the minimum validation of 15 minutes defined in Trip model
+            if (duration < 15) {
+                console.warn(`[QueueAutomator] duration ${duration} is too low. Adjusting to 15 mins minimum.`);
+                duration = 15;
+            }
+            
             arrivalTime.setMinutes(arrivalTime.getMinutes() + duration);
 
             const trip = new Trip({
@@ -73,7 +110,18 @@ class QueueAutomator {
             const count = await Trip.countDocuments();
             trip.tripNumber = `TRP-${Date.now().toString().slice(-6)}-${count + 1}`;
 
-            await trip.save();
+            try {
+                await trip.save();
+                console.log(`[QueueAutomator] SUCCESS: Trip ${trip.tripNumber} created!`);
+            } catch (saveErr) {
+                console.error(`[QueueAutomator] SAVE ERROR for trip:`, saveErr.message);
+                if (saveErr.errors) {
+                    Object.keys(saveErr.errors).forEach(key => {
+                        console.error(` - Field '${key}': ${saveErr.errors[key].message}`);
+                    });
+                }
+                throw saveErr;
+            }
 
             // 5. Update Queue Entry Status
             nextInLine.status = 'loading'; // Changed from waiting to loading

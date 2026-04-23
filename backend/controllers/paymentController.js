@@ -613,8 +613,7 @@ export const getPaymentStatus = async (req, res) => {
         // For station admin, only allow payments from their station
         if (req.user.role === 'station_admin') {
             // Find station managed by this admin
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station) {
+            if (!req.user.stationID) {
                 return res.status(403).json({
                     success: false,
                     message: 'No station assigned to this admin'
@@ -970,8 +969,7 @@ export const recordCashPayment = async (req, res) => {
         // Verify station admin has permission for this station
         if (req.user.role === 'station_admin') {
             const Station = (await import('../models/Station.js')).default;
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !booking.tripID.station.equals(station._id)) {
+            if (!req.user.stationID || !booking.tripID.station.equals(req.user.stationID)) {
                 return res.status(403).json({ success: false, message: 'Not authorized for this station' });
             }
         }
@@ -1083,25 +1081,33 @@ export const verifyBankReceipt = async (req, res) => {
             console.error('Cloudinary upload failed:', cldErr);
         }
 
-        // 3. Prevent Duplicates
-        const existingPayment = await Payment.findOne({ gatewayTransactionID: extractedData.transactionID });
-        if (existingPayment) {
-            return res.status(400).json({ success: false, message: 'This transaction ID has already been used.' });
+        // 3. Prevent Duplicates (Only if Transaction ID was found)
+        if (extractedData.transactionID) {
+            const existingPayment = await Payment.findOne({ gatewayTransactionID: extractedData.transactionID });
+            if (existingPayment) {
+                return res.status(400).json({ success: false, message: 'This transaction ID has already been used.' });
+            }
         }
 
         // 4. Validation & Smart Review Logic
-        const amountMatch = Math.abs(extractedData.amount - booking.totalPrice) < 2;
+        // Fallback: If booking.totalPrice is 0 (old data), use trip price
+        const requiredAmount = booking.totalPrice > 0 ? booking.totalPrice : (booking.tripID?.price || 0);
+        const amountMatch = Math.abs(extractedData.amount - requiredAmount) < 2;
+        
         const ownerName = (vehicle?.ownerDetails?.ownerName || "").toLowerCase();
         const extractedReceiver = (extractedData.receiverName || "").toLowerCase();
-        const ownerNameInReceipt = extractedReceiver && ownerName &&
-            (extractedReceiver.includes(ownerName) || ownerName.includes(extractedReceiver));
+        
+        // Better fuzzy matching for name
+        const ownerNameInReceipt = extractedReceiver && ownerName && 
+            (extractedReceiver.includes(ownerName) || ownerName.includes(extractedReceiver) || 
+             ownerName.split(' ').some(part => part.length > 3 && extractedReceiver.includes(part)));
 
         const isSuspicious = !ownerNameInReceipt || (extractedData.confidence < 60);
 
         if (!amountMatch) {
             return res.status(422).json({
                 success: false,
-                message: `Amount mismatch. Receipt: ${extractedData.amount}, Required: ${booking.totalPrice}`,
+                message: `Amount mismatch. Receipt: ${extractedData.amount}, Required: ${requiredAmount}`,
                 extracted: extractedData
             });
         }

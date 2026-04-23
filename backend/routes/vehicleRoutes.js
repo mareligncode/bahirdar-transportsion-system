@@ -16,7 +16,8 @@ import {
     removeVehicleImage,
     getVehicleImages,
     getVehicleWithImages,
-    getPublicLiveVehicles
+    getPublicLiveVehicles,
+    getMyVehicle
 } from '../controllers/vehicleController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -27,6 +28,7 @@ router.get('/public-locations', getPublicLiveVehicles);
 
 router.use(protect);
 
+router.get('/my-vehicle', authorize(['driver']), getMyVehicle);
 router.post('/register', authorize(['station_admin', 'super_admin']), createVehicle);
 router.get('/', authorize(['driver', 'station_admin', 'super_admin']), getAllVehicles);
 router.get('/available', authorize(['station_admin', 'super_admin']), getAvailableVehicles);

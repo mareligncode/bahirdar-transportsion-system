@@ -54,7 +54,7 @@ const TripResults = ({
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
-  
+
   // State
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [page, setPage] = useState(0);
@@ -166,7 +166,7 @@ const TripResults = ({
 
     // Apply vehicle type filter
     if (selectedVehicleTypes.length > 0) {
-      filtered = filtered.filter(trip => 
+      filtered = filtered.filter(trip =>
         selectedVehicleTypes.includes(trip.vehicle?.carType)
       );
     }
@@ -174,7 +174,7 @@ const TripResults = ({
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'price':
           comparison = (a.price || 0) - (b.price || 0);
@@ -272,7 +272,7 @@ const TripResults = ({
         <Grid item xs={12} sm={6} lg={4} key={trip._id}>
           <Fade in={true} timeout={500}>
             <div>
-              <TripCard 
+              <TripCard
                 trip={trip}
                 onSelect={onTripSelect}
                 viewMode="grid"
@@ -287,10 +287,10 @@ const TripResults = ({
 
   // List View
   const renderListView = () => (
-    <Paper sx={{ 
-      width: '100%', 
-      overflow: 'hidden', 
-      borderRadius: '16px', 
+    <Paper sx={{
+      width: '100%',
+      overflow: 'hidden',
+      borderRadius: '16px',
       border: '1px solid #e2e8f0',
       boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
     }}>
@@ -312,10 +312,10 @@ const TripResults = ({
           <TableBody>
             {paginatedTrips.map((trip) => (
               trip && (
-                <TableRow 
-                  key={trip._id} 
+                <TableRow
+                  key={trip._id}
                   hover
-                  sx={{ 
+                  sx={{
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) },
                     cursor: trip.availableSeats > 0 ? 'pointer' : 'default',
                     opacity: trip.availableSeats === 0 ? 0.7 : 1
@@ -367,7 +367,7 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     <Box>
-                      <Chip 
+                      <Chip
                         label={`${trip.availableSeats || 0}/${trip.totalSeats || 0}`}
                         size="small"
                         color={getSeatAvailabilityColor(trip.availableSeats || 0, trip.totalSeats || 1)}
@@ -381,18 +381,18 @@ const TripResults = ({
                   </TableCell>
                   <TableCell>
                     {trip.availableSeats > 0 ? (
-                      <Chip 
-                        label={t('available')} 
-                        size="small" 
-                        color="success" 
+                      <Chip
+                        label={t('available')}
+                        size="small"
+                        color="success"
                         variant="filled"
                         sx={{ fontWeight: 600 }}
                       />
                     ) : (
-                      <Chip 
-                        label={t('sold_out')} 
-                        size="small" 
-                        color="error" 
+                      <Chip
+                        label={t('sold_out')}
+                        size="small"
+                        color="error"
                         variant="filled"
                         sx={{ fontWeight: 600 }}
                       />
@@ -408,7 +408,7 @@ const TripResults = ({
                         onTripSelect(trip);
                       }}
                       disabled={trip.availableSeats === 0}
-                      sx={{ 
+                      sx={{
                         borderRadius: '6px',
                         minWidth: '80px',
                         textTransform: 'none',
@@ -424,7 +424,7 @@ const TripResults = ({
           </TableBody>
         </Table>
       </TableContainer>
-      
+
       <TablePagination
         rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
@@ -433,7 +433,7 @@ const TripResults = ({
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
-        sx={{ 
+        sx={{
           borderTop: '1px solid #e2e8f0',
           bgcolor: '#f8fafc'
         }}
@@ -444,8 +444,8 @@ const TripResults = ({
   // Loading State
   if (loading) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
+      <Box sx={{
+        display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
@@ -463,7 +463,7 @@ const TripResults = ({
   // Empty State
   if (trips.length === 0) {
     return (
-      <Paper sx={{ 
+      <Paper sx={{
         p: 6,
         textAlign: 'center',
         borderRadius: '16px',
@@ -471,8 +471,8 @@ const TripResults = ({
         border: '1px solid #e2e8f0'
       }}>
         <Box sx={{ mb: 3 }}>
-          <img 
-            src="/images/no-results.svg" 
+          <img
+            src="/images/no-results.svg"
             alt="No trips"
             style={{ width: 120, height: 120, opacity: 0.5 }}
             onError={(e) => e.target.style.display = 'none'}
@@ -484,11 +484,11 @@ const TripResults = ({
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
           {t('try_adjusting_search_criteria')}
         </Typography>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={onBack}
           startIcon={<ArrowBack />}
-          sx={{ 
+          sx={{
             borderRadius: '8px',
             px: 4,
             py: 1.5,
@@ -505,7 +505,7 @@ const TripResults = ({
   // Filtered Empty State
   if (filteredAndSortedTrips.length === 0) {
     return (
-      <Paper sx={{ 
+      <Paper sx={{
         p: 6,
         textAlign: 'center',
         borderRadius: '16px',
@@ -521,8 +521,8 @@ const TripResults = ({
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
           {t('try_adjusting_filters')}
         </Typography>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={clearFilters}
           startIcon={<Clear />}
           sx={{ borderRadius: '8px', textTransform: 'none' }}
@@ -536,45 +536,45 @@ const TripResults = ({
   return (
     <Box>
       {/* Header with Search Info and Controls */}
-      <Paper sx={{ 
+      <Paper sx={{
         p: 3,
         mb: 4,
         borderRadius: '12px',
         border: '1px solid #e2e8f0',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
       }}>
-        <Box sx={{ 
-          display: 'flex', 
+        <Box sx={{
+          display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          justifyContent: 'space-between', 
+          justifyContent: 'space-between',
           alignItems: { xs: 'stretch', md: 'center' },
           gap: 2
         }}>
           {/* Search Info */}
           <Box>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 700, 
-              mb: 1, 
+            <Typography variant="h5" sx={{
+              fontWeight: 700,
+              mb: 1,
               color: '#1e293b'
             }}>
               {t('search_results')}
             </Typography>
             <Typography variant="body1" sx={{ color: '#64748b' }}>
-              {t('trips_from_to', { 
+              {t('trips_from_to', {
                 from: stations.find(s => s._id === searchData.origin)?.stationName || 'Unknown',
                 to: stations.find(s => s._id === searchData.destination)?.stationName || 'Unknown'
-              })} 
+              })}
               {searchData.date && ` • ${formatDate(searchData.date)}`}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               {t('found_trips', { count: filteredAndSortedTrips.length, total: trips.length })}
             </Typography>
           </Box>
-          
+
           {/* Controls */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 1.5, 
+          <Box sx={{
+            display: 'flex',
+            gap: 1.5,
             alignItems: 'center',
             flexWrap: 'wrap'
           }}>
@@ -604,9 +604,9 @@ const TripResults = ({
             />
 
             {/* View Toggle */}
-            <IconButton 
+            <IconButton
               onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              sx={{ 
+              sx={{
                 bgcolor: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
@@ -622,7 +622,7 @@ const TripResults = ({
                 variant="outlined"
                 startIcon={<FilterList />}
                 onClick={handleFilterClick}
-                sx={{ 
+                sx={{
                   borderRadius: '8px',
                   textTransform: 'none',
                   borderColor: activeFilterCount > 0 ? 'primary.main' : '#e2e8f0'
@@ -646,9 +646,9 @@ const TripResults = ({
 
         {/* Active Filters Display */}
         {activeFilterCount > 0 && (
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 1, 
+          <Box sx={{
+            display: 'flex',
+            gap: 1,
             flexWrap: 'wrap',
             mt: 2,
             pt: 2,
@@ -693,12 +693,12 @@ const TripResults = ({
 
       {/* Results */}
       {viewMode === 'grid' ? renderGridView() : renderListView()}
-      
+
       {/* Pagination for Grid View */}
       {viewMode === 'grid' && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
           mt: 4,
           p: 2,
           bgcolor: 'white',
@@ -792,9 +792,9 @@ const TripResults = ({
           <Button size="small" onClick={clearFilters}>
             {t('clear_all')}
           </Button>
-          <Button 
-            size="small" 
-            variant="contained" 
+          <Button
+            size="small"
+            variant="contained"
             onClick={handleFilterClose}
             sx={{ borderRadius: '6px' }}
           >
@@ -819,8 +819,8 @@ const TripResults = ({
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, px: 2, pt: 1 }}>
           {t('sort_by')}
         </Typography>
-        
-        <MenuItem 
+
+        <MenuItem
           onClick={() => handleSortChange('departureTime')}
           selected={sortBy === 'departureTime'}
           sx={{ justifyContent: 'space-between' }}
@@ -830,15 +830,15 @@ const TripResults = ({
             {t('departure_time')}
           </Box>
           {sortBy === 'departureTime' && (
-            <Chip 
-              label={sortOrder === 'asc' ? '↑' : '↓'} 
+            <Chip
+              label={sortOrder === 'asc' ? '↑' : '↓'}
               size="small"
               sx={{ height: 20, minWidth: 20 }}
             />
           )}
         </MenuItem>
 
-        <MenuItem 
+        <MenuItem
           onClick={() => handleSortChange('price')}
           selected={sortBy === 'price'}
           sx={{ justifyContent: 'space-between' }}
@@ -848,15 +848,15 @@ const TripResults = ({
             {t('price')}
           </Box>
           {sortBy === 'price' && (
-            <Chip 
-              label={sortOrder === 'asc' ? '↑' : '↓'} 
+            <Chip
+              label={sortOrder === 'asc' ? '↑' : '↓'}
               size="small"
               sx={{ height: 20, minWidth: 20 }}
             />
           )}
         </MenuItem>
 
-        <MenuItem 
+        <MenuItem
           onClick={() => handleSortChange('duration')}
           selected={sortBy === 'duration'}
           sx={{ justifyContent: 'space-between' }}
@@ -866,15 +866,15 @@ const TripResults = ({
             {t('duration')}
           </Box>
           {sortBy === 'duration' && (
-            <Chip 
-              label={sortOrder === 'asc' ? '↑' : '↓'} 
+            <Chip
+              label={sortOrder === 'asc' ? '↑' : '↓'}
               size="small"
               sx={{ height: 20, minWidth: 20 }}
             />
           )}
         </MenuItem>
 
-        <MenuItem 
+        <MenuItem
           onClick={() => handleSortChange('availability')}
           selected={sortBy === 'availability'}
           sx={{ justifyContent: 'space-between' }}
@@ -884,8 +884,8 @@ const TripResults = ({
             {t('availability')}
           </Box>
           {sortBy === 'availability' && (
-            <Chip 
-              label={sortOrder === 'asc' ? '↑' : '↓'} 
+            <Chip
+              label={sortOrder === 'asc' ? '↑' : '↓'}
               size="small"
               sx={{ height: 20, minWidth: 20 }}
             />

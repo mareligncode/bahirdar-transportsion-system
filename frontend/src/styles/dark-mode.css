@@ -1,7 +1,7 @@
 /* Dark Mode Styles */
 .dark-mode {
   background-color: #111827;
-  color: #f8f9f9;
+  color: #f9fafb;
 }
 
 .dark-mode body {
@@ -15,36 +15,43 @@
 }
 
 .dark-mode .bg-gray-50 {
-  background-color: #374151 !important;
+  background-color: #111827 !important;
 }
 
 .dark-mode .bg-gray-100 {
-  background-color: #3a567d !important;
-
+  background-color: #1f2937 !important;
 }
 
-/* Text colors in dark mode */
-.dark-mode .text-gray-700,
+/* Text colors in dark mode - ensure high contrast */
+.dark-mode .text-gray-900,
 .dark-mode .text-gray-800,
-.dark-mode .text-gray-900 {
-  color: #f7f7f8 !important;
-  background-color: #1f2937;
+.dark-mode .text-gray-700 {
+  color: #f9fafb !important;
+  background-color: transparent !important;
 }
 
-.dark-mode .text-gray-500,
-.dark-mode .text-gray-600 {
-  color: #090a0a !important;
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500 {
+  color: #d1d5db !important;
+  /* Lighter gray for dark mode */
+  background-color: transparent !important;
+}
 
+.dark-mode .text-gray-400 {
+  color: #9ca3af !important;
+  background-color: transparent !important;
 }
 
 /* Borders in dark mode */
 .dark-mode .border-gray-200,
-.dark-mode .border-gray-300 {
-  border-color: #4b5563 !important;
+.dark-mode .border-gray-300,
+.dark-mode .border-gray-100 {
+  border-color: #374151 !important;
 }
 
 /* Hover states */
-.dark-mode .hover\:bg-gray-50 {
+.dark-mode .hover\:bg-gray-50:hover,
+.dark-mode .hover\:bg-gray-100:hover {
   background-color: #374151 !important;
 }
 
@@ -56,17 +63,15 @@
 
 /* Primary colors in dark mode */
 .dark-mode .text-primary-600 {
-  color: #5c91cd !important;
+  color: #60a5fa !important;
 }
 
 .dark-mode .bg-primary-50 {
-  background-color: #1e3a8a !important;
+  background-color: rgba(30, 58, 138, 0.5) !important;
 }
 
-.dark-mode .border-primary-200 {
-  border-color: #1e40af !important;
-}
-
-.dark-mode .border-primary-600 {
-  border-color: #3b82f6 !important;
+/* Glass effect refinements */
+.dark-mode .glass {
+  background-color: rgba(17, 24, 39, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }

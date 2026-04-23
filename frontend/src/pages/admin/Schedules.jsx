@@ -127,7 +127,7 @@ const Schedules = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedTrips, setSelectedTrips] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
-  
+
   // View Details state
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewedTrip, setViewedTrip] = useState(null);
@@ -191,7 +191,7 @@ const Schedules = () => {
       };
 
       const response = await api.get('/api/trip', { params });
-      
+
       if (response.data.success) {
         setTrips(response.data.data);
         setTotalTrips(response.data.total || response.data.count);
@@ -229,17 +229,17 @@ const Schedules = () => {
   const fetchVehicles = async () => {
     try {
       let response;
-      
+
       try {
         response = await api.get('/api/vehicles');
         console.log('Vehicles response:', response.data);
-        
+
         if (response.data.success) {
-          const availableVehicles = response.data.data?.vehicles?.filter(vehicle => 
-            vehicle.isActive && 
+          const availableVehicles = response.data.data?.vehicles?.filter(vehicle =>
+            vehicle.isActive &&
             (vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active' || !vehicle.currentStatus)
           ) || [];
-          
+
           console.log('Available vehicles:', availableVehicles);
           setVehicles(availableVehicles);
           return;
@@ -247,12 +247,12 @@ const Schedules = () => {
       } catch (firstErr) {
         console.log('First vehicles endpoint failed:', firstErr.message);
       }
-      
+
       try {
         response = await api.get('/api/vehicles');
         if (response.data && Array.isArray(response.data)) {
-          const availableVehicles = response.data.filter(vehicle => 
-            vehicle.isActive && 
+          const availableVehicles = response.data.filter(vehicle =>
+            vehicle.isActive &&
             (vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active' || !vehicle.currentStatus)
           );
           console.log('Alternative vehicles data:', availableVehicles);
@@ -262,10 +262,10 @@ const Schedules = () => {
       } catch (secondErr) {
         console.log('Alternative endpoint failed:', secondErr.message);
       }
-      
+
       showSnackbar(t('could_not_load_vehicles'), 'warning');
       setVehicles([]);
-      
+
     } catch (err) {
       console.error('Error fetching vehicles:', err);
       showSnackbar(t('failed_to_load_vehicles'), 'warning');
@@ -278,11 +278,11 @@ const Schedules = () => {
     try {
       let response;
       let users = [];
-      
+
       if (user?.role === 'super_admin') {
         response = await api.get('/api/auth/all-users');
         console.log('Super admin drivers response:', response.data);
-        
+
         if (response.data.success) {
           users = response.data.data?.users || [];
         } else if (Array.isArray(response.data)) {
@@ -291,33 +291,33 @@ const Schedules = () => {
       } else if (user?.role === 'station_admin') {
         response = await api.get('/api/auth/station-users');
         console.log('Station admin drivers response:', response.data);
-        
+
         if (response.data.success) {
           users = response.data.data?.users || response.data.data || [];
         }
       } else {
         response = await api.get('/api/auth/all-users');
         console.log('All users drivers response:', response.data);
-        
+
         if (response.data.success) {
           users = response.data.data?.users || [];
         } else if (Array.isArray(response.data)) {
           users = response.data;
         }
       }
-      
-      const driversList = users.filter(u => 
-        u.role === 'driver' && 
+
+      const driversList = users.filter(u =>
+        u.role === 'driver' &&
         (u.isActive === true || u.isActive === undefined)
       ) || [];
-      
+
       console.log('Filtered drivers:', driversList);
       setDrivers(driversList);
-      
+
       if (driversList.length === 0) {
         showSnackbar(t('no_active_drivers_found'), 'warning');
       }
-      
+
     } catch (err) {
       console.error('Error fetching drivers:', err.response?.data || err);
       showSnackbar(t('failed_to_load_drivers'), 'warning');
@@ -349,7 +349,7 @@ const Schedules = () => {
   // Update date range when preset changes
   useEffect(() => {
     const today = new Date();
-    switch(filters.dateRange) {
+    switch (filters.dateRange) {
       case 'today':
         setFilters(prev => ({
           ...prev,
@@ -445,12 +445,12 @@ const Schedules = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     const updatedForm = {
       ...tripForm,
       [name]: value
     };
-    
+
     if (name === 'vehicle' && value) {
       const selectedVehicle = vehicles.find(v => v._id === value);
       if (selectedVehicle) {
@@ -460,26 +460,26 @@ const Schedules = () => {
         updatedForm.totalSeats = selectedVehicle.totalCapacity || '';
       }
     }
-    
+
     if ((name === 'departureTime' || name === 'arrivalTime') && updatedForm.departureTime && updatedForm.arrivalTime) {
       const departure = new Date(updatedForm.departureTime);
       const arrival = new Date(updatedForm.arrivalTime);
-      
+
       if (departure < arrival) {
         const durationMinutes = differenceInMinutes(arrival, departure);
         updatedForm.estimatedDuration = durationMinutes > 0 ? durationMinutes : '';
       }
     }
-    
+
     setTripForm(updatedForm);
   };
 
   const handleCreateTrip = async () => {
     try {
-      const requiredFields = ['origin', 'destination', 'departureTime', 'arrivalTime', 
-                             'vehicle', 'driver', 'price', 'totalSeats'];
+      const requiredFields = ['origin', 'destination', 'departureTime', 'arrivalTime',
+        'vehicle', 'driver', 'price', 'totalSeats'];
       const missingFields = requiredFields.filter(field => !tripForm[field]);
-      
+
       if (missingFields.length > 0) {
         showSnackbar(t('fill_required_fields', { fields: missingFields.join(', ') }), 'error');
         return;
@@ -712,15 +712,15 @@ const Schedules = () => {
     }
 
     try {
-      switch(action) {
+      switch (action) {
         case 'activate':
-          await Promise.all(selectedTrips.map(id => 
+          await Promise.all(selectedTrips.map(id =>
             api.patch(`/api/trip/${id}/toggle-active`, {})
           ));
           showSnackbar(t('trips_activated', { count: selectedTrips.length }), 'success');
           break;
         case 'deactivate':
-          await Promise.all(selectedTrips.map(id => 
+          await Promise.all(selectedTrips.map(id =>
             api.patch(`/api/trip/${id}/toggle-active`, {})
           ));
           showSnackbar(t('trips_deactivated', { count: selectedTrips.length }), 'success');
@@ -765,7 +765,7 @@ const Schedules = () => {
     a.download = `trips-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     showSnackbar(t('trips_exported_successfully'), 'success');
   };
 
@@ -773,21 +773,21 @@ const Schedules = () => {
     const stats = {
       total: trips.length,
       active: trips.filter(t => t.isActive).length,
-      today: trips.filter(t => 
+      today: trips.filter(t =>
         format(new Date(t.departureTime), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
       ).length,
-      upcoming: trips.filter(t => 
+      upcoming: trips.filter(t =>
         isAfter(new Date(t.departureTime), new Date()) && t.tripStatus === 'scheduled'
       ).length,
       completed: trips.filter(t => t.tripStatus === 'completed').length,
       cancelled: trips.filter(t => t.tripStatus === 'cancelled').length
     };
-    
+
     return stats;
   };
 
   const getStatusStep = (status) => {
-    switch(status) {
+    switch (status) {
       case 'scheduled': return 0;
       case 'boarding': return 1;
       case 'ongoing': return 2;
@@ -812,9 +812,9 @@ const Schedules = () => {
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Grid container alignItems="center" justifyContent="space-between">
+        <Grid container alignItems="center" justifyContent="space-between" direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <Grid>
-            <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
               <ScheduleIcon sx={{ mr: 2, color: 'primary.main' }} />
               {t('trip_schedules')}
               <Badge badgeContent={totalTrips} color="primary" sx={{ ml: 2 }}>
@@ -825,7 +825,7 @@ const Schedules = () => {
               {t('manage_and_monitor_trips')}
             </Typography>
           </Grid>
-          <Grid sx={{ display: 'flex', gap: 2 }}>
+          <Grid sx={{ display: 'flex', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' }, flexWrap: 'wrap' }}>
             <ToggleButtonGroup
               value={viewMode}
               exclusive
@@ -839,52 +839,57 @@ const Schedules = () => {
                 <GridViewIcon />
               </ToggleButton>
             </ToggleButtonGroup>
-            
-            {(user?.role === 'station_admin' || user?.role === 'super_admin') && (
+
+            <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+              {(user?.role === 'station_admin' || user?.role === 'super_admin') && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenDialog()}
+                  disabled={vehicles.length === 0 || drivers.length === 0}
+                  fullWidth={{ xs: true, sm: false }}
+                  size="small"
+                >
+                  {t('new_trip')}
+                </Button>
+              )}
               <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => handleOpenDialog()}
-                disabled={vehicles.length === 0 || drivers.length === 0}
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  fetchTrips();
+                  fetchRelatedData();
+                }}
+                fullWidth={{ xs: true, sm: false }}
+                size="small"
               >
-                {t('new_trip')}
-                {(vehicles.length === 0 || drivers.length === 0) && ` (${t('no_data')})`}
+                {t('refresh_all')}
               </Button>
-            )}
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() => {
-                fetchTrips();
-                fetchRelatedData();
-              }}
-            >
-              {t('refresh_all')}
-            </Button>
+            </Box>
           </Grid>
         </Grid>
-        
+
         {/* Data Status Indicator */}
         <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Chip 
-            label={t('stations_count', { count: stations.length })} 
-            color={stations.length > 0 ? "success" : "error"} 
-            size="small" 
+          <Chip
+            label={t('stations_count', { count: stations.length })}
+            color={stations.length > 0 ? "success" : "error"}
+            size="small"
           />
-          <Chip 
-            label={t('vehicles_count', { count: vehicles.length })} 
-            color={vehicles.length > 0 ? "success" : "error"} 
-            size="small" 
+          <Chip
+            label={t('vehicles_count', { count: vehicles.length })}
+            color={vehicles.length > 0 ? "success" : "error"}
+            size="small"
           />
-          <Chip 
-            label={t('drivers_count', { count: drivers.length })} 
-            color={drivers.length > 0 ? "success" : "error"} 
-            size="small" 
+          <Chip
+            label={t('drivers_count', { count: drivers.length })}
+            color={drivers.length > 0 ? "success" : "error"}
+            size="small"
           />
-          <Chip 
-            label={t('trips_count', { count: totalTrips })} 
-            color="primary" 
-            size="small" 
+          <Chip
+            label={t('trips_count', { count: totalTrips })}
+            color="primary"
+            size="small"
           />
         </Box>
       </Paper>
@@ -1014,7 +1019,7 @@ const Schedules = () => {
               {t('filters_and_search')}
             </Typography>
           </Grid>
-          
+
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>{t('date_range')}</InputLabel>
@@ -1211,10 +1216,10 @@ const Schedules = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell>{t('trip_details')}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{t('trip_details')}</TableCell>
                   <TableCell>{t('schedule')}</TableCell>
-                  <TableCell>{t('vehicle_and_driver')}</TableCell>
-                  <TableCell>{t('seats')}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{t('vehicle_and_driver')}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>{t('seats')}</TableCell>
                   <TableCell>{t('status')}</TableCell>
                   <TableCell>{t('actions')}</TableCell>
                 </TableRow>
@@ -1238,7 +1243,7 @@ const Schedules = () => {
                           onChange={() => handleTripSelection(trip._id)}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Box>
                           <Typography variant="subtitle1" fontWeight="bold">
                             {trip.tripNumber || t('na')}
@@ -1268,7 +1273,7 @@ const Schedules = () => {
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Box>
                           <Typography variant="body2">
                             <BusIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -1287,7 +1292,7 @@ const Schedules = () => {
                           />
                         </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                         <Box sx={{ minWidth: 100 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                             <Typography variant="body2">
@@ -1324,14 +1329,14 @@ const Schedules = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <Tooltip title={t('view_details')}>
-                            <IconButton 
+                            <IconButton
                               size="small"
                               onClick={() => handleViewDetails(trip)}
                             >
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          
+
                           {(user?.role === 'station_admin' || user?.role === 'super_admin') && canEditDelete(trip) && (
                             <>
                               <Tooltip title={t('edit')}>
@@ -1435,7 +1440,7 @@ const Schedules = () => {
                       size="small"
                     />
                   </Box>
-                  
+
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="textSecondary" gutterBottom>
                       {t('route')}
@@ -1519,10 +1524,10 @@ const Schedules = () => {
                     />
                   </Box>
                 </CardContent>
-                
+
                 <CardActions sx={{ justifyContent: 'space-between', pt: 0 }}>
                   <Tooltip title={t('view_details')}>
-                    <IconButton 
+                    <IconButton
                       size="small"
                       onClick={() => handleViewDetails(trip)}
                     >
@@ -1565,8 +1570,8 @@ const Schedules = () => {
         <DialogTitle>
           {selectedTrip ? t('edit_trip') : t('create_new_trip')}
           <Typography variant="caption" display="block" color="textSecondary">
-            {selectedTrip 
-              ? `${t('editing')}: ${selectedTrip.tripNumber || selectedTrip._id}` 
+            {selectedTrip
+              ? `${t('editing')}: ${selectedTrip.tripNumber || selectedTrip._id}`
               : t('create_new_trip_schedule')}
           </Typography>
         </DialogTitle>
@@ -1719,19 +1724,21 @@ const Schedules = () => {
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  fullWidth 
+                  fullWidth
                   required
                   type="number"
                   name="totalSeats"
                   label={t('total_seats')}
                   value={tripForm.totalSeats}
                   onChange={handleInputChange}
-                  InputProps={{ inputProps: { 
-                    min: 1, 
-                    max: vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity || 100 
-                  }}}
+                  InputProps={{
+                    inputProps: {
+                      min: 1,
+                      max: vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity || 100
+                    }
+                  }}
                   size="small"
-                  helperText={tripForm.vehicle && vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity && 
+                  helperText={tripForm.vehicle && vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity &&
                     `${t('vehicle_capacity')}: ${vehicles.find(v => v._id === tripForm.vehicle)?.totalCapacity} ${t('seats')}`}
                 />
               </Grid>
@@ -1803,10 +1810,10 @@ const Schedules = () => {
       </Dialog>
 
       {/* View Trip Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={handleCloseViewDialog} 
-        maxWidth="md" 
+      <Dialog
+        open={viewDialogOpen}
+        onClose={handleCloseViewDialog}
+        maxWidth="md"
         fullWidth
         scroll="paper"
       >
@@ -1817,7 +1824,7 @@ const Schedules = () => {
                 <Typography variant="h5">
                   {t('trip_details')}: {viewedTrip.tripNumber || t('na')}
                 </Typography>
-                <Chip 
+                <Chip
                   label={t(viewedTrip.tripStatus) || t('na')}
                   color={statusColors[viewedTrip.tripStatus] || 'default'}
                   sx={{ color: 'white', fontWeight: 'bold' }}
@@ -1827,15 +1834,15 @@ const Schedules = () => {
                 {viewedTrip.origin?.stationName || t('na')} → {viewedTrip.destination?.stationName || t('na')}
               </Typography>
             </DialogTitle>
-            
+
             <DialogContent dividers sx={{ p: 0 }}>
               {/* Quick Stats Bar */}
-              <Box sx={{ 
-                display: 'flex', 
-                bgcolor: 'grey.50', 
-                p: 2, 
-                borderBottom: 1, 
-                borderColor: 'divider' 
+              <Box sx={{
+                display: 'flex',
+                bgcolor: 'grey.50',
+                p: 2,
+                borderBottom: 1,
+                borderColor: 'divider'
               }}>
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 6, sm: 3 }}>
@@ -1886,7 +1893,7 @@ const Schedules = () => {
                         <RouteIcon sx={{ mr: 1, color: 'primary.main' }} />
                         {t('route_information')}
                       </Typography>
-                      
+
                       <Timeline position="alternate">
                         <TimelineItem>
                           <TimelineOppositeContent color="textSecondary">
@@ -1910,7 +1917,7 @@ const Schedules = () => {
                             </Typography>
                           </TimelineContent>
                         </TimelineItem>
-                        
+
                         <TimelineItem>
                           <TimelineOppositeContent color="textSecondary">
                             {format(new Date(viewedTrip.arrivalTime), 'PPp')}
@@ -1941,7 +1948,7 @@ const Schedules = () => {
                         <DriveEtaIcon sx={{ mr: 1, color: 'primary.main' }} />
                         {t('vehicle_details')}
                       </Typography>
-                      
+
                       <Grid container spacing={2}>
                         <Grid size={{ xs: 12, sm: 6 }}>
                           <List dense>
@@ -1949,27 +1956,27 @@ const Schedules = () => {
                               <ListItemIcon>
                                 <BusIcon color="primary" />
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={t('plate_number')} 
-                                secondary={viewedTrip.vehicle?.plateNumber || t('na')} 
+                              <ListItemText
+                                primary={t('plate_number')}
+                                secondary={viewedTrip.vehicle?.plateNumber || t('na')}
                               />
                             </ListItem>
                             <ListItem>
                               <ListItemIcon>
                                 <InfoIcon color="primary" />
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={t('type')} 
-                                secondary={viewedTrip.vehicle?.carType || t('na')} 
+                              <ListItemText
+                                primary={t('type')}
+                                secondary={viewedTrip.vehicle?.carType || t('na')}
                               />
                             </ListItem>
                             <ListItem>
                               <ListItemIcon>
                                 <SpeedIcon color="primary" />
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={t('capacity')} 
-                                secondary={`${viewedTrip.totalSeats || 0} ${t('seats')}`} 
+                              <ListItemText
+                                primary={t('capacity')}
+                                secondary={`${viewedTrip.totalSeats || 0} ${t('seats')}`}
                               />
                             </ListItem>
                           </List>
@@ -2013,7 +2020,7 @@ const Schedules = () => {
                         <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
                         {t('driver_information')}
                       </Typography>
-                      
+
                       <Grid container spacing={2} alignItems="center">
                         <Grid size={{ xs: 12, sm: 4 }}>
                           <Avatar
@@ -2026,9 +2033,9 @@ const Schedules = () => {
                         <Grid size={{ xs: 12, sm: 8 }}>
                           <List dense>
                             <ListItem>
-                              <ListItemText 
-                                primary={t('full_name')} 
-                                secondary={viewedTrip.driver?.fullName || t('na')} 
+                              <ListItemText
+                                primary={t('full_name')}
+                                secondary={viewedTrip.driver?.fullName || t('na')}
                                 primaryTypographyProps={{ fontWeight: 'bold' }}
                               />
                             </ListItem>
@@ -2036,18 +2043,18 @@ const Schedules = () => {
                               <ListItemIcon>
                                 <PhoneIcon color="primary" />
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={t('phone')} 
-                                secondary={viewedTrip.driver?.phoneNumber || t('na')} 
+                              <ListItemText
+                                primary={t('phone')}
+                                secondary={viewedTrip.driver?.phoneNumber || t('na')}
                               />
                             </ListItem>
                             <ListItem>
                               <ListItemIcon>
                                 <AccountCircleIcon color="primary" />
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={t('license')} 
-                                secondary={viewedTrip.driver?.licenseNumber || t('no_license')} 
+                              <ListItemText
+                                primary={t('license')}
+                                secondary={viewedTrip.driver?.licenseNumber || t('no_license')}
                               />
                             </ListItem>
                           </List>
@@ -2061,24 +2068,24 @@ const Schedules = () => {
                         <LocationIcon sx={{ mr: 1, color: 'primary.main' }} />
                         {t('station_information')}
                       </Typography>
-                      
+
                       <List dense>
                         <ListItem>
-                          <ListItemText 
-                            primary={t('station_name')} 
-                            secondary={viewedTrip.station?.stationName || t('na')} 
+                          <ListItemText
+                            primary={t('station_name')}
+                            secondary={viewedTrip.station?.stationName || t('na')}
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemText 
-                            primary={t('station_code')} 
-                            secondary={viewedTrip.station?.stationCode || t('na')} 
+                          <ListItemText
+                            primary={t('station_code')}
+                            secondary={viewedTrip.station?.stationCode || t('na')}
                           />
                         </ListItem>
                         <ListItem>
-                          <ListItemText 
-                            primary={t('created_by')} 
-                            secondary={viewedTrip.createdBy?.fullName || t('na')} 
+                          <ListItemText
+                            primary={t('created_by')}
+                            secondary={viewedTrip.createdBy?.fullName || t('na')}
                           />
                         </ListItem>
                       </List>
@@ -2090,7 +2097,7 @@ const Schedules = () => {
                         <TimelapseIcon sx={{ mr: 1, color: 'primary.main' }} />
                         {t('trip_status_timeline')}
                       </Typography>
-                      
+
                       <Stepper orientation="vertical" activeStep={getStatusStep(viewedTrip.tripStatus)}>
                         <Step>
                           <StepLabel>{t('scheduled')}</StepLabel>
@@ -2158,8 +2165,8 @@ const Schedules = () => {
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           variant="filled"
           sx={{ width: '100%' }}

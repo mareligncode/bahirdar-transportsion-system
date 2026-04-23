@@ -15,11 +15,14 @@ import {
   UserIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { 
-  TruckIcon as TruckSolidIcon 
+import {
+  TruckIcon as TruckSolidIcon
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import io from 'socket.io-client';
 import api from '../../services/api';
+
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 const TripDetails = () => {
   const params = useParams();
@@ -100,11 +103,11 @@ const TripDetails = () => {
     queryKey: ['trip', tripId],
     queryFn: async () => {
       console.log('📡 Fetching trip details for ID:', tripId);
-      
+
       try {
         const response = await api.get(`/api/trip/${tripId}`);
         console.log('✅ Trip API Response:', response.data);
-        
+
         // Handle different response structures
         if (response.data?.success && response.data?.data) {
           return response.data.data;
@@ -113,7 +116,7 @@ const TripDetails = () => {
           return response.data.data;
         }
         return response.data;
-        
+
       } catch (error) {
         console.error('❌ Error fetching trip:', error.response || error);
         throw error;
@@ -128,11 +131,11 @@ const TripDetails = () => {
     queryKey: ['tripBookings', tripId],
     queryFn: async () => {
       console.log('📡 Fetching bookings for trip:', tripId);
-      
+
       try {
         const response = await api.get(`/api/booking/trip/${tripId}`);
         console.log('✅ Bookings API Response:', response.data);
-        
+
         // Handle different response structures
         if (response.data?.success && response.data?.data) {
           return response.data.data;
@@ -147,7 +150,7 @@ const TripDetails = () => {
           return response.data.bookings;
         }
         return [];
-        
+
       } catch (error) {
         console.error('❌ Error fetching bookings:', error.response || error);
         return [];
@@ -156,11 +159,37 @@ const TripDetails = () => {
     enabled: !!tripId && tripId !== ':tripId'
   });
 
+  // Real-time GPS Tracking Logic for Drivers
+  useEffect(() => {
+    if (!tripId || tripData?.tripStatus !== 'ongoing') return;
+
+    console.log('🛰 Starting GPS Broadcasting for Trip:', tripId);
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        socket.emit('update-location', {
+          tripId,
+          latitude,
+          longitude,
+          timestamp: new Date()
+        });
+      },
+      (error) => console.error('GPS Error:', error),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+
+    return () => {
+      console.log('🛰 Stopping GPS Broadcasting');
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [tripId, tripData?.tripStatus]);
+
   // Update trip status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (status) => {
       console.log('📤 Updating trip status:', { tripId, status });
-      
+
       const response = await api.patch(`/api/trip/${tripId}/status`, { status });
       return response.data;
     },
@@ -172,10 +201,10 @@ const TripDetails = () => {
     onError: (error) => {
       console.error('❌ Status update error:', error);
       console.error('Error response:', error.response?.data);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'Failed to update status';
+
+      const errorMessage = error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Failed to update status';
       toast.error(errorMessage);
     }
   });
@@ -252,7 +281,7 @@ const TripDetails = () => {
       cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
       delayed: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Delayed' }
     };
-    
+
     const config = statusConfig[status] || statusConfig.scheduled;
     return `${config.bg} ${config.text}`;
   };
@@ -327,11 +356,10 @@ const TripDetails = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${activeTab === tab
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 {tab === 'passengers' ? `Passengers (${bookings.length})` : tab}
               </button>
@@ -348,7 +376,7 @@ const TripDetails = () => {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">Trip Information</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
@@ -363,7 +391,7 @@ const TripDetails = () => {
                         <p className="text-sm text-gray-600">{trip?.origin?.city || ''}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start space-x-3">
                       <div className="bg-red-100 p-2 rounded-lg">
                         <MapPinIcon className="h-5 w-5 text-red-600" />
@@ -377,7 +405,7 @@ const TripDetails = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
                       <div className="bg-blue-100 p-2 rounded-lg">
@@ -393,7 +421,7 @@ const TripDetails = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start space-x-3">
                       <div className="bg-purple-100 p-2 rounded-lg">
                         <ClockIcon className="h-5 w-5 text-purple-600" />
@@ -512,7 +540,7 @@ const TripDetails = () => {
                 Passenger List ({bookings.length})
               </h2>
             </div>
-            
+
             {bookingsLoading ? (
               <div className="p-12 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -534,22 +562,20 @@ const TripDetails = () => {
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                             Seat #{booking.seatNumber}
                           </span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            booking.checkedIn 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${booking.checkedIn
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                            }`}>
                             {booking.checkedIn ? '✓ Checked In' : '⏳ Not Checked In'}
                           </span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                             booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                              'bg-gray-100 text-gray-800'
+                            }`}>
                             {booking.status}
                           </span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-7">
                           <div className="flex items-center text-sm">
                             <PhoneIcon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
@@ -566,7 +592,7 @@ const TripDetails = () => {
                             </div>
                           )}
                         </div>
-                        
+
                         {booking.specialRequests && (
                           <div className="mt-3 ml-7 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                             <p className="text-sm text-yellow-800">
@@ -594,7 +620,7 @@ const TripDetails = () => {
         {activeTab === 'vehicle' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">Vehicle Information</h2>
-            
+
             {trip?.vehicle ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
@@ -609,7 +635,7 @@ const TripDetails = () => {
                       <TruckIcon className="h-20 w-20 text-gray-400" />
                     </div>
                   )}
-                  
+
                   {trip.vehicle.images && trip.vehicle.images.length > 1 && (
                     <div className="mt-4 grid grid-cols-4 gap-2">
                       {trip.vehicle.images.slice(0, 4).map((image, idx) => (
@@ -623,7 +649,7 @@ const TripDetails = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -661,18 +687,17 @@ const TripDetails = () => {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-sm text-gray-500 mb-1">Insurance</p>
-                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                        trip.vehicle.insuranceExpiry && new Date(trip.vehicle.insuranceExpiry) > new Date() 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {trip.vehicle.insuranceExpiry && new Date(trip.vehicle.insuranceExpiry) > new Date() 
+                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${trip.vehicle.insuranceExpiry && new Date(trip.vehicle.insuranceExpiry) > new Date()
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
+                        {trip.vehicle.insuranceExpiry && new Date(trip.vehicle.insuranceExpiry) > new Date()
                           ? `Valid until ${format(new Date(trip.vehicle.insuranceExpiry), 'MMM d, yyyy')}`
                           : 'Expired'}
                       </span>
                     </div>
                   </div>
-                  
+
                   {trip.vehicle.features && trip.vehicle.features.length > 0 && (
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-3">Features</p>

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { X, Car, Wrench, User, CreditCard } from 'lucide-react';
-import api from '../../services/api'; 
+import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '../../hooks/useTranslation';
 
 export default function VehicleModal({ isOpen, onClose, vehicle }) {
   const { t } = useTranslation();
-  
+
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: 'coaster',
@@ -30,7 +30,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
       }
     }
   });
-  
+
   const [stations, setStations] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -116,14 +116,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const isChecked = e.target.checked;
       const feature = e.target.value;
-      
+
       setFormData(prev => ({
         ...prev,
-        features: isChecked 
+        features: isChecked
           ? [...prev.features, feature]
           : prev.features.filter(f => f !== feature)
       }));
@@ -160,10 +160,10 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       const payload = {
         ...formData,
         totalCapacity: parseInt(formData.totalCapacity),
@@ -179,7 +179,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
         await api.post('/api/vehicles/register', payload);
         toast.success(t('messages.vehicleCreated'));
       }
-      
+
       onClose();
     } catch (error) {
       console.error(t('errors.saveVehicle'), error);
@@ -230,7 +230,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                   <Car className="w-5 h-5" />
                   {t('vehicles.basicInformation')}
                 </h3>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('vehicles.plateNumber')} *
@@ -415,7 +415,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                 <User className="w-5 h-5" />
                 {t('vehicles.ownerDetails')}
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -455,7 +455,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
                 <CreditCard className="w-5 h-5" />
                 {t('vehicles.bankDetails')}
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -545,7 +545,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle }) {
             >
               {t('common.cancel')}
             </button>
-            
+
             <button
               type="submit"
               disabled={loading}

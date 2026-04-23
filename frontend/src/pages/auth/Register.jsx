@@ -7,7 +7,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Register() {
   const { t } = useTranslation();
-  
+
   const countryCodes = [
     { code: '+251', flag: '🇪🇹', name: t('ethiopia') },
     { code: '+1', flag: '🇺🇸', name: t('usa') },
@@ -30,7 +30,7 @@ export default function Register() {
     confirmPassword: '',
     emergencyContact: '',
   });
-  
+
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [isCountryOpen, setIsCountryOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -43,7 +43,7 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     setError('');
     setSuccess('');
     setIsLoading(true);
@@ -65,7 +65,7 @@ export default function Register() {
     try {
       // Remove all non-digit characters except plus sign for phone number
       let phoneNumber = formData.phoneNumber.replace(/[^\d+]/g, '');
-      
+
       // Ensure phone number starts with country code
       if (!phoneNumber.startsWith('+')) {
         phoneNumber = selectedCountry.code + phoneNumber.replace(/\D/g, '');
@@ -77,8 +77,8 @@ export default function Register() {
         email: formData.email.toLowerCase().trim(),
         phoneNumber: phoneNumber.trim(),
         password: formData.password, // Backend will validate complexity
-        ...(formData.emergencyContact.trim() && { 
-          emergencyContact: formData.emergencyContact.trim() 
+        ...(formData.emergencyContact.trim() && {
+          emergencyContact: formData.emergencyContact.trim()
         }),
       };
 
@@ -86,12 +86,12 @@ export default function Register() {
 
       // Call the backend API directly
       const response = await api.post('/api/auth/register', registrationData);
-      
+
       console.log('Registration response:', response.data);
 
       if (response.data.success) {
         setSuccess(t('accountCreated'));
-        
+
         // Automatically log in the user after successful registration
         try {
           // Use the same credentials to log in
@@ -106,10 +106,10 @@ export default function Register() {
             // Store tokens in localStorage
             localStorage.setItem('accessToken', loginResponse.data.data.tokens.accessToken);
             localStorage.setItem('refreshToken', loginResponse.data.data.tokens.refreshToken);
-            
+
             // Store user data
             localStorage.setItem('user', JSON.stringify(loginResponse.data.data.user));
-            
+
             // Call login function from auth context if needed
             if (login) {
               login(loginResponse.data.data);
@@ -118,8 +118,8 @@ export default function Register() {
             // Show success message then redirect based on role
             setTimeout(() => {
               const userRole = loginResponse.data.data.user?.role || 'passenger';
-              
-              switch(userRole.toLowerCase()) {
+
+              switch (userRole.toLowerCase()) {
                 case 'driver':
                   navigate('/driver/dashboard');
                   break;
@@ -156,11 +156,11 @@ export default function Register() {
     } catch (err) {
       console.error('Registration error details:', err);
       console.error('Error response:', err.response?.data);
-      
+
       if (err.response?.data) {
         // Backend returned an error response
         const backendError = err.response.data;
-        
+
         if (backendError.message?.includes('email')) {
           setError(t('emailExists'));
         } else if (backendError.message?.includes('phone')) {
@@ -169,8 +169,8 @@ export default function Register() {
           setError(backendError.message);
         } else if (backendError.errors) {
           // Handle validation errors from express-validator
-          const validationError = Object.values(backendError.errors)[0]?.msg || 
-                                Object.values(backendError.errors)[0]?.message;
+          const validationError = Object.values(backendError.errors)[0]?.msg ||
+            Object.values(backendError.errors)[0]?.message;
           setError(validationError || t('checkInputValues'));
         } else {
           setError(backendError.message || t('registrationFailed'));
@@ -196,15 +196,15 @@ export default function Register() {
 
   const handlePhoneChange = (e) => {
     let value = e.target.value;
-    
+
     // Remove all non-digit characters except plus sign
     value = value.replace(/[^\d+]/g, '');
-    
+
     // Ensure only one plus sign at the beginning
     if (value.startsWith('++')) {
       value = '+' + value.slice(2);
     }
-    
+
     // If it doesn't start with a country code, add the selected one
     if (!value.startsWith('+') && selectedCountry) {
       // Check if the number already has the country code
@@ -212,19 +212,19 @@ export default function Register() {
         value = selectedCountry.code + value;
       }
     }
-    
+
     setFormData(prev => ({
       ...prev,
       phoneNumber: value
     }));
-    
+
     if (error) setError('');
   };
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setIsCountryOpen(false);
-    
+
     // Update phone number with new country code
     const currentNumber = formData.phoneNumber.replace(/^\+\d+/, '');
     setFormData(prev => ({
@@ -340,11 +340,11 @@ export default function Register() {
                       </div>
                       <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                     </button>
-                    
+
                     {/* Dropdown Menu */}
                     {isCountryOpen && (
                       <>
-                        <div 
+                        <div
                           className="fixed inset-0 z-10"
                           onClick={() => setIsCountryOpen(false)}
                         />
@@ -484,11 +484,10 @@ export default function Register() {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`w-full pl-11 pr-12 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 transition-all placeholder-gray-400 dark:placeholder-gray-500 ${
-                    formData.confirmPassword && formData.password !== formData.confirmPassword 
-                      ? 'border-red-300 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/20' 
+                  className={`w-full pl-11 pr-12 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 transition-all placeholder-gray-400 dark:placeholder-gray-500 ${formData.confirmPassword && formData.password !== formData.confirmPassword
+                      ? 'border-red-300 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
                       : 'border-gray-200 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500/20'
-                  }`}
+                    }`}
                   placeholder={t('confirmPasswordPlaceholder')}
                   required
                   disabled={isLoading}
@@ -565,8 +564,8 @@ export default function Register() {
       <div className="mt-8 text-center bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700/50">
         <p className="text-gray-600 dark:text-gray-400 text-sm">
           {t('alreadyHaveAccount')}{' '}
-          <Link 
-            to="/login" 
+          <Link
+            to="/login"
             className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold hover:underline transition-colors"
           >
             {t('signInHere')}

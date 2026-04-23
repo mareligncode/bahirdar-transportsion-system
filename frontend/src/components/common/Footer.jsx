@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { 
-  Bus, 
-  Navigation, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Globe, 
-  Shield, 
+import {
+  Bus,
+  Navigation,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
+  Shield,
   Clock,
   Facebook,
   Twitter,
@@ -25,7 +25,7 @@ export default function Footer() {
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary-500 to-teal-500"></div>
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl"></div>
       <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Company Info */}
@@ -44,11 +44,11 @@ export default function Footer() {
             <p className="text-gray-300 mb-4 leading-relaxed">
               {t('Revolutionizing urban mobility')}
             </p>
-            
+
             {/* App Badges */}
             <div className="flex gap-3 mb-4">
-              <a 
-                href="https://play.google.com/store/apps/details?id=com.bahirhartransport" 
+              <a
+                href="https://play.google.com/store/apps/details?id=com.bahirhartransport"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 cursor-pointer transition-all hover:scale-105"
@@ -61,8 +61,8 @@ export default function Footer() {
                   </div>
                 </div>
               </a>
-              <a 
-                href="https://apps.apple.com/app/id1234567890" 
+              <a
+                href="https://apps.apple.com/app/id1234567890"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 cursor-pointer transition-all hover:scale-105"
@@ -83,7 +83,7 @@ export default function Footer() {
             {/* Contact & Social Section - Combined */}
             <div className="md:col-span-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* Contact Info */}
                 <div>
                   <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
@@ -94,7 +94,7 @@ export default function Footer() {
                     <li className="flex items-start gap-3">
                       <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-300 text-sm">
-                       {t('Main office at')}<br />
+                        {t('Main office at')}<br />
                         {t('Ethiopia')}, {t('Bahir dar')}
                       </span>
                     </li>
@@ -114,27 +114,27 @@ export default function Footer() {
                   <h4 className="font-bold text-lg mb-4">{t('Follow us on')}</h4>
                   <div className="flex gap-3">
                     {[
-                      { 
-                        icon: Facebook, 
-                        color: 'hover:bg-blue-600', 
+                      {
+                        icon: Facebook,
+                        color: 'hover:bg-blue-600',
                         label: 'Facebook',
                         link: 'https://facebook.com'
                       },
-                      { 
-                        icon: Twitter, 
-                        color: 'hover:bg-sky-500', 
+                      {
+                        icon: Twitter,
+                        color: 'hover:bg-sky-500',
                         label: 'Twitter',
                         link: 'https://twitter.com'
                       },
-                      { 
-                        icon: Instagram, 
-                        color: 'hover:bg-pink-600', 
+                      {
+                        icon: Instagram,
+                        color: 'hover:bg-pink-600',
                         label: 'Instagram',
                         link: 'https://instagram.com'
                       },
-                      { 
-                        icon: Linkedin, 
-                        color: 'hover:bg-blue-700', 
+                      {
+                        icon: Linkedin,
+                        color: 'hover:bg-blue-700',
                         label: 'LinkedIn',
                         link: 'https://linkedin.com'
                       },
@@ -163,7 +163,7 @@ export default function Footer() {
             <p className="text-gray-400 text-xs">
               &copy; {currentYear} {t('Bahir dar meneharia transportation system')}. {t('all rights reserved')}.
             </p>
-            
+
             <div className="flex flex-wrap justify-center gap-5 text-xs">
               <Link to="/terms" className="text-gray-400 hover:text-white transition-colors">
                 {t('Terms of service')}

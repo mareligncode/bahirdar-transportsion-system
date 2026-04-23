@@ -4,6 +4,7 @@ import Vehicle from '../models/Vehicle.js';
 import User from '../models/Users.js';
 import Station from '../models/Station.js';
 import NotificationService from '../services/notificationService.js';
+import QueueAutomator from '../services/queueAutomator.js';
 import mongoose from 'mongoose';
 
 export const createBooking = async (req, res) => {
@@ -80,12 +81,21 @@ export const createBooking = async (req, res) => {
                 email: req.user.email,
                 emergencyContact: req.user.emergencyContact
             },
+            totalPrice: trip.price,
+            pricePerSeat: trip.price,
             boardingPass,
             createdBy: req.user.id
         });
 
         trip.availableSeats -= 1;
         await trip.save();
+
+        // 🚀 AUTO-MANIFEST: If the trip is now full, automatically trigger the next one in queue
+        if (trip.availableSeats === 0 && trip.route) {
+            console.log(`🚀 Trip ${trip.tripNumber} is now full. Triggering next vehicle for route ${trip.route}...`);
+            QueueAutomator.triggerNextTrip(trip.route, trip.station, req.user.id)
+                .catch(err => console.error('Auto-Manifest Error:', err));
+        }
 
         await booking.save();
         // Send booking confirmation notification
@@ -150,9 +160,12 @@ export const getAllBookings = async (req, res) => {
 
         // Station admin can only see their station's bookings
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station) {
-                query.stationID = station._id;
+            if (req.user.stationID) {
+                query.stationID = req.user.stationID;
+            } else {
+                console.warn(`Station admin ${req.user._id} has no stationID assigned`);
+                // For unassigned station admin, return empty result to prevent unauthorized access
+                query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
 
@@ -235,8 +248,7 @@ export const getBookingById = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !booking.tripID.station.equals(station._id)) {
+            if (req.user.stationID && !booking.tripID.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to view this booking'
@@ -290,8 +302,7 @@ export const updateBooking = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !booking.tripID.station.equals(station._id)) {
+            if (req.user.stationID && !booking.tripID.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this booking'
@@ -425,8 +436,7 @@ export const deleteBooking = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !booking.tripID.station.equals(station._id)) {
+            if (req.user.stationID && !booking.tripID.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to delete this booking'
@@ -641,8 +651,7 @@ export const checkInPassenger = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !booking.tripID.station.equals(station._id)) {
+            if (req.user.stationID && !booking.tripID.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to check-in this passenger'
@@ -724,8 +733,7 @@ export const getTripBookings = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ managerID: req.user.id });
-            if (station && !trip.station.equals(station._id)) {
+            if (req.user.stationID && !trip.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to view bookings for this trip'
@@ -913,6 +921,13 @@ export const createBatchBooking = async (req, res) => {
         // Update trip available seats
         trip.availableSeats -= seats.length;
         await trip.save();
+
+        // 🚀 AUTO-MANIFEST: If the trip is now full, automatically trigger the next one in queue
+        if (trip.availableSeats === 0 && trip.route) {
+            console.log(`🚀 Trip ${trip.tripNumber} (Batch) is now full. Triggering next vehicle for route ${trip.route}...`);
+            QueueAutomator.triggerNextTrip(trip.route, trip.station, req.user.id)
+                .catch(err => console.error('Auto-Manifest Error (Batch):', err));
+        }
 
         // Send booking confirmation notification
         try {

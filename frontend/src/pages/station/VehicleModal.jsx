@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Car, Wrench, User, CreditCard } from 'lucide-react';
-import api from '../../services/api'; 
+import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 
 export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, userStation }) {
@@ -26,7 +26,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       }
     }
   });
-  
+
   const [stations, setStations] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       fetchStationsAndDrivers();
       setInitialized(true);
     }
-    
+
     // Reset when modal closes
     if (!isOpen) {
       setInitialized(false);
@@ -73,26 +73,26 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       if (vehicle) {
         // EDIT MODE - Extract stationID from multiple possible locations
         let stationID = '';
-        
+
         if (vehicle.stationID) {
-          stationID = typeof vehicle.stationID === 'object' 
-            ? vehicle.stationID._id || vehicle.stationID 
+          stationID = typeof vehicle.stationID === 'object'
+            ? vehicle.stationID._id || vehicle.stationID
             : vehicle.stationID;
         } else if (vehicle.station) {
-          stationID = typeof vehicle.station === 'object' 
-            ? vehicle.station._id || vehicle.station 
+          stationID = typeof vehicle.station === 'object'
+            ? vehicle.station._id || vehicle.station
             : vehicle.station;
         }
-        
+
         // Extract driverID from multiple possible locations
         let driverID = '';
         if (vehicle.driverID) {
-          driverID = typeof vehicle.driverID === 'object' 
-            ? vehicle.driverID._id || vehicle.driverID 
+          driverID = typeof vehicle.driverID === 'object'
+            ? vehicle.driverID._id || vehicle.driverID
             : vehicle.driverID;
         } else if (vehicle.driver) {
-          driverID = typeof vehicle.driver === 'object' 
-            ? vehicle.driver._id || vehicle.driver 
+          driverID = typeof vehicle.driver === 'object'
+            ? vehicle.driver._id || vehicle.driver
             : vehicle.driver;
         }
 
@@ -105,7 +105,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
             bankName: ''
           }
         };
-        
+
         setFormData({
           plateNumber: vehicle.plateNumber || '',
           carType: vehicle.carType || 'coaster',
@@ -123,14 +123,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
         });
 
         // Show owner details section if they exist
-        if (ownerDetails.ownerName || ownerDetails.phoneNumber || 
-            ownerDetails.bankDetails?.accountNumber || ownerDetails.bankDetails?.bankName) {
+        if (ownerDetails.ownerName || ownerDetails.phoneNumber ||
+          ownerDetails.bankDetails?.accountNumber || ownerDetails.bankDetails?.bankName) {
           setShowOwnerDetails(true);
         }
       } else {
         // CREATE MODE - Use station from props or user profile
         let defaultStationID = '';
-        
+
         if (userStation?._id) {
           defaultStationID = userStation._id;
         } else if (userProfile?.stationID) {
@@ -138,7 +138,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
         } else if (stations.length > 0) {
           defaultStationID = stations[0]?._id || '';
         }
-        
+
         setFormData({
           plateNumber: '',
           carType: 'coaster',
@@ -178,7 +178,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       // Fetch stations
       const stationsRes = await api.get('/api/station');
       let stationsData = [];
-      
+
       if (stationsRes.data.stations) {
         stationsData = stationsRes.data.stations;
       } else if (stationsRes.data.data?.stations) {
@@ -186,13 +186,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       } else if (Array.isArray(stationsRes.data)) {
         stationsData = stationsRes.data;
       }
-      
+
       setStations(stationsData);
 
       // Fetch drivers from station-users endpoint
       const usersRes = await api.get('/api/auth/station-users');
       let usersData = [];
-      
+
       if (usersRes.data.data?.users) {
         usersData = usersRes.data.data.users;
       } else if (usersRes.data.users) {
@@ -200,11 +200,11 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       } else if (Array.isArray(usersRes.data.data)) {
         usersData = usersRes.data.data;
       }
-      
+
       // Filter only active drivers
       const driversData = usersData
         .filter(user => user && user.role === 'driver' && user.isActive === true);
-      
+
       console.log('Available drivers:', driversData);
       setDrivers(driversData);
 
@@ -216,14 +216,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const isChecked = e.target.checked;
       const feature = e.target.value;
-      
+
       setFormData(prev => ({
         ...prev,
-        features: isChecked 
+        features: isChecked
           ? [...prev.features, feature]
           : prev.features.filter(f => f !== feature)
       }));
@@ -262,7 +262,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.plateNumber || !formData.totalCapacity || !formData.make || !formData.model || !formData.insuranceExpiry) {
       toast.error('Please fill in all required fields (*)');
@@ -277,8 +277,8 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
     // Validate owner details for new vehicles
     if (!vehicle) {
       const { ownerDetails } = formData;
-      if (!ownerDetails.ownerName || !ownerDetails.phoneNumber || 
-          !ownerDetails.bankDetails.accountNumber || !ownerDetails.bankDetails.bankName) {
+      if (!ownerDetails.ownerName || !ownerDetails.phoneNumber ||
+        !ownerDetails.bankDetails.accountNumber || !ownerDetails.bankDetails.bankName) {
         toast.error('All owner details are required for new vehicles');
         return;
       }
@@ -286,7 +286,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
     try {
       setLoading(true);
-      
+
       // Prepare payload according to backend expectations
       const payload = {
         plateNumber: formData.plateNumber.toUpperCase().trim(),
@@ -317,17 +317,17 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
         await api.post('/api/vehicles/register', payload);
         toast.success('Vehicle created successfully');
       }
-      
+
       // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
       }
-      
+
       onClose();
     } catch (error) {
       console.error('Error saving vehicle:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to save vehicle';
-      
+
       // Handle specific errors
       if (errorMsg.includes('Plate number') || errorMsg.includes('plateNumber')) {
         toast.error('Vehicle with this plate number already exists');
@@ -366,11 +366,11 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                   {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {userStation?.stationName 
-                    ? `Station: ${userStation.stationName} (${userStation.city || ''})` 
-                    : userProfile?.stationID 
-                    ? 'Register a new vehicle to your station'
-                    : 'Register a new vehicle'}
+                  {userStation?.stationName
+                    ? `Station: ${userStation.stationName} (${userStation.city || ''})`
+                    : userProfile?.stationID
+                      ? 'Register a new vehicle to your station'
+                      : 'Register a new vehicle'}
                 </p>
               </div>
             </div>
@@ -394,7 +394,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                   <Car className="w-5 h-5" />
                   Basic Information
                 </h3>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Plate Number *
@@ -634,7 +634,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                   <p className="text-sm text-gray-600 mb-3">
                     All owner details are required for vehicle registration
                   </p>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Owner Name *
@@ -670,7 +670,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                       <CreditCard className="w-4 h-4" />
                       Bank Details
                     </h4>
-                    
+
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -723,7 +723,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                       className="rounded text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700">
-                      {feature.split('_').map(word => 
+                      {feature.split('_').map(word =>
                         word.charAt(0).toUpperCase() + word.slice(1)
                       ).join(' ')}
                     </span>
@@ -745,7 +745,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
             >
               Cancel
             </button>
-            
+
             <button
               type="submit"
               disabled={loading || !formData.stationID}

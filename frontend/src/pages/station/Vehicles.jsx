@@ -38,7 +38,7 @@ export default function Vehicles() {
     available: 0,
     onTrip: 0,
   });
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -64,23 +64,23 @@ export default function Vehicles() {
     try {
       // Get user profile first
       const user = await fetchUserProfile();
-      
+
       if (!user) {
         toast.error('Failed to fetch user profile');
         return null;
       }
-      
+
       if (user.role !== 'station_admin') {
         toast.error('Only station admins can access this page');
         return null;
       }
-      
+
       // IMPORTANT: User model has stationID field
       if (!user.stationID) {
         toast.error('You are not assigned to any station. Please contact super admin.');
         return null;
       }
-      
+
       // Create basic station object from user's stationID
       const stationObject = {
         _id: user.stationID,
@@ -88,7 +88,7 @@ export default function Vehicles() {
         stationCode: user.stationID.toString().substring(0, 8),
         city: 'Unknown'
       };
-      
+
       // Try to fetch real station details
       try {
         const stationRes = await api.get(`/api/station/${user.stationID}`);
@@ -98,12 +98,12 @@ export default function Vehicles() {
       } catch (stationError) {
         console.warn('Could not fetch station details, using basic station object');
       }
-      
+
       return stationObject;
-      
+
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      
+
       if (error.response?.status === 401) {
         toast.error('Session expired. Please login again');
       } else {
@@ -116,9 +116,9 @@ export default function Vehicles() {
   const fetchVehicles = async () => {
     try {
       setLoading(true);
-      
+
       const station = await fetchStationAdminStation();
-      
+
       if (!station) {
         setVehicles([]);
         setTotalItems(0);
@@ -126,16 +126,16 @@ export default function Vehicles() {
         setLoading(false);
         return;
       }
-      
+
       setCurrentUserStation(station);
-      
+
       // Fetch vehicles - backend automatically filters by stationID
       const response = await api.get('/api/vehicles');
       console.log('Vehicles API response:', response.data);
-      
+
       if (response.data.success) {
         let vehiclesData = [];
-        
+
         // Extract vehicles from different response structures
         if (response.data.data && response.data.data.vehicles) {
           vehiclesData = response.data.data.vehicles;
@@ -146,28 +146,28 @@ export default function Vehicles() {
         } else if (Array.isArray(response.data)) {
           vehiclesData = response.data;
         }
-        
+
         console.log('Raw vehicles data:', vehiclesData);
-        
+
         // Normalize vehicle objects
         vehiclesData = vehiclesData.map(vehicle => {
           // Extract station ID
           let stationId = null;
           if (vehicle.stationID) {
-            stationId = typeof vehicle.stationID === 'object' 
-              ? vehicle.stationID._id || vehicle.stationID 
+            stationId = typeof vehicle.stationID === 'object'
+              ? vehicle.stationID._id || vehicle.stationID
               : vehicle.stationID;
           } else if (vehicle.station) {
             stationId = typeof vehicle.station === 'object'
               ? vehicle.station._id || vehicle.station
               : vehicle.station;
           }
-          
+
           // Extract driver info
           let driverId = null;
           let driverName = null;
           let driverPhone = null;
-          
+
           if (vehicle.driverID) {
             if (typeof vehicle.driverID === 'object') {
               driverId = vehicle.driverID._id;
@@ -185,10 +185,10 @@ export default function Vehicles() {
               driverId = vehicle.driver;
             }
           }
-          
+
           // Extract owner details
           const ownerDetails = vehicle.ownerDetails || {};
-          
+
           return {
             ...vehicle,
             stationID: stationId,
@@ -207,9 +207,9 @@ export default function Vehicles() {
             }
           };
         });
-        
+
         console.log('✅ Normalized vehicles:', vehiclesData);
-        
+
         setVehicles(vehiclesData);
         setTotalItems(vehiclesData.length);
         calculateStats(vehiclesData);
@@ -221,7 +221,7 @@ export default function Vehicles() {
     } catch (error) {
       console.error('Error fetching vehicles:', error);
       const errorMsg = error.response?.data?.message || 'Failed to fetch vehicles';
-      
+
       if (error.response?.status === 403) {
         toast.error('You do not have permission to view vehicles');
       } else if (error.response?.status === 401) {
@@ -229,7 +229,7 @@ export default function Vehicles() {
       } else {
         toast.error(errorMsg);
       }
-      
+
       setVehicles([]);
       setTotalItems(0);
     } finally {
@@ -248,7 +248,7 @@ export default function Vehicles() {
     const available = vehicleList.filter(v => v.currentStatus === 'available').length;
     const onTrip = vehicleList.filter(v => v.currentStatus === 'on_trip').length;
     const totalCapacity = vehicleList.reduce((sum, v) => sum + (v.totalCapacity || 0), 0);
-    
+
     setStats({ total, active, maintenance, totalCapacity, available, onTrip });
   };
 
@@ -262,7 +262,7 @@ export default function Vehicles() {
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       const errorMsg = error.response?.data?.message || 'Failed to delete vehicle';
-      
+
       if (errorMsg.includes('on_trip')) {
         toast.error('Cannot delete a vehicle that is currently on a trip');
       } else if (errorMsg.includes('permission')) {
@@ -322,11 +322,11 @@ export default function Vehicles() {
   // Check insurance expiry
   const checkInsuranceStatus = (insuranceExpiry) => {
     if (!insuranceExpiry) return { status: 'unknown', label: 'No insurance' };
-    
+
     const expiryDate = new Date(insuranceExpiry);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-    
+
     if (expiryDate < today) {
       return { status: 'expired', label: 'Expired' };
     } else if (daysUntilExpiry <= 30) {
@@ -360,7 +360,7 @@ export default function Vehicles() {
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
-    
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -368,16 +368,16 @@ export default function Vehicles() {
     } else {
       let startPage = Math.max(1, currentPage - 2);
       let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-      
+
       if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
       }
-      
+
       for (let i = startPage; i <= endPage; i++) {
         pageNumbers.push(i);
       }
     }
-    
+
     return pageNumbers;
   };
 
@@ -392,19 +392,19 @@ export default function Vehicles() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Vehicles Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Vehicles Management</h1>
           <p className="text-gray-600">
-            {currentUserStation ? 
-              `Managing vehicles for ${currentUserStation.stationName || 'your station'}` : 
+            {currentUserStation ?
+              `Managing vehicles for ${currentUserStation.stationName || 'your station'}` :
               'Manage fleet vehicles and maintenance'}
           </p>
         </div>
         {currentUserStation && (
-          <button 
+          <button
             onClick={() => setShowModal(true)}
-            className="btn-primary flex items-center gap-2"
+            className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add New Vehicle
@@ -419,7 +419,7 @@ export default function Vehicles() {
             <AlertCircle className="h-5 w-5 text-yellow-400" />
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                {userProfile?.stationID 
+                {userProfile?.stationID
                   ? 'Your assigned station could not be found. Please contact super admin.'
                   : 'You are not assigned to any station. Please contact super admin to get stationID assigned.'}
               </p>
@@ -475,7 +475,7 @@ export default function Vehicles() {
                 <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No vehicles found in your station</h3>
                 <p className="text-gray-600 mb-6">Add your first vehicle to get started</p>
-                <button 
+                <button
                   onClick={() => setShowModal(true)}
                   className="btn-primary flex items-center gap-2 mx-auto"
                 >
@@ -522,16 +522,16 @@ export default function Vehicles() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Vehicle
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Specifications
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Driver Assignment
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Owner Details
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Maintenance & Insurance
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -545,7 +545,7 @@ export default function Vehicles() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {currentVehicles.map((vehicle) => {
                         const insuranceStatus = checkInsuranceStatus(vehicle.insuranceExpiry);
-                        
+
                         return (
                           <tr key={vehicle._id} className="hover:bg-gray-50">
                             <td className="px-6 py-4">
@@ -568,7 +568,7 @@ export default function Vehicles() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="hidden md:table-cell px-6 py-4">
                               <div>
                                 <div className="font-medium">Capacity: {vehicle.totalCapacity} seats</div>
                                 <div className="text-sm text-gray-600">
@@ -579,7 +579,7 @@ export default function Vehicles() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="hidden lg:table-cell px-6 py-4">
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4 text-gray-400" />
@@ -595,7 +595,7 @@ export default function Vehicles() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="hidden xl:table-cell px-6 py-4">
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4 text-gray-400" />
@@ -618,16 +618,15 @@ export default function Vehicles() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="hidden lg:table-cell px-6 py-4">
                               <div className="text-sm space-y-1">
                                 <div>Last Service: {formatDate(vehicle.lastServiceDate)}</div>
                                 <div>Next Service: {formatDate(vehicle.nextServiceDate)}</div>
                                 {vehicle.insuranceExpiry && (
-                                  <div className={`text-xs px-2 py-1 rounded-full inline-block ${
-                                    insuranceStatus.status === 'expired' ? 'bg-red-100 text-red-800' :
+                                  <div className={`text-xs px-2 py-1 rounded-full inline-block ${insuranceStatus.status === 'expired' ? 'bg-red-100 text-red-800' :
                                     insuranceStatus.status === 'expiring' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-green-100 text-green-800'
-                                  }`}>
+                                      'bg-green-100 text-green-800'
+                                    }`}>
                                     Ins. {insuranceStatus.label}: {formatDate(vehicle.insuranceExpiry)}
                                   </div>
                                 )}
@@ -653,21 +652,21 @@ export default function Vehicles() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
-                                <button 
+                                <button
                                   onClick={() => handleViewImages(vehicle)}
                                   className="text-blue-600 hover:text-blue-700"
                                   title="View images"
                                 >
                                   <ImageIcon className="w-4 h-4" />
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => handleEdit(vehicle)}
                                   className="text-primary-600 hover:text-primary-700"
                                   title="Edit vehicle"
                                 >
                                   <Edit className="w-4 h-4" />
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => handleDelete(vehicle)}
                                   className="text-red-600 hover:text-red-700"
                                   title="Delete vehicle"
@@ -690,80 +689,75 @@ export default function Vehicles() {
                       Page <span className="font-semibold">{currentPage}</span> of{' '}
                       <span className="font-semibold">{totalPages}</span>
                     </div>
-                    
+
                     <div className="flex items-center space-x-1">
                       {/* First Page Button */}
                       <button
                         onClick={() => handlePageChange(1)}
                         disabled={currentPage === 1}
-                        className={`p-2 rounded-md ${
-                          currentPage === 1
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
+                        className={`p-2 rounded-md ${currentPage === 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                          }`}
                         title="First page"
                       >
                         <ChevronsLeft className="w-4 h-4" />
                       </button>
-                      
+
                       {/* Previous Page Button */}
                       <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className={`p-2 rounded-md ${
-                          currentPage === 1
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
+                        className={`p-2 rounded-md ${currentPage === 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                          }`}
                         title="Previous page"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
-                      
+
                       {/* Page Number Buttons */}
                       {getPageNumbers().map((page) => (
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`min-w-[2.5rem] px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                            currentPage === page
-                              ? 'bg-primary-600 text-white'
-                              : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                          }`}
+                          className={`min-w-[2.5rem] px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === page
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                            }`}
                         >
                           {page}
                         </button>
                       ))}
-                      
+
                       {/* Next Page Button */}
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className={`p-2 rounded-md ${
-                          currentPage === totalPages
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
+                        className={`p-2 rounded-md ${currentPage === totalPages
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                          }`}
                         title="Next page"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
-                      
+
                       {/* Last Page Button */}
                       <button
                         onClick={() => handlePageChange(totalPages)}
                         disabled={currentPage === totalPages}
-                        className={`p-2 rounded-md ${
-                          currentPage === totalPages
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
+                        className={`p-2 rounded-md ${currentPage === totalPages
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                          }`}
                         title="Last page"
                       >
                         <ChevronsRight className="w-4 h-4" />
                       </button>
                     </div>
-                    
+
                     {/* Go to Page Input */}
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-700">Go to page:</span>

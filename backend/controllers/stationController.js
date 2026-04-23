@@ -26,8 +26,8 @@ export const createStation = async (req, res) => {
 
 
 
-// leul
-        
+        // leul
+
         // Check if manager exists and is a station admin
         // if (!req.body.manager) {
         //     return res.status(400).json({ message: 'Manager is required' });
@@ -83,6 +83,7 @@ export const getStations = async (req, res) => {
         const total = await Station.countDocuments(query);
 
         res.status(200).json({
+            success: true,
             stations,
             pagination: {
                 currentPage: parseInt(page),
@@ -263,7 +264,7 @@ export const getActiveStations = async (req, res) => {
             .select('_id stationCode stationName city location')
             .sort({ stationName: 1 });
 
-        res.status(200).json({ stations });
+        res.status(200).json({ success: true, stations });
     } catch (error) {
         console.error('Get active stations error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });

@@ -77,8 +77,8 @@ const SettingsPage = () => {
               <Settings className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Settings</h1>
-              <p className="text-gray-500 mt-1">Manage your preferences and account settings</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Settings</h1>
+              <p className="text-sm sm:text-base text-gray-500 mt-1">Manage preferences</p>
             </div>
           </div>
         </div>
@@ -110,10 +110,10 @@ const SettingsPage = () => {
                       {getInitials(user?.fullName)}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">{user?.fullName || 'User'}</h3>
-                  <p className="text-sm text-blue-100">{user?.email}</p>
-                  <div className="mt-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white">
-                    {user?.role?.split('_').map(word => 
+                  <h3 className="text-base sm:text-lg font-semibold text-white">{user?.fullName || 'User'}</h3>
+                  <p className="text-xs sm:text-sm text-blue-100 truncate w-full text-center">{user?.email}</p>
+                  <div className="mt-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] sm:text-xs text-white">
+                    {user?.role?.split('_').map(word =>
                       word.charAt(0).toUpperCase() + word.slice(1)
                     ).join(' ')}
                   </div>
@@ -126,26 +126,21 @@ const SettingsPage = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-start space-x-3 px-4 py-3 rounded-xl transition-all mb-1 ${
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={`w-full flex items-start space-x-3 px-4 py-3 rounded-xl transition-all mb-1 ${activeTab === tab.id
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-50'
+                      }`}
                   >
-                    <div className={`p-2 rounded-lg ${
-                      activeTab === tab.id ? 'bg-white shadow-sm' : ''
-                    }`}>
-                      <tab.icon className={`w-5 h-5 ${
-                        activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
-                      }`} />
+                    <div className={`p-2 rounded-lg ${activeTab === tab.id ? 'bg-white shadow-sm' : ''
+                      }`}>
+                      <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
+                        }`} />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className={`font-medium ${
-                        activeTab === tab.id ? 'text-blue-700' : 'text-gray-700'
-                      }`}>{tab.label}</p>
-                      <p className={`text-xs ${
-                        activeTab === tab.id ? 'text-blue-500' : 'text-gray-400'
-                      }`}>{tab.description}</p>
+                      <p className={`font-medium ${activeTab === tab.id ? 'text-blue-700' : 'text-gray-700'
+                        }`}>{tab.label}</p>
+                      <p className={`text-xs ${activeTab === tab.id ? 'text-blue-500' : 'text-gray-400'
+                        }`}>{tab.description}</p>
                     </div>
                   </button>
                 ))}
@@ -184,27 +179,24 @@ const SettingsPage = () => {
                       </div>
                       <h2 className="text-xl font-semibold text-gray-800">Language Preferences</h2>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {languages.map(lang => (
                         <button
                           key={lang.code}
                           onClick={() => changeLanguage(lang.code)}
-                          className={`p-5 border-2 rounded-xl flex items-center justify-between transition-all ${
-                            settings.language === lang.code
-                              ? 'border-blue-500 bg-blue-50/50 shadow-md'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                          }`}
+                          className={`p-5 border-2 rounded-xl flex items-center justify-between transition-all ${settings.language === lang.code
+                            ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
                         >
                           <div className="flex items-center space-x-4">
                             <span className="text-3xl">{lang.flag}</span>
                             <div className="text-left">
-                              <p className={`font-semibold ${
-                                settings.language === lang.code ? 'text-blue-700' : 'text-gray-700'
-                              }`}>{lang.name}</p>
-                              <p className={`text-sm ${
-                                settings.language === lang.code ? 'text-blue-500' : 'text-gray-400'
-                              }`}>{lang.native}</p>
+                              <p className={`font-semibold ${settings.language === lang.code ? 'text-blue-700' : 'text-gray-700'
+                                }`}>{lang.name}</p>
+                              <p className={`text-sm ${settings.language === lang.code ? 'text-blue-500' : 'text-gray-400'
+                                }`}>{lang.native}</p>
                             </div>
                           </div>
                           {settings.language === lang.code && (
@@ -234,11 +226,10 @@ const SettingsPage = () => {
                       {/* Light Theme Card */}
                       <button
                         onClick={() => settings.themeMode !== 'light' && toggleTheme()}
-                        className={`p-6 border-2 rounded-xl transition-all ${
-                          settings.themeMode === 'light'
-                            ? 'border-blue-500 bg-blue-50/50 shadow-md'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
+                        className={`p-6 border-2 rounded-xl transition-all ${settings.themeMode === 'light'
+                          ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className="p-2 bg-amber-100 rounded-lg">
@@ -262,11 +253,10 @@ const SettingsPage = () => {
                       {/* Dark Theme Card */}
                       <button
                         onClick={() => settings.themeMode !== 'dark' && toggleTheme()}
-                        className={`p-6 border-2 rounded-xl transition-all ${
-                          settings.themeMode === 'dark'
-                            ? 'border-blue-500 bg-blue-50/50 shadow-md'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
+                        className={`p-6 border-2 rounded-xl transition-all ${settings.themeMode === 'dark'
+                          ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className="p-2 bg-indigo-100 rounded-lg">
@@ -295,18 +285,15 @@ const SettingsPage = () => {
                           <button
                             key={size.value}
                             onClick={() => updateSetting('fontSize', size.value)}
-                            className={`p-4 border-2 rounded-xl text-center transition-all ${
-                              settings.fontSize === size.value
-                                ? 'border-blue-500 bg-blue-50/50 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`p-4 border-2 rounded-xl text-center transition-all ${settings.fontSize === size.value
+                              ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
-                            <p className={`font-semibold ${
-                              settings.fontSize === size.value ? 'text-blue-700' : 'text-gray-700'
-                            }`}>{size.label}</p>
-                            <p className={`text-sm mt-1 ${
-                              settings.fontSize === size.value ? 'text-blue-500' : 'text-gray-400'
-                            }`} style={{ fontSize: size.preview }}>
+                            <p className={`font-semibold ${settings.fontSize === size.value ? 'text-blue-700' : 'text-gray-700'
+                              }`}>{size.label}</p>
+                            <p className={`text-sm mt-1 ${settings.fontSize === size.value ? 'text-blue-500' : 'text-gray-400'
+                              }`} style={{ fontSize: size.preview }}>
                               Preview text
                             </p>
                           </button>
@@ -322,7 +309,8 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes slideDown {
           from {
             opacity: 0;
@@ -336,7 +324,7 @@ const SettingsPage = () => {
         .animate-slideDown {
           animation: slideDown 0.3s ease-out;
         }
-      `}</style>
+      ` }} />
     </div>
   );
 };

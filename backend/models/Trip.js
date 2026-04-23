@@ -77,9 +77,20 @@ const tripSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    currentCoordinates: {
+        lat: { type: Number },
+        lng: { type: Number }
+    },
     isActive: {
         type: Boolean,
         default: true
+    },
+    isRealtimeTracking: {
+        type: Boolean,
+        default: false
+    },
+    lastGpsUpdate: {
+        type: Date
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,

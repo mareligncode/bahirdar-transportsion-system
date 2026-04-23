@@ -27,10 +27,10 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const SeatSelection = ({ 
-  trip, 
-  selectedSeats = [], 
-  onSeatSelect, 
+const SeatSelection = ({
+  trip,
+  selectedSeats = [],
+  onSeatSelect,
   onProceedToPayment,
   onBack,
   loading = false,
@@ -44,13 +44,13 @@ const SeatSelection = ({
   // Generate seats with numbers and actual booked status
   const generateSeats = useCallback(() => {
     if (!trip) return [];
-    
+
     const totalSeats = trip.totalSeats || 40;
     const rows = Math.ceil(totalSeats / 4);
-    
+
     // Create a Set of booked seat numbers from the prop (actual booked seats from backend)
     const bookedSeatsSet = new Set(bookedSeats || []);
-    
+
     const seats = [];
     for (let row = 1; row <= rows; row++) {
       for (let col = 1; col <= 4; col++) {
@@ -82,7 +82,7 @@ const SeatSelection = ({
     if (seat.isBooked) return;
 
     setError('');
-    
+
     let newSelectedSeats;
     if (localSelectedSeats.includes(seat.number)) {
       // Remove seat
@@ -147,7 +147,7 @@ const SeatSelection = ({
         <Button
           startIcon={<ArrowBack />}
           onClick={onBack}
-          sx={{ 
+          sx={{
             color: '#64748b',
             '&:hover': { color: '#1e293b' }
           }}
@@ -156,19 +156,19 @@ const SeatSelection = ({
         </Button>
       </Box>
 
-      <Typography variant="h5" gutterBottom sx={{ 
-        fontWeight: 600, 
+      <Typography variant="h5" gutterBottom sx={{
+        fontWeight: 600,
         mb: 3,
         fontSize: '1.35rem',
         color: '#1e293b'
       }}>
         {t('select_your_seats')}
       </Typography>
-      
+
       <Grid container spacing={4}>
         {/* Left Side: Seat Selection */}
         <Grid item xs={12} md={7}>
-          <Card variant="outlined" sx={{ 
+          <Card variant="outlined" sx={{
             borderRadius: '12px',
             border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
@@ -176,9 +176,9 @@ const SeatSelection = ({
           }}>
             <CardContent sx={{ p: 3 }}>
               {/* Header with seat count */}
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 mb: 3
               }}>
@@ -190,11 +190,11 @@ const SeatSelection = ({
                     {t('select_up_to', { count: maxSeats })} seats
                   </Typography>
                 </Box>
-                <Chip 
-                  label={t('total_seats', { count: trip?.totalSeats || 0 })} 
+                <Chip
+                  label={t('total_seats', { count: trip?.totalSeats || 0 })}
                   size="small"
-                  sx={{ 
-                    bgcolor: '#f1f5f9', 
+                  sx={{
+                    bgcolor: '#f1f5f9',
                     color: '#475569',
                     fontSize: '0.75rem',
                     height: '24px'
@@ -203,10 +203,10 @@ const SeatSelection = ({
               </Box>
 
               {/* Driver Seat Indicator */}
-              <Box sx={{ 
-                mb: 3, 
-                p: 1.5, 
-                bgcolor: '#f8fafc', 
+              <Box sx={{
+                mb: 3,
+                p: 1.5,
+                bgcolor: '#f8fafc',
                 borderRadius: '8px',
                 textAlign: 'center',
                 border: '1px dashed #94a3b8'
@@ -217,9 +217,9 @@ const SeatSelection = ({
               </Box>
 
               {/* Seat Grid */}
-              <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(4, 1fr)', 
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: 1.5,
                 maxWidth: 320,
                 mx: 'auto',
@@ -228,9 +228,9 @@ const SeatSelection = ({
               }}>
                 {seats.map((seat) => {
                   const isSelected = localSelectedSeats.includes(seat.number);
-                  
+
                   return (
-                    <Tooltip 
+                    <Tooltip
                       key={seat.number}
                       title={seat.isBooked ? t('seat_booked') : `Seat ${seat.number}`}
                       arrow
@@ -240,7 +240,7 @@ const SeatSelection = ({
                         color={seat.isBooked ? "error" : isSelected ? "primary" : "inherit"}
                         onClick={() => handleSeatClick(seat)}
                         disabled={seat.isBooked}
-                        sx={{ 
+                        sx={{
                           height: 56,
                           minWidth: 56,
                           display: 'flex',
@@ -258,12 +258,12 @@ const SeatSelection = ({
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        <SeatIcon sx={{ 
+                        <SeatIcon sx={{
                           fontSize: 20,
                           color: seat.isBooked ? '#ef4444' : isSelected ? 'white' : '#64748b'
                         }} />
-                        <Typography variant="caption" sx={{ 
-                          mt: 0.25, 
+                        <Typography variant="caption" sx={{
+                          mt: 0.25,
                           fontSize: '0.7rem',
                           fontWeight: isSelected ? 600 : 400,
                           color: seat.isBooked ? '#ef4444' : isSelected ? 'white' : '#1e293b'
@@ -277,9 +277,9 @@ const SeatSelection = ({
               </Box>
 
               {/* Seat Legend */}
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
                 gap: 3,
                 p: 2,
                 bgcolor: '#f8fafc',
@@ -317,7 +317,7 @@ const SeatSelection = ({
 
         {/* Right Side: Booking Summary */}
         <Grid item xs={12} md={5}>
-          <Card variant="outlined" sx={{ 
+          <Card variant="outlined" sx={{
             borderRadius: '12px',
             border: '1px solid #3b82f6',
             height: '100%',
@@ -327,14 +327,14 @@ const SeatSelection = ({
           }}>
             <CardContent sx={{ p: 3 }}>
               {/* Header */}
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: 1,
                 mb: 2
               }}>
-                <Box sx={{ 
-                  bgcolor: '#3b82f6', 
+                <Box sx={{
+                  bgcolor: '#3b82f6',
                   borderRadius: '8px',
                   p: 0.75,
                   display: 'flex',
@@ -343,29 +343,29 @@ const SeatSelection = ({
                 }}>
                   <Info sx={{ fontSize: 16, color: 'white' }} />
                 </Box>
-                <Typography variant="subtitle1" sx={{ 
-                  fontWeight: 700, 
+                <Typography variant="subtitle1" sx={{
+                  fontWeight: 700,
                   color: '#1e40af',
                   fontSize: '1rem'
                 }}>
                   {t('booking_summary')}
                 </Typography>
               </Box>
-              
+
               <Divider sx={{ mb: 2, borderColor: '#e2e8f0' }} />
-              
+
               {/* Trip Details */}
               <Box sx={{ mb: 2.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ 
-                  fontWeight: 600, 
+                <Typography variant="caption" color="text.secondary" sx={{
+                  fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
                   {t('trip_details')}
                 </Typography>
-                <Paper variant="outlined" sx={{ 
-                  p: 2, 
+                <Paper variant="outlined" sx={{
+                  p: 2,
                   mt: 0.5,
                   bgcolor: '#f8fafc',
                   borderRadius: '8px',
@@ -391,18 +391,18 @@ const SeatSelection = ({
 
               {/* Selected Seats */}
               <Box sx={{ mb: 2.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ 
-                  fontWeight: 600, 
+                <Typography variant="caption" color="text.secondary" sx={{
+                  fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
                   {t('selected_seats')}
                 </Typography>
-                <Box sx={{ 
-                  p: 2, 
+                <Box sx={{
+                  p: 2,
                   mt: 0.5,
-                  bgcolor: localSelectedSeats.length > 0 ? '#f0f9ff' : '#f8fafc', 
+                  bgcolor: localSelectedSeats.length > 0 ? '#f0f9ff' : '#f8fafc',
                   borderRadius: '8px',
                   border: '1px solid #e2e8f0',
                   minHeight: '60px',
@@ -419,7 +419,7 @@ const SeatSelection = ({
                           label={`Seat ${seatNumber}`}
                           size="small"
                           onDelete={() => handleSeatClick({ number: seatNumber, isBooked: false })}
-                          sx={{ 
+                          sx={{
                             bgcolor: '#3b82f6',
                             color: 'white',
                             fontSize: '0.75rem',
@@ -431,7 +431,7 @@ const SeatSelection = ({
                       );
                     })
                   ) : (
-                    <Typography variant="caption" sx={{ 
+                    <Typography variant="caption" sx={{
                       color: '#64748b',
                       fontSize: '0.8rem',
                       textAlign: 'center',
@@ -445,18 +445,18 @@ const SeatSelection = ({
 
               {/* Price Breakdown */}
               <Box sx={{ mb: 2.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ 
-                  fontWeight: 600, 
+                <Typography variant="caption" color="text.secondary" sx={{
+                  fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   fontSize: '0.65rem'
                 }}>
                   {t('price_breakdown')}
                 </Typography>
-                <Box sx={{ 
-                  p: 2, 
+                <Box sx={{
+                  p: 2,
                   mt: 0.5,
-                  bgcolor: '#f8fafc', 
+                  bgcolor: '#f8fafc',
                   borderRadius: '8px',
                   border: '1px solid #e2e8f0'
                 }}>
@@ -479,10 +479,10 @@ const SeatSelection = ({
               <Divider sx={{ my: 2, borderColor: '#e2e8f0' }} />
 
               {/* Total Price */}
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
                 mb: 2.5,
                 p: 2,
                 bgcolor: '#f0f9ff',
@@ -492,7 +492,7 @@ const SeatSelection = ({
                 <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                   {t('total_amount')}
                 </Typography>
-                <Typography variant="h5" color="primary" sx={{ 
+                <Typography variant="h5" color="primary" sx={{
                   fontWeight: 700,
                   fontSize: '1.3rem'
                 }}>
@@ -507,7 +507,7 @@ const SeatSelection = ({
                 size="large"
                 onClick={handleProceed}
                 disabled={localSelectedSeats.length === 0 || loading}
-                sx={{ 
+                sx={{
                   borderRadius: '10px',
                   py: 1.5,
                   fontWeight: 600,
@@ -515,7 +515,7 @@ const SeatSelection = ({
                   fontSize: '1rem',
                   background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
                   boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                  '&:hover': { 
+                  '&:hover': {
                     background: 'linear-gradient(135deg, #2563eb, #1e3a8a)',
                     boxShadow: '0 6px 16px rgba(59, 130, 246, 0.4)',
                   },

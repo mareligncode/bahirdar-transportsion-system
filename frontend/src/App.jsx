@@ -10,12 +10,6 @@ import SettingsPage from './pages/SettingsPage';
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
-// Public Pages
-import Home from './pages/public/Home';
-import About from './pages/public/About';
-import Contact from './pages/public/Contact';
-import FAQ from './pages/public/FAQ';
-
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -27,13 +21,6 @@ import PassengerDashboard from './pages/passenger/Dashboard';
 import BookTrip from './pages/passenger/BookTrip';
 import MyBookings from './pages/passenger/MyBookings';
 import BookingConfirmation from './pages/passenger/BookingConfirmation';
-
-// Driver Pages
-import DriverDashboard from './pages/driver/Dashboard';
-import MyTrips from './pages/driver/MyTrips';
-import TripDetails from './pages/driver/TripDetails';
-import MyVehicle from './pages/driver/MyVehicle';
-import DriverReports from './pages/driver/Reports';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -47,14 +34,31 @@ import Profile from './pages/profile/Profile';
 import AllUsers from './pages/admin/AllUsers';
 import RoleManagement from './pages/admin/RoleManagement';
 import Stations from './pages/admin/Stations';
+import RoutesPage from './pages/admin/Routes';
 
 // Station Admin Pages
 import StationDashboard from './pages/station/Dashboard';
+import QueueManagement from './pages/station/QueueManagement';
 import StationUsers from './pages/station/Users';
 import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
 import Trips from './pages/station/Trips';
 import Vehicle from './pages/station/Vehicles';
+
+// Driver Pages
+import DriverDashboard from './pages/driver/Dashboard';
+import DriverQueue from './pages/driver/DriverQueue';
+import MyTrips from './pages/driver/MyTrips';
+import TripDetails from './pages/driver/TripDetails';
+import MyVehicle from './pages/driver/MyVehicle';
+import DriverReports from './pages/driver/Reports';
+
+// Public Pages
+import Home from './pages/public/Home';
+import About from './pages/public/About';
+import Contact from './pages/public/Contact';
+import FAQ from './pages/public/FAQ';
+import LiveMap from './pages/public/LiveMap';
 
 // Notification Pages - ADD THIS
 import NotificationsPage from './pages/notifications/NotificationsPage';
@@ -88,16 +92,17 @@ function App() {
               <Route path="/about" element={<Layout><About /></Layout>} />
               <Route path="/contact" element={<Layout><Contact /></Layout>} />
               <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+              <Route path="/live-map" element={<Layout><LiveMap /></Layout>} />
 
-              <Route 
-                path="/settings" 
+              <Route
+                path="/settings"
                 element={
                   <ProtectedRoute>
                     <Layout showSidebar>
                       <SettingsPage />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== AUTHENTICATION ROUTES ===== */}
@@ -107,168 +112,190 @@ function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* ===== CHAPA REDIRECT ROUTE - ADD THIS ===== */}
-              <Route 
-                path="/booking/confirmation" 
-                element={<Navigate to="/passenger/booking-confirmation" replace />} 
+              <Route
+                path="/booking/confirmation"
+                element={<Navigate to="/passenger/booking-confirmation" replace />}
               />
 
               {/* ===== PROFILE ROUTES (Authenticated Users) ===== */}
-              <Route 
-                path="/passenger/booking-confirmation" 
+              <Route
+                path="/passenger/booking-confirmation"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <BookingConfirmation />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/profile" 
+              <Route
+                path="/profile"
                 element={
                   <ProtectedRoute>
                     <Layout showSidebar>
                       <Profile />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== NOTIFICATION ROUTES - ADD THIS ===== */}
-              <Route 
-                path="/notifications" 
+              <Route
+                path="/notifications"
                 element={
                   <ProtectedRoute>
                     <Layout showSidebar>
                       <NotificationsPage />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== PASSENGER ROUTES =====*/}
-              <Route 
-                path="/dashboard" 
+              <Route
+                path="/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <PassengerDashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/passenger/dashboard" 
+              <Route
+                path="/passenger/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <PassengerDashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/passenger/book-trip" 
+              <Route
+                path="/passenger/book-trip"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <BookTrip />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/passenger/book-trip/:tripId" 
+              <Route
+                path="/passenger/book-trip/:tripId"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <BookTrip />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/passenger/my-booking" 
+              <Route
+                path="/passenger/my-booking"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <MyBookings />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== DRIVER ROUTES ===== */}
-              <Route 
-                path="/driver/dashboard" 
+              <Route
+                path="/driver/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['driver']}>
                     <Layout showSidebar>
                       <DriverDashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/driver/trips" 
+              <Route
+                path="/driver/queue"
+                element={
+                  <ProtectedRoute allowedRoles={['driver']}>
+                    <Layout showSidebar>
+                      <DriverQueue />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/driver/trips"
                 element={
                   <ProtectedRoute allowedRoles={['driver']}>
                     <Layout showSidebar>
                       <MyTrips />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/driver/trip/:tripId" 
+              <Route
+                path="/driver/trip/:tripId"
                 element={
                   <ProtectedRoute allowedRoles={['driver']}>
                     <Layout showSidebar>
                       <TripDetails />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/driver/vehicle" 
+              <Route
+                path="/driver/vehicle"
                 element={
                   <ProtectedRoute allowedRoles={['driver']}>
                     <Layout showSidebar>
                       <MyVehicle />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/driver/reports" 
+              <Route
+                path="/driver/reports"
                 element={
                   <ProtectedRoute allowedRoles={['driver']}>
                     <Layout showSidebar>
                       <DriverReports />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== STATION ADMIN ROUTES ===== */}
-              <Route 
-                path="/station/dashboard" 
+              <Route
+                path="/station/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
                     <Layout showSidebar>
                       <StationDashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
+              />
+
+              <Route
+                path="/station/queue"
+                element={
+                  <ProtectedRoute allowedRoles={['station_admin']}>
+                    <Layout showSidebar>
+                      <QueueManagement />
+                    </Layout>
+                  </ProtectedRoute>
+                }
               />
 
               <Route
@@ -282,127 +309,138 @@ function App() {
                 }
               />
 
-              <Route 
-                path="/station/users" 
+              <Route
+                path="/station/users"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
                     <Layout showSidebar>
                       <StationUsers />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/station/Trips" 
+              <Route
+                path="/station/Trips"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
                     <Layout showSidebar>
                       <Trips />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/station/vehicles" 
+              <Route
+                path="/station/vehicles"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
                     <Layout showSidebar>
                       <Vehicle />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/station/reports" 
+              <Route
+                path="/station/reports"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
                     <Layout showSidebar>
                       <StationReports />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
-              <Route 
-                path="/admin/schedules" 
+              <Route
+                path="/admin/schedules"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
                     <Layout showSidebar>
                       <Schedules />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/admin/drivers" 
+              <Route
+                path="/admin/drivers"
                 element={
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <Drivers />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/admin/stations" 
+              <Route
+                path="/admin/stations"
                 element={
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <Stations />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/admin/vehicles" 
+              <Route
+                path="/admin/vehicles"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
                     <Layout showSidebar>
                       <Vehicles />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
+              />
+
+              <Route
+                path="/admin/routes"
+                element={
+                  <ProtectedRoute allowedRoles={['super_admin', 'station_admin']}>
+                    <Layout showSidebar>
+                      <RoutesPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
               />
 
               {/* ===== SUPER ADMIN EXCLUSIVE ROUTES ===== */}
-              <Route 
-                path="/admin/dashboard" 
+              <Route
+                path="/admin/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <AdminDashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/admin/AllUsers" 
+              <Route
+                path="/admin/AllUsers"
                 element={
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <AllUsers />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
-              <Route 
-                path="/admin/role-management" 
+              <Route
+                path="/admin/role-management"
                 element={
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <RoleManagement />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
 
               {/* ===== ERROR ROUTES ===== */}
@@ -411,7 +449,7 @@ function App() {
               {/* ===== 404 ROUTE ===== */}
               <Route path="*" element={<Layout><NotFound /></Layout>} />
             </Routes>
-            <Toaster 
+            <Toaster
               position="top-right"
               toastOptions={{
                 duration: 4000,

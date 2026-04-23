@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../hooks/useTranslation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { 
-  CalendarIcon, 
-  ClockIcon, 
-  MapPinIcon, 
+import {
+  CalendarIcon,
+  ClockIcon,
+  MapPinIcon,
   UserGroupIcon,
   ChevronRightIcon,
   CheckCircleIcon,
@@ -15,7 +16,7 @@ import {
   ArrowPathIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import { 
+import {
   TruckIcon as TruckSolidIcon,
   UserGroupIcon as UserGroupSolidIcon,
   CheckCircleIcon as CheckCircleSolidIcon
@@ -23,10 +24,14 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const DriverDashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useSettings();
+  const isDark = settings.themeMode === 'dark';
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,9 +39,9 @@ const DriverDashboard = () => {
   // Get current hour for dynamic greeting
   const currentHour = new Date().getHours();
   const getGreeting = () => {
-    if (currentHour < 12) return 'Good Morning';
-    if (currentHour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (currentHour < 12) return t('good_morning');
+    if (currentHour < 17) return t('good_afternoon');
+    return t('good_evening');
   };
 
   // Fetch driver's trips
@@ -46,16 +51,16 @@ const DriverDashboard = () => {
       try {
         console.log('Fetching trips for driver:', user?._id);
         console.log('Selected date:', selectedDate);
-        
+
         // Get all trips for this driver
         const response = await api.get('/api/trip', {
-          params: { 
+          params: {
             driverID: user?._id
           }
         });
-        
+
         console.log('API Response:', response.data);
-        
+
         // Extract trips from response
         let allTrips = [];
         if (response.data?.data) {
@@ -65,9 +70,9 @@ const DriverDashboard = () => {
         } else if (Array.isArray(response.data)) {
           allTrips = response.data;
         }
-        
+
         console.log('All trips fetched:', allTrips.length);
-        
+
         // Log each trip for debugging
         allTrips.forEach((trip, index) => {
           console.log(`Trip ${index + 1}:`, {
@@ -76,25 +81,25 @@ const DriverDashboard = () => {
             localDate: new Date(trip.departureTime).toLocaleDateString('en-CA')
           });
         });
-        
+
         // FIXED: Filter trips by comparing dates properly
         const filteredTrips = allTrips.filter(trip => {
           if (!trip.departureTime) return false;
-          
+
           // Create date objects for comparison
           const tripDate = new Date(trip.departureTime);
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-          
+
           // Compare year, month, and day only (ignore time)
           return tripDate.getUTCFullYear() === selectedDateObj.getUTCFullYear() &&
-                 tripDate.getUTCMonth() === selectedDateObj.getUTCMonth() &&
-                 tripDate.getUTCDate() === selectedDateObj.getUTCDate();
+            tripDate.getUTCMonth() === selectedDateObj.getUTCMonth() &&
+            tripDate.getUTCDate() === selectedDateObj.getUTCDate();
         });
-        
+
         console.log('Filtered trips for date:', filteredTrips.length);
-        
+
         return filteredTrips;
-        
+
       } catch (error) {
         console.error('Error fetching trips:', error);
         toast.error('Failed to fetch trips');
@@ -145,35 +150,35 @@ const DriverDashboard = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      scheduled: { 
+      scheduled: {
         lightColor: 'bg-blue-50 text-blue-700 border-blue-200',
         icon: ClockIcon,
-        label: 'Scheduled'
+        label: t('scheduled')
       },
-      boarding: { 
+      boarding: {
         lightColor: 'bg-yellow-50 text-yellow-700 border-yellow-200',
         icon: UserGroupIcon,
-        label: 'Boarding'
+        label: t('boarding')
       },
-      ongoing: { 
+      ongoing: {
         lightColor: 'bg-green-50 text-green-700 border-green-200',
         icon: TruckIcon,
-        label: 'Ongoing'
+        label: t('ongoing')
       },
-      completed: { 
+      completed: {
         lightColor: 'bg-gray-50 text-gray-700 border-gray-200',
         icon: CheckCircleIcon,
-        label: 'Completed'
+        label: t('completed')
       },
-      cancelled: { 
+      cancelled: {
         lightColor: 'bg-red-50 text-red-700 border-red-200',
         icon: XCircleIcon,
-        label: 'Cancelled'
+        label: t('cancelled')
       },
-      delayed: { 
+      delayed: {
         lightColor: 'bg-orange-50 text-orange-700 border-orange-200',
         icon: ExclamationTriangleIcon,
-        label: 'Delayed'
+        label: t('delayed')
       }
     };
     return statusConfig[status] || statusConfig.scheduled;
@@ -187,10 +192,10 @@ const DriverDashboard = () => {
   const completedToday = schedule.filter(t => t.tripStatus === 'completed').length;
   const ongoingNow = schedule.filter(t => t.tripStatus === 'ongoing').length;
   const boardingNow = schedule.filter(t => t.tripStatus === 'boarding').length;
-  const totalPassengersToday = schedule.reduce((acc, trip) => 
+  const totalPassengersToday = schedule.reduce((acc, trip) =>
     acc + (trip.totalSeats - trip.availableSeats), 0
   );
-  
+
   const nextTrip = schedule
     .filter(t => ['scheduled', 'boarding'].includes(t.tripStatus))
     .sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime))[0];
@@ -200,22 +205,22 @@ const DriverDashboard = () => {
   // Loading state
   if (tripsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
         <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-24 w-24 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
-            <TruckSolidIcon className="h-8 w-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            <div className={`animate-spin rounded-full h-24 w-24 border-4 ${isDark ? 'border-gray-800 border-t-blue-500' : 'border-blue-200 border-t-blue-600'} mx-auto`}></div>
+            <TruckSolidIcon className={`h-8 w-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
           </div>
-          <p className="mt-4 text-gray-600 font-medium">Loading your dashboard...</p>
+          <p className={`mt-4 font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Loading your dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-20 border-b border-gray-200/50">
+      <div className={`${isDark ? 'bg-gray-800/80' : 'glass'} backdrop-blur-md shadow-lg sticky top-0 z-20 border-b ${isDark ? 'border-white/5' : 'border-white/20'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="flex items-center space-x-4">
@@ -223,12 +228,12 @@ const DriverDashboard = () => {
                 <TruckSolidIcon className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Driver'}!
                 </h1>
-                <p className="text-sm text-gray-600 flex items-center">
+                <p className={`text-sm flex items-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   <SparklesIcon className="h-4 w-4 mr-1 text-yellow-500" />
-                  Here's your overview for {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+                  {t('overview_for')} {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
                 </p>
               </div>
             </div>
@@ -240,13 +245,14 @@ const DriverDashboard = () => {
               >
                 <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
               </button>
-              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              <div className={`flex items-center space-x-2 backdrop-blur-sm px-4 py-2 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white/80 border-gray-200'
+                }`}>
                 <CalendarIcon className="h-5 w-5 text-blue-500" />
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none focus:outline-none text-sm font-medium text-gray-700"
+                  className={`bg-transparent border-none focus:outline-none text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}
                 />
               </div>
             </div>
@@ -257,15 +263,14 @@ const DriverDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className={`${isDark ? 'bg-gray-800/50 border-white/5' : 'bg-white/70 border-white/20'} backdrop-blur-xl rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border glass-card`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Today's Trips</p>
+                <p className="text-sm font-medium text-gray-500">{t('todays_trips')}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{todayTrips}</p>
                 <div className="flex items-center mt-2">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    todayTrips > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${todayTrips > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
                     {todayTrips} active
                   </span>
                 </div>
@@ -276,12 +281,12 @@ const DriverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 glass-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Ongoing</p>
+                <p className="text-sm font-medium text-gray-500">{t('ongoing')}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{ongoingNow}</p>
-                <p className="text-xs text-gray-500 mt-2">Currently on road</p>
+                <p className="text-xs text-gray-500 mt-2">{t('currently_on_road')}</p>
               </div>
               <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-4 rounded-2xl shadow-lg">
                 <TruckSolidIcon className="h-8 w-8 text-white" />
@@ -289,12 +294,12 @@ const DriverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 glass-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Boarding</p>
+                <p className="text-sm font-medium text-gray-500">{t('boarding')}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{boardingNow}</p>
-                <p className="text-xs text-gray-500 mt-2">Ready to depart</p>
+                <p className="text-xs text-gray-500 mt-2">{t('ready_to_depart')}</p>
               </div>
               <div className="bg-gradient-to-br from-yellow-500 to-amber-500 p-4 rounded-2xl shadow-lg">
                 <UserGroupIcon className="h-8 w-8 text-white" />
@@ -302,12 +307,12 @@ const DriverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 glass-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Completed</p>
+                <p className="text-sm font-medium text-gray-500">{t('completed')}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{completedToday}</p>
-                <p className="text-xs text-gray-500 mt-2">{completionRate}% success</p>
+                <p className="text-xs text-gray-500 mt-2">{completionRate}% {t('success')}</p>
               </div>
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl shadow-lg">
                 <CheckCircleIcon className="h-8 w-8 text-white" />
@@ -315,12 +320,12 @@ const DriverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 glass-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Passengers</p>
+                <p className="text-sm font-medium text-gray-500">{t('passengers')}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{totalPassengersToday}</p>
-                <p className="text-xs text-gray-500 mt-2">Today's total</p>
+                <p className="text-xs text-gray-500 mt-2">{t('todays_total')}</p>
               </div>
               <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-4 rounded-2xl shadow-lg">
                 <UserGroupSolidIcon className="h-8 w-8 text-white" />
@@ -338,13 +343,13 @@ const DriverDashboard = () => {
                   <ClockIcon className="h-8 w-8" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-amber-100">NEXT TRIP</p>
+                  <p className="text-sm font-medium text-amber-100">{t('next_trip_banner')}</p>
                   <h3 className="text-xl font-bold">
-                    {nextTrip.origin?.stationName || 'N/A'} → {nextTrip.destination?.stationName || 'N/A'}
+                    {nextTrip.origin?.stationName || t('na')} → {nextTrip.destination?.stationName || t('na')}
                   </h3>
                   <p className="text-amber-100">
-                    {nextTrip.departureTime ? `Departs at ${format(new Date(nextTrip.departureTime), 'hh:mm a')}` : 'Time TBD'} • 
-                    {nextTrip.totalSeats - nextTrip.availableSeats} passengers booked
+                    {nextTrip.departureTime ? `${t('departs_at')} ${format(new Date(nextTrip.departureTime), 'hh:mm a')}` : t('time_tbd')} •
+                    {nextTrip.totalSeats - nextTrip.availableSeats} {t('passengers_booked')}
                   </p>
                 </div>
               </div>
@@ -352,23 +357,23 @@ const DriverDashboard = () => {
                 onClick={() => handleViewTrip(nextTrip._id)}
                 className="px-6 py-3 bg-white text-orange-600 rounded-xl font-semibold hover:bg-orange-50 transition-colors shadow-lg"
               >
-                View Details
+                {t('view_details')}
               </button>
             </div>
           </div>
         )}
 
         {/* Today's Schedule */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+        <div className={`${isDark ? 'bg-gray-800/50 border-white/5' : 'bg-white/70 border-white/20'} backdrop-blur-xl rounded-2xl shadow-lg overflow-hidden border glass-card`}>
+          <div className={`px-6 py-5 border-b ${isDark ? 'bg-gray-800/50 border-white/5' : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200'}`}>
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-5 w-5 text-blue-600" />
                 <h2 className="text-lg font-bold text-gray-900">
-                  Today's Schedule
+                  {t('todays_schedule')}
                 </h2>
                 <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">
-                  {schedule.length} {schedule.length === 1 ? 'trip' : 'trips'}
+                  {schedule.length} {schedule.length === 1 ? t('trip') : t('trips')}
                 </span>
               </div>
               <button
@@ -380,20 +385,21 @@ const DriverDashboard = () => {
               </button>
             </div>
           </div>
-          
-          <div className="divide-y divide-gray-200">
+
+          <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-200'}`}>
             {schedule.length > 0 ? (
               schedule.map((trip) => {
                 if (!trip || !trip._id) return null;
-                
+
                 const StatusIcon = getStatusBadge(trip.tripStatus).icon;
                 const isNextTrip = nextTrip?._id === trip._id;
-                
+
                 return (
-                  <div 
-                    key={trip._id} 
-                    className={`p-6 hover:bg-gray-50 transition-all duration-200 cursor-pointer group relative
-                      ${isNextTrip ? 'bg-amber-50/30' : ''}`}
+                  <div
+                    key={trip._id}
+                    className={`p-6 transition-all duration-200 cursor-pointer group relative
+                      ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}
+                      ${isNextTrip ? (isDark ? 'bg-amber-900/20' : 'bg-amber-50/30') : ''}`}
                     onClick={() => {
                       console.log('Clicked trip with ID:', trip._id);
                       handleViewTrip(trip._id);
@@ -402,7 +408,7 @@ const DriverDashboard = () => {
                     {isNextTrip && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500 to-orange-500"></div>
                     )}
-                    
+
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
@@ -426,7 +432,7 @@ const DriverDashboard = () => {
                             </span>
                           )}
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <div className="flex items-center text-sm">
@@ -434,8 +440,8 @@ const DriverDashboard = () => {
                                 <MapPinIcon className="h-3 w-3 text-green-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500">From</p>
-                                <p className="font-medium text-gray-900">{trip.origin?.stationName || 'N/A'}</p>
+                                <p className="text-xs text-gray-500">{t('from')}</p>
+                                <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{trip.origin?.stationName || t('na')}</p>
                               </div>
                             </div>
                             <div className="flex items-center text-sm">
@@ -443,21 +449,21 @@ const DriverDashboard = () => {
                                 <MapPinIcon className="h-3 w-3 text-red-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500">To</p>
-                                <p className="font-medium text-gray-900">{trip.destination?.stationName || 'N/A'}</p>
+                                <p className="text-xs text-gray-500">{t('to')}</p>
+                                <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{trip.destination?.stationName || t('na')}</p>
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2">
                             <div className="flex items-center text-sm">
                               <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
                                 <ClockIcon className="h-3 w-3 text-blue-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500">Departure</p>
-                                <p className="font-medium text-gray-900">
-                                  {trip.departureTime ? format(new Date(trip.departureTime), 'hh:mm a') : 'N/A'}
+                                <p className="text-xs text-gray-500">{t('departure')}</p>
+                                <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                                  {trip.departureTime ? format(new Date(trip.departureTime), 'hh:mm a') : t('na')}
                                 </p>
                               </div>
                             </div>
@@ -466,9 +472,9 @@ const DriverDashboard = () => {
                                 <UserGroupIcon className="h-3 w-3 text-purple-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500">Seats</p>
-                                <p className="font-medium text-gray-900">
-                                  {trip.totalSeats - trip.availableSeats}/{trip.totalSeats} filled
+                                <p className="text-xs text-gray-500">{t('seats')}</p>
+                                <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                                  {trip.totalSeats - trip.availableSeats}/{trip.totalSeats} {t('filled')}
                                 </p>
                               </div>
                             </div>
@@ -484,7 +490,7 @@ const DriverDashboard = () => {
                             >
                               <div className="flex items-center space-x-2">
                                 <UserGroupIcon className="h-4 w-4" />
-                                <span>Start Boarding</span>
+                                <span>{t('start_boarding')}</span>
                               </div>
                             </button>
                           )}
@@ -495,7 +501,7 @@ const DriverDashboard = () => {
                             >
                               <div className="flex items-center space-x-2">
                                 <TruckIcon className="h-4 w-4" />
-                                <span>Start Trip</span>
+                                <span>{t('start_trip')}</span>
                               </div>
                             </button>
                           )}
@@ -506,13 +512,13 @@ const DriverDashboard = () => {
                             >
                               <div className="flex items-center space-x-2">
                                 <CheckCircleIcon className="h-4 w-4" />
-                                <span>Complete Trip</span>
+                                <span>{t('complete_trip')}</span>
                               </div>
                             </button>
                           )}
                         </div>
                       </div>
-                      
+
                       <ChevronRightIcon className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors group-hover:translate-x-1 transform duration-200" />
                     </div>
                   </div>
@@ -520,10 +526,10 @@ const DriverDashboard = () => {
               })
             ) : (
               <div className="p-12 text-center">
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                <div className={`${isDark ? 'bg-gray-800/50' : 'bg-gradient-to-br from-gray-100 to-gray-200'} rounded-full w-24 h-24 mx-auto flex items-center justify-center`}>
                   <CalendarIcon className="h-12 w-12 text-gray-400" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-gray-900">No trips scheduled</h3>
+                <h3 className={`mt-4 text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>No trips scheduled</h3>
                 <p className="mt-1 text-sm text-gray-500">
                   You have no trips assigned for {format(new Date(selectedDate), 'MMMM d, yyyy')}.
                 </p>
@@ -539,27 +545,30 @@ const DriverDashboard = () => {
         </div>
 
         {/* Quick Actions Footer */}
-        <div className="mt-8 flex justify-center space-x-4">
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
           <button
             onClick={() => navigate('/driver/trips')}
-            className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+            className={`flex-1 min-w-[150px] px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center border ${isDark ? 'bg-gray-800 text-blue-400 border-white/10 hover:bg-gray-700' : 'bg-white text-blue-600 border-gray-200 hover:bg-blue-50'
+              }`}
           >
             <TruckIcon className="h-5 w-5 mr-2" />
-            All Trips
+            {t('all_trips')}
           </button>
           <button
             onClick={() => navigate('/driver/reports')}
-            className="px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+            className={`flex-1 min-w-[150px] px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center border ${isDark ? 'bg-gray-800 text-purple-400 border-white/10 hover:bg-gray-700' : 'bg-white text-purple-600 border-gray-200 hover:bg-purple-50'
+              }`}
           >
             <CheckCircleIcon className="h-5 w-5 mr-2" />
-            Reports
+            {t('system_reports')}
           </button>
           <button
             onClick={() => navigate('/profile')}
-            className="px-6 py-3 bg-white text-pink-600 rounded-xl font-semibold hover:bg-pink-50 transition-all duration-200 shadow-lg flex items-center border border-gray-200"
+            className={`flex-1 min-w-[150px] px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center border ${isDark ? 'bg-gray-800 text-pink-400 border-white/10 hover:bg-gray-700' : 'bg-white text-pink-600 border-gray-200 hover:bg-pink-50'
+              }`}
           >
             <UserGroupIcon className="h-5 w-5 mr-2" />
-            Profile
+            {t('profile')}
           </button>
         </div>
       </div>

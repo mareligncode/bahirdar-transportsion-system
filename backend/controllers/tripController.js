@@ -137,9 +137,12 @@ export const getAllTrips = async (req, res) => {
 
         // Station admin can only see their station's trips
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station) {
-                query.station = station._id;
+            if (req.user.stationID) {
+                query.station = req.user.stationID;
+            } else {
+                console.warn(`Station admin ${req.user._id} has no stationID assigned`);
+                // For unassigned station admin, return empty result to prevent unauthorized access
+                query.station = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
 
@@ -221,8 +224,7 @@ export const getTripById = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station && trip.station && !trip.station.equals(station._id)) {
+            if (req.user.stationID && trip.station && !trip.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to view this trip'
@@ -456,8 +458,7 @@ export const deleteTrip = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !trip.station.equals(station._id)) {
+            if (!req.user.stationID || !trip.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to delete this trip'
@@ -505,6 +506,8 @@ export const searchTrips = async (req, res) => {
             isActive: true,
             availableSeats: { $gt: 0 }
         };
+
+        console.log('🔍 Executing Trip Search Query:', JSON.stringify(query, null, 2));
 
         const trips = await Trip.find(query)
             .populate('origin', 'stationName city')
@@ -556,8 +559,7 @@ export const updateTripStatus = async (req, res) => {
 
         // Check station admin permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !trip.station.equals(station._id)) {
+            if (!req.user.stationID || !trip.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'
@@ -568,6 +570,19 @@ export const updateTripStatus = async (req, res) => {
         // Update status
         trip.tripStatus = status;
         await trip.save();
+
+        // 🚗 Vehicle Status Sync
+        try {
+            if (status === 'completed' || status === 'cancelled') {
+                await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'available' });
+                console.log(`🚗 Vehicle ${trip.vehicle} is now AVAILABLE after trip ${status}`);
+            } else if (status === 'ongoing') {
+                await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'on_trip' });
+                console.log(`🚗 Vehicle ${trip.vehicle} is now ON_TRIP`);
+            }
+        } catch (vehErr) {
+            console.error('Failed to update vehicle status during trip update:', vehErr);
+        }
 
         // Send notifications to affected passengers
         try {
@@ -759,8 +774,7 @@ export const toggleTripActive = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !trip.station.equals(station._id)) {
+            if (!req.user.stationID || !trip.station.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'

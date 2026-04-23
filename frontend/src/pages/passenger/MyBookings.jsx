@@ -64,7 +64,7 @@ const MyBookings = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
-  
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -106,10 +106,10 @@ const MyBookings = () => {
     } else {
       setLoading(true);
     }
-    
+
     try {
       const response = await api.get('/api/booking/my-bookings');
-      
+
       console.log('Bookings API response:', response.data);
 
       let fetchedBookings = [];
@@ -124,25 +124,25 @@ const MyBookings = () => {
       }
 
       // Sort bookings by date (most recent first)
-      const sortedBookings = fetchedBookings.sort((a, b) => 
+      const sortedBookings = fetchedBookings.sort((a, b) =>
         new Date(b.bookingDate || b.createdAt) - new Date(a.bookingDate || a.createdAt)
       );
 
       setBookings(sortedBookings);
-      
+
       if (showRefreshIndicator) {
         showNotification(t('Bookings refreshed'), 'success');
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      
+
       // Handle 401 Unauthorized specifically
       if (error.response?.status === 401) {
         showNotification(t('Session expired. Please login again.'), 'error');
         setTimeout(() => navigate('/login'), 1500);
         return;
       }
-      
+
       const errorMessage = error.response?.data?.message || t('Failed to load your bookings');
       showNotification(errorMessage, 'error');
       setBookings([]);
@@ -162,8 +162,8 @@ const MyBookings = () => {
       if (response.data?.success) {
         showNotification(t('Booking cancelled successfully'), 'success');
         // Update the booking in the list
-        setBookings(prev => prev.map(booking => 
-          booking._id === selectedBooking._id 
+        setBookings(prev => prev.map(booking =>
+          booking._id === selectedBooking._id
             ? { ...booking, status: 'cancelled' }
             : booking
         ));
@@ -174,7 +174,7 @@ const MyBookings = () => {
       }
     } catch (error) {
       console.error('Cancel booking error:', error);
-      
+
       if (error.response?.status === 400) {
         showNotification(error.response.data?.message || t('Cannot cancel booking at this time'), 'error');
       } else if (error.response?.status === 401) {
@@ -272,7 +272,7 @@ const MyBookings = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'confirmed':
         return 'success';
       case 'pending':
@@ -287,7 +287,7 @@ const MyBookings = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'confirmed':
         return <CheckCircle />;
       case 'pending':
@@ -324,7 +324,7 @@ const MyBookings = () => {
     const departureTime = booking.tripID?.departureTime ? new Date(booking.tripID.departureTime) : null;
     const now = new Date();
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    
+
     return isPendingOrConfirmed && departureTime && departureTime > twoHoursFromNow;
   };
 
@@ -367,7 +367,7 @@ const MyBookings = () => {
 
     // Filter by status
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.status?.toLowerCase() === filterStatus.toLowerCase()
       );
     }
@@ -390,12 +390,12 @@ const MyBookings = () => {
     const isConfirmed = booking.status?.toLowerCase() === 'confirmed';
     const isCancelled = booking.status?.toLowerCase() === 'cancelled';
     const canCancel = canCancelBooking(booking);
-    
+
     const trip = booking.tripID || booking.trip || {};
     const vehicle = trip.vehicle || {};
     const origin = trip.origin || {};
     const destination = trip.destination || {};
-    
+
     // Get seat numbers using helper function
     const seatNumbers = getSeatNumbers(booking);
     const seatCount = seatNumbers.length;
@@ -408,8 +408,8 @@ const MyBookings = () => {
 
     return (
       <Zoom in={true} style={{ transitionDelay: '50ms' }}>
-        <Card sx={{ 
-          mb: 3, 
+        <Card sx={{
+          mb: 3,
           borderRadius: '16px',
           border: '1px solid',
           borderColor: isPending ? '#f59e0b' : isCancelled ? '#ef4444' : '#e2e8f0',
@@ -423,9 +423,9 @@ const MyBookings = () => {
             borderColor: isPending ? '#f59e0b' : isCancelled ? '#ef4444' : '#3b82f6'
           }
         }}>
-          <Box sx={{ 
-            position: 'absolute', 
-            top: '20px', 
+          <Box sx={{
+            position: 'absolute',
+            top: '20px',
             right: '20px',
             zIndex: 1,
             display: 'flex',
@@ -453,10 +453,10 @@ const MyBookings = () => {
               icon={getStatusIcon(booking.status)}
               label={getStatusLabel(booking.status)}
               color={getStatusColor(booking.status)}
-              sx={{ 
+              sx={{
                 fontWeight: 600,
                 px: 1,
-                '& .MuiChip-icon': { 
+                '& .MuiChip-icon': {
                   fontSize: '18px',
                   ml: 0.5
                 }
@@ -469,7 +469,7 @@ const MyBookings = () => {
               {/* Left Section - Route Info */}
               <Grid item xs={12} md={8}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Avatar sx={{ 
+                  <Avatar sx={{
                     bgcolor: isPending ? '#f59e0b' : '#3b82f6',
                     width: 40,
                     height: 40,
@@ -528,7 +528,7 @@ const MyBookings = () => {
                             key={index}
                             label={`Seat ${seat}`}
                             size="small"
-                            sx={{ 
+                            sx={{
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
                               fontWeight: 600,
                               fontSize: '0.75rem'
@@ -573,9 +573,9 @@ const MyBookings = () => {
 
               {/* Right Section - Price & Actions */}
               <Grid item xs={12} md={4}>
-                <Box sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
+                <Box sx={{
+                  height: '100%',
+                  display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   borderLeft: { md: '1px solid #e2e8f0' },
@@ -587,8 +587,8 @@ const MyBookings = () => {
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       {t('Total Amount')}
                     </Typography>
-                    <Typography variant="h4" sx={{ 
-                      fontWeight: 800, 
+                    <Typography variant="h4" sx={{
+                      fontWeight: 800,
                       color: '#1e40af',
                       mb: 1
                     }}>
@@ -600,18 +600,18 @@ const MyBookings = () => {
                         {seatCount} {t('seat(s)')} × ETB {pricePerSeat.toLocaleString()}
                       </Typography>
                     </Box>
-                    
+
                     {booking.paymentStatus && (
                       <Box sx={{ mt: 1 }}>
                         <Typography variant="caption" color="text.secondary">
-                          {t('Payment')}: 
+                          {t('Payment')}:
                           <Chip
                             size="small"
-                            label={booking.paymentStatus === 'success' ? t('Paid') : 
-                                   booking.paymentStatus === 'pending' ? t('Pending') : 
-                                   booking.paymentStatus}
-                            color={booking.paymentStatus === 'success' ? 'success' : 
-                                   booking.paymentStatus === 'pending' ? 'warning' : 'default'}
+                            label={booking.paymentStatus === 'success' ? t('Paid') :
+                              booking.paymentStatus === 'pending' ? t('Pending') :
+                                booking.paymentStatus}
+                            color={booking.paymentStatus === 'success' ? 'success' :
+                              booking.paymentStatus === 'pending' ? 'warning' : 'default'}
                             sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
                           />
                         </Typography>
@@ -619,9 +619,9 @@ const MyBookings = () => {
                     )}
                   </Box>
 
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1, 
+                  <Box sx={{
+                    display: 'flex',
+                    gap: 1,
                     mt: 3,
                     flexDirection: { xs: 'column', sm: 'row' }
                   }}>
@@ -637,7 +637,7 @@ const MyBookings = () => {
                         fullWidth
                       />
                     )}
-                    
+
                     {/* Ticket Button - Show for confirmed/completed bookings */}
                     {(isConfirmed || booking.status?.toLowerCase() === 'completed') && (
                       <Button
@@ -651,7 +651,7 @@ const MyBookings = () => {
                         {t('View Ticket')}
                       </Button>
                     )}
-                    
+
                     {/* Cancel Button */}
                     {canCancel && (
                       <Button
@@ -667,7 +667,7 @@ const MyBookings = () => {
                         {t('Cancel')}
                       </Button>
                     )}
-                    
+
                     {/* If no actions available, show disabled state */}
                     {!needsPayment && !canCancel && !isConfirmed && booking.status?.toLowerCase() !== 'completed' && (
                       <Button
@@ -691,16 +691,16 @@ const MyBookings = () => {
   };
 
   const renderEmptyState = () => (
-    <Paper sx={{ 
-      p: 6, 
+    <Paper sx={{
+      p: 6,
       textAlign: 'center',
       borderRadius: '16px',
       background: 'white',
       border: '1px solid #e2e8f0'
     }}>
-      <Avatar sx={{ 
-        width: 80, 
-        height: 80, 
+      <Avatar sx={{
+        width: 80,
+        height: 80,
         bgcolor: '#e2e8f0',
         color: '#64748b',
         margin: '0 auto 20px'
@@ -711,13 +711,13 @@ const MyBookings = () => {
         {t('No Bookings Found')}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
-        {filterStatus !== 'all' || searchDate 
+        {filterStatus !== 'all' || searchDate
           ? t('No bookings match your current filters. Try adjusting your search criteria.')
           : t("You haven't made any bookings yet. Start your journey by booking a trip!")}
       </Typography>
       {filterStatus !== 'all' || searchDate ? (
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={() => {
             setFilterStatus('all');
             setSearchDate(null);
@@ -727,11 +727,11 @@ const MyBookings = () => {
           {t('Clear Filters')}
         </Button>
       ) : (
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           startIcon={<DirectionsBus />}
           onClick={() => navigate('/passenger/book-trip')}
-          sx={{ 
+          sx={{
             borderRadius: '8px',
             background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
             '&:hover': { background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' }
@@ -744,8 +744,8 @@ const MyBookings = () => {
   );
 
   const renderLoadingState = () => (
-    <Box sx={{ 
-      display: 'flex', 
+    <Box sx={{
+      display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
@@ -783,24 +783,24 @@ const MyBookings = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ 
+    <Container maxWidth="lg" sx={{
       py: 4,
       minHeight: '100vh',
       background: '#f8fafc'
     }}>
       {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         mb: 4,
         flexWrap: 'wrap',
         gap: 2
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton 
+          <IconButton
             onClick={() => navigate('/passenger/dashboard')}
-            sx={{ 
+            sx={{
               bgcolor: 'white',
               border: '1px solid #e2e8f0',
               '&:hover': { bgcolor: '#f8fafc' }
@@ -809,8 +809,8 @@ const MyBookings = () => {
             <ArrowBack />
           </IconButton>
           <Box>
-            <Typography variant="h4" sx={{ 
-              fontWeight: 700, 
+            <Typography variant="h4" sx={{
+              fontWeight: 700,
               color: '#1e293b',
               display: 'flex',
               alignItems: 'center',
@@ -827,10 +827,10 @@ const MyBookings = () => {
 
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Tooltip title={t('Refresh')}>
-            <IconButton 
+            <IconButton
               onClick={() => fetchBookings(true)}
               disabled={refreshing}
-              sx={{ 
+              sx={{
                 bgcolor: 'white',
                 border: '1px solid #e2e8f0',
                 '&:hover': { bgcolor: '#f8fafc' }
@@ -839,12 +839,12 @@ const MyBookings = () => {
               {refreshing ? <CircularProgress size={24} /> : <Refresh />}
             </IconButton>
           </Tooltip>
-          
+
           <Button
             variant="contained"
             startIcon={<DirectionsBus />}
             onClick={() => navigate('/passenger/book-trip')}
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
               '&:hover': { background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' },
@@ -857,9 +857,9 @@ const MyBookings = () => {
       </Box>
 
       {/* Filters */}
-      <Paper sx={{ 
-        p: 3, 
-        mb: 4, 
+      <Paper sx={{
+        p: 3,
+        mb: 4,
         borderRadius: '12px',
         border: '1px solid #e2e8f0',
         background: 'white'
@@ -877,7 +877,7 @@ const MyBookings = () => {
                   onClick={() => setFilterStatus(status)}
                   color={filterStatus === status ? 'primary' : 'default'}
                   variant={filterStatus === status ? 'filled' : 'outlined'}
-                  sx={{ 
+                  sx={{
                     fontWeight: 500,
                     textTransform: 'capitalize'
                   }}
@@ -885,7 +885,7 @@ const MyBookings = () => {
               ))}
             </Box>
           </Grid>
-          
+
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               {t('Filter by Date')}
@@ -896,10 +896,10 @@ const MyBookings = () => {
                 value={searchDate}
                 onChange={setSearchDate}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    size="small" 
-                    fullWidth 
+                  <TextField
+                    {...params}
+                    size="small"
+                    fullWidth
                     placeholder={t('Select date')}
                   />
                 )}
@@ -946,14 +946,14 @@ const MyBookings = () => {
             <>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  {t('Showing {{count}} of {{total}} booking(s)', { 
-                    count: filteredBookings.length, 
-                    total: bookings.length 
+                  {t('Showing {{count}} of {{total}} booking(s)', {
+                    count: filteredBookings.length,
+                    total: bookings.length
                   })}
                 </Typography>
                 {(filterStatus !== 'all' || searchDate) && (
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => {
                       setFilterStatus('all');
                       setSearchDate(null);
@@ -1015,19 +1015,19 @@ const MyBookings = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 2 }}>
-          <Button 
+          <Button
             onClick={closeCancelDialog}
             variant="outlined"
             sx={{ borderRadius: '8px' }}
           >
             {t('Keep Booking')}
           </Button>
-          <Button 
+          <Button
             onClick={handleCancelBooking}
             variant="contained"
             color="error"
             disabled={cancelling}
-            sx={{ 
+            sx={{
               borderRadius: '8px',
               px: 3
             }}
@@ -1044,11 +1044,11 @@ const MyBookings = () => {
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleCloseNotification} 
+        <Alert
+          onClose={handleCloseNotification}
           severity={notification.severity}
-          sx={{ 
-            borderRadius: '8px', 
+          sx={{
+            borderRadius: '8px',
             fontWeight: 500,
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
           }}

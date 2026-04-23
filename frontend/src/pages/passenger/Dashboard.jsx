@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Calendar, 
-  Ticket, 
-  MapPin, 
-  Clock, 
-  Car, 
-  User, 
+import {
+  Calendar,
+  Ticket,
+  MapPin,
+  Clock,
+  Car,
+  User,
   TrendingUp,
   AlertCircle,
   PlusCircle,
@@ -23,11 +23,14 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useSettings } from '../../contexts/SettingsContext';
 import toast from 'react-hot-toast';
 
 export default function PassengerDashboard() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
+  const isDark = settings.themeMode === 'dark';
   const navigate = useNavigate();
   const [upcomingTrips, setUpcomingTrips] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -50,7 +53,7 @@ export default function PassengerDashboard() {
         setLoading(true);
       }
       setError(null);
-      
+
       // Check if user is actually a passenger
       if (user?.role !== 'passenger') {
         setError(t('This dashboard is only available for passengers'));
@@ -87,9 +90,9 @@ export default function PassengerDashboard() {
       // Filter for available trips (future dates + available seats)
       const availableTrips = allTrips.filter(trip => {
         const departureTime = new Date(trip.departureTime);
-        return trip.availableSeats > 0 && 
-               departureTime > now &&
-               ['scheduled', 'boarding'].includes(trip.tripStatus);
+        return trip.availableSeats > 0 &&
+          departureTime > now &&
+          ['scheduled', 'boarding'].includes(trip.tripStatus);
       });
 
       console.log('Available trips:', availableTrips.length);
@@ -101,7 +104,7 @@ export default function PassengerDashboard() {
           params: { _t: Date.now() } // Cache busting
         });
         console.log('Bookings Response:', bookingsResponse.data);
-        
+
         let bookings = [];
         if (bookingsResponse.data?.data) {
           bookings = bookingsResponse.data.data;
@@ -113,20 +116,20 @@ export default function PassengerDashboard() {
         setRecentBookings(bookings.slice(0, 3));
 
         // Calculate statistics from bookings
-        const completedTrips = bookings.filter(b => 
+        const completedTrips = bookings.filter(b =>
           b.status === 'completed' || b.tripStatus === 'completed'
         ).length;
-        
-        const totalSpent = bookings.reduce((sum, booking) => 
+
+        const totalSpent = bookings.reduce((sum, booking) =>
           sum + (booking.totalPrice || booking.amount || 0), 0
         );
-        
+
         // Find next upcoming booking
         const upcomingBooking = bookings
           .filter(b => {
             const departureTime = b.tripID?.departureTime ? new Date(b.tripID.departureTime) : null;
-            return departureTime && departureTime > now && 
-                   ['pending', 'confirmed'].includes(b.status);
+            return departureTime && departureTime > now &&
+              ['pending', 'confirmed'].includes(b.status);
           })
           .sort((a, b) => new Date(a.tripID?.departureTime) - new Date(b.tripID?.departureTime))[0];
 
@@ -138,9 +141,9 @@ export default function PassengerDashboard() {
             routeCounts[routeKey] = (routeCounts[routeKey] || 0) + 1;
           }
         });
-        
+
         const favoriteRoutes = Object.entries(routeCounts)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 2)
           .map(([route]) => route);
 
@@ -158,7 +161,7 @@ export default function PassengerDashboard() {
 
       } catch (bookingsError) {
         console.error('Error fetching bookings:', bookingsError);
-        
+
         // If bookings fail, still show available trips with default stats
         setRecentBookings([]);
         setPassengerStats({
@@ -168,7 +171,7 @@ export default function PassengerDashboard() {
           nextTripDate: null,
           favoriteRoutes: []
         });
-        
+
         if (showRefreshToast) {
           toast.error(t('Failed to load booking data'));
         }
@@ -177,22 +180,22 @@ export default function PassengerDashboard() {
     } catch (error) {
       console.error('Failed to fetch passenger data:', error);
       console.error('Error details:', error.response?.data);
-      
+
       if (error.response?.status === 401) {
         toast.error(t('Session expired. Please login again.'));
         logout();
         navigate('/login');
         return;
       }
-      
+
       if (error.response?.status === 403) {
         setError(t('Access denied. This dashboard is for passengers only.'));
         return;
       }
-      
+
       const errorMessage = error.response?.data?.message || t('Failed to load dashboard data. Please try again.');
       setError(errorMessage);
-      
+
       if (showRefreshToast) {
         toast.error(errorMessage);
       }
@@ -226,10 +229,10 @@ export default function PassengerDashboard() {
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       if (date.toDateString() === today.toDateString()) return t('Today');
       if (date.toDateString() === tomorrow.toDateString()) return t('Tomorrow');
-      
+
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric'
@@ -242,9 +245,9 @@ export default function PassengerDashboard() {
   const formatTime = (dateString) => {
     if (!dateString) return '';
     try {
-      return new Date(dateString).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return new Date(dateString).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
       });
     } catch {
       return '';
@@ -258,15 +261,15 @@ export default function PassengerDashboard() {
 
   const getStatusColor = (status) => {
     const colors = {
-      scheduled: 'bg-blue-100 text-blue-800',
-      boarding: 'bg-yellow-100 text-yellow-800',
-      ongoing: 'bg-purple-100 text-purple-800',
-      completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
-      pending: 'bg-orange-100 text-orange-800',
-      confirmed: 'bg-green-100 text-green-800'
+      scheduled: isDark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-800',
+      boarding: isDark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-800',
+      ongoing: isDark ? 'bg-purple-900/40 text-purple-300' : 'bg-purple-100 text-purple-800',
+      completed: isDark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-800',
+      cancelled: isDark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-800',
+      pending: isDark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-800',
+      confirmed: isDark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-800');
   };
 
   const getVehicleIcon = (carType) => {
@@ -309,8 +312,8 @@ export default function PassengerDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{t('Loading passenger dashboard...')}</p>
+          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isDark ? 'border-primary-400' : 'border-primary-600'} mx-auto`}></div>
+          <p className={`mt-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{t('Loading passenger dashboard...')}</p>
         </div>
       </div>
     );
@@ -322,9 +325,9 @@ export default function PassengerDashboard() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="w-8 h-8 text-red-600" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('Error Loading Dashboard')}</h3>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <button 
+        <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>{t('Error Loading Dashboard')}</h3>
+        <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-4`}>{error}</p>
+        <button
           onClick={() => fetchPassengerData()}
           className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
@@ -340,26 +343,27 @@ export default function PassengerDashboard() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {getGreeting()}, {user?.fullName?.split(' ')[0] || t('Passenger')}!
             </h1>
-            <p className="text-gray-600">
+            <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               {t('Manage your trips and bookings with Bahir Dar Transport System')}
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`flex items-center gap-2 border px-4 py-2 rounded-lg transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               title={t('Refresh data')}
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm">{refreshing ? t('Refreshing...') : t('Refresh')}</span>
             </button>
-            
+
             {/* Passenger Info Badge */}
             <div className="flex items-center gap-2 bg-primary-50 text-primary-700 px-4 py-2 rounded-lg">
               <User className="w-4 h-4" />
@@ -371,8 +375,8 @@ export default function PassengerDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          <div className={`${isDark ? 'bg-gray-800 border-white/5' : 'bg-white shadow-sm'} rounded-xl p-6 hover:shadow-md transition-all border`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('Available Trips')}</p>
@@ -387,12 +391,12 @@ export default function PassengerDashboard() {
               <Calendar className="w-8 h-8 text-primary-500" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all">
+
+          <div className={`${isDark ? 'bg-gray-800 border-white/5' : 'bg-white shadow-sm'} rounded-xl p-6 hover:shadow-md transition-all border`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('Total Spent')}</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(passengerStats.totalSpent)}</p>
+                <p className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{formatCurrency(passengerStats.totalSpent)}</p>
                 <div className="flex items-center mt-1">
                   <DollarSign className="w-4 h-4 text-green-500 mr-1" />
                   <span className="text-sm text-green-600">{t('Lifetime total')}</span>
@@ -401,12 +405,12 @@ export default function PassengerDashboard() {
               <Ticket className="w-8 h-8 text-green-500" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all">
+
+          <div className={`${isDark ? 'bg-gray-800 border-white/5' : 'bg-white shadow-sm'} rounded-xl p-6 hover:shadow-md transition-all border`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('Completed Trips')}</p>
-                <p className="text-2xl font-bold text-gray-900">{passengerStats.completedTrips}</p>
+                <p className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{passengerStats.completedTrips}</p>
                 <div className="flex items-center mt-1">
                   <CheckCircle className="w-4 h-4 text-blue-500 mr-1" />
                   <span className="text-sm text-blue-600">
@@ -417,12 +421,12 @@ export default function PassengerDashboard() {
               <Car className="w-8 h-8 text-blue-500" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all">
+
+          <div className={`${isDark ? 'bg-gray-800 border-white/5' : 'bg-white shadow-sm'} rounded-xl p-6 hover:shadow-md transition-all border`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('Next Trip')}</p>
-                <p className="text-2xl font-bold text-gray-900">{formatDate(passengerStats.nextTripDate)}</p>
+                <p className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{formatDate(passengerStats.nextTripDate)}</p>
                 <div className="flex items-center mt-1">
                   <Clock className="w-4 h-4 text-purple-500 mr-1" />
                   <span className="text-sm text-purple-600">
@@ -439,7 +443,7 @@ export default function PassengerDashboard() {
       {/* Available Trips */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">{t('Available Trips')}</h2>
+          <h2 className={`text-xl font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t('Available Trips')}</h2>
           <button
             onClick={handleSearchTrips}
             className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
@@ -448,13 +452,13 @@ export default function PassengerDashboard() {
             {t('Search All Trips')}
           </button>
         </div>
-        
+
         {upcomingTrips.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <div className={`${isDark ? 'bg-gray-800 border border-white/5' : 'bg-white shadow-sm'} rounded-xl p-12 text-center`}>
             <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('No Available Trips')}</h3>
-            <p className="text-gray-600 mb-6">{t('There are no available trips at the moment.')}</p>
-            <button 
+            <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>{t('No Available Trips')}</h3>
+            <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-6`}>{t('There are no available trips at the moment.')}</p>
+            <button
               onClick={handleSearchTrips}
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
             >
@@ -465,14 +469,14 @@ export default function PassengerDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingTrips.map((trip) => (
-              <div key={trip._id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden">
+              <div key={trip._id} className={`${isDark ? 'bg-gray-800 border border-white/5' : 'bg-white shadow-sm'} rounded-xl hover:shadow-md transition-all overflow-hidden`}>
                 <div className="p-6">
                   <div className="flex items-start gap-3 mb-4">
                     <div className="text-3xl">
                       {getVehicleIcon(trip.vehicle?.carType)}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                      <h3 className={`font-semibold text-lg mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                         {trip.origin?.stationName || t('Unknown')} → {trip.destination?.stationName || t('Unknown')}
                       </h3>
                       <div className="flex items-center gap-3 text-sm text-gray-600">
@@ -487,7 +491,7 @@ export default function PassengerDashboard() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(trip.tripStatus)}`}>
@@ -497,7 +501,7 @@ export default function PassengerDashboard() {
                         {formatCurrency(trip.price || 0)}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
@@ -505,7 +509,7 @@ export default function PassengerDashboard() {
                       </div>
                       <span>{t('Vehicle')}: {trip.vehicle?.carType || t('N/A')}</span>
                     </div>
-                    
+
                     <button
                       onClick={() => handleViewTripDetails(trip._id)}
                       className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors mt-4 flex items-center justify-center gap-2"
@@ -525,8 +529,8 @@ export default function PassengerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Bookings */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('Recent Bookings')}</h2>
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t('Recent Bookings')}</h2>
+          <div className={`${isDark ? 'bg-gray-800 border border-white/5' : 'bg-white shadow-sm'} rounded-xl p-6`}>
             {recentBookings.length === 0 ? (
               <div className="text-center py-8">
                 <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -541,8 +545,8 @@ export default function PassengerDashboard() {
             ) : (
               <div className="space-y-4">
                 {recentBookings.map((booking) => (
-                  <div 
-                    key={booking._id} 
+                  <div
+                    key={booking._id}
                     className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                     onClick={() => handleViewBookingDetails(booking._id)}
                   >
@@ -559,7 +563,7 @@ export default function PassengerDashboard() {
                     </span>
                   </div>
                 ))}
-                <Link 
+                <Link
                   to="/passenger/my-booking"
                   className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-center gap-1 pt-2 border-t"
                 >
@@ -573,22 +577,22 @@ export default function PassengerDashboard() {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('Quick Actions')}</h2>
+          <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t('Quick Actions')}</h2>
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={handleBookTrip}
-              className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-primary-50 hover:border-primary-200 transition-all group"
+              className={`${isDark ? 'bg-gray-800 border border-white/5 hover:bg-primary-900/20' : 'bg-white shadow-sm hover:bg-primary-50'} rounded-xl p-6 text-left hover:border-primary-200 transition-all group`}
             >
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-primary-200 transition-colors">
                   <Search className="w-6 h-6 text-primary-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{t('Search Trips')}</h3>
-                <p className="text-xs text-gray-600">{t('Find and book trips')}</p>
+                <h3 className={`font-semibold mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t('Search Trips')}</h3>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t('Find and book trips')}</p>
               </div>
             </button>
-            
-            <Link 
+
+            <Link
               to="/passenger/my-booking"
               className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-blue-50 hover:border-blue-200 transition-all group"
             >
@@ -600,8 +604,8 @@ export default function PassengerDashboard() {
                 <p className="text-xs text-gray-600">{t('View all bookings')}</p>
               </div>
             </Link>
-            
-            <Link 
+
+            <Link
               to="/passenger/payments"
               className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-green-50 hover:border-green-200 transition-all group"
             >
@@ -613,8 +617,8 @@ export default function PassengerDashboard() {
                 <p className="text-xs text-gray-600">{t('Payment history')}</p>
               </div>
             </Link>
-            
-            <Link 
+
+            <Link
               to="/help"
               className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-purple-50 hover:border-purple-200 transition-all group"
             >

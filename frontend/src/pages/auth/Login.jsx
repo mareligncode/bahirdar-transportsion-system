@@ -6,7 +6,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Login() {
   const { t } = useTranslation();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -127,8 +127,8 @@ export default function Login() {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {t('password')}
             </label>
-            <Link 
-              to="/forgot-password" 
+            <Link
+              to="/forgot-password"
               className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition-colors"
             >
               {t('forgotPassword')}

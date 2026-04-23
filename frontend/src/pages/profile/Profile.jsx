@@ -107,26 +107,26 @@ const Profile = () => {
   const [success, setSuccess] = useState('');
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [openAvatarDialog, setOpenAvatarDialog] = useState(false);
-  
+
   // Form states
   const [formData, setFormData] = useState({
     fullName: '',
     phoneNumber: '',
     emergencyContact: ''
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  
+
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false
   });
-  
+
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
 
@@ -135,9 +135,9 @@ const Profile = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const response = await api.get('/api/auth/profile');
-      
+
       if (response.data.success) {
         const userData = response.data.data.user;
         setProfile(userData);
@@ -160,9 +160,9 @@ const Profile = () => {
     try {
       setSaving(true);
       setError('');
-      
+
       const response = await api.put('/api/auth/profile', formData);
-      
+
       if (response.data.success) {
         setProfile(response.data.data.user);
         setEditing(false);
@@ -183,21 +183,21 @@ const Profile = () => {
       setError(t('New passwords do not match'));
       return;
     }
-    
+
     if (passwordData.newPassword.length < 6) {
       setError(t('New password must be at least 6 characters'));
       return;
     }
-    
+
     try {
       setSaving(true);
       setError('');
-      
+
       const response = await api.put('/api/auth/change-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
-      
+
       if (response.data.success) {
         setSuccess(t('Password changed successfully!'));
         setOpenPasswordDialog(false);
@@ -219,20 +219,20 @@ const Profile = () => {
   // Upload avatar
   const handleUploadAvatar = async () => {
     if (!avatarFile) return;
-    
+
     const formData = new FormData();
     formData.append('avatar', avatarFile);
-    
+
     try {
       setSaving(true);
       setError('');
-      
+
       const response = await api.post('/api/auth/upload-avatar', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       if (response.data.success) {
         setProfile(prev => ({
           ...prev,
@@ -256,19 +256,19 @@ const Profile = () => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     if (!file.type.startsWith('image/')) {
       setError(t('Please select an image file'));
       return;
     }
-    
+
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       setError(t('Image size must be less than 5MB'));
       return;
     }
-    
+
     setAvatarFile(file);
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result);
@@ -338,7 +338,7 @@ const Profile = () => {
           {success}
         </Alert>
       </Snackbar>
-      
+
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
@@ -391,18 +391,18 @@ const Profile = () => {
                   <PhotoCameraIcon />
                 </IconButton>
               </Box>
-              
+
               <Typography variant="h5" fontWeight="bold" gutterBottom>
                 {profile.fullName}
               </Typography>
-              
+
               <RoleBadge
                 label={getRoleDisplayName(profile.role)}
                 role={profile.role}
                 size="medium"
                 icon={<BadgeIcon />}
               />
-              
+
               <Box mt={2}>
                 <Chip
                   label={profile.isActive ? t('Active') : t('Inactive')}
@@ -413,7 +413,7 @@ const Profile = () => {
                 />
               </Box>
             </Box>
-            
+
             {/* Quick Stats */}
             <ProfileSection mt={3}>
               <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -424,8 +424,8 @@ const Profile = () => {
                   <ListItemIcon>
                     <PersonIcon />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={t('Member Since')} 
+                  <ListItemText
+                    primary={t('Member Since')}
                     secondary={formatDate(profile.createdAt)}
                   />
                 </ListItem>
@@ -433,8 +433,8 @@ const Profile = () => {
                   <ListItemIcon>
                     <EmailIcon />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={t('Email')} 
+                  <ListItemText
+                    primary={t('Email')}
                     secondary={profile.email}
                   />
                 </ListItem>
@@ -443,15 +443,15 @@ const Profile = () => {
                     <ListItemIcon>
                       <SecurityIcon />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={t('Last Login')} 
+                    <ListItemText
+                      primary={t('Last Login')}
                       secondary={formatDate(profile.lastLogin)}
                     />
                   </ListItem>
                 )}
               </List>
             </ProfileSection>
-            
+
             {/* Actions */}
             <Box mt={3}>
               <Button
@@ -473,24 +473,24 @@ const Profile = () => {
                 <Typography variant="h6" gutterBottom fontWeight="bold">
                   {t('Edit Profile Information')}
                 </Typography>
-                
+
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label={t('Full Name')}
                       value={formData.fullName}
-                      onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       required
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label={t('Phone Number')}
                       value={formData.phoneNumber}
-                      onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -500,18 +500,18 @@ const Profile = () => {
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label={t('Emergency Contact')}
                       value={formData.emergencyContact}
-                      onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
                       placeholder={t('Name and phone number')}
                       helperText={t('In case of emergencies')}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box display="flex" gap={2}>
                       <Button
@@ -522,7 +522,7 @@ const Profile = () => {
                       >
                         {saving ? <CircularProgress size={24} /> : t('Save Changes')}
                       </Button>
-                      
+
                       <Button
                         variant="outlined"
                         startIcon={<CancelIcon />}
@@ -547,7 +547,7 @@ const Profile = () => {
                 <Typography variant="h6" gutterBottom fontWeight="bold">
                   {t('Personal Information')}
                 </Typography>
-                
+
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -565,7 +565,7 @@ const Profile = () => {
                       variant="outlined"
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
@@ -582,7 +582,7 @@ const Profile = () => {
                       variant="outlined"
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -696,7 +696,7 @@ const Profile = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <Card variant="outlined">
                     <CardContent>
@@ -753,7 +753,7 @@ const Profile = () => {
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -782,7 +782,7 @@ const Profile = () => {
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -842,7 +842,7 @@ const Profile = () => {
                 src={avatarPreview || profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}&background=random`}
                 sx={{ width: 150, height: 150 }}
               />
-              
+
               <input
                 accept="image/*"
                 style={{ display: 'none' }}
@@ -850,7 +850,7 @@ const Profile = () => {
                 type="file"
                 onChange={handleFileSelect}
               />
-              
+
               <label htmlFor="avatar-upload">
                 <Button
                   variant="contained"
@@ -860,13 +860,13 @@ const Profile = () => {
                   {t('Choose Photo')}
                 </Button>
               </label>
-              
+
               {avatarFile && (
                 <Typography variant="body2" color="textSecondary">
                   {t('Selected')}: {avatarFile.name}
                 </Typography>
               )}
-              
+
               <Typography variant="body2" color="textSecondary" align="center">
                 {t('Maximum file size: 5MB. Supported formats: JPG, PNG, GIF, WebP')}
               </Typography>

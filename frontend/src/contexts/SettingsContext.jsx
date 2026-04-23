@@ -28,18 +28,25 @@ export const SettingsProvider = ({ children }) => {
   // Apply theme
   useEffect(() => {
     if (settings.themeMode === 'dark') {
-      document.body.classList.add('dark-mode');
+      document.body.classList.add('dark', 'dark-mode');
       document.body.setAttribute('data-theme', 'dark');
     } else {
-      document.body.classList.remove('dark-mode');
+      document.body.classList.remove('dark', 'dark-mode');
       document.body.setAttribute('data-theme', 'light');
     }
   }, [settings.themeMode]);
 
-  // Apply language to HTML tag
+  // Apply language to HTML tag and sync with i18n
   useEffect(() => {
     document.documentElement.lang = settings.language;
     document.documentElement.dir = settings.language === 'am' ? 'ltr' : 'ltr';
+
+    // Sync with i18next
+    import('../i18n').then(({ default: i18n }) => {
+      if (i18n.language !== settings.language) {
+        i18n.changeLanguage(settings.language);
+      }
+    });
   }, [settings.language]);
 
   // Apply font size

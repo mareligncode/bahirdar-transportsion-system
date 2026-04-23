@@ -136,7 +136,12 @@ bookingSchema.pre('save', async function (next) {
 
     // Generate group ticket number for group bookings
     if (this.isGroupBooking && !this.groupTicketNumber) {
-        this.groupTicketNumber = `GTK${Date.now().toString(36).toUpperCase()}`;
+        this.groupTicketNumber = `GTK${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1000)}`;
+    }
+
+    // Generate ticket number for individual bookings if not group booking or if needed
+    if (!this.ticketNumber) {
+        this.ticketNumber = `TCK${Date.now().toString().slice(-6)}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
     }
 
     // Set seatNumber for backward compatibility

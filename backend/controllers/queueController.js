@@ -217,18 +217,20 @@ export const getNextVehicle = async (req, res) => {
         const { stationID } = req.params;
         const { destinationID } = req.query;
 
-        if (!destinationID) {
-            return res.status(400).json({ message: 'Destination is required for route-based turn' });
+        const query = {
+            station: stationID,
+            status: 'waiting'
+        };
+
+        if (destinationID) {
+            query.destination = destinationID;
         }
 
-        const nextEntry = await Queue.findOne({
-            station: stationID,
-            destination: destinationID,
-            status: 'waiting'
-        })
+        const nextEntry = await Queue.findOne(query)
             .populate('vehicle', 'plateNumber carType totalCapacity')
             .populate('driver', 'fullName phoneNumber')
-            .sort({ queuePosition: 1 });
+            .populate('destination', 'stationName city')
+            .sort({ createdAt: 1 }); // First in, first out
 
         if (!nextEntry) {
             return res.status(404).json({ message: 'No vehicles in queue for this route' });
@@ -237,6 +239,55 @@ export const getNextVehicle = async (req, res) => {
         res.json({ success: true, data: nextEntry });
 
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * ACTUALLY dispatch the next vehicle (trigger Trip creation)
+ */
+export const dispatchNextVehicle = async (req, res) => {
+    try {
+        const { stationID } = req.params;
+        const { destinationID, routeID } = req.query;
+
+        console.log(`Dispatching next vehicle for station ${stationID}, route ${routeID || 'all'}`);
+
+        // If routeID is provided, we can be specific
+        // Otherwise, we'll try to find the absolute oldest 'waiting' entry for this station
+        let targetRouteID = routeID;
+
+        if (!targetRouteID) {
+            // Find the oldest waiting entry to get its route
+            const query = { station: stationID, status: 'waiting' };
+            if (destinationID) query.destination = destinationID;
+
+            const oldestEntry = await Queue.findOne(query).sort({ createdAt: 1 });
+            if (!oldestEntry) {
+                return res.status(404).json({ success: false, message: 'No vehicles in queue for this station' });
+            }
+            targetRouteID = oldestEntry.route;
+        }
+
+        if (!targetRouteID) {
+            return res.status(400).json({ success: false, message: 'Could not determine route for dispatch' });
+        }
+
+        // Trigger automation
+        const result = await QueueAutomator.processNextInQueue(targetRouteID, stationID, req.user.id);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Vehicle dispatched and trip created successfully',
+            trip: result.trip
+        });
+
+    } catch (error) {
+        console.error('Dispatch error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -291,5 +342,45 @@ export const reorderQueue = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Get current queue status for the logged-in driver
+ */
+export const getMyQueueStatus = async (req, res) => {
+    try {
+        const driverID = req.user.id;
+
+        const queueEntry = await Queue.findOne({
+            driver: driverID,
+            status: { $in: ['waiting', 'loading', 'boarding'] }
+        })
+            .populate('vehicle', 'plateNumber carType')
+            .populate('station', 'stationName city')
+            .populate('destination', 'stationName city')
+            .populate('route', 'routeName basePrice');
+
+        if (!queueEntry) {
+            return res.json({
+                success: true,
+                inQueue: false,
+                data: null
+            });
+        }
+
+        res.json({
+            success: true,
+            inQueue: true,
+            data: queueEntry
+        });
+
+    } catch (error) {
+        console.error('Get my queue status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch queue status',
+            error: error.message
+        });
     }
 };

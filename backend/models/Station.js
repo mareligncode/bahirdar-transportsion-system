@@ -20,6 +20,10 @@ const stationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    coordinates: {
+        lat: { type: Number, default: 11.5742 },
+        lng: { type: Number, default: 37.3614 }
+    },
     contactPhone: {
         type: String,
         required: true

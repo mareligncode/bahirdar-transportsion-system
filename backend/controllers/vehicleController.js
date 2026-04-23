@@ -143,18 +143,10 @@ export const getAllVehicles = async (req, res) => {
 
         // FIXED: Add ObjectId validation with proper error handling start
         if (req.user.role === 'station_admin') {
-            try {
-                // Find station where this user is the manager
-                const station = await Station.findOne({ manager: req.user._id });
-                if (station) {
-                    query.stationID = station._id;
-                } else {
-                    console.warn(`Station admin ${req.user._id} is not assigned to any station`);
-                    // For unassigned station admin, return empty result to prevent unauthorized access
-                    query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
-                }
-            } catch (validationError) {
-                console.warn('Station manager validation error:', validationError.message);
+            if (req.user.stationID) {
+                query.stationID = req.user.stationID;
+            } else {
+                console.warn(`Station admin ${req.user._id} has no stationID assigned`);
                 // Return empty result for security
                 query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
             }
@@ -344,9 +336,7 @@ export const getVehicleById = async (req, res) => {
 
         // Check if station_admin can access this vehicle
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station && vehicle.stationID && !vehicle.stationID.equals(station._id)) {
+            if (req.user.stationID && vehicle.stationID && !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied. Vehicle belongs to another station'
@@ -460,9 +450,7 @@ export const getVehicleWithImages = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station && vehicle.stationID && !vehicle.stationID.equals(station._id)) {
+            if (req.user.stationID && vehicle.stationID && !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -513,9 +501,7 @@ export const updateVehicle = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied. Cannot update vehicle from another station'
@@ -632,9 +618,7 @@ export const deleteVehicle = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (station && vehicle.stationID && !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied. Cannot delete vehicle from another station'
@@ -729,9 +713,7 @@ export const assignDriver = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -839,9 +821,7 @@ export const removeDriver = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -908,9 +888,7 @@ export const updateVehicleStatus = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -967,9 +945,7 @@ export const addMaintenanceRecord = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -1065,9 +1041,7 @@ export const uploadVehicleImages = async (req, res) => {
         }
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied. Cannot upload images for vehicle from another station'
@@ -1169,9 +1143,7 @@ export const setPrimaryImage = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -1231,9 +1203,7 @@ export const removeVehicleImage = async (req, res) => {
 
         // Check permissions
         if (req.user.role === 'station_admin') {
-            // Find station where this user is the manager
-            const station = await Station.findOne({ manager: req.user._id });
-            if (!station || !vehicle.stationID.equals(station._id)) {
+            if (!req.user.stationID || !vehicle.stationID.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Access denied'
@@ -1349,6 +1319,35 @@ export const getPublicLiveVehicles = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch public map data',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get the vehicle assigned to the current driver
+ */
+export const getMyVehicle = async (req, res) => {
+    try {
+        const vehicle = await Vehicle.findOne({ driverID: req.user.id })
+            .populate('stationID', 'stationName city');
+
+        if (!vehicle) {
+            return res.status(404).json({
+                success: false,
+                message: 'No vehicle assigned to this driver'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: vehicle
+        });
+    } catch (error) {
+        console.error('Get my vehicle error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
             error: error.message
         });
     }

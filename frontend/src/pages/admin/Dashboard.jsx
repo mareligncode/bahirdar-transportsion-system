@@ -17,9 +17,11 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const Dashboard = () => {
   const { t } = useTranslation();
+  const { settings } = useSettings();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState(null);
@@ -35,7 +37,7 @@ const Dashboard = () => {
     totalBookings: 0,
     revenue: 0
   });
-  
+
   const [userRoles, setUserRoles] = useState([]);
   const [vehicleStatus, setVehicleStatus] = useState([]);
 
@@ -43,35 +45,35 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       // Fetch current user profile
       const profileResponse = await api.get('/api/auth/profile');
       setUserData(profileResponse.data.data?.user);
-      
+
       // Fetch all users
       const usersResponse = await api.get('/api/auth/all-users');
       const users = usersResponse.data.data?.users || [];
-      
+
       // Fetch stations
       const stationsResponse = await api.get('/api/station');
       const stations = stationsResponse.data.stations || [];
-      
+
       // Fetch vehicles
       const vehiclesResponse = await api.get('/api/vehicles');
       const vehicles = vehiclesResponse.data.data?.vehicles || [];
-      
+
       // Fetch trips
       const tripsResponse = await api.get('/api/trip');
       const trips = tripsResponse.data.data || [];
-      
+
       // Calculate statistics
       const activeUsers = users.filter(user => user.isActive).length;
       const activeStations = stations.filter(station => station.isActive).length;
       const activeTrips = trips.filter(trip => trip.isActive).length;
-      const availableVehicles = vehicles.filter(vehicle => 
+      const availableVehicles = vehicles.filter(vehicle =>
         vehicle.currentStatus === 'available' || vehicle.currentStatus === 'active'
       ).length;
-      
+
       // Calculate user role distribution
       const roleCounts = {
         passenger: users.filter(u => u.role === 'passenger').length,
@@ -79,14 +81,14 @@ const Dashboard = () => {
         station_admin: users.filter(u => u.role === 'station_admin').length,
         super_admin: users.filter(u => u.role === 'super_admin').length
       };
-      
+
       setUserRoles([
         { name: t('passengers'), value: roleCounts.passenger, color: '#8884d8' },
         { name: t('drivers'), value: roleCounts.driver, color: '#82ca9d' },
         { name: t('station_admins'), value: roleCounts.station_admin, color: '#ffc658' },
         { name: t('super_admins'), value: roleCounts.super_admin, color: '#ff8042' }
       ]);
-      
+
       // Calculate vehicle status distribution
       const vehicleStatusCounts = {
         available: vehicles.filter(v => v.currentStatus === 'available').length,
@@ -95,7 +97,7 @@ const Dashboard = () => {
         maintenance: vehicles.filter(v => v.currentStatus === 'maintenance').length,
         inactive: vehicles.filter(v => v.currentStatus === 'inactive').length
       };
-      
+
       setVehicleStatus([
         { name: t('available'), value: vehicleStatusCounts.available, color: '#4caf50' },
         { name: t('active'), value: vehicleStatusCounts.active, color: '#2196f3' },
@@ -103,7 +105,7 @@ const Dashboard = () => {
         { name: t('maintenance'), value: vehicleStatusCounts.maintenance, color: '#f44336' },
         { name: t('inactive'), value: vehicleStatusCounts.inactive, color: '#9e9e9e' }
       ]);
-      
+
       // Set overall stats
       setStats({
         totalUsers: users.length,
@@ -117,7 +119,7 @@ const Dashboard = () => {
         totalBookings: 0,
         revenue: 0
       });
-      
+
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError(err.response?.data?.message || t('failed_to_load_dashboard_data'));
@@ -128,7 +130,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    
+
     // Refresh data every 5 minutes
     const interval = setInterval(fetchDashboardData, 300000);
     return () => clearInterval(interval);
@@ -147,11 +149,18 @@ const Dashboard = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
+    <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 } }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between',
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        gap: 2,
+        mb: 3
+      }}>
         <Box>
-          <Typography variant="h4" component="h1" fontWeight="bold">
+          <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
             {t('welcome')}, {userData?.fullName || t('super_admin')}
           </Typography>
           <Typography variant="subtitle1" color="textSecondary">
@@ -163,6 +172,8 @@ const Dashboard = () => {
           onClick={handleRefresh}
           variant="outlined"
           size="small"
+          fullWidth={{ xs: true, sm: false }}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           {t('refresh')}
         </Button>
@@ -177,7 +188,20 @@ const Dashboard = () => {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={3}>
+          <Card
+            elevation={0}
+            sx={{
+              backdropFilter: 'blur(16px) saturate(180%)',
+              backgroundColor: settings.themeMode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+              border: '1px solid rgba(255, 255, 255, 0.125)',
+              borderRadius: '24px',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              }
+            }}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
@@ -206,7 +230,20 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={3}>
+          <Card
+            elevation={0}
+            sx={{
+              backdropFilter: 'blur(16px) saturate(180%)',
+              backgroundColor: settings.themeMode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+              border: '1px solid rgba(255, 255, 255, 0.125)',
+              borderRadius: '24px',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              }
+            }}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
@@ -232,7 +269,20 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={3}>
+          <Card
+            elevation={0}
+            sx={{
+              backdropFilter: 'blur(16px) saturate(180%)',
+              backgroundColor: settings.themeMode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+              border: '1px solid rgba(255, 255, 255, 0.125)',
+              borderRadius: '24px',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              }
+            }}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
@@ -286,7 +336,7 @@ const Dashboard = () => {
 
       {/* Charts Section */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        
+
         {/* User Roles Distribution */}
         <Card elevation={3}>
           <CardHeader

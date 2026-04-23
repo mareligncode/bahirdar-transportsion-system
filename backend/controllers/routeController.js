@@ -33,13 +33,26 @@ export const createRoute = async (req, res) => {
             data: route
         });
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'A route between these two stations already exists.'
+            });
+        }
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
 export const getAllRoutes = async (req, res) => {
     try {
-        const routes = await Route.find()
+        const { origin } = req.query;
+        let query = {};
+
+        if (origin) {
+            query.origin = origin;
+        }
+
+        const routes = await Route.find(query)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city');
 

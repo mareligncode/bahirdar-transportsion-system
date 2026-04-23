@@ -3,6 +3,7 @@ import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, CreditCard, Phone,
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import VehicleModal from './VehicleModal';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const statusColors = {
   active: 'bg-green-100 text-green-800',
@@ -22,6 +23,7 @@ const carTypeLabels = {
 };
 
 export default function Vehicles() {
+  const { t } = useTranslation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -32,7 +34,7 @@ export default function Vehicles() {
     maintenance: 0,
     totalCapacity: 0,
   });
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -42,7 +44,7 @@ export default function Vehicles() {
     try {
       setLoading(true);
       const response = await api.get('/api/vehicles');
-      
+
       if (response.data.success) {
         const vehiclesData = response.data.data.vehicles || response.data.data;
         setVehicles(vehiclesData);
@@ -51,7 +53,7 @@ export default function Vehicles() {
       }
     } catch (error) {
       console.error('Error fetching vehicles:', error);
-      toast.error(error.response?.data?.message || 'Failed to fetch vehicles');
+      toast.error(error.response?.data?.message || t('failed_to_fetch_vehicles'));
     } finally {
       setLoading(false);
     }
@@ -66,20 +68,20 @@ export default function Vehicles() {
     const active = vehicleList.filter(v => v.currentStatus === 'active' || v.currentStatus === 'available').length;
     const maintenance = vehicleList.filter(v => v.currentStatus === 'maintenance').length;
     const totalCapacity = vehicleList.reduce((sum, v) => sum + (v.totalCapacity || 0), 0);
-    
+
     setStats({ total, active, maintenance, totalCapacity });
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle?')) return;
+    if (!window.confirm(t('confirm_delete_vehicle'))) return;
 
     try {
       await api.delete(`/api/vehicles/${id}`);
-      toast.success('Vehicle deleted successfully');
+      toast.success(t('vehicle_deleted_successfully'));
       fetchVehicles();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete vehicle');
+      toast.error(error.response?.data?.message || t('failed_to_delete_vehicle'));
     }
   };
 
@@ -91,11 +93,11 @@ export default function Vehicles() {
   const handleStatusUpdate = async (vehicleId, status) => {
     try {
       await api.post(`/api/vehicles/${vehicleId}/status`, { status });
-      toast.success(`Vehicle status updated to ${status}`);
+      toast.success(t('status_updated_successfully', { status: t(status) }));
       fetchVehicles();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      toast.error(error.response?.data?.message || t('failed_to_update_status'));
     }
   };
 
@@ -145,7 +147,7 @@ export default function Vehicles() {
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
-    
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -153,16 +155,16 @@ export default function Vehicles() {
     } else {
       let startPage = Math.max(1, currentPage - 2);
       let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-      
+
       if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
       }
-      
+
       for (let i = startPage; i <= endPage; i++) {
         pageNumbers.push(i);
       }
     }
-    
+
     return pageNumbers;
   };
 
@@ -177,26 +179,26 @@ export default function Vehicles() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Vehicles Management</h1>
-          <p className="text-gray-600">Manage fleet vehicles and maintenance</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('vehicles_management')}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">{t('manage_fleet_vehicles_maintenance')}</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2"
+          className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2"
         >
           <Plus className="w-5 h-5" />
-          Add New Vehicle
+          {t('add_new_vehicle')}
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Vehicles</p>
+              <p className="text-sm text-gray-600">{t('total_vehicles')}</p>
               <p className="text-2xl font-bold">{stats.total}</p>
             </div>
             <Car className="w-8 h-8 text-primary-500" />
@@ -205,7 +207,7 @@ export default function Vehicles() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Vehicles</p>
+              <p className="text-sm text-gray-600">{t('active_vehicles')}</p>
               <p className="text-2xl font-bold">{stats.active}</p>
             </div>
             <Car className="w-8 h-8 text-green-500" />
@@ -214,7 +216,7 @@ export default function Vehicles() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Under Maintenance</p>
+              <p className="text-sm text-gray-600">{t('under_maintenance')}</p>
               <p className="text-2xl font-bold">{stats.maintenance}</p>
             </div>
             <Wrench className="w-8 h-8 text-yellow-500" />
@@ -223,7 +225,7 @@ export default function Vehicles() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Capacity</p>
+              <p className="text-sm text-gray-600">{t('total_capacity')}</p>
               <p className="text-2xl font-bold">{stats.totalCapacity}</p>
             </div>
             <Fuel className="w-8 h-8 text-blue-500" />
@@ -236,14 +238,14 @@ export default function Vehicles() {
         {vehicles.length === 0 ? (
           <div className="text-center py-12">
             <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No vehicles found</h3>
-            <p className="text-gray-600 mb-6">Add your first vehicle to get started</p>
-            <button 
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('no_vehicles_found')}</h3>
+            <p className="text-gray-600 mb-6">{t('add_first_vehicle_to_get_started')}</p>
+            <button
               onClick={() => setShowModal(true)}
               className="btn-primary flex items-center gap-2 mx-auto"
             >
               <Plus className="w-5 h-5" />
-              Add New Vehicle
+              {t('add_new_vehicle')}
             </button>
           </div>
         ) : (
@@ -252,13 +254,13 @@ export default function Vehicles() {
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing <span className="font-semibold">{startIndex + 1}</span> to{' '}
-                  <span className="font-semibold">{Math.min(endIndex, totalItems)}</span> of{' '}
-                  <span className="font-semibold">{totalItems}</span> vehicles
+                  {t('showing')} <span className="font-semibold">{startIndex + 1}</span> {t('to')}{' '}
+                  <span className="font-semibold">{Math.min(endIndex, totalItems)}</span> {t('of')}{' '}
+                  <span className="font-semibold">{totalItems}</span> {t('vehicles')}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Items per page:</span>
+                <span className="text-sm text-gray-700">{t('items_per_page')}:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
@@ -280,25 +282,25 @@ export default function Vehicles() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Vehicle
+                      {t('vehicle')}
+                    </th>
+                    <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {t('specifications')}
+                    </th>
+                    <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {t('driver_and_station')}
+                    </th>
+                    <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {t('owner_details')}
+                    </th>
+                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {t('maintenance')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Specifications
+                      {t('status')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Driver & Station
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Owner Details
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Maintenance
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Actions
+                      {t('actions')}
                     </th>
                   </tr>
                 </thead>
@@ -318,23 +320,23 @@ export default function Vehicles() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden lg:table-cell px-6 py-4">
                         <div>
-                          <div className="font-medium">Capacity: {vehicle.totalCapacity} seats</div>
+                          <div className="font-medium">{t('capacity')}: {vehicle.totalCapacity} {t('seats')}</div>
                           <div className="text-sm text-gray-600">
-                            Fuel: {vehicle.fuelType} • {vehicle.make} {vehicle.model}
+                            {t('fuel')}: {t(vehicle.fuelType)} • {vehicle.make} {vehicle.model}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            Color: {vehicle.color || 'N/A'}
+                            {t('color')}: {vehicle.color ? t(vehicle.color) : t('na')}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden md:table-cell px-6 py-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <User className="w-4 h-4 text-gray-400" />
                             <span className="font-medium">
-                              {vehicle.driverID?.fullName || 'Not Assigned'}
+                              {vehicle.driverID?.fullName || t('not_assigned')}
                             </span>
                           </div>
                           {vehicle.stationID && (
@@ -347,7 +349,7 @@ export default function Vehicles() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden xl:table-cell px-6 py-4">
                         {vehicle.ownerDetails ? (
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
@@ -370,16 +372,16 @@ export default function Vehicles() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400 italic">No owner details</span>
+                          <span className="text-sm text-gray-400 italic">{t('no_owner_details')}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden sm:table-cell px-6 py-4">
                         <div className="text-sm">
-                          <div>Last: {formatDate(vehicle.lastServiceDate)}</div>
-                          <div>Next: {formatDate(vehicle.nextServiceDate)}</div>
+                          <div>{t('last')}: {formatDate(vehicle.lastServiceDate)}</div>
+                          <div>{t('next')}: {formatDate(vehicle.nextServiceDate)}</div>
                           {vehicle.insuranceExpiry && (
                             <div className="text-xs mt-1">
-                              Ins. expires: {formatDate(vehicle.insuranceExpiry)}
+                              {t('ins_expires')}: {formatDate(vehicle.insuranceExpiry)}
                             </div>
                           )}
                         </div>
@@ -387,31 +389,31 @@ export default function Vehicles() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[vehicle.currentStatus] || 'bg-gray-100 text-gray-800'}`}>
-                            {vehicle.currentStatus}
+                            {t(vehicle.currentStatus)}
                           </span>
                           <select
                             value={vehicle.currentStatus}
                             onChange={(e) => handleStatusUpdate(vehicle._id, e.target.value)}
                             className="text-xs border border-gray-300 rounded px-2 py-1"
                           >
-                            <option value="active">Active</option>
-                            <option value="available">Available</option>
-                            <option value="maintenance">Maintenance</option>
-                            <option value="on_trip">On Trip</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="active">{t('active')}</option>
+                            <option value="available">{t('available')}</option>
+                            <option value="maintenance">{t('maintenance')}</option>
+                            <option value="on_trip">{t('on_trip')}</option>
+                            <option value="inactive">{t('inactive')}</option>
                           </select>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <button 
+                          <button
                             onClick={() => handleEdit(vehicle)}
                             className="text-primary-600 hover:text-primary-700"
                             title="Edit vehicle"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(vehicle._id)}
                             className="text-red-600 hover:text-red-700"
                             title="Delete vehicle"
@@ -430,83 +432,78 @@ export default function Vehicles() {
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-gray-700">
-                  Page <span className="font-semibold">{currentPage}</span> of{' '}
+                  {t('page')} <span className="font-semibold">{currentPage}</span> {t('of')}{' '}
                   <span className="font-semibold">{totalPages}</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-1">
                   {/* First Page Button */}
                   <button
                     onClick={() => handlePageChange(1)}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded-md ${
-                      currentPage === 1
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                    }`}
-                    title="First page"
+                    className={`p-2 rounded-md ${currentPage === 1
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                      }`}
+                    title={t('first_page')}
                   >
                     <ChevronsLeft className="w-4 h-4" />
                   </button>
-                  
+
                   {/* Previous Page Button */}
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded-md ${
-                      currentPage === 1
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                    }`}
-                    title="Previous page"
+                    className={`p-2 rounded-md ${currentPage === 1
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                      }`}
+                    title={t('previous_page')}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  
+
                   {/* Page Number Buttons */}
                   {getPageNumbers().map((page) => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`min-w-[2.5rem] px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        currentPage === page
-                          ? 'bg-primary-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                      }`}
+                      className={`min-w-[2.5rem] px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === page
+                        ? 'bg-primary-600 text-white'
+                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                        }`}
                     >
                       {page}
                     </button>
                   ))}
-                  
+
                   {/* Next Page Button */}
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className={`p-2 rounded-md ${
-                      currentPage === totalPages
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                    }`}
-                    title="Next page"
+                    className={`p-2 rounded-md ${currentPage === totalPages
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                      }`}
+                    title={t('next_page')}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                  
+
                   {/* Last Page Button */}
                   <button
                     onClick={() => handlePageChange(totalPages)}
                     disabled={currentPage === totalPages}
-                    className={`p-2 rounded-md ${
-                      currentPage === totalPages
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                    }`}
-                    title="Last page"
+                    className={`p-2 rounded-md ${currentPage === totalPages
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                      }`}
+                    title={t('last_page')}
                   >
                     <ChevronsRight className="w-4 h-4" />
                   </button>
                 </div>
-                
+
                 {/* Go to Page Input */}
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700">Go to page:</span>

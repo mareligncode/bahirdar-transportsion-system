@@ -16,6 +16,8 @@ import paymentRoutes from './routes/paymentRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
 import queueRoutes from './routes/queueRoutes.js'
 import routeRoutes from './routes/routeRoutes.js'
+import LocationSimulator from './services/locationSimulator.js';
+
 connectDB()
 initSuperAdmin()
 
@@ -44,23 +46,35 @@ io.on('connection', (socket) => {
     });
 
     socket.on('update-location', async (data) => {
-        const { tripID, vehicleID, latitude, longitude, speed } = data;
+        const { tripId, latitude, longitude } = data;
 
-        if (!tripID || !latitude || !longitude) return;
+        if (!tripId || !latitude || !longitude) return;
 
-        io.to(`trip-${tripID}`).emit('location-broadcast', {
-            vehicleID,
-            latitude,
-            longitude,
-            speed,
-            timestamp: new Date()
-        });
-        io.to('public-live-map').emit('public-location-update', {
-            vehicleID,
+        // Broadcast to specific trip room (for passengers following a specific bus)
+        io.to(`trip-${tripId}`).emit('location-broadcast', {
             latitude,
             longitude,
             timestamp: new Date()
         });
+
+        // Broadcast to Public Live Map
+        io.emit('trip-location-update', {
+            tripId,
+            coordinates: [latitude, longitude],
+            isGPS: true,
+            timestamp: new Date()
+        });
+
+        // PERSIST the real-time status to the database (and vehicle location)
+        try {
+            await mongoose.model('Trip').findByIdAndUpdate(tripId, {
+                currentCoordinates: { lat: latitude, lng: longitude },
+                isRealtimeTracking: true,
+                lastGpsUpdate: new Date()
+            });
+        } catch (err) {
+            console.error('Failed to update trip GPS status:', err);
+        }
 
         try {
             await mongoose.model('Vehicle').findByIdAndUpdate(vehicleID, {
@@ -97,8 +111,8 @@ io.on('connection', (socket) => {
 
 app.use(helmet());
 const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    limit: 100, 
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: {
@@ -109,7 +123,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    limit: 10, 
+    limit: 100,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: {
@@ -118,13 +132,19 @@ const authLimiter = rateLimit({
     }
 });
 
-app.use('/api', generalLimiter);
-app.use('/api/auth', authLimiter);
-
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// app.use('/api', generalLimiter);
+// app.use('/api/auth', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -145,5 +165,9 @@ app.get("/", (req, res) => {
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`)
     console.log(`Socket.io enabled for real-time notifications`)
+
+    // Start Live Location Simulation
+    const simulator = new LocationSimulator(io);
+    simulator.start();
 });
 

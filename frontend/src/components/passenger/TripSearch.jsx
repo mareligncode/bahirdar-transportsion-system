@@ -33,23 +33,23 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const TripSearch = ({ 
-  stations = [], 
-  initialData = {}, 
+const TripSearch = ({
+  stations = [],
+  initialData = {},
   onSearch,
   loading: externalLoading = false,
   showRecentSearches = true
 }) => {
   const { t } = useTranslation();
   const isSubmittingRef = useRef(false);
-  
+
   // Form state
   const [formData, setFormData] = useState(() => ({
     origin: initialData?.origin || '',
     destination: initialData?.destination || '',
     date: initialData?.date ? new Date(initialData.date) : null,
   }));
-  
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [recentSearches, setRecentSearches] = useState([]);
@@ -95,7 +95,7 @@ const TripSearch = ({
       today.setHours(0, 0, 0, 0);
       const selectedDate = new Date(formData.date);
       selectedDate.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
         newErrors.date = t('date_past');
       }
@@ -111,7 +111,7 @@ const TripSearch = ({
       ...prev,
       [field]: value
     }));
-    
+
     setTouched(prev => ({
       ...prev,
       [field]: true
@@ -150,7 +150,7 @@ const TripSearch = ({
     try {
       const originStation = stations.find(s => s._id === searchData.origin);
       const destStation = stations.find(s => s._id === searchData.destination);
-      
+
       const searchEntry = {
         origin: searchData.origin,
         destination: searchData.destination,
@@ -161,8 +161,8 @@ const TripSearch = ({
       };
 
       setRecentSearches(prev => {
-        const filtered = prev.filter(s => 
-          s.origin !== searchData.origin || 
+        const filtered = prev.filter(s =>
+          s.origin !== searchData.origin ||
           s.destination !== searchData.destination
         );
         const updated = [searchEntry, ...filtered].slice(0, 5);
@@ -192,12 +192,12 @@ const TripSearch = ({
   const handleSubmit = useCallback(async (event) => {
     // Prevent multiple submissions
     if (isSubmittingRef.current) return;
-    
+
     // Handle both real events and synthetic calls
     if (event && event.preventDefault) {
       event.preventDefault();
     }
-    
+
     // Mark all fields as touched
     setTouched({
       origin: true,
@@ -211,7 +211,7 @@ const TripSearch = ({
 
     isSubmittingRef.current = true;
     setLoading(true);
-    
+
     try {
       // Prepare search data for backend - format date correctly
       const searchData = {
@@ -219,7 +219,7 @@ const TripSearch = ({
         destination: formData.destination,
         date: formatDateForBackend(formData.date)
       };
-      
+
       console.log('🔍 Sending search request to backend:', searchData);
       await onSearch(searchData);
       saveRecentSearch({
@@ -243,7 +243,7 @@ const TripSearch = ({
       destination: search.destination,
       date: search.date ? new Date(search.date) : null
     });
-    
+
     // Clear any existing errors
     setErrors({});
     setTouched({
@@ -251,14 +251,14 @@ const TripSearch = ({
       destination: true,
       date: true
     });
-    
+
     // Submit the search
     const performSearch = async () => {
       if (isSubmittingRef.current) return;
-      
+
       isSubmittingRef.current = true;
       setLoading(true);
-      
+
       try {
         const searchData = {
           origin: search.origin,
@@ -275,13 +275,13 @@ const TripSearch = ({
         isSubmittingRef.current = false;
       }
     };
-    
+
     performSearch();
   }, [onSearch, saveRecentSearch]);
 
   const isFormValid = useMemo(() => {
-    return formData.origin && formData.destination && formData.date && 
-           formData.origin !== formData.destination;
+    return formData.origin && formData.destination && formData.date &&
+      formData.origin !== formData.destination;
   }, [formData.origin, formData.destination, formData.date]);
 
   const isProcessing = loading || externalLoading;
@@ -289,8 +289,8 @@ const TripSearch = ({
   // Memoize station options to prevent unnecessary re-renders
   const originStationOptions = useMemo(() => {
     return stations.map((station) => (
-      <MenuItem 
-        key={station._id} 
+      <MenuItem
+        key={station._id}
         value={station._id}
         disabled={station._id === formData.destination}
       >
@@ -301,8 +301,8 @@ const TripSearch = ({
 
   const destinationStationOptions = useMemo(() => {
     return stations.map((station) => (
-      <MenuItem 
-        key={station._id} 
+      <MenuItem
+        key={station._id}
         value={station._id}
         disabled={station._id === formData.origin}
       >
@@ -319,7 +319,7 @@ const TripSearch = ({
         onClick={() => handleRecentSearchClick(search)}
         size="small"
         icon={<History />}
-        sx={{ 
+        sx={{
           borderRadius: '6px',
           bgcolor: '#f8fafc',
           border: '1px solid #e2e8f0',
@@ -335,22 +335,22 @@ const TripSearch = ({
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Paper elevation={0} sx={{ 
-        p: 3, 
-        borderRadius: '16px', 
+      <Paper elevation={0} sx={{
+        p: 3,
+        borderRadius: '16px',
         border: '1px solid #e2e8f0',
         background: 'white',
         boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
       }}>
         {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           mb: 2
         }}>
-          <Typography variant="h6" sx={{ 
-            fontWeight: 700, 
+          <Typography variant="h6" sx={{
+            fontWeight: 700,
             color: '#1e293b',
             display: 'flex',
             alignItems: 'center',
@@ -359,13 +359,13 @@ const TripSearch = ({
             <SearchIcon sx={{ color: '#3b82f6' }} />
             {t('search_trips')}
           </Typography>
-          
+
           {(formData.origin || formData.destination || formData.date) && (
             <Tooltip title={t('clear_form')}>
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 onClick={handleClear}
-                sx={{ 
+                sx={{
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px'
                 }}
@@ -383,8 +383,8 @@ const TripSearch = ({
           <Grid container spacing={2.5}>
             {/* Origin */}
             <Grid item xs={12} md={4}>
-              <FormControl 
-                fullWidth 
+              <FormControl
+                fullWidth
                 error={touched.origin && !!errors.origin}
                 sx={{ minWidth: 200 }}
               >
@@ -413,17 +413,17 @@ const TripSearch = ({
             </Grid>
 
             {/* Swap Button */}
-            <Grid item xs={12} md={1} sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Grid item xs={12} md={1} sx={{
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               mt: { xs: 0, md: 1 }
             }}>
               <Tooltip title={t('swap_stations')}>
-                <IconButton 
+                <IconButton
                   onClick={handleSwap}
                   disabled={!formData.origin && !formData.destination}
-                  sx={{ 
+                  sx={{
                     bgcolor: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     '&:hover': { bgcolor: '#f1f5f9' },
@@ -438,15 +438,15 @@ const TripSearch = ({
 
             {/* Destination */}
             <Grid item xs={12} md={4}>
-              <FormControl 
-                fullWidth 
+              <FormControl
+                fullWidth
                 error={touched.destination && !!errors.destination}
                 sx={{ minWidth: 200 }}
               >
                 <InputLabel>{t('to_station')}</InputLabel>
                 <Select
                   value={formData.destination}
-                  label={t('to_station')} 
+                  label={t('to_station')}
                   onChange={(e) => handleChange('destination', e.target.value)}
                   required
                   startAdornment={
@@ -474,9 +474,9 @@ const TripSearch = ({
                 value={formData.date}
                 onChange={(date) => handleChange('date', date)}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    fullWidth 
+                  <TextField
+                    {...params}
+                    fullWidth
                     required
                     error={touched.date && !!errors.date}
                     helperText={touched.date && errors.date}
@@ -487,7 +487,7 @@ const TripSearch = ({
                         </InputAdornment>
                       ),
                     }}
-                    sx={{ 
+                    sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '8px'
                       }
@@ -506,8 +506,8 @@ const TripSearch = ({
                 fullWidth
                 disabled={isProcessing || !isFormValid}
                 startIcon={isProcessing ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
-                sx={{ 
-                  height: '56px', 
+                sx={{
+                  height: '56px',
                   borderRadius: '8px',
                   textTransform: 'none',
                   fontSize: '1rem',
@@ -531,8 +531,8 @@ const TripSearch = ({
         {showRecentSearches && recentSearches.length > 0 && (
           <Box sx={{ mt: 3 }}>
             <Divider sx={{ mb: 2 }} />
-            <Typography variant="caption" sx={{ 
-              fontWeight: 600, 
+            <Typography variant="caption" sx={{
+              fontWeight: 600,
               color: '#64748b',
               display: 'flex',
               alignItems: 'center',

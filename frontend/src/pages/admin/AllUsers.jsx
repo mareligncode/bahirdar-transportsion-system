@@ -98,22 +98,22 @@ const AllUsers = () => {
   const [loadingStations, setLoadingStations] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
-  
+
   // Filtering
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   // Modals
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openChangeRoleDialog, setOpenChangeRoleDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  
+
   // Change role form
   const [newRole, setNewRole] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
@@ -124,9 +124,9 @@ const AllUsers = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const response = await api.get('/api/auth/all-users');
-      
+
       if (response.data.success) {
         setUsers(response.data.data.users || []);
         setTotalUsers(response.data.data.total || response.data.data.users?.length || 0);
@@ -144,7 +144,7 @@ const AllUsers = () => {
     try {
       setLoadingStations(true);
       const response = await api.get('/api/station');
-      
+
       let stationsList = [];
       if (response.data.stations) {
         stationsList = response.data.stations;
@@ -153,7 +153,7 @@ const AllUsers = () => {
       } else if (Array.isArray(response.data)) {
         stationsList = response.data;
       }
-      
+
       setStations(stationsList);
     } catch (err) {
       console.error('Error fetching stations:', err);
@@ -166,16 +166,16 @@ const AllUsers = () => {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       setError('');
-      
+
       const response = await api.post('/api/auth/toggle-status', { userId });
-      
+
       if (response.data.success) {
-        setUsers(users.map(user => 
-          user._id === userId 
+        setUsers(users.map(user =>
+          user._id === userId
             ? { ...user, isActive: !currentStatus }
             : user
         ));
-        
+
         setSuccess(currentStatus ? t('user_deactivated') : t('user_activated'));
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -188,16 +188,16 @@ const AllUsers = () => {
   // Change user role - EXACTLY as your backend expects
   const handleChangeRole = async () => {
     if (!selectedUser || !newRole) return;
-    
+
     try {
       setError('');
-      
+
       // Build request exactly as your backend expects
       const requestData = {
         userId: selectedUser._id,
         newRole: newRole
       };
-      
+
       // Add licenseNumber ONLY for driver role
       if (newRole === 'driver') {
         if (!licenseNumber) {
@@ -206,7 +206,7 @@ const AllUsers = () => {
         }
         requestData.licenseNumber = licenseNumber;
       }
-      
+
       // Add stationID ONLY for station_admin role
       if (newRole === 'station_admin') {
         if (!stationID) {
@@ -215,44 +215,44 @@ const AllUsers = () => {
         }
         requestData.stationID = stationID;
       }
-      
+
       console.log('📤 Sending role change request:', requestData);
-      
+
       const response = await api.post('/api/auth/change-role', requestData);
-      
+
       if (response.data.success) {
         // Find the selected station name for display
         const selectedStation = stations.find(s => s._id === stationID);
-        
+
         // Update local state
-        setUsers(users.map(user => 
-          user._id === selectedUser._id 
-            ? { 
-                ...user, 
-                role: newRole,
-                // For driver: set licenseNumber, keep existing stationID or set to null
-                ...(newRole === 'driver' && { 
-                  licenseNumber,
-                  stationID: null // Clear stationID when becoming driver
-                }),
-                // For station_admin: set stationID
-                ...(newRole === 'station_admin' && { 
-                  stationID,
-                  licenseNumber: null // Clear licenseNumber when becoming station_admin
-                }),
-                // For other roles: clear both
-                ...(newRole !== 'driver' && newRole !== 'station_admin' && {
-                  licenseNumber: null,
-                  stationID: null
-                })
-              }
+        setUsers(users.map(user =>
+          user._id === selectedUser._id
+            ? {
+              ...user,
+              role: newRole,
+              // For driver: set licenseNumber, keep existing stationID or set to null
+              ...(newRole === 'driver' && {
+                licenseNumber,
+                stationID: null // Clear stationID when becoming driver
+              }),
+              // For station_admin: set stationID
+              ...(newRole === 'station_admin' && {
+                stationID,
+                licenseNumber: null // Clear licenseNumber when becoming station_admin
+              }),
+              // For other roles: clear both
+              ...(newRole !== 'driver' && newRole !== 'station_admin' && {
+                licenseNumber: null,
+                stationID: null
+              })
+            }
             : user
         ));
-        
+
         setOpenChangeRoleDialog(false);
         setSuccess(t('user_role_changed_successfully'));
         setTimeout(() => setSuccess(''), 3000);
-        
+
         // Reset form
         setNewRole('');
         setLicenseNumber('');
@@ -310,17 +310,17 @@ const AllUsers = () => {
 
   // Filter users
   const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phoneNumber?.includes(searchTerm);
-    
+
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    
-    const matchesStatus = statusFilter === 'all' || 
+
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && user.isActive) ||
       (statusFilter === 'inactive' && !user.isActive);
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -365,15 +365,15 @@ const AllUsers = () => {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setSuccess('Users exported successfully');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -423,28 +423,36 @@ const AllUsers = () => {
       <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess('')}>
         <Alert severity="success">{success}</Alert>
       </Snackbar>
-      
+
       <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError('')}>
         <Alert severity="error">{error}</Alert>
       </Snackbar>
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between',
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        gap: 2,
+        mb: 4
+      }}>
         <Box>
-          <Typography variant="h4" component="h1" fontWeight="bold">
+          <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
             {t('user_management')}
           </Typography>
           <Typography variant="body2" color="textSecondary">
             {t('manage_all_system_users')}
           </Typography>
         </Box>
-        <Box display="flex" gap={2}>
+        <Box display="flex" gap={2} sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
           <Button
             variant="outlined"
             startIcon={<DownloadIcon />}
             onClick={exportToCSV}
             disabled={users.length === 0}
+            fullWidth={{ xs: true, sm: false }}
           >
-            Export CSV
+            Export
           </Button>
           <Button
             variant="contained"
@@ -453,6 +461,7 @@ const AllUsers = () => {
               fetchUsers();
               fetchStations();
             }}
+            fullWidth={{ xs: true, sm: false }}
           >
             {t('refresh')}
           </Button>
@@ -591,10 +600,10 @@ const AllUsers = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: 'action.hover' }}>
               <TableCell><strong>{t('user')}</strong></TableCell>
-              <TableCell><strong>{t('role')}</strong></TableCell>
-              <TableCell><strong>{t('contact')}</strong></TableCell>
+              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}><strong>{t('role')}</strong></TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}><strong>{t('contact')}</strong></TableCell>
               <TableCell><strong>{t('status')}</strong></TableCell>
-              <TableCell><strong>{t('joined')}</strong></TableCell>
+              <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}><strong>{t('joined')}</strong></TableCell>
               <TableCell align="center"><strong>{t('actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
@@ -603,8 +612,8 @@ const AllUsers = () => {
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography color="textSecondary">
-                    {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
-                      ? t('no_users_match_filters') 
+                    {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
+                      ? t('no_users_match_filters')
                       : t('no_users_found')}
                   </Typography>
                 </TableCell>
@@ -628,7 +637,7 @@ const AllUsers = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                     <RoleChip
                       label={getRoleDisplayName(user.role)}
                       role={user.role}
@@ -645,7 +654,7 @@ const AllUsers = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                     <Box>
                       <Typography variant="body2" display="flex" alignItems="center" gap={1}>
                         <EmailIcon fontSize="small" />
@@ -666,7 +675,7 @@ const AllUsers = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                     {formatDate(user.createdAt)}
                   </TableCell>
                   <TableCell align="center">
@@ -680,7 +689,7 @@ const AllUsers = () => {
                           <VisibilityIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title={t('change_role')}>
                         <IconButton
                           size="small"
@@ -690,7 +699,7 @@ const AllUsers = () => {
                           <BadgeIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title={user.isActive ? t('deactivate') : t('activate')}>
                         <IconButton
                           size="small"
@@ -719,8 +728,8 @@ const AllUsers = () => {
         rowsPerPageOptions={[5, 10, 25, 50]}
       />
 
-      <Dialog 
-        open={openViewDialog} 
+      <Dialog
+        open={openViewDialog}
         onClose={() => setOpenViewDialog(false)}
         maxWidth="md"
         fullWidth
@@ -768,7 +777,7 @@ const AllUsers = () => {
                     </Typography>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     {t('account_information')}
@@ -780,7 +789,7 @@ const AllUsers = () => {
                   </Box>
                   <Box mb={2}>
                     <Typography variant="body2">
-                      <strong>{t('status')}:</strong> 
+                      <strong>{t('status')}:</strong>
                       <StatusChip
                         label={selectedUser.isActive ? t('active') : t('inactive')}
                         status={selectedUser.isActive ? 'active' : 'inactive'}
@@ -842,8 +851,8 @@ const AllUsers = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenViewDialog(false)}>{t('close')}</Button>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => {
                   setOpenViewDialog(false);
                   handleOpenChangeRoleDialog(selectedUser);
@@ -857,8 +866,8 @@ const AllUsers = () => {
       </Dialog>
 
       {/* Change Role Dialog - MATCHES BACKEND EXACTLY */}
-      <Dialog 
-        open={openChangeRoleDialog} 
+      <Dialog
+        open={openChangeRoleDialog}
         onClose={() => setOpenChangeRoleDialog(false)}
         maxWidth="sm"
         fullWidth
@@ -924,7 +933,7 @@ const AllUsers = () => {
 
                 <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>{t('note')}:</strong> 
+                    <strong>{t('note')}:</strong>
                     {newRole === 'driver' && t('driver_role_change_note')}
                     {newRole === 'station_admin' && t('station_admin_role_change_note')}
                     {(!newRole || (newRole !== 'driver' && newRole !== 'station_admin')) && t('role_change_general_note')}
@@ -934,12 +943,12 @@ const AllUsers = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenChangeRoleDialog(false)}>{t('cancel')}</Button>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={handleChangeRole}
                 disabled={
-                  !newRole || 
-                  (newRole === 'driver' && !licenseNumber) || 
+                  !newRole ||
+                  (newRole === 'driver' && !licenseNumber) ||
                   (newRole === 'station_admin' && !stationID)
                 }
               >

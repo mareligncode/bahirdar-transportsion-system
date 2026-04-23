@@ -63,7 +63,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 
 const Stations = () => {
   const { t } = useTranslation();
-  
+
   // State variables
   const [stations, setStations] = useState([]);
   const [filteredStations, setFilteredStations] = useState([]);
@@ -73,19 +73,19 @@ const Stations = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalStations, setTotalStations] = useState(0);
-  
+
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   // Dialog states
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openAssignManagerDialog, setOpenAssignManagerDialog] = useState(false);
-  
+
   // Form states
   const [formData, setFormData] = useState({
     stationCode: '',
@@ -97,7 +97,7 @@ const Stations = () => {
     manager: '',
     isActive: true
   });
-  
+
   const [editFormData, setEditFormData] = useState({
     stationCode: '',
     stationName: '',
@@ -117,11 +117,11 @@ const Stations = () => {
     manager: '',
     action: 'assign'
   });
-  
+
   const [selectedStation, setSelectedStation] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [managerAssignmentLoading, setManagerAssignmentLoading] = useState(false);
-  
+
   // Data for dropdowns
   const [cities, setCities] = useState([]);
   const [managers, setManagers] = useState([]);
@@ -141,22 +141,22 @@ const Stations = () => {
     try {
       let url = '/api/station';
       const params = new URLSearchParams();
-      
+
       if (searchTerm) params.append('search', searchTerm);
       if (cityFilter) params.append('city', cityFilter);
       if (statusFilter && statusFilter !== 'all') params.append('isActive', statusFilter === 'active');
-      
+
       params.append('page', page + 1);
       params.append('limit', rowsPerPage);
-      
+
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
-      
+
       const response = await api.get(url);
-      
+
       let stationsData = [];
       let paginationData = {};
-      
+
       if (response.data?.stations) {
         stationsData = response.data.stations;
         paginationData = response.data.pagination || {};
@@ -166,7 +166,7 @@ const Stations = () => {
       } else if (Array.isArray(response.data)) {
         stationsData = response.data;
       }
-      
+
       setStations(stationsData);
       setFilteredStations(stationsData);
       setTotalStations(paginationData.totalStations || stationsData.length);
@@ -185,7 +185,7 @@ const Stations = () => {
   const fetchActiveStations = useCallback(async () => {
     try {
       const response = await api.get('/api/station/active');
-      
+
       let activeStations = [];
       if (response.data?.stations) {
         activeStations = response.data.stations;
@@ -194,7 +194,7 @@ const Stations = () => {
       } else if (Array.isArray(response.data)) {
         activeStations = response.data;
       }
-      
+
       const uniqueCities = [...new Set(activeStations.map(station => station.city).filter(Boolean))];
       setCities(uniqueCities);
     } catch (err) {
@@ -207,9 +207,9 @@ const Stations = () => {
     setManagersLoading(true);
     try {
       const usersRes = await api.get('/api/auth/all-users');
-      
+
       let allUsers = [];
-      
+
       if (usersRes.data?.success && usersRes.data?.data?.users) {
         allUsers = usersRes.data.data.users;
       } else if (usersRes.data?.data?.users) {
@@ -219,15 +219,15 @@ const Stations = () => {
       } else if (Array.isArray(usersRes.data)) {
         allUsers = usersRes.data;
       }
-      
+
       // Filter for station admins that are active
       const stationAdmins = allUsers.filter(user => {
         return user.role === 'station_admin' && user.isActive === true;
       });
-      
+
       setManagers(stationAdmins);
       setAvailableManagers(stationAdmins);
-      
+
     } catch (userErr) {
       console.error('Error fetching station admins:', userErr);
       setManagers([]);
@@ -260,18 +260,18 @@ const Stations = () => {
   // Validate form data - ONLY required fields
   const validateForm = (data) => {
     const errors = [];
-    
+
     if (!data.stationCode?.trim()) errors.push('Station code is required');
     if (!data.stationName?.trim()) errors.push('Station name is required');
     if (!data.location?.trim()) errors.push('Location is required');
     if (!data.city?.trim()) errors.push('City is required');
     if (!data.contactPhone?.trim()) errors.push('Contact phone is required');
     if (!data.contactEmail?.trim()) errors.push('Contact email is required');
-    
+
     if (data.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contactEmail)) {
       errors.push('Invalid email format');
     }
-    
+
     // Manager is NOT validated - it's optional
     return errors;
   };
@@ -283,7 +283,7 @@ const Stations = () => {
       setError(errors.join(', '));
       return;
     }
-    
+
     setFormLoading(true);
     try {
       // Build station data with ONLY required fields
@@ -303,9 +303,9 @@ const Stations = () => {
       }
 
       console.log('Creating station with data:', stationData);
-      
+
       const response = await api.post('/api/station/register', stationData);
-      
+
       setSuccess('Station created successfully');
       setOpenCreateDialog(false);
       resetForm();
@@ -315,11 +315,11 @@ const Stations = () => {
     } catch (err) {
       console.error('Error creating station:', err);
       console.error('Error response:', err.response?.data);
-      
+
       // Show the actual error message from backend
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.errors?.[0]?.msg || 
-                          'Failed to create station';
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.errors?.[0]?.msg ||
+        'Failed to create station';
       setError(errorMessage);
     } finally {
       setFormLoading(false);
@@ -333,7 +333,7 @@ const Stations = () => {
       setError(errors.join(', '));
       return;
     }
-    
+
     setFormLoading(true);
     try {
       // Build station data with ONLY required fields
@@ -353,9 +353,9 @@ const Stations = () => {
       }
 
       console.log('Updating station with data:', stationData);
-      
+
       const response = await api.put(`/api/station/${editFormData._id}`, stationData);
-      
+
       setSuccess('Station updated successfully');
       setOpenEditDialog(false);
       resetEditForm();
@@ -412,7 +412,7 @@ const Stations = () => {
       setError('Please select a manager');
       return;
     }
-    
+
     setManagerAssignmentLoading(true);
     try {
       // Send empty string to remove manager, or manager ID to assign
@@ -422,7 +422,7 @@ const Stations = () => {
 
       console.log('Updating manager:', updateData);
       await api.put(`/api/station/${managerAssignmentData.stationId}`, updateData);
-      
+
       const actionText = managerAssignmentData.action === 'assign' ? 'assigned' : 'removed';
       setSuccess(`Manager ${actionText} successfully!`);
       setOpenAssignManagerDialog(false);
@@ -520,7 +520,7 @@ const Stations = () => {
     if (!phone) return 'N/A';
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 12 && cleaned.startsWith('251')) {
-      return `+${cleaned.slice(0,3)} ${cleaned.slice(3,5)} ${cleaned.slice(5,8)} ${cleaned.slice(8)}`;
+      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8)}`;
     }
     return phone;
   };
@@ -532,7 +532,7 @@ const Stations = () => {
     const inactive = total - active;
     const withManager = stations.filter(s => s.manager).length;
     const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
-    
+
     return { total, active, inactive, withManager, activePercentage };
   };
 
@@ -541,29 +541,29 @@ const Stations = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 3, mb: 6 }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          mb: 4, 
-          p: 3, 
+      <Box
+        sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
           borderRadius: 2,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           boxShadow: 3
         }}
       >
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
           <BusinessIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-          Station Management
+          {t('station_management_title')}
         </Typography>
         <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-          Manage all stations in the transport system (Super Admin Only)
+          {t('station_management_subtitle')}
         </Typography>
       </Box>
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ 
+          <Card sx={{
             height: '100%',
             borderRadius: 3,
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
@@ -579,20 +579,20 @@ const Stations = () => {
                     {stats.total}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Stations
+                    {t('total_stations')}
                   </Typography>
                 </Box>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={100} 
+              <LinearProgress
+                variant="determinate"
+                value={100}
                 sx={{ height: 4, borderRadius: 2 }}
               />
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ 
+          <Card sx={{
             height: '100%',
             borderRadius: 3,
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
@@ -608,7 +608,7 @@ const Stations = () => {
                     {stats.active}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Active Stations
+                    {t('active_stations')}
                   </Typography>
                 </Box>
               </Box>
@@ -616,12 +616,12 @@ const Stations = () => {
                 <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
                   {stats.activePercentage}% Active
                 </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={stats.activePercentage} 
-                  sx={{ 
-                    flexGrow: 1, 
-                    height: 4, 
+                <LinearProgress
+                  variant="determinate"
+                  value={stats.activePercentage}
+                  sx={{
+                    flexGrow: 1,
+                    height: 4,
                     borderRadius: 2,
                     backgroundColor: '#e8f5e9',
                     '& .MuiLinearProgress-bar': {
@@ -634,7 +634,7 @@ const Stations = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ 
+          <Card sx={{
             height: '100%',
             borderRadius: 3,
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
@@ -654,11 +654,11 @@ const Stations = () => {
                   </Typography>
                 </Box>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={stats.total > 0 ? (stats.inactive / stats.total) * 100 : 0} 
-                sx={{ 
-                  height: 4, 
+              <LinearProgress
+                variant="determinate"
+                value={stats.total > 0 ? (stats.inactive / stats.total) * 100 : 0}
+                sx={{
+                  height: 4,
                   borderRadius: 2,
                   backgroundColor: '#ffebee',
                   '& .MuiLinearProgress-bar': {
@@ -670,7 +670,7 @@ const Stations = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ 
+          <Card sx={{
             height: '100%',
             borderRadius: 3,
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
@@ -699,16 +699,16 @@ const Stations = () => {
       </Grid>
 
       {/* Search & Filter Section */}
-      <Paper sx={{ 
-        p: 3, 
-        mb: 4, 
+      <Paper sx={{
+        p: 3,
+        mb: 4,
         borderRadius: 3,
         boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
         border: '1px solid #e0e0e0'
       }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
           <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
-          Filter Stations
+          {t('filter_stations')}
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
@@ -757,30 +757,33 @@ const Stations = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
+            <Box sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
               justifyContent: 'flex-end',
-              pt: 1 
+              pt: 1
             }}>
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
                 onClick={handleResetFilters}
                 sx={{ borderRadius: 2 }}
+                fullWidth={{ xs: true, sm: false }}
               >
-                Reset
+                {t('reset')}
               </Button>
               <Button
                 variant="contained"
                 startIcon={<SearchIcon />}
                 onClick={handleSearch}
-                sx={{ 
+                sx={{
                   borderRadius: 2,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 }}
+                fullWidth={{ xs: true, sm: false }}
               >
-                Search
+                {t('search')}
               </Button>
               <Button
                 variant="contained"
@@ -788,8 +791,9 @@ const Stations = () => {
                 startIcon={<AddIcon />}
                 onClick={() => setOpenCreateDialog(true)}
                 sx={{ borderRadius: 2 }}
+                fullWidth={{ xs: true, sm: false }}
               >
-                Add Station
+                {t('add_station')}
               </Button>
             </Box>
           </Grid>
@@ -798,12 +802,12 @@ const Stations = () => {
 
       {/* Loading & Error States */}
       {loading ? (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          my: 8 
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          my: 8
         }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 3, color: 'text.secondary' }}>
@@ -811,35 +815,35 @@ const Stations = () => {
           </Typography>
         </Box>
       ) : error ? (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
             borderRadius: 2,
             '& .MuiAlert-icon': { fontSize: 30 }
           }}
           action={
             <Button color="inherit" size="small" onClick={fetchStations}>
-              Retry
+              {t('retry')}
             </Button>
           }
         >
           <Typography variant="subtitle1" fontWeight="bold">
-            Error Loading Stations
+            {t('error_loading_stations')}
           </Typography>
           {error}
         </Alert>
       ) : (
         <>
           {/* Stations Table */}
-          <Paper sx={{ 
-            mb: 3, 
+          <Paper sx={{
+            mb: 3,
             borderRadius: 3,
             overflow: 'hidden',
             boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
           }}>
-            <Box sx={{ 
-              p: 2, 
+            <Box sx={{
+              p: 2,
               bgcolor: '#f5f5f5',
               borderBottom: '1px solid #e0e0e0'
             }}>
@@ -852,12 +856,12 @@ const Stations = () => {
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Station Details</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Location</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Contact Info</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Manager</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', py: 2 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('station_details')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('location')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('contact_info')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('manager')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>{t('status')}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', py: 2 }}>{t('actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -867,20 +871,20 @@ const Stations = () => {
                         <Box sx={{ textAlign: 'center' }}>
                           <LocationIcon sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.5, mb: 2 }} />
                           <Typography variant="h6" color="text.secondary" gutterBottom>
-                            No stations found
+                            {t('no_stations_found')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Click "Add Station" to create your first station
+                            {t('add_station_hint')}
                           </Typography>
                         </Box>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredStations.map((station) => (
-                      <TableRow 
-                        key={station._id} 
-                        hover 
-                        sx={{ 
+                      <TableRow
+                        key={station._id}
+                        hover
+                        sx={{
                           '&:hover': { bgcolor: '#f8f9fa' },
                           '&:last-child td': { borderBottom: 0 }
                         }}
@@ -972,10 +976,10 @@ const Stations = () => {
                         <TableCell align="right">
                           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                             <Tooltip title="View Details">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={() => openView(station)}
-                                sx={{ 
+                                sx={{
                                   bgcolor: '#e3f2fd',
                                   '&:hover': { bgcolor: '#bbdefb' }
                                 }}
@@ -983,12 +987,12 @@ const Stations = () => {
                                 <ViewIcon fontSize="small" color="primary" />
                               </IconButton>
                             </Tooltip>
-                            
+
                             <Tooltip title="Edit Station">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={() => openEdit(station)}
-                                sx={{ 
+                                sx={{
                                   bgcolor: '#e8f5e9',
                                   '&:hover': { bgcolor: '#c8e6c9' }
                                 }}
@@ -996,12 +1000,12 @@ const Stations = () => {
                                 <EditIcon fontSize="small" color="success" />
                               </IconButton>
                             </Tooltip>
-                            
+
                             <Tooltip title={station.isActive ? 'Deactivate' : 'Activate'}>
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={() => handleToggleStatus(station)}
-                                sx={{ 
+                                sx={{
                                   bgcolor: station.isActive ? '#fff3e0' : '#e8f5e9',
                                   '&:hover': { bgcolor: station.isActive ? '#ffe0b2' : '#c8e6c9' }
                                 }}
@@ -1013,14 +1017,14 @@ const Stations = () => {
                                 )}
                               </IconButton>
                             </Tooltip>
-                            
+
                             <Tooltip title="Delete">
-                              <IconButton 
-                                size="small" 
-                                color="error" 
+                              <IconButton
+                                size="small"
+                                color="error"
                                 onClick={() => openDelete(station)}
                                 disabled={station.isActive}
-                                sx={{ 
+                                sx={{
                                   bgcolor: '#ffebee',
                                   '&:hover': { bgcolor: '#ffcdd2' },
                                   '&.Mui-disabled': { opacity: 0.3 }
@@ -1037,7 +1041,7 @@ const Stations = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             {/* Pagination */}
             {filteredStations.length > 0 && (
               <TablePagination
@@ -1064,17 +1068,17 @@ const Stations = () => {
       )}
 
       {/* Snackbars for notifications */}
-      <Snackbar 
-        open={!!success} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={!!success}
+        autoHideDuration={4000}
         onClose={() => setSuccess('')}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={() => setSuccess('')} 
-          severity="success" 
+        <Alert
+          onClose={() => setSuccess('')}
+          severity="success"
           variant="filled"
-          sx={{ 
+          sx={{
             width: '100%',
             borderRadius: 2,
             '& .MuiAlert-icon': { fontSize: 26 }
@@ -1085,17 +1089,17 @@ const Stations = () => {
           </Typography>
         </Alert>
       </Snackbar>
-      <Snackbar 
-        open={!!error} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
         onClose={() => setError('')}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={() => setError('')} 
-          severity="error" 
+        <Alert
+          onClose={() => setError('')}
+          severity="error"
           variant="filled"
-          sx={{ 
+          sx={{
             width: '100%',
             borderRadius: 2,
             '& .MuiAlert-icon': { fontSize: 26 }
@@ -1108,24 +1112,24 @@ const Stations = () => {
       </Snackbar>
 
       {/* Create Station Dialog */}
-      <Dialog 
-        open={openCreateDialog} 
-        onClose={() => !formLoading && setOpenCreateDialog(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={openCreateDialog}
+        onClose={() => !formLoading && setOpenCreateDialog(false)}
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 3 }
         }}
       >
-        <DialogTitle sx={{ 
-          bgcolor: 'primary.main', 
+        <DialogTitle sx={{
+          bgcolor: 'primary.main',
           color: 'white',
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <AddIcon sx={{ mr: 2 }} />
-            Create New Station
+            {t('create_new_station')}
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
@@ -1269,20 +1273,20 @@ const Stations = () => {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={() => setOpenCreateDialog(false)} 
+          <Button
+            onClick={() => setOpenCreateDialog(false)}
             disabled={formLoading}
             sx={{ borderRadius: 2 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleCreateStation} 
-            variant="contained" 
+          <Button
+            onClick={handleCreateStation}
+            variant="contained"
             color="primary"
             disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={20} /> : <AddIcon />}
-            sx={{ 
+            sx={{
               borderRadius: 2,
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
@@ -1293,10 +1297,10 @@ const Stations = () => {
       </Dialog>
 
       {/* View Station Dialog */}
-      <Dialog 
-        open={openViewDialog} 
-        onClose={() => setOpenViewDialog(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={openViewDialog}
+        onClose={() => setOpenViewDialog(false)}
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 3 }
@@ -1304,8 +1308,8 @@ const Stations = () => {
       >
         {selectedStation && (
           <>
-            <DialogTitle sx={{ 
-              bgcolor: 'primary.main', 
+            <DialogTitle sx={{
+              bgcolor: 'primary.main',
               color: 'white',
               borderTopLeftRadius: 3,
               borderTopRightRadius: 3
@@ -1419,9 +1423,9 @@ const Stations = () => {
                             {formatPhoneNumber(selectedStation.manager.phoneNumber)}
                           </Typography>
                           <Box sx={{ mt: 2 }}>
-                            <Button 
-                              variant="outlined" 
-                              size="small" 
+                            <Button
+                              variant="outlined"
+                              size="small"
                               startIcon={<PersonIcon />}
                               onClick={() => {
                                 setOpenViewDialog(false);
@@ -1438,9 +1442,9 @@ const Stations = () => {
                           <Typography variant="body1" color="text.secondary" fontStyle="italic">
                             No Manager Assigned
                           </Typography>
-                          <Button 
-                            variant="outlined" 
-                            size="small" 
+                          <Button
+                            variant="outlined"
+                            size="small"
                             startIcon={<AssignmentIcon />}
                             onClick={() => {
                               setOpenViewDialog(false);
@@ -1486,13 +1490,13 @@ const Stations = () => {
               </Grid>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button 
-                onClick={() => setOpenViewDialog(false)} 
+              <Button
+                onClick={() => setOpenViewDialog(false)}
                 sx={{ borderRadius: 2 }}
               >
                 Close
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setOpenViewDialog(false);
                   openEdit(selectedStation);
@@ -1502,7 +1506,7 @@ const Stations = () => {
               >
                 Edit
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleToggleStatus(selectedStation)}
                 variant="contained"
                 color={selectedStation.isActive ? "warning" : "success"}
@@ -1516,24 +1520,24 @@ const Stations = () => {
       </Dialog>
 
       {/* Edit Station Dialog */}
-      <Dialog 
-        open={openEditDialog} 
-        onClose={() => !formLoading && setOpenEditDialog(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={openEditDialog}
+        onClose={() => !formLoading && setOpenEditDialog(false)}
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 3 }
         }}
       >
-        <DialogTitle sx={{ 
-          bgcolor: 'primary.main', 
+        <DialogTitle sx={{
+          bgcolor: 'primary.main',
           color: 'white',
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <EditIcon sx={{ mr: 2 }} />
-            Edit Station
+            {t('edit_station')}
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
@@ -1658,20 +1662,20 @@ const Stations = () => {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={() => setOpenEditDialog(false)} 
+          <Button
+            onClick={() => setOpenEditDialog(false)}
             disabled={formLoading}
             sx={{ borderRadius: 2 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleEditStation} 
-            variant="contained" 
+          <Button
+            onClick={handleEditStation}
+            variant="contained"
             color="primary"
             disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={20} /> : <EditIcon />}
-            sx={{ 
+            sx={{
               borderRadius: 2,
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
@@ -1682,17 +1686,17 @@ const Stations = () => {
       </Dialog>
 
       {/* Assign/Remove Manager Dialog */}
-      <Dialog 
-        open={openAssignManagerDialog} 
-        onClose={() => !managerAssignmentLoading && setOpenAssignManagerDialog(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={openAssignManagerDialog}
+        onClose={() => !managerAssignmentLoading && setOpenAssignManagerDialog(false)}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 3 }
         }}
       >
-        <DialogTitle sx={{ 
-          bgcolor: managerAssignmentData.action === 'assign' ? '#2196f3' : '#ff9800', 
+        <DialogTitle sx={{
+          bgcolor: managerAssignmentData.action === 'assign' ? '#2196f3' : '#ff9800',
           color: 'white',
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3
@@ -1708,11 +1712,11 @@ const Stations = () => {
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           {managerAssignmentLoading && <LinearProgress sx={{ mb: 2 }} />}
-          
+
           <Typography variant="h6" gutterBottom>
             Station: {managerAssignmentData.stationName}
           </Typography>
-          
+
           {managerAssignmentData.action === 'assign' ? (
             <FormControl fullWidth size="medium" sx={{ mt: 2 }}>
               <InputLabel>Select Manager *</InputLabel>
@@ -1762,10 +1766,10 @@ const Stations = () => {
               )}
             </FormControl>
           ) : (
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                mt: 2, 
+            <Alert
+              severity="warning"
+              sx={{
+                mt: 2,
                 borderRadius: 2,
                 '& .MuiAlert-icon': { alignItems: 'center' }
               }}
@@ -1780,43 +1784,43 @@ const Stations = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={() => setOpenAssignManagerDialog(false)} 
+          <Button
+            onClick={() => setOpenAssignManagerDialog(false)}
             disabled={managerAssignmentLoading}
             sx={{ borderRadius: 2 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleAssignManager} 
-            variant="contained" 
+          <Button
+            onClick={handleAssignManager}
+            variant="contained"
             color={managerAssignmentData.action === 'assign' ? "primary" : "warning"}
             disabled={managerAssignmentLoading || (managerAssignmentData.action === 'assign' && !managerAssignmentData.manager)}
-            startIcon={managerAssignmentLoading ? <CircularProgress size={20} /> : 
+            startIcon={managerAssignmentLoading ? <CircularProgress size={20} /> :
               (managerAssignmentData.action === 'assign' ? <AssignmentIcon /> : <PersonIcon />)}
-            sx={{ 
+            sx={{
               borderRadius: 2,
-              background: managerAssignmentData.action === 'assign' 
+              background: managerAssignmentData.action === 'assign'
                 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 : 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)'
             }}
           >
-            {managerAssignmentLoading ? 'Processing...' : 
+            {managerAssignmentLoading ? 'Processing...' :
               (managerAssignmentData.action === 'assign' ? 'Assign Manager' : 'Remove Manager')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={openDeleteDialog} 
+      <Dialog
+        open={openDeleteDialog}
         onClose={() => !formLoading && setOpenDeleteDialog(false)}
         PaperProps={{
           sx: { borderRadius: 3, maxWidth: 500 }
         }}
       >
-        <DialogTitle sx={{ 
-          bgcolor: '#f44336', 
+        <DialogTitle sx={{
+          bgcolor: '#f44336',
           color: 'white',
           borderTopLeftRadius: 3,
           borderTopRightRadius: 3
@@ -1832,10 +1836,10 @@ const Stations = () => {
             Are you sure you want to delete {selectedStation?.stationName}?
           </Typography>
           {selectedStation?.isActive && (
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                mb: 2, 
+            <Alert
+              severity="warning"
+              sx={{
+                mb: 2,
                 borderRadius: 2,
                 '& .MuiAlert-icon': { alignItems: 'center' }
               }}
@@ -1848,9 +1852,9 @@ const Stations = () => {
               </Typography>
             </Alert>
           )}
-          <Alert 
-            severity="error" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               borderRadius: 2,
               '& .MuiAlert-icon': { alignItems: 'center' }
             }}
@@ -1864,16 +1868,16 @@ const Stations = () => {
           </Alert>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={() => setOpenDeleteDialog(false)} 
+          <Button
+            onClick={() => setOpenDeleteDialog(false)}
             disabled={formLoading}
             sx={{ borderRadius: 2 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleDeleteStation} 
-            variant="contained" 
+          <Button
+            onClick={handleDeleteStation}
+            variant="contained"
             color="error"
             disabled={formLoading || selectedStation?.isActive}
             startIcon={formLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}

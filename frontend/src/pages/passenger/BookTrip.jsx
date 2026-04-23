@@ -40,6 +40,7 @@ import SeatSelection from '../../components/passenger/SeatSelection';
 import TripSearch from '../../components/passenger/TripSearch';
 import TripResults from '../../components/passenger/TripResults';
 import PaymentButton from '../../components/passenger/PaymentButton';
+import ReceiptUpload from '../../components/passenger/ReceiptUpload';
 import toast from 'react-hot-toast';
 
 const steps = ['Search Trips', 'Select Trip', 'Choose Seats', 'Payment'];
@@ -71,6 +72,7 @@ export default function BookTrip() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' or 'manual'
   const [error, setError] = useState(null);
 
   // Fetch stations on mount
@@ -115,7 +117,7 @@ export default function BookTrip() {
     try {
       setLoading(true);
       const response = await api.get(`/api/trip/${id}`);
-      
+
       const trip = response.data?.data || response.data;
       if (trip) {
         setSelectedTrip(trip);
@@ -135,7 +137,7 @@ export default function BookTrip() {
     try {
       console.log('🔍 Fetching booked seats for trip:', tripId);
       const response = await api.get(`/api/booking/trip/${tripId}/booked-seats`);
-      
+
       // The API returns an array of booked seat numbers
       const bookedSeatsArray = response.data?.data || [];
       console.log('📊 Booked seats from backend:', bookedSeatsArray);
@@ -196,7 +198,7 @@ export default function BookTrip() {
       } else {
         toast.success(t('Found {{count}} trips', { count: trips.length }));
       }
-      
+
       setActiveStep(1);
     } catch (error) {
       console.error('❌ Search error:', error);
@@ -244,7 +246,7 @@ export default function BookTrip() {
 
     try {
       console.log('Creating booking for seats:', selectedSeats);
-      
+
       const passengerDetails = {
         fullName: user.fullName,
         phoneNumber: user.phoneNumber,
@@ -253,56 +255,56 @@ export default function BookTrip() {
       };
 
       let bookingResponse;
-      
+
       if (selectedSeats.length === 1) {
         const bookingData = {
           tripID: selectedTrip._id,
           seatNumber: parseInt(selectedSeats[0], 10),
           passengerDetails
         };
-        
+
         console.log('Sending single seat booking data:', bookingData);
         const response = await api.post('/api/booking', bookingData);
         bookingResponse = response.data?.data;
-        
+
       } else {
         const seatsPayload = selectedSeats.map(seatNumber => ({
           seatNumber: parseInt(seatNumber, 10)
         }));
-        
+
         const batchData = {
           tripID: selectedTrip._id,
           seats: seatsPayload,
           passengerDetails
         };
-        
+
         console.log('Sending batch booking data:', batchData);
         const response = await api.post('/api/booking/batch', batchData);
-        
+
         const bookingArray = response.data?.data || [];
         bookingResponse = bookingArray[0];
       }
-      
+
       console.log('Booking created:', bookingResponse);
       setCreatedBooking(bookingResponse);
-      
+
       const seatCount = selectedSeats.length;
       toast.success(t('{{count}} seat(s) booked successfully!', { count: seatCount }));
-      
+
       setActiveStep(3);
-      
+
     } catch (error) {
       console.error('Booking error:', error);
       console.error('Error details:', error.response?.data);
-      
+
       let errorMessage = t('Failed to create booking');
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       }
-      
+
       toast.error(errorMessage);
       setPaymentDialogOpen(false);
       setPaymentStatus('failed');
@@ -314,9 +316,9 @@ export default function BookTrip() {
   const handlePaymentSuccess = useCallback(() => {
     setPaymentStatus('success');
     toast.success(t('Payment completed successfully!'));
-    
+
     const bookingId = createdBooking?._id;
-    
+
     setTimeout(() => {
       navigate(`/passenger/booking-confirmation?bookingId=${bookingId}&success=true`);
     }, 1500);
@@ -396,7 +398,7 @@ export default function BookTrip() {
             loading={searching}
           />
         );
-      
+
       case 1:
         return (
           <TripResults
@@ -409,7 +411,7 @@ export default function BookTrip() {
             loading={searching}
           />
         );
-      
+
       case 2:
         return selectedTrip ? (
           <SeatSelection
@@ -424,7 +426,7 @@ export default function BookTrip() {
             bookedSeats={bookedSeats} // Pass the booked seats to SeatSelection
           />
         ) : null;
-      
+
       case 3: {
         const totalAmount = getTotalAmount();
         const bookingId = createdBooking?._id;
@@ -439,16 +441,16 @@ export default function BookTrip() {
             <Typography variant="body1" color="text.secondary" paragraph>
               {t('You have {{count}} seat(s) to pay for.', { count: seatCount })}
             </Typography>
-            
-            <Box sx={{ 
-              my: 4, 
-              p: 3, 
+
+            <Box sx={{
+              my: 4,
+              p: 3,
               bgcolor: alpha(theme.palette.primary.main, 0.02),
               borderRadius: '12px',
               border: '1px solid #e2e8f0'
             }}>
-              <Typography variant="h3" sx={{ 
-                fontWeight: 700, 
+              <Typography variant="h3" sx={{
+                fontWeight: 700,
                 color: theme.palette.primary.main,
                 mb: 1
               }}>
@@ -457,11 +459,11 @@ export default function BookTrip() {
               <Typography variant="body2" color="text.secondary">
                 {seatCount} {t('seat(s)')} × ETB {selectedTrip?.price.toLocaleString()}
               </Typography>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: 1, 
+
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 1,
                 mt: 2,
                 flexWrap: 'wrap'
               }}>
@@ -482,7 +484,7 @@ export default function BookTrip() {
                   </Typography>
                 ))}
               </Box>
-              
+
               {seatCount > 1 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
                   {t('Group booking - all seats in one transaction')}
@@ -490,15 +492,42 @@ export default function BookTrip() {
               )}
             </Box>
 
+            <Box sx={{ mb: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Button
+                variant={paymentMethod === 'online' ? 'contained' : 'outlined'}
+                onClick={() => setPaymentMethod('online')}
+                startIcon={<PaymentIcon />}
+                sx={{ borderRadius: '12px', px: 3 }}
+              >
+                {t('Online Payment (Chapa)')}
+              </Button>
+              <Button
+                variant={paymentMethod === 'manual' ? 'contained' : 'outlined'}
+                onClick={() => setPaymentMethod('manual')}
+                startIcon={<SearchIcon />}
+                sx={{ borderRadius: '12px', px: 3 }}
+              >
+                {t('Bank Transfer (OCR)')}
+              </Button>
+            </Box>
+
             {bookingId ? (
-              <PaymentButton
-                bookingId={bookingId}
-                amount={totalAmount}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                fullWidth
-                size="large"
-              />
+              paymentMethod === 'online' ? (
+                <PaymentButton
+                  bookingId={bookingId}
+                  amount={totalAmount}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                  fullWidth
+                  size="large"
+                />
+              ) : (
+                <ReceiptUpload
+                  bookingId={bookingId}
+                  amount={totalAmount}
+                  onVerificationSuccess={handlePaymentSuccess}
+                />
+              )
             ) : (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 {t('No booking found. Please go back and try again.')}
@@ -516,7 +545,7 @@ export default function BookTrip() {
           </Paper>
         );
       }
-      
+
       default:
         return null;
     }
@@ -576,16 +605,16 @@ export default function BookTrip() {
         </Box>
       )}
 
-      <Dialog 
-        open={paymentDialogOpen && activeStep !== 3} 
+      <Dialog
+        open={paymentDialogOpen && activeStep !== 3}
         onClose={handleClosePaymentDialog}
         maxWidth="xs"
         fullWidth
       >
         <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>
-          {paymentStatus === 'success' ? t('Payment Successful') : 
-           paymentStatus === 'failed' ? t('Payment Failed') : 
-           t('Processing Payment')}
+          {paymentStatus === 'success' ? t('Payment Successful') :
+            paymentStatus === 'failed' ? t('Payment Failed') :
+              t('Processing Payment')}
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', pb: 3 }}>
           {!paymentStatus ? (
@@ -625,9 +654,9 @@ export default function BookTrip() {
         </DialogContent>
         {paymentStatus && (
           <DialogActions sx={{ pb: 3, px: 3 }}>
-            <Button 
-              onClick={handleClosePaymentDialog} 
-              variant="contained" 
+            <Button
+              onClick={handleClosePaymentDialog}
+              variant="contained"
               fullWidth
               color={paymentStatus === 'success' ? 'success' : 'primary'}
             >

@@ -5,32 +5,34 @@ import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationsPage = () => {
-  const { 
-    notifications, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead, 
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
     deleteNotification,
     retryFailedNotification,
-    loading 
+    loading
   } = useNotifications();
   const [filter, setFilter] = useState('all');
   const [retrying, setRetrying] = useState(null);
 
-  const filtered = notifications.filter(n => 
+  const filtered = notifications.filter(n =>
     filter === 'all' ? true : filter === 'unread' ? n.status !== 'read' : true
   );
 
   const getIcon = (type) => {
     const icons = {
-      booking_confirmation: '✅', 
-      payment_success: '✅', 
+      booking_confirmation: '✅',
+      payment_success: '✅',
       payment_failed: '❌',
-      trip_cancellation: '❌', 
-      trip_delay: '⏱️', 
+      trip_cancellation: '❌',
+      trip_delay: '⏱️',
       trip_reminder: '⏰',
-      driver_assignment: '👨‍✈️', 
-      station_announcement: '📢'
+      driver_assignment: '👨‍✈️',
+      station_announcement: '📢',
+      queue_update: '🔢',
+      vehicle_ready: '🚀'
     };
     return icons[type] || '🔔';
   };
@@ -64,8 +66,8 @@ const NotificationsPage = () => {
               )}
             </div>
             {unreadCount > 0 && (
-              <button 
-                onClick={markAllAsRead} 
+              <button
+                onClick={markAllAsRead}
                 className="text-white/80 hover:text-white flex items-center gap-2"
               >
                 <CheckCheck className="w-5 h-5" />
@@ -81,21 +83,19 @@ const NotificationsPage = () => {
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filter === 'all' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'all'
+                ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+              }`}
           >
             All ({notifications.length})
           </button>
           <button
             onClick={() => setFilter('unread')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filter === 'unread' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-lg transition-colors ${filter === 'unread'
+                ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+              }`}
           >
             Unread ({unreadCount})
           </button>
@@ -118,21 +118,19 @@ const NotificationsPage = () => {
               <div
                 key={n._id}
                 onClick={() => n.status !== 'read' && markAsRead(n._id)}
-                className={`p-4 border-b last:border-0 flex gap-3 transition-colors ${
-                  n.status !== 'read' 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+                className={`p-4 border-b last:border-0 flex gap-3 transition-colors ${n.status !== 'read'
+                    ? 'bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                } ${isFailed(n) ? 'border-l-4 border-l-red-500' : ''}`}
+                  } ${isFailed(n) ? 'border-l-4 border-l-red-500' : ''}`}
               >
                 <span className="text-2xl">{getIcon(n.type)}</span>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className={`font-medium ${
-                        n.status !== 'read' 
-                          ? 'text-gray-900 dark:text-white' 
+                      <h3 className={`font-medium ${n.status !== 'read'
+                          ? 'text-gray-900 dark:text-white'
                           : 'text-gray-600 dark:text-gray-400'
-                      }`}>
+                        }`}>
                         {n.title}
                       </h3>
                       {isFailed(n) && (
@@ -161,7 +159,27 @@ const NotificationsPage = () => {
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{n.message}</p>
+                  {n.message?.includes('<') ? (
+                    <div
+                      className="text-sm text-gray-600 dark:text-gray-400 mt-1 notification-content"
+                      dangerouslySetInnerHTML={{ __html: n.message }}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{n.message}</p>
+                  )}
+
+                  {n.metadata?.actionURL && (
+                    <div className="mt-3">
+                      <Link
+                        to={n.metadata.actionURL}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg"
+                      >
+                        {n.metadata.actionLabel || 'View Details'}
+                        <ArrowLeft className="w-3 h-3 rotate-180" />
+                      </Link>
+                    </div>
+                  )}
+
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                     {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                   </p>
