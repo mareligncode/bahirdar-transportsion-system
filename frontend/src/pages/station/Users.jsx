@@ -53,8 +53,10 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { format, formatDistance } from 'date-fns';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const Users = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -70,11 +72,11 @@ const Users = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [toggleDialogOpen, setToggleDialogOpen] = useState(false);
-  
+
   // Selected user states
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserDetails, setSelectedUserDetails] = useState(null);
-  
+
   // Form states for assign driver
   const [assignForm, setAssignForm] = useState({
     passengerId: '',
@@ -90,10 +92,10 @@ const Users = () => {
       // First get current user profile
       const response = await api.get('/api/auth/profile');
       console.log('Profile response:', response.data);
-      
+
       if (response.data.success) {
         const userData = response.data.data?.user || response.data.data;
-        
+
         if (userData.stationID) {
           if (typeof userData.stationID === 'object') {
             setStationInfo(userData.stationID);
@@ -120,35 +122,35 @@ const Users = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const response = await api.get('/api/auth/station-users');
-      
+
       console.log('📊 Station Users Response:', response.data);
-      
+
       if (response.data.success) {
         const allUsers = response.data.data?.users || [];
-        
+
         // Filter to ONLY show passengers
         const passengers = allUsers.filter(user => user.role === 'passenger');
-        
+
         setUsers(passengers);
-        
+
         // Fetch station info if not already set
         if (!stationInfo) {
           await fetchStationInfo();
         }
       } else {
-        setError(response.data.message || 'Failed to fetch users');
+        setError(response.data.message || t('Failed to fetch users'));
       }
     } catch (err) {
       console.error('❌ Fetch users error:', err);
-      
+
       if (err.response?.status === 403) {
-        setError('Access denied. You may not have permission to view station users.');
+        setError(t('Access denied. You may not have permission to view station users.'));
       } else if (err.response?.status === 401) {
-        setError('Session expired. Please login again.');
+        setError(t('Session expired. Please login again.'));
       } else {
-        setError(err.response?.data?.message || 'Failed to load users. Please try again.');
+        setError(err.response?.data?.message || t('Failed to load users. Please try again.'));
       }
     } finally {
       setLoading(false);
@@ -161,12 +163,12 @@ const Users = () => {
 
   // Filter users based on search and status
   const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phoneNumber?.includes(searchTerm);
 
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && user.isActive) ||
       (statusFilter === 'inactive' && !user.isActive);
 
@@ -231,7 +233,7 @@ const Users = () => {
     if (!assignForm.licenseNumber.trim()) {
       errors.licenseNumber = 'License number is required';
     }
-    
+
     if (Object.keys(errors).length > 0) {
       setAssignErrors(errors);
       return;
@@ -239,17 +241,17 @@ const Users = () => {
 
     try {
       setAssignLoading(true);
-      
+
       const formData = {
         passengerId: assignForm.passengerId,
         licenseNumber: assignForm.licenseNumber,
         stationID: stationInfo?._id || assignForm.stationID
       };
-      
+
       console.log('📤 Assigning driver with data:', formData);
-      
+
       const response = await api.post('/api/auth/assign-driver', formData);
-      
+
       if (response.data.success) {
         setSuccess('✅ Passenger assigned as driver successfully');
         setAssignDialogOpen(false);
@@ -259,9 +261,9 @@ const Users = () => {
       }
     } catch (err) {
       console.error('❌ Assign driver error:', err);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error ||
-                          'Failed to assign driver role. Please try again.';
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Failed to assign driver role. Please try again.';
       setError(errorMessage);
     } finally {
       setAssignLoading(false);
@@ -275,29 +277,29 @@ const Users = () => {
     try {
       setActionLoading(true);
       setError('');
-      
+
       console.log('🔄 Toggling status for user:', selectedUser._id);
-      
+
       const response = await api.post('/api/auth/toggle-status', {
         userId: selectedUser._id
       });
-      
+
       console.log('📊 Toggle response:', response.data);
-      
+
       if (response.data.success) {
         const action = selectedUser.isActive ? 'deactivated' : 'activated';
         setSuccess(`✅ User ${action} successfully`);
         setToggleDialogOpen(false);
-        
+
         // Update the user in the local state immediately
-        setUsers(prevUsers => 
-          prevUsers.map(u => 
-            u._id === selectedUser._id 
+        setUsers(prevUsers =>
+          prevUsers.map(u =>
+            u._id === selectedUser._id
               ? { ...u, isActive: !selectedUser.isActive }
               : u
           )
         );
-        
+
         // Also refresh from server to be safe
         setTimeout(() => fetchUsers(), 500);
       } else {
@@ -305,7 +307,7 @@ const Users = () => {
       }
     } catch (err) {
       console.error('❌ Toggle status error:', err);
-      
+
       let errorMessage = 'Failed to update user status';
       if (err.response?.status === 403) {
         if (err.response?.data?.message?.includes('Cannot manage users from other stations')) {
@@ -316,7 +318,7 @@ const Users = () => {
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setActionLoading(false);
@@ -372,8 +374,8 @@ const Users = () => {
         {stationInfo && (
           <Alert severity="info" sx={{ mb: 3 }} icon={<LocationIcon />}>
             <Typography variant="body2">
-              <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode}) | 
-              <strong> City:</strong> {stationInfo.city} | 
+              <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode}) |
+              <strong> City:</strong> {stationInfo.city} |
               <strong> Location:</strong> {stationInfo.location}
             </Typography>
           </Alert>
@@ -459,8 +461,8 @@ const Users = () => {
             </Box>
           </Box>
         ) : error ? (
-          <Alert 
-            severity="error" 
+          <Alert
+            severity="error"
             sx={{ m: 2 }}
             action={
               <Button color="inherit" size="small" onClick={clearError}>
@@ -498,9 +500,9 @@ const Users = () => {
                       <TableRow key={user._id} hover>
                         <TableCell>
                           <Box display="flex" alignItems="center">
-                            <Avatar 
-                              sx={{ 
-                                mr: 2, 
+                            <Avatar
+                              sx={{
+                                mr: 2,
                                 bgcolor: 'primary.main',
                                 width: 40,
                                 height: 40
@@ -565,7 +567,7 @@ const Users = () => {
                                 <ViewIcon />
                               </IconButton>
                             </Tooltip>
-                            
+
                             <Tooltip title="Assign as Driver">
                               <IconButton
                                 size="small"
@@ -593,7 +595,7 @@ const Users = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, 50]}
               component="div"
@@ -639,7 +641,7 @@ const Users = () => {
               sx={{ mb: 2 }}
               placeholder="Enter driver's license number"
             />
-            
+
             {stationInfo && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
@@ -721,11 +723,11 @@ const Users = () => {
                         {selectedUserDetails.fullName?.charAt(0).toUpperCase()}
                       </Avatar>
                     </Badge>
-                    
+
                     <Typography variant="h6" gutterBottom>
                       {selectedUserDetails.fullName}
                     </Typography>
-                    
+
                     <Chip
                       label="PASSENGER"
                       color="primary"
@@ -733,7 +735,7 @@ const Users = () => {
                     />
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} md={8}>
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
@@ -800,7 +802,7 @@ const Users = () => {
                         <Box display="flex" alignItems="center" gap={1}>
                           <LocationIcon fontSize="small" color="primary" />
                           <Typography>
-                            {typeof selectedUserDetails.stationID === 'object' 
+                            {typeof selectedUserDetails.stationID === 'object'
                               ? `${selectedUserDetails.stationID.stationName} (${selectedUserDetails.stationID.stationCode}) - ${selectedUserDetails.stationID.city}`
                               : `Station ID: ${selectedUserDetails.stationID}`}
                           </Typography>
@@ -837,8 +839,8 @@ const Users = () => {
         <DialogContent>
           {selectedUser && (
             <>
-              <Alert 
-                severity={selectedUser.isActive ? 'warning' : 'info'} 
+              <Alert
+                severity={selectedUser.isActive ? 'warning' : 'info'}
                 sx={{ mt: 2 }}
               >
                 <Typography variant="body2">
@@ -847,7 +849,7 @@ const Users = () => {
                   <strong>{selectedUser.fullName}</strong>?
                 </Typography>
               </Alert>
-              
+
               {selectedUser.isActive && (
                 <Alert severity="warning" sx={{ mt: 2 }}>
                   <Typography variant="body2">
@@ -855,7 +857,7 @@ const Users = () => {
                   </Typography>
                 </Alert>
               )}
-              
+
               {!selectedUser.isActive && (
                 <Alert severity="success" sx={{ mt: 2 }}>
                   <Typography variant="body2">

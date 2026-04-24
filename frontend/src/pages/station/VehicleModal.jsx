@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { X, Car, Wrench, User, CreditCard } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, userStation }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     plateNumber: '',
     carType: 'coaster',
@@ -210,7 +212,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load form data');
+      toast.error(t('Failed to load form data'));
     }
   };
 
@@ -265,12 +267,12 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
     // Validate required fields
     if (!formData.plateNumber || !formData.totalCapacity || !formData.make || !formData.model || !formData.insuranceExpiry) {
-      toast.error('Please fill in all required fields (*)');
+      toast.error(t('please_fill_required_fields'));
       return;
     }
 
     if (!formData.stationID) {
-      toast.error('Station is required');
+      toast.error(t('station_required'));
       return;
     }
 
@@ -279,7 +281,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       const { ownerDetails } = formData;
       if (!ownerDetails.ownerName || !ownerDetails.phoneNumber ||
         !ownerDetails.bankDetails.accountNumber || !ownerDetails.bankDetails.bankName) {
-        toast.error('All owner details are required for new vehicles');
+        toast.error(t('owner_details_required_new_vehicle'));
         return;
       }
     }
@@ -311,11 +313,11 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
       if (vehicle) {
         // Update existing vehicle
         await api.put(`/api/vehicles/${vehicle._id}`, payload);
-        toast.success('Vehicle updated successfully');
+        toast.success(t('vehicle_updated_successfully'));
       } else {
         // Create new vehicle
         await api.post('/api/vehicles/register', payload);
-        toast.success('Vehicle created successfully');
+        toast.success(t('vehicle_created_successfully'));
       }
 
       // Call onSuccess callback if provided
@@ -330,17 +332,17 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
       // Handle specific errors
       if (errorMsg.includes('Plate number') || errorMsg.includes('plateNumber')) {
-        toast.error('Vehicle with this plate number already exists');
+        toast.error(t('plate_number_exists'));
       } else if (errorMsg.includes('Station') || errorMsg.includes('stationID')) {
-        toast.error('Invalid station selected');
+        toast.error(t('invalid_station_selected'));
       } else if (errorMsg.includes('driverID') || errorMsg.includes('driver')) {
-        toast.error('Invalid driver selected');
+        toast.error(t('invalid_driver_selected'));
       } else if (errorMsg.includes('owner') || errorMsg.includes('Owner')) {
-        toast.error('Please provide all owner details');
+        toast.error(t('provide_owner_details'));
       } else if (errorMsg.includes('permission') || error.response?.status === 403) {
-        toast.error('You do not have permission to perform this action');
+        toast.error(t('no_permission_action'));
       } else if (error.response?.status === 401) {
-        toast.error('Session expired. Please login again');
+        toast.error(t('Session expired. Please login again.'));
       } else {
         toast.error(errorMsg);
       }
@@ -363,14 +365,14 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  {vehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
+                  {vehicle ? t('edit_vehicle') : t('create_vehicle')}
                 </h2>
                 <p className="text-sm text-gray-600">
                   {userStation?.stationName
-                    ? `Station: ${userStation.stationName} (${userStation.city || ''})`
+                    ? `${t('station')}: ${userStation.stationName} (${userStation.city || ''})`
                     : userProfile?.stationID
-                      ? 'Register a new vehicle to your station'
-                      : 'Register a new vehicle'}
+                      ? t('register_new_vehicle_station_hint')
+                      : t('register_new_vehicle_hint')}
                 </p>
               </div>
             </div>
@@ -397,7 +399,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plate Number *
+                    {t('plate_number')} *
                   </label>
                   <input
                     type="text"
@@ -412,7 +414,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle Type *
+                    {t('vehicle_type')} *
                   </label>
                   <select
                     name="carType"
@@ -431,7 +433,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total Capacity *
+                    {t('total_capacity')} *
                   </label>
                   <input
                     type="number"
@@ -449,7 +451,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                 {/* Station selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Station *
+                    {t('station')} *
                   </label>
                   <select
                     name="stationID"
@@ -467,13 +469,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                       ))
                     ) : (
                       <option value={formData.stationID}>
-                        {userStation?.stationName || 'Your Station'}
+                        {userStation?.stationName || t('station')}
                       </option>
                     )}
                   </select>
                   {(stations.length <= 1 || userStation) && (
                     <p className="text-xs text-gray-600 mt-1">
-                      Station admin can only manage vehicles from assigned station
+                      {t('only_active_drivers_hint')}
                     </p>
                   )}
                 </div>
@@ -483,13 +485,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
                   <Wrench className="w-5 h-5" />
-                  Specifications
+                  {t('specifications')}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Make *
+                      {t('make')} *
                     </label>
                     <input
                       type="text"
@@ -504,7 +506,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Model *
+                      {t('model')} *
                     </label>
                     <input
                       type="text"
@@ -521,7 +523,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year *
+                      {t('year')} *
                     </label>
                     <input
                       type="number"
@@ -537,7 +539,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Color
+                      {t('color')}
                     </label>
                     <input
                       type="text"
@@ -552,7 +554,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fuel Type *
+                    {t('fuel_type')} *
                   </label>
                   <select
                     name="fuelType"
@@ -571,7 +573,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Insurance Expiry *
+                    {t('insurance_expiry')} *
                   </label>
                   <input
                     type="date"
@@ -588,7 +590,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
             {/* Driver Assignment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign Driver (Optional)
+                {t('assign_driver_optional')}
               </label>
               <select
                 name="driverID"
@@ -596,18 +598,18 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                <option value="">No driver assigned</option>
+                <option value="">{t('no_driver_assigned')}</option>
                 {drivers.map(driver => (
                   <option key={driver._id} value={driver._id}>
                     {driver.fullName} {driver.licenseNumber ? `(${driver.licenseNumber})` : ''}
                   </option>
                 ))}
                 {drivers.length === 0 && (
-                  <option value="" disabled>No drivers available</option>
+                  <option value="" disabled>{t('no_driver_assigned')}</option>
                 )}
               </select>
               <p className="text-xs text-gray-600 mt-1">
-                Only active drivers from your station are shown
+                {t('only_active_drivers_hint')}
               </p>
             </div>
 
@@ -616,7 +618,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
                   <User className="w-5 h-5" />
-                  Owner Details
+                  {t('owner_details')}
                 </h3>
                 {!vehicle && (
                   <button
@@ -624,7 +626,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                     onClick={() => setShowOwnerDetails(!showOwnerDetails)}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                   >
-                    {showOwnerDetails ? 'Hide Owner Details' : 'Add Owner Details'}
+                    {showOwnerDetails ? t('hide_owner_details') : t('add_owner_details')}
                   </button>
                 )}
               </div>
@@ -632,12 +634,12 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               {(showOwnerDetails || vehicle) && (
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-3">
-                    All owner details are required for vehicle registration
+                    {t('owner_details_required_hint')}
                   </p>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Owner Name *
+                      {t('owner_name')} *
                     </label>
                     <input
                       type="text"
@@ -652,7 +654,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Owner Phone Number *
+                      {t('owner_phone')} *
                     </label>
                     <input
                       type="tel"
@@ -668,13 +670,13 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
                   <div className="border-t pt-3">
                     <h4 className="text-md font-medium text-gray-800 flex items-center gap-2 mb-3">
                       <CreditCard className="w-4 h-4" />
-                      Bank Details
+                      {t('bank_details')}
                     </h4>
 
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Bank Name *
+                          {t('bank_name')} *
                         </label>
                         <input
                           type="text"
@@ -689,7 +691,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Account Number *
+                          {t('account_number')} *
                         </label>
                         <input
                           type="text"
@@ -710,7 +712,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
             {/* Features */}
             <div className="border-t pt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vehicle Features
+                {t('vehicle_features')}
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {featuresOptions.map(feature => (
@@ -743,7 +745,7 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               disabled={loading}
             >
-              Cancel
+              {t('Cancel')}
             </button>
 
             <button
@@ -751,12 +753,12 @@ export default function VehicleModal({ isOpen, onClose, vehicle, onSuccess, user
               disabled={loading || !formData.stationID}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : vehicle ? 'Update Vehicle' : 'Create Vehicle'}
+              {loading ? t('saving') : vehicle ? t('update_vehicle') : t('create_vehicle')}
             </button>
           </div>
           {!formData.stationID && (
             <p className="text-sm text-red-600 mt-2 text-center">
-              Station information is required
+              {t('station_info_required')}
             </p>
           )}
         </form>

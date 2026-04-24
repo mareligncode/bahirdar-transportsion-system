@@ -47,28 +47,34 @@ class LocationSimulator {
                 const startCoords = trip.origin?.coordinates || this.getCoordsByCity(trip.origin?.city);
                 const endCoords = trip.destination?.coordinates || this.getCoordsByCity(trip.destination?.city);
 
-                if (startCoords && endCoords) {
+                if (startCoords && endCoords &&
+                    !isNaN(startCoords.lat) && !isNaN(endCoords.lat) &&
+                    !isNaN(startCoords.lng) && !isNaN(endCoords.lng) &&
+                    !isNaN(progress)) {
+
                     // Linear interpolation with a bit of "wobble" to make it look live
                     const wobble = (Math.random() - 0.5) * 0.0002;
-                    const lat = startCoords.lat + (endCoords.lat - startCoords.lat) * progress + wobble;
-                    const lng = startCoords.lng + (endCoords.lng - startCoords.lng) * progress + wobble;
+                    const lat = Number(startCoords.lat) + (Number(endCoords.lat) - Number(startCoords.lat)) * progress + wobble;
+                    const lng = Number(startCoords.lng) + (Number(endCoords.lng) - Number(startCoords.lng)) * progress + wobble;
 
-                    // Update trip with current coordinates
-                    trip.currentCoordinates = { lat, lng };
-                    await trip.save();
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        // Update trip with current coordinates
+                        trip.currentCoordinates = { lat, lng };
+                        await trip.save();
 
-                    // Broadcast to clients
-                    this.io.emit('trip-location-update', {
-                        tripId: trip._id,
-                        coordinates: { lat, lng },
-                        tripNumber: trip.tripNumber,
-                        vehicle: {
-                            plateNumber: trip.vehicle?.plateNumber,
-                            carType: trip.vehicle?.carType
-                        },
-                        origin: { stationName: trip.origin?.stationName },
-                        destination: { stationName: trip.destination?.stationName }
-                    });
+                        // Broadcast to clients
+                        this.io.emit('trip-location-update', {
+                            tripId: trip._id,
+                            coordinates: { lat, lng },
+                            tripNumber: trip.tripNumber,
+                            vehicle: {
+                                plateNumber: trip.vehicle?.plateNumber,
+                                carType: trip.vehicle?.carType
+                            },
+                            origin: { stationName: trip.origin?.stationName },
+                            destination: { stationName: trip.destination?.stationName }
+                        });
+                    }
                 }
             }
         } catch (error) {
