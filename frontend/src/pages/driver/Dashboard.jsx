@@ -579,14 +579,6 @@ const DriverDashboard = () => {
             {t('all_trips')}
           </button>
           <button
-            onClick={() => navigate('/driver/reports')}
-            className={`flex-1 min-w-[150px] px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center border ${isDark ? 'bg-gray-800 text-purple-400 border-white/10 hover:bg-gray-700' : 'bg-white text-purple-600 border-gray-200 hover:bg-purple-50'
-              }`}
-          >
-            <CheckCircleIcon className="h-5 w-5 mr-2" />
-            {t('system_reports')}
-          </button>
-          <button
             onClick={() => navigate('/profile')}
             className={`flex-1 min-w-[150px] px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg flex items-center justify-center border ${isDark ? 'bg-gray-800 text-pink-400 border-white/10 hover:bg-gray-700' : 'bg-white text-pink-600 border-gray-200 hover:bg-pink-50'
               }`}

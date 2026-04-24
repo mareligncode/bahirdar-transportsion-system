@@ -70,7 +70,6 @@ export default function Sidebar({ userRole }) {
       { icon: RefreshCw, label: t('Vehicle Queue'), path: '/driver/queue' },
       { icon: Car, label: t('My Trips'), path: '/driver/trips' },
       { icon: BarChart3, label: t('My Vehicle'), path: '/driver/vehicle' },
-      { icon: Calendar, label: t('Driver Reports'), path: '/driver/reports' },
     ];
 
     const stationAdminItems = [
@@ -81,7 +80,6 @@ export default function Sidebar({ userRole }) {
       { icon: Car, label: t('vehicles'), path: '/station/vehicles' },
       { icon: Route, label: t('routes'), path: '/admin/routes' },
       { icon: Calendar, label: t('trip_management'), path: '/station/trips' },
-      { icon: BarChart3, label: t('station_reports'), path: '/station/reports' },
     ];
 
     const superAdminItems = [
@@ -92,7 +90,6 @@ export default function Sidebar({ userRole }) {
       { icon: Route, label: t('routes'), path: '/admin/routes' },
       { icon: Car, label: t('vehicles'), path: '/admin/vehicles' },
       { icon: MapPin, label: t('stations'), path: '/admin/stations' },
-      { icon: BarChart3, label: t('system_reports'), path: '/admin/reports' },
     ];
 
     switch (userRole) {
