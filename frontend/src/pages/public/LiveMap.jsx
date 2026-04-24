@@ -14,6 +14,16 @@ const LiveMap = () => {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ online: false, count: 0 });
 
+    // Advanced features state
+    const [mapType, setMapType] = useState('street');
+    const [userLocation, setUserLocation] = useState(null);
+    const [destination, setDestination] = useState(null);
+    const [distanceInfo, setDistanceInfo] = useState(null);
+    const userMarkerRef = useRef(null);
+    const destMarkerRef = useRef(null);
+    const routeLineRef = useRef(null);
+    const layerRef = useRef(null);
+
     // 1. Initialize Map (Once)
     useEffect(() => {
         if (!window.L || mapInstance.current) return;
@@ -27,8 +37,14 @@ const LiveMap = () => {
         });
 
         // Use a more professional gray/dark tile set style via filter
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        layerRef.current = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         mapInstance.current = map;
+
+        // Add map click listener for destination
+        map.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            setDestination({ lat, lng });
+        });
 
         // CRITICAL: Ensure map fills container
         setTimeout(() => {
@@ -147,9 +163,11 @@ const LiveMap = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((pos) => {
                 const { latitude, longitude } = pos.coords;
+                setUserLocation({ lat: latitude, lng: longitude });
                 mapInstance.current.flyTo([latitude, longitude], 16, { duration: 2 });
+                if (userMarkerRef.current) userMarkerRef.current.remove();
                 const userIcon = window.L.divIcon({ html: `<div class="w-5 h-5 bg-blue-500 rounded-full border-4 border-white shadow-2xl animate-pulse ring-4 ring-blue-500/20"></div>`, className: '' });
-                window.L.marker([latitude, longitude], { icon: userIcon }).addTo(mapInstance.current).bindPopup("<b>Console Location</b>");
+                userMarkerRef.current = window.L.marker([latitude, longitude], { icon: userIcon }).addTo(mapInstance.current).bindPopup("<b>Your Location</b>");
             });
         }
     };
@@ -172,6 +190,61 @@ const LiveMap = () => {
             marker.openPopup();
         }
     };
+
+    // Calculate Distance & Bearing Helper
+    const calculateDistanceAndBearing = (pos1, pos2) => {
+        const toRad = (value) => (value * Math.PI) / 180;
+        const R = 6371; // Earth's radius in km
+        const dLat = toRad(pos2.lat - pos1.lat);
+        const dLng = toRad(pos2.lng - pos1.lng);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(pos1.lat)) * Math.cos(toRad(pos2.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = (R * c).toFixed(2);
+
+        const y = Math.sin(toRad(pos2.lng - pos1.lng)) * Math.cos(toRad(pos2.lat));
+        const x = Math.cos(toRad(pos1.lat)) * Math.sin(toRad(pos2.lat)) - Math.sin(toRad(pos1.lat)) * Math.cos(toRad(pos2.lat)) * Math.cos(toRad(pos2.lng - pos1.lng));
+        let brng = (Math.atan2(y, x) * 180) / Math.PI;
+        brng = (brng + 360) % 360;
+
+        const directions = ['North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', 'North-West'];
+        const index = Math.round((brng % 360) / 45);
+        return { distance, direction: directions[index === 8 ? 0 : index] };
+    };
+
+    // destination hook
+    useEffect(() => {
+        if (!mapInstance.current || !window.L) return;
+        if (destMarkerRef.current) destMarkerRef.current.remove();
+        if (routeLineRef.current) routeLineRef.current.remove();
+
+        if (destination) {
+            const destIcon = window.L.divIcon({ html: `<div class="w-6 h-6 bg-red-500 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`, className: '' });
+            destMarkerRef.current = window.L.marker([destination.lat, destination.lng], { icon: destIcon }).addTo(mapInstance.current);
+
+            if (userLocation) {
+                const info = calculateDistanceAndBearing(userLocation, destination);
+                setDistanceInfo(info);
+                routeLineRef.current = window.L.polyline([[userLocation.lat, userLocation.lng], [destination.lat, destination.lng]], { color: '#ef4444', weight: 4, dashArray: '5, 10', opacity: 0.8 }).addTo(mapInstance.current);
+            } else {
+                setDistanceInfo({ msg: "Locate yourself first to measure!" });
+            }
+        } else {
+            setDistanceInfo(null);
+        }
+    }, [destination, userLocation]);
+
+    // Layer switch hook
+    useEffect(() => {
+        if (!mapInstance.current || !window.L || !layerRef.current) return;
+        layerRef.current.remove();
+        if (mapType === 'satellite') {
+            layerRef.current = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' }).addTo(mapInstance.current);
+            document.querySelector('.leaflet-tile-pane').style.filter = 'none';
+        } else {
+            layerRef.current = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+            document.querySelector('.leaflet-tile-pane').style.filter = 'brightness(0.65) invert(1) contrast(1.2) hue-rotate(200deg) saturate(0.6) brightness(0.85)';
+        }
+    }, [mapType]);
 
     return (
         <div className="flex h-[calc(100vh-100px)] bg-[#0f172a] rounded-[2.5rem] overflow-hidden border-[6px] border-[#1e293b] relative shadow-[0_25px_80px_rgba(0,0,0,0.5)]">
@@ -247,10 +320,37 @@ const LiveMap = () => {
                     <button onClick={fitAll} className="w-14 h-14 bg-white/90 backdrop-blur-xl text-gray-900 rounded-2xl shadow-3xl transition-all hover:scale-110 active:scale-90 border-2 border-white flex items-center justify-center group">
                         <ZoomIn className="w-6 h-6 group-hover:text-blue-600 transition-colors" />
                     </button>
-                    <div className="w-14 h-14 bg-white/20 backdrop-blur-xl text-white rounded-2xl shadow-3xl transition-all border-2 border-white/20 flex items-center justify-center group cursor-not-allowed opacity-40">
-                        <Layers className="w-6 h-6" />
-                    </div>
+                    <button onClick={() => setMapType(t => t === 'street' ? 'satellite' : 'street')} className={`w-14 h-14 ${mapType === 'satellite' ? 'bg-blue-600 text-white' : 'bg-white/90 text-gray-900'} backdrop-blur-xl rounded-2xl shadow-3xl transition-all hover:scale-110 active:scale-90 border-2 border-white flex items-center justify-center group`}>
+                        <Layers className={`w-6 h-6 ${mapType === 'satellite' ? '' : 'group-hover:text-blue-600'} transition-colors`} />
+                    </button>
                 </div>
+
+                {/* Distance Information Popup */}
+                {distanceInfo && (
+                    <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 flex gap-4 pointer-events-none">
+                        <div className="bg-[#0f172a]/95 backdrop-blur-2xl px-6 py-3 rounded-[2rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] inline-flex items-center gap-5 pointer-events-auto ring-1 ring-white/5">
+                            <div className="p-2.5 bg-red-500/20 rounded-2xl text-red-400">
+                                <MapPin className="w-5 h-5" />
+                            </div>
+                            {distanceInfo.msg ? (
+                                <div>
+                                    <p className="text-xs font-black text-white">{distanceInfo.msg}</p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Target Assessment</p>
+                                    <div className="flex gap-4 items-baseline">
+                                        <p className="text-xl font-black text-white">{distanceInfo.distance} <span className="text-[10px] text-gray-500 uppercase tracking-widest">km</span></p>
+                                        <p className="text-sm font-black text-blue-400 uppercase tracking-widest">{distanceInfo.direction}</p>
+                                    </div>
+                                </div>
+                            )}
+                            <button onClick={() => { setDestination(null); setDistanceInfo(null); }} className="ml-2 w-8 h-8 hover:bg-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Status Dashboard */}
                 <div className="absolute bottom-12 left-12 right-12 lg:right-auto z-10 pointer-events-none">

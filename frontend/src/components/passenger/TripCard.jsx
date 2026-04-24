@@ -114,6 +114,53 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
     return percentage <= 20 && trip.availableSeats > 0;
   }, [trip.availableSeats, trip.totalSeats]);
 
+  const getDepartureStatus = () => {
+    if (!trip.departureTime) return null;
+
+    const now = new Date();
+    const departure = new Date(trip.departureTime);
+    const diffMs = departure - now;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+
+    // If trip status is explicitly boarding
+    if (trip.tripStatus === 'boarding' || trip.status === 'boarding') {
+      return {
+        label: t('boarding_now'),
+        color: 'success',
+        isCritical: true
+      };
+    }
+
+    // Countdown if within 2 hours
+    if (diffMins > 0 && diffMins <= 30) {
+      return {
+        label: t('boarding_now'),
+        color: 'success',
+        isCritical: true
+      };
+    }
+
+    if (diffMins > 30 && diffMins <= 120) {
+      return {
+        label: t('departing_in', { minutes: diffMins }),
+        color: 'warning',
+        isCritical: true
+      };
+    }
+
+    // If it's the departure date but in the past (and not completed/cancelled)
+    if (diffMs < 0 && !['completed', 'cancelled'].includes(trip.status?.toLowerCase())) {
+      return {
+        label: t('just_departed'),
+        color: 'error',
+        isCritical: true
+      };
+    }
+
+    return null;
+  };
+
+  const depStatus = getDepartureStatus();
   const isSoldOut = trip.availableSeats === 0;
 
   // List View
@@ -141,10 +188,13 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             {/* Departure Time */}
             <Grid item xs={12} sm={2}>
               <Box sx={{ textAlign: { xs: 'left', sm: 'center' } }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                  {t('leaves_at')}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b' }}>
                   {formatTime(trip.departureTime)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                   <Schedule sx={{ fontSize: 14 }} />
                   {formatDate(trip.departureTime)}
                 </Typography>
@@ -161,10 +211,13 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             {/* Arrival Time */}
             <Grid item xs={12} sm={2}>
               <Box sx={{ textAlign: { xs: 'left', sm: 'center' } }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                  {t('arrives_at')}
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#64748b' }}>
                   {formatTime(trip.arrivalTime)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                   <Schedule sx={{ fontSize: 14 }} />
                   {formatDate(trip.arrivalTime)}
                 </Typography>
@@ -229,6 +282,18 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             mt: 2,
             flexWrap: 'wrap'
           }}>
+            {depStatus && (
+              <Chip
+                label={depStatus.label}
+                size="small"
+                color={depStatus.color}
+                sx={{
+                  fontWeight: 700,
+                  boxShadow: depStatus.isCritical ? `0 0 10px ${alpha(theme.palette[depStatus.color].main, 0.3)}` : 'none',
+                  animation: depStatus.label === t('boarding_now') ? 'pulse 2s infinite' : 'none'
+                }}
+              />
+            )}
             <Chip
               icon={<EventSeat />}
               label={getSeatAvailabilityText(trip.availableSeats, trip.totalSeats)}
@@ -308,7 +373,16 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
           </Typography>
         </Box>
 
-        {isAlmostFull && !isSoldOut && (
+        {depStatus && (
+          <Chip
+            label={depStatus.label}
+            size="small"
+            color={depStatus.color}
+            sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+          />
+        )}
+
+        {isAlmostFull && !isSoldOut && !depStatus && (
           <Tooltip title={t('book_soon')}>
             <Chip
               label={t('almost_full')}
@@ -353,7 +427,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
               px: 1
             }}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
+                <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 700, fontSize: '0.6rem', display: 'block' }}>
+                  {t('leaves_at')}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b' }}>
                   {formatTime(trip.departureTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -393,7 +470,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
               </Box>
 
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem' }}>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.6rem', display: 'block' }}>
+                  {t('arrives_at')}
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#64748b' }}>
                   {formatTime(trip.arrivalTime)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

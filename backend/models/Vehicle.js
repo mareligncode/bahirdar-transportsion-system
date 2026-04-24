@@ -21,7 +21,7 @@ const vehicleSchema = new mongoose.Schema({
     },
     currentStatus: {
         type: String,
-        enum: ['active', 'maintenance', 'inactive', 'on_trip', 'available'],
+        enum: ['active', 'maintenance', 'inactive', 'on_trip', 'available', 'boarding', 'waiting'],
         default: 'available'
     },
     driverID: {

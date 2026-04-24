@@ -495,8 +495,11 @@ export const searchTrips = async (req, res) => {
         }
 
         const searchDate = new Date(date);
-        const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+        const startOfDay = new Date(searchDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(searchDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
         const query = {
             origin,
@@ -536,7 +539,12 @@ export const searchTrips = async (req, res) => {
 export const updateTripStatus = async (req, res) => {
     try {
         const { status } = req.body;
-        const trip = await Trip.findById(req.params.id);
+        const trip = await Trip.findById(req.params.id)
+            .populate('origin', 'stationName city')
+            .populate('destination', 'stationName city')
+            .populate('vehicle', 'plateNumber carType')
+            .populate('driver', 'fullName phoneNumber')
+            .populate('station', 'stationName');
 
         if (!trip) {
             return res.status(404).json({
@@ -545,11 +553,9 @@ export const updateTripStatus = async (req, res) => {
             });
         }
 
-        // Check driver can only update their own trips
+        // Check permissions
         if (req.user.role === 'driver') {
-
-            //leul
-            if (!trip.driver.equals(req.user.id)) {
+            if (!trip.driver || (trip.driver._id ? !trip.driver._id.equals(req.user.id) : !trip.driver.equals(req.user.id))) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'
@@ -557,9 +563,8 @@ export const updateTripStatus = async (req, res) => {
             }
         }
 
-        // Check station admin permissions
         if (req.user.role === 'station_admin') {
-            if (!req.user.stationID || !trip.station.equals(req.user.stationID)) {
+            if (!req.user.stationID || !trip.station || !trip.station._id.equals(req.user.stationID)) {
                 return res.status(403).json({
                     success: false,
                     message: 'Not authorized to update this trip'
@@ -567,174 +572,136 @@ export const updateTripStatus = async (req, res) => {
             }
         }
 
-        // Update status
+        // 1. Update status and save IMMEDIATELY
         trip.tripStatus = status;
         await trip.save();
 
-        // 🚗 Vehicle Status Sync
-        try {
-            if (status === 'completed' || status === 'cancelled') {
-                await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'available' });
-                console.log(`🚗 Vehicle ${trip.vehicle} is now AVAILABLE after trip ${status}`);
-            } else if (status === 'ongoing') {
-                await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'on_trip' });
-                console.log(`🚗 Vehicle ${trip.vehicle} is now ON_TRIP`);
-            }
-        } catch (vehErr) {
-            console.error('Failed to update vehicle status during trip update:', vehErr);
-        }
-
-        // Send notifications to affected passengers
-        try {
-            // Get all bookings for this trip
-            const bookings = await Booking.find({ tripID: trip._id })
-                .populate('passengerID', 'fullName email phoneNumber');
-
-            console.log('🔍 Found', bookings.length, 'bookings for trip status update');
-            console.log('📋 Trip details:', {
-                tripNumber: trip.tripNumber,
-                status: status,
-                origin: trip.origin?.stationName,
-                destination: trip.destination?.stationName
-            });
-
-            // Prepare notification data based on status
-            let notificationData = {
-                title: '',
-                message: '',
-                type: '',
-                priority: 'high',
-                channel: 'all'
-            };
-
-            switch (status) {
-                case 'cancelled':
-                    notificationData = {
-                        title: 'Trip Cancelled - Refund Information',
-                        message: `Trip ${trip.tripNumber} from ${trip.origin?.stationName} to ${trip.destination?.stationName} has been cancelled. Please check your booking for refund information.`,
-                        type: 'trip_cancellation',
-                        priority: 'urgent',
-                        channel: 'all'
-                    };
-                    break;
-                case 'delayed':
-                    notificationData = {
-                        title: 'Trip Delayed - Updated Schedule',
-                        message: `Trip ${trip.tripNumber} from ${trip.origin?.stationName} to ${trip.destination?.stationName} has been delayed. New departure time: ${new Date(trip.departureTime).toLocaleString()}.`,
-                        type: 'trip_delay',
-                        priority: 'high',
-                        channel: 'all'
-                    };
-                    break;
-                case 'updated':
-                    notificationData = {
-                        title: 'Trip Information Updated',
-                        message: `Trip ${trip.tripNumber} from ${trip.origin?.stationName} to ${trip.destination?.stationName} has been updated. Please check the latest information.`,
-                        type: 'trip_update',
-                        priority: 'medium',
-                        channel: 'all'
-                    };
-                    break;
-                default:
-                    notificationData = {
-                        title: 'Trip Status Updated',
-                        message: `Trip ${trip.tripNumber} status has been updated to ${status}.`,
-                        type: 'trip_update',
-                        priority: 'medium',
-                        channel: 'all'
-                    };
-            }
-
-            console.log('📧 Preparing notification data:', notificationData);
-
-            // Send notifications to all affected passengers
-            for (const booking of bookings) {
-                if (booking.passengerID) {
-                    console.log(`📤 Creating notification for passenger: ${booking.passengerID.fullName} (${booking.passengerID.email})`);
-
-                    const passengerNotificationData = {
-                        userID: booking.passengerID._id,
-                        title: notificationData.title,
-                        message: notificationData.message,
-                        type: notificationData.type,
-                        channel: notificationData.channel,
-                        priority: notificationData.priority,
-                        metadata: {
-                            userName: booking.passengerID.fullName,
-                            booking: {
-                                bookingNumber: booking.bookingNumber,
-                                ticketNumber: booking.ticketNumber,
-                                seatNumber: booking.seatNumber
-                            },
-                            trip: {
-                                tripNumber: trip.tripNumber,
-                                origin: trip.origin?.stationName,
-                                destination: trip.destination?.stationName,
-                                departureTime: trip.departureTime,
-                                arrivalTime: trip.arrivalTime,
-                                status: trip.tripStatus
-                            },
-                            vehicle: {
-                                plateNumber: trip.vehicle?.plateNumber,
-                                carType: trip.vehicle?.carType
-                            },
-                            driver: {
-                                fullName: trip.driver?.fullName,
-                                phoneNumber: trip.driver?.phoneNumber
-                            },
-                            actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}`,
-                            actionText: 'View Booking Details'
-                        }
-                    };
-
-                    try {
-                        const notification = await NotificationService.createNotification(passengerNotificationData);
-                        console.log(`✅ Notification sent successfully: ${notification._id}`);
-                    } catch (notificationError) {
-                        console.error(`❌ Failed to send notification for booking ${booking._id}:`, notificationError.message);
-                    }
-                } else {
-                    console.log('⚠️ Skipping booking - no passengerID found');
-                }
-            }
-        } catch (notificationError) {
-            console.error('🚨 CRITICAL ERROR - Failed to send trip status notifications:', {
-                error: notificationError.message,
-                stack: notificationError.stack,
-                tripId: trip._id,
-                tripNumber: trip.tripNumber
-            });
-        }
-        // end of notfication changes
-
-        // Update vehicle status when trip is completed or cancelled
-        if (['completed', 'cancelled'].includes(status)) {
-            await Vehicle.findByIdAndUpdate(trip.vehicle, { currentStatus: 'available' });
-        }
-
-        // SMART AUTOMATION: If trip is departing (ongoing) or finished (completed/cancelled), 
-        // trigger the next vehicle in line for this route.
-        if (['ongoing', 'completed', 'cancelled'].includes(status) && trip.route) {
-            console.log(`🚀 Trip for route ${trip.route} is ${status}. Triggering next vehicle...`);
-            QueueAutomator.triggerNextTrip(trip.route, trip.station, req.user.id)
-                .catch(err => console.error('Automation Trigger Error:', err));
-        }
-
+        // 2. Respond to the driver RIGHT AWAY - No more lag!
         res.status(200).json({
             success: true,
             message: `Trip status updated to ${status}`,
             data: trip
         });
 
+        // 3. Side Effects (Run in background)
+        setImmediate(async () => {
+            try {
+                // 🚗 Vehicle Status Sync
+                if (['completed', 'cancelled'].includes(status)) {
+                    await Vehicle.findByIdAndUpdate(trip.vehicle?._id || trip.vehicle, { currentStatus: 'available' });
+                } else if (status === 'ongoing') {
+                    await Vehicle.findByIdAndUpdate(trip.vehicle?._id || trip.vehicle, { currentStatus: 'on_trip' });
+                }
+
+                // 📧 Passenger Notifications
+                const bookings = await Booking.find({ tripID: trip._id })
+                    .populate('passengerID', 'fullName email phoneNumber');
+
+                if (bookings.length > 0) {
+                    let notificationBase = {
+                        priority: 'high',
+                        channel: 'all'
+                    };
+
+                    switch (status) {
+                        case 'cancelled':
+                            notificationBase = { ...notificationBase, title: 'Trip Cancelled', type: 'trip_cancellation', priority: 'urgent' };
+                            break;
+                        case 'delayed':
+                            notificationBase = { ...notificationBase, title: 'Trip Delayed', type: 'trip_delay' };
+                            break;
+                        default:
+                            notificationBase = { ...notificationBase, title: 'Trip Status Updated', type: 'trip_update', priority: 'medium' };
+                    }
+
+                    // Process notifications in parallel for speed
+                    await Promise.all(bookings.map(async (booking) => {
+                        if (!booking.passengerID) return;
+
+                        const message = status === 'cancelled'
+                            ? `Trip ${trip.tripNumber} from ${trip.origin?.stationName} to ${trip.destination?.stationName} has been cancelled.`
+                            : status === 'delayed'
+                                ? `Trip ${trip.tripNumber} from ${trip.origin?.stationName} to ${trip.destination?.stationName} has been delayed.`
+                                : `Trip ${trip.tripNumber} status has been updated to ${status}.`;
+
+                        return NotificationService.createNotification({
+                            userID: booking.passengerID._id,
+                            title: notificationBase.title,
+                            message,
+                            type: notificationBase.type,
+                            channel: notificationBase.channel,
+                            priority: notificationBase.priority,
+                            metadata: {
+                                userName: booking.passengerID.fullName,
+                                booking: {
+                                    bookingNumber: booking.bookingNumber,
+                                    ticketNumber: booking.ticketNumber,
+                                    seatNumber: booking.seatNumber
+                                },
+                                trip: {
+                                    tripNumber: trip.tripNumber,
+                                    origin: trip.origin?.stationName,
+                                    destination: trip.destination?.stationName,
+                                    departureTime: trip.departureTime,
+                                    arrivalTime: trip.arrivalTime,
+                                    status
+                                },
+                                vehicle: {
+                                    plateNumber: trip.vehicle?.plateNumber,
+                                    carType: trip.vehicle?.carType
+                                },
+                                driver: {
+                                    fullName: trip.driver?.fullName,
+                                    phoneNumber: trip.driver?.phoneNumber
+                                },
+                                actionURL: `${process.env.CLIENT_URL}/dashboard/bookings/${booking._id}`,
+                                actionText: 'View Booking Details'
+                            }
+                        }).catch(err => console.error(`Failed to notify passenger ${booking.passengerID._id}:`, err));
+                    }));
+                }
+
+                // 🚀 Queue Automation & Circular Logic
+                if (status === 'ongoing') {
+                    // Update queue status to on_trip when trip starts
+                    await Queue.updateMany(
+                        { vehicle: trip.vehicle?._id || trip.vehicle, status: 'loading' },
+                        { status: 'on_trip' }
+                    );
+                }
+
+                if (status === 'completed') {
+                    // 🚀 Run re-queuing in background so driver gets success message instantly
+                    setImmediate(async () => {
+                        try {
+                            await Queue.deleteMany({ vehicle: trip.vehicle?._id || trip.vehicle, status: { $in: ['loading', 'on_trip'] } });
+                            await QueueAutomator.reQueueVehicle(trip);
+                        } catch (err) {
+                            console.error('[QueueAutomator] Background re-queue failed:', err);
+                        }
+                    });
+                }
+
+                if (['ongoing', 'completed', 'cancelled'].includes(status) && trip.route) {
+                    await QueueAutomator.triggerNextTrip(trip.route, trip.station?._id || trip.station, req.user.id);
+                }
+            } catch (bgErr) {
+                console.error('CRITICAL: Background status update processing failed:', bgErr);
+            }
+        });
+
     } catch (error) {
         console.error('Update trip status error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error updating trip status',
-            error: error.message
-        });
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Error updating trip status',
+                error: error.message
+            });
+        }
     }
 };
+
 
 export const getDriverTrips = async (req, res) => {
     try {

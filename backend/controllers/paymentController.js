@@ -5,6 +5,7 @@ import Booking from '../models/Booking.js';
 import Trip from '../models/Trip.js';
 import User from '../models/Users.js';
 import Vehicle from '../models/Vehicle.js';
+import Station from '../models/Station.js'; // Added Station support
 import OCRProcessor from '../utils/ocrProcessor.js';
 import NotificationService from '../services/notificationService.js';
 import cloudinary from '../config/cloudinary.js';
@@ -1093,68 +1094,103 @@ export const verifyBankReceipt = async (req, res) => {
         // Fallback: If booking.totalPrice is 0 (old data), use trip price
         const requiredAmount = booking.totalPrice > 0 ? booking.totalPrice : (booking.tripID?.price || 0);
         const amountMatch = Math.abs(extractedData.amount - requiredAmount) < 2;
-        
-        const ownerName = (vehicle?.ownerDetails?.ownerName || "").toLowerCase();
-        const extractedReceiver = (extractedData.receiverName || "").toLowerCase();
-        
-        // Better fuzzy matching for name
-        const ownerNameInReceipt = extractedReceiver && ownerName && 
-            (extractedReceiver.includes(ownerName) || ownerName.includes(extractedReceiver) || 
-             ownerName.split(' ').some(part => part.length > 3 && extractedReceiver.includes(part)));
 
-        const isSuspicious = !ownerNameInReceipt || (extractedData.confidence < 60);
+        const ownerName = (vehicle?.ownerDetails?.ownerName || "").toLowerCase();
+        const ownerAccount = (vehicle?.ownerDetails?.bankDetails?.accountNumber || "").replace(/\s+/g, '');
+        const extractedReceiver = (extractedData.receiverName || "").toLowerCase();
+        const extractedAccount = (extractedData.accountNumber || "").replace(/\s+/g, '');
+
+        console.log(`🔍 Validation Match Check:`);
+        console.log(`Name: System(${ownerName}) vs Receipt(${extractedReceiver})`);
+        console.log(`Account: System(${ownerAccount}) vs Receipt(${extractedAccount})`);
+
+        // Stricter matching logic
+        const nameMatch = extractedReceiver && ownerName &&
+            (extractedReceiver.includes(ownerName) || ownerName.includes(extractedReceiver) ||
+                ownerName.split(' ').some(part => part.length > 3 && extractedReceiver.includes(part)));
+
+        const accountMatchStatus = extractedAccount && ownerAccount ? (extractedAccount === ownerAccount) : null;
+
+        // A payment is solid if amount matches AND (name matches OR account matches)
+        // If account matches exactly, we trust it highly.
+        const isVerified = amountMatch && (accountMatchStatus === true || (accountMatchStatus === null && nameMatch));
+        const isSuspicious = !isVerified || (extractedData.confidence < 70);
 
         if (!amountMatch) {
             return res.status(422).json({
                 success: false,
-                message: `Amount mismatch. Receipt: ${extractedData.amount}, Required: ${requiredAmount}`,
+                message: `Amount mismatch. Expected: ETB ${requiredAmount}, Detected: ETB ${extractedData.amount || 0}. Please ensure you transferred the correct amount.`,
+                extracted: extractedData
+            });
+        }
+
+        if (accountMatchStatus === false) {
+            return res.status(422).json({
+                success: false,
+                message: `Account Number mismatch. Detected: ${extractedAccount}, Expected: ${ownerAccount}. Please send funds to the correct account.`,
+                extracted: extractedData
+            });
+        }
+
+        if (extractedData.confidence < 70) {
+            return res.status(422).json({
+                success: false,
+                message: `Image quality too low (Confidence: ${Math.round(extractedData.confidence)}%). Please provide a clearer, brighter photo of the receipt.`,
+                extracted: extractedData
+            });
+        }
+
+        // If amount and account match, we are good.
+        // If amount matches but account was null, we check name.
+        if (!isVerified && !nameMatch && accountMatchStatus === null) {
+            return res.status(422).json({
+                success: false,
+                message: `Receiver name mismatch. Receipt says "${extractedReceiver}", but owner name is "${ownerName}". Please check the recipient name.`,
                 extracted: extractedData
             });
         }
 
         // 5. Finalize Payment
-        const paymentStatus = isSuspicious ? 'under_review' : 'success';
-
-        const payment = new Payment({
+        const paymentData = {
             bookingID: booking._id,
             passengerID: req.user._id,
-            tripID: booking.tripID._id,
+            tripID: booking.tripID?._id || booking.tripID,
             amount: extractedData.amount,
             paymentGateway: 'bank_transfer_receipt',
             paymentMethod: 'bank_transfer',
-            paymentStatus: paymentStatus,
+            paymentStatus: 'success',
             gatewayTransactionID: extractedData.transactionID,
-            verifiedAt: isSuspicious ? null : new Date(),
+            verifiedAt: new Date(),
             metadata: {
                 extracted: extractedData,
                 receipt_url: cloudinaryUrl,
                 verificationMethod: 'OCR_Tesseract_SmartReview',
                 flags: {
-                    lowConfidence: (extractedData.confidence || 0) < 60,
-                    nameMismatch: !ownerNameInReceipt
+                    smartVerified: true,
+                    confidenceScore: extractedData.confidence,
+                    nameMatched: nameMatch
                 }
             },
             createdBy: req.user._id
-        });
+        };
 
-        await payment.save();
+        // Use findOneAndUpdate with upsert:true to handle re-uploads for the same booking
+        const payment = await Payment.findOneAndUpdate(
+            { bookingID: booking._id },
+            { $set: paymentData },
+            { new: true, upsert: true, runValidators: true }
+        );
 
-        if (paymentStatus === 'success') {
+        if (payment) {
             booking.paymentID = payment._id;
             booking.paymentStatus = 'paid';
             booking.status = 'confirmed';
-            await booking.save();
-        } else {
-            booking.paymentStatus = 'pending';
             await booking.save();
         }
 
         res.status(200).json({
             success: true,
-            isManualReview: isSuspicious,
-            message: isSuspicious
-                ? 'Receipt uploaded. An admin must verify this manually due to low quality or name mismatch.'
-                : 'Receipt verified and booking confirmed successfully!',
+            message: 'Receipt verified and booking confirmed successfully!',
             data: { payment, extracted: extractedData }
         });
 

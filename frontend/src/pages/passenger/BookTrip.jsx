@@ -28,7 +28,8 @@ import {
   ArrowBack,
   Refresh,
   CheckCircle,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  Payments as MoneyIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -509,6 +510,14 @@ export default function BookTrip() {
               >
                 {t('Bank Transfer (OCR)')}
               </Button>
+              <Button
+                variant={paymentMethod === 'cash' ? 'contained' : 'outlined'}
+                onClick={() => setPaymentMethod('cash')}
+                startIcon={<MoneyIcon />}
+                sx={{ borderRadius: '12px', px: 3 }}
+              >
+                {t('Cash Payment')}
+              </Button>
             </Box>
 
             {bookingId ? (
@@ -521,12 +530,40 @@ export default function BookTrip() {
                   fullWidth
                   size="large"
                 />
-              ) : (
+              ) : paymentMethod === 'manual' ? (
                 <ReceiptUpload
                   bookingId={bookingId}
                   amount={totalAmount}
                   onVerificationSuccess={handlePaymentSuccess}
                 />
+              ) : (
+                <Box sx={{ mt: 2, p: 3, bgcolor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                  <Typography variant="h6" color="primary" gutterBottom sx={{ fontWeight: 600 }}>
+                    💵 {t('Pay at Station')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {t('Please visit the station counter to make your payment in cash. Your booking will remain pending until the payment is received.')}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    onClick={handlePaymentSuccess}
+                    sx={{
+                      borderRadius: '10px',
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #059669, #047857)'
+                      }
+                    }}
+                  >
+                    {t('confirm_booking_pay_at_station')}
+                  </Button>
+                </Box>
               )
             ) : (
               <Alert severity="warning" sx={{ mt: 2 }}>

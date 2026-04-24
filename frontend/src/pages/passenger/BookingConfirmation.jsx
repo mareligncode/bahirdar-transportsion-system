@@ -56,6 +56,7 @@ import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export default function BookingConfirmation() {
   const { t } = useTranslation();
@@ -117,19 +118,19 @@ export default function BookingConfirmation() {
   // Helper function to get total amount correctly
   const getTotalAmount = () => {
     if (!booking) return 0;
-    
+
     // Priority 1: Use totalPrice from booking (already includes all seats)
     if (booking.totalPrice && booking.totalPrice > 0) {
       return booking.totalPrice;
     }
-    
+
     // Priority 2: Calculate from trip price and seat count
     const seatCount = getSeatCount(booking);
     const pricePerSeat = booking.tripID?.price || booking.pricePerSeat || 0;
     if (seatCount > 0 && pricePerSeat > 0) {
       return seatCount * pricePerSeat;
     }
-    
+
     // Priority 3: Fallback to amount or batchTotalPrice
     return booking.amount || booking.batchTotalPrice || 0;
   };
@@ -137,14 +138,14 @@ export default function BookingConfirmation() {
   // Helper function to get price per seat
   const getPricePerSeat = () => {
     if (!booking) return 0;
-    
+
     const totalAmount = getTotalAmount();
     const seatCount = getSeatCount(booking);
-    
+
     if (seatCount > 0 && totalAmount > 0) {
       return totalAmount / seatCount;
     }
-    
+
     return booking.tripID?.price || booking.pricePerSeat || 0;
   };
 
@@ -249,6 +250,17 @@ export default function BookingConfirmation() {
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
     doc.text(`Ticket #: ${booking.ticketNumber || (seatCount > 1 ? booking.groupTicketNumber || 'N/A' : 'N/A')}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
+
+    // Add QR Code to PDF (Live Verification URL)
+    const qrCanvas = document.querySelector('canvas');
+    if (qrCanvas) {
+      const qrImage = qrCanvas.toDataURL('image/png');
+      doc.addImage(qrImage, 'PNG', 150, 42, 45, 45);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Scan for Live Verification', 172.5, 90, { align: 'center' });
+    }
+
     if (seatCount > 1) {
       doc.text(`Group Booking: ${seatCount} seats`, 20, 66);
     }
@@ -377,6 +389,17 @@ export default function BookingConfirmation() {
     doc.text(`Booking #: ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}`, 20, 45);
     doc.text(`Ticket #: ${booking.ticketNumber || (seatCount > 1 ? booking.groupTicketNumber || 'N/A' : 'N/A')}`, 20, 52);
     doc.text(`Status: ${booking.status?.toUpperCase() || 'N/A'}`, 20, 59);
+
+    // Add QR Code to PDF (Live Verification URL)
+    const qrCanvas = document.querySelector('canvas');
+    if (qrCanvas) {
+      const qrImage = qrCanvas.toDataURL('image/png');
+      doc.addImage(qrImage, 'PNG', 150, 42, 45, 45);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Scan for Live Verification', 172.5, 90, { align: 'center' });
+    }
+
     if (seatCount > 1) {
       doc.text(`Group Booking: ${seatCount} seats`, 20, 66);
     }
@@ -1028,26 +1051,51 @@ export default function BookingConfirmation() {
                 </Grid>
 
                 <Grid item xs={12} md={4}>
+                  {/* Digital Ticket Perforation Divider (Visual) */}
+                  <Box sx={{
+                    display: { xs: 'none', md: 'block' },
+                    position: 'absolute',
+                    top: '15%',
+                    bottom: '5%',
+                    left: 'calc(66.66% - 1px)',
+                    borderLeft: '2px dashed #cbd5e1',
+                    zIndex: 0
+                  }} />
+
                   <Box sx={{
                     p: 3,
                     bgcolor: '#f8fafc',
-                    borderRadius: '16px',
+                    borderRadius: '0 24px 24px 0',
                     textAlign: 'center',
                     height: '100%',
                     display: 'flex',
+                    position: 'relative',
+                    zIndex: 1,
                     flexDirection: 'column'
                   }}>
                     <Box sx={{ mb: 3 }}>
                       <Paper sx={{
-                        p: 2,
+                        p: 1.5,
                         display: 'inline-block',
                         bgcolor: 'white',
-                        borderRadius: '12px',
-                        border: '2px dashed #cbd5e1',
-                        transition: 'transform 0.3s ease',
-                        '&:hover': { transform: 'scale(1.05)' }
+                        borderRadius: '20px',
+                        border: '2px solid #3b82f6',
+                        boxShadow: '0 12px 32px rgba(59, 130, 246, 0.15)',
+                        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        '&:hover': {
+                          transform: 'scale(1.1) rotate(0deg)',
+                          boxShadow: '0 16px 48px rgba(59, 130, 246, 0.25)'
+                        }
                       }}>
-                        <QrCodeIcon sx={{ fontSize: 120, color: '#1e293b' }} />
+                        {booking && (
+                          <QRCodeCanvas
+                            value={`${window.location.origin}/passenger/booking-confirmation?bookingId=${booking._id}`}
+                            size={180}
+                            level={"Q"}
+                            includeMargin={true}
+                            style={{ borderRadius: '8px' }}
+                          />
+                        )}
                       </Paper>
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                         Scan for ticket details

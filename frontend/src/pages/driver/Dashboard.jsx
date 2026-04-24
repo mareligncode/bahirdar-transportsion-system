@@ -115,12 +115,36 @@ const DriverDashboard = () => {
       const response = await api.patch(`/api/trip/${tripId}/status`, { status });
       return response.data;
     },
+    onMutate: async ({ tripId, status }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['driverTrips', selectedDate] });
+
+      // Snapshot the previous value
+      const previousTrips = queryClient.getQueryData(['driverTrips', selectedDate]);
+
+      // Optimistically update to the new value
+      if (previousTrips) {
+        queryClient.setQueryData(['driverTrips', selectedDate], (old) =>
+          old.map((t) => (t._id === tripId ? { ...t, tripStatus: status } : t))
+        );
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousTrips };
+    },
+    onError: (error, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousTrips) {
+        queryClient.setQueryData(['driverTrips', selectedDate], context.previousTrips);
+      }
+      toast.error(error.response?.data?.message || 'Failed to update trip status');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['driverTrips', selectedDate]);
       toast.success('Trip status updated successfully');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to update trip status');
+    onSettled: () => {
+      // Always refetch after error or success to ensure we are in sync with server
+      queryClient.invalidateQueries(['driverTrips', selectedDate]);
     }
   });
 
