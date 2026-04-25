@@ -101,6 +101,11 @@ const Trips = () => {
   const [sortField, setSortField] = useState('departureTime');
   const [sortDirection, setSortDirection] = useState('desc');
 
+  // Simple filter state
+  const [filters, setFilters] = useState({
+    destination: ''
+  });
+
   // Fetch user profile and trips on component mount
   useEffect(() => {
     fetchUserProfile();
@@ -118,12 +123,12 @@ const Trips = () => {
     }
   }, [openDialog, userProfile, userStation]);
 
-  // Fetch trips when pagination/sorting changes
+  // Fetch trips when pagination/sorting/filters change
   useEffect(() => {
     if (userProfile) {
       fetchTrips();
     }
-  }, [page, rowsPerPage, sortField, sortDirection, userProfile, userStation]);
+  }, [page, rowsPerPage, sortField, sortDirection, filters, userProfile, userStation]);
 
   const fetchUserProfile = async () => {
     try {
@@ -194,6 +199,9 @@ const Trips = () => {
         sortOrder: sortDirection
       });
 
+      // Add destination filter to params
+      if (filters.destination) params.append('destination', filters.destination);
+
       // For station admin, only show trips from their station
       if (userProfile?.role === 'station_admin' && userStation) {
         params.append('station', userStation._id);
@@ -202,8 +210,19 @@ const Trips = () => {
       const response = await api.get(`/api/trip?${params.toString()}`);
 
       if (response.data.success) {
-        setTrips(response.data.data || []);
-        setTotalTrips(response.data.total || response.data.data?.length || 0);
+        let fetchedTrips = response.data.data || [];
+        
+        // Manual sorting adjustment (ensures it works even if backend sorting is disabled)
+        if (sortField === 'price') {
+          fetchedTrips = [...fetchedTrips].sort((a, b) => {
+            const priceA = Number(a.price) || 0;
+            const priceB = Number(b.price) || 0;
+            return sortDirection === 'asc' ? priceA - priceB : priceB - priceA;
+          });
+        }
+        
+        setTrips(fetchedTrips);
+        setTotalTrips(response.data.total || fetchedTrips.length || 0);
       } else {
         setError(response.data.message || t('Failed to fetch trips'));
         setTrips([]);
@@ -803,6 +822,14 @@ const Trips = () => {
     setPage(0);
   };
 
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setPage(0);
+  };
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -931,6 +958,59 @@ const Trips = () => {
         </Grid>
       </Grid>
 
+      {/* Filter and Sort (Stabilized Layout) */}
+      <Paper variant="outlined" sx={{ mb: 4, p: 2, borderRadius: 2, backgroundColor: 'grey.50' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          alignItems: 'center' 
+        }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 250 }, flexGrow: 1 }} size="small" variant="outlined">
+            <InputLabel id="destination-filter-label">{t('Destination')}</InputLabel>
+            <Select
+              labelId="destination-filter-label"
+              value={filters.destination}
+              label={t('Destination')}
+              onChange={(e) => handleFilterChange('destination', e.target.value)}
+              sx={{ backgroundColor: 'white' }}
+            >
+              <MenuItem value="">
+                <em>{t('All Destinations')}</em>
+              </MenuItem>
+              {stations.map(s => (
+                <MenuItem key={s._id} value={s._id}>
+                  {s.stationName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 200 }, flexGrow: 1 }} size="small" variant="outlined">
+            <InputLabel id="price-sort-label">{t('Price Ordering')}</InputLabel>
+            <Select
+              labelId="price-sort-label"
+              value={sortField === 'price' ? sortDirection : ''}
+              label={t('Price Ordering')}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSortField('price');
+                  setSortDirection(e.target.value);
+                } else {
+                  setSortField('departureTime');
+                  setSortDirection('desc');
+                }
+              }}
+              sx={{ backgroundColor: 'white' }}
+            >
+              <MenuItem value="">{t('Default (Time)')}</MenuItem>
+              <MenuItem value="asc">{t('Price: Low to High')}</MenuItem>
+              <MenuItem value="desc">{t('Price: High to Low')}</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
+
       {/* Trips Table */}
       <Paper sx={{ overflow: 'hidden' }}>
         <TableContainer>
@@ -952,9 +1032,9 @@ const Trips = () => {
                 <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                   <Typography variant="subtitle2" fontWeight="600">{t('Seats')}</Typography>
                 </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                <SortableHeader field="price" label="Price" currentField={sortField} currentDirection={sortDirection}>
                   <Typography variant="subtitle2" fontWeight="600">{t('Price')}</Typography>
-                </TableCell>
+                </SortableHeader>
                 <TableCell align="center">
                   <Typography variant="subtitle2" fontWeight="600">{t('Actions')}</Typography>
                 </TableCell>

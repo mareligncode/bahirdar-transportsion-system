@@ -59,6 +59,12 @@ const RoutesPage = () => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [formLoading, setFormLoading] = useState(false);
 
+    // Filter and Sort states
+    const [filters, setFilters] = useState({
+        destination: ''
+    });
+    const [sortOrder, setSortOrder] = useState(''); // 'asc', 'desc', or ''
+
     const [routeForm, setRouteForm] = useState({
         origin: '',
         destination: '',
@@ -184,6 +190,19 @@ const RoutesPage = () => {
         }
     };
 
+    const filteredAndSortedRoutes = routes
+        .filter(route => {
+            if (!filters.destination) return true;
+            const destId = route.destination?._id || route.destination;
+            return destId === filters.destination;
+        })
+        .sort((a, b) => {
+            if (!sortOrder) return 0;
+            const priceA = Number(a.basePrice) || 0;
+            const priceB = Number(b.basePrice) || 0;
+            return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+        });
+
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
@@ -213,6 +232,51 @@ const RoutesPage = () => {
                 </Grid>
             </Paper>
 
+            {/* Filter and Sort (Stabilized Layout) */}
+            <Paper variant="outlined" sx={{ mb: 4, p: 2, borderRadius: 2, backgroundColor: 'grey.50' }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' }, 
+                    gap: 2, 
+                    alignItems: 'center' 
+                }}>
+                    <FormControl sx={{ minWidth: { xs: '100%', sm: 250 }, flexGrow: 1 }} size="small" variant="outlined">
+                        <InputLabel id="destination-filter-label">{t('Filter by Destination')}</InputLabel>
+                        <Select
+                            labelId="destination-filter-label"
+                            value={filters.destination}
+                            label={t('Filter by Destination')}
+                            onChange={(e) => setFilters({ destination: e.target.value })}
+                            sx={{ backgroundColor: 'white' }}
+                        >
+                            <MenuItem value="">
+                                <em>{t('All Destinations')}</em>
+                            </MenuItem>
+                            {stations.map(s => (
+                                <MenuItem key={s._id} value={s._id}>
+                                    {s.stationName}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl sx={{ minWidth: { xs: '100%', sm: 200 }, flexGrow: 1 }} size="small" variant="outlined">
+                        <InputLabel id="price-sort-label">{t('Price Ordering')}</InputLabel>
+                        <Select
+                            labelId="price-sort-label"
+                            value={sortOrder}
+                            label={t('Price Ordering')}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            sx={{ backgroundColor: 'white' }}
+                        >
+                            <MenuItem value="">{t('Default (No Sort)')}</MenuItem>
+                            <MenuItem value="asc">{t('Price: Low to High')}</MenuItem>
+                            <MenuItem value="desc">{t('Price: High to Low')}</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
+            </Paper>
+
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', my: 10 }}>
                     <CircularProgress />
@@ -232,21 +296,25 @@ const RoutesPage = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {routes.length === 0 ? (
+                            {filteredAndSortedRoutes.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                                        <Typography color="textSecondary">{t('No routes defined yet')}</Typography>
-                                        <Button
-                                            startIcon={<AddIcon />}
-                                            onClick={() => handleOpenDialog()}
-                                            sx={{ mt: 2 }}
-                                        >
-                                            {t('Define First Route')}
-                                        </Button>
+                                        <Typography color="textSecondary">
+                                            {filters.destination ? t('No routes found for this destination') : t('No routes defined yet')}
+                                        </Typography>
+                                        {!filters.destination && (
+                                            <Button
+                                                startIcon={<AddIcon />}
+                                                onClick={() => handleOpenDialog()}
+                                                sx={{ mt: 2 }}
+                                            >
+                                                {t('Define First Route')}
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                routes.map((route) => (
+                                filteredAndSortedRoutes.map((route) => (
                                     <TableRow key={route._id} hover>
                                         <TableCell>
                                             <Typography variant="subtitle2" fontWeight="bold">{route.routeName}</Typography>
