@@ -474,5 +474,20 @@
   "departing_in": "departing_in",
   "just_departed": "just_departed",
   "boarding_now": "boarding_now",
-  "scheduled_departure": "scheduled_departure"
+  "scheduled_departure": "scheduled_departure",
+  "Support": "Support",
+  "Booking Guide": "Booking Guide",
+  "Follow these simple steps to book your journey with Bahir Dar Transportation System.": "Follow these simple steps to book your journey with Bahir Dar Transportation System.",
+  "1. Search Your Trip": "1. Search Your Trip",
+  "Enter your departure station and destination on the 'Book Trip' page. Select your travel date to see available trips.": "Enter your departure station and destination on the 'Book Trip' page. Select your travel date to see available trips.",
+  "2. Choose a Trip": "2. Choose a Trip",
+  "Browse the list of available trips. You can see the price, departure time, and remaining seats for each option.": "Browse the list of available trips. You can see the price, departure time, and remaining seats for each option.",
+  "3. Select Your Seats": "3. Select Your Seats",
+  "Click on 'Choose Seats' and pick your preferred spot from the interactive seat map. You can book multiple seats at once.": "Click on 'Choose Seats' and pick your preferred spot from the interactive seat map. You can book multiple seats at once.",
+  "4. Complete Payment": "4. Complete Payment",
+  "Choose your payment method. You can pay securely online via Chapa or choose 'Pay at Station' to pay with cash.": "Choose your payment method. You can pay securely online via Chapa or choose 'Pay at Station' to pay with cash.",
+  "5. Get Your Ticket": "5. Get Your Ticket",
+  "Once confirmed, your ticket will appear in 'My Bookings'. You can download or show it at the station when boarding.": "Once confirmed, your ticket will appear in 'My Bookings'. You can download or show it at the station when boarding.",
+  "Important Information": "Important Information",
+  "Please arrive at the station at least 30 minutes before departure. If you chose 'Pay at Station', ensure you complete your payment at least 1 hour before the trip starts to secure your seat.": "Please arrive at the station at least 30 minutes before departure. If you chose 'Pay at Station', ensure you complete your payment at least 1 hour before the trip starts to secure your seat."
 }

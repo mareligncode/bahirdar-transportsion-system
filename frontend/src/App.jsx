@@ -21,6 +21,7 @@ import PassengerDashboard from './pages/passenger/Dashboard';
 import BookTrip from './pages/passenger/BookTrip';
 import MyBookings from './pages/passenger/MyBookings';
 import BookingConfirmation from './pages/passenger/BookingConfirmation';
+import BookingGuide from './pages/passenger/BookingGuide';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -203,6 +204,17 @@ function App() {
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
                       <MyBookings />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/passenger/support"
+                element={
+                  <ProtectedRoute allowedRoles={['passenger']}>
+                    <Layout showSidebar>
+                      <BookingGuide />
                     </Layout>
                   </ProtectedRoute>
                 }

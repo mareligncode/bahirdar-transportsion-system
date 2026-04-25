@@ -62,7 +62,7 @@ export default function Sidebar({ userRole }) {
       { icon: Ticket, label: t('book_trip'), path: '/passenger/book-trip' },
       { icon: Calendar, label: t('my_booking'), path: '/passenger/my-booking' },
       { icon: CreditCard, label: t('payment_methods'), path: '/passenger/payments' },
-      { icon: MessageSquare, label: t('support'), path: '/passenger/support' },
+      { icon: MessageSquare, label: t('Support'), path: '/passenger/support' },
     ];
 
     const driverItems = [
