@@ -11,7 +11,6 @@ import {
   AlertCircle,
   PlusCircle,
   History,
-  CreditCard,
   HelpCircle,
   DollarSign,
   Users,
@@ -602,19 +601,6 @@ export default function PassengerDashboard() {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">{t('My Bookings')}</h3>
                 <p className="text-xs text-gray-600">{t('View all bookings')}</p>
-              </div>
-            </Link>
-
-            <Link
-              to="/passenger/payments"
-              className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-green-50 hover:border-green-200 transition-all group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-200 transition-colors">
-                  <CreditCard className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{t('Payments')}</h3>
-                <p className="text-xs text-gray-600">{t('Payment history')}</p>
               </div>
             </Link>
 
