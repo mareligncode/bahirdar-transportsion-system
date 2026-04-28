@@ -53,22 +53,52 @@ import { useTranslation } from '../../hooks/useTranslation';
 const ProfilePaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   marginTop: theme.spacing(4),
-  borderRadius: theme.spacing(2),
-  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+  borderRadius: theme.spacing(3),
+  boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+  background: theme.palette.mode === 'dark' ? theme.palette.background.paper : 'rgba(255, 255, 255, 0.9)',
+  backdropFilter: theme.palette.mode === 'dark' ? 'none' : 'blur(10px)',
+  border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : '1px solid rgba(255, 255, 255, 0.3)',
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '180px',
+    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+    zIndex: 0
+  }
 }));
 
 const ProfileAvatar = styled(Avatar)(({ theme }) => ({
-  width: theme.spacing(16),
-  height: theme.spacing(16),
-  border: `4px solid ${theme.palette.primary.main}`,
-  marginBottom: theme.spacing(2)
+  width: theme.spacing(18),
+  height: theme.spacing(18),
+  border: `6px solid ${theme.palette.background.paper}`,
+  boxShadow: theme.shadows[4],
+  marginBottom: theme.spacing(2),
+  zIndex: 1,
+  backgroundColor: theme.palette.grey[200]
 }));
 
 const ProfileSection = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(4),
   padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.default,
-  borderRadius: theme.spacing(1.5)
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+  borderRadius: theme.spacing(2),
+  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[2],
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+  }
+}));
+
+const ContentWrapper = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  zIndex: 1,
+  marginTop: '40px'
 }));
 
 const RoleBadge = styled(Chip)(({ theme, role }) => {
@@ -93,7 +123,9 @@ const RoleBadge = styled(Chip)(({ theme, role }) => {
     backgroundColor: color,
     color: 'white',
     fontWeight: 'bold',
-    fontSize: '0.875rem'
+    fontSize: '0.875rem',
+    boxShadow: `0 4px 12px ${color}44`,
+    padding: '4px 8px'
   };
 });
 
@@ -334,7 +366,7 @@ const Profile = () => {
         onClose={() => setSuccess('')}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity="success" onClose={() => setSuccess('')}>
+        <Alert severity="success" onClose={() => setSuccess('')} sx={{ borderRadius: 2 }}>
           {success}
         </Alert>
       </Snackbar>
@@ -345,374 +377,392 @@ const Profile = () => {
         onClose={() => setError('')}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity="error" onClose={() => setError('')}>
+        <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: 2 }}>
           {error}
         </Alert>
       </Snackbar>
 
       <ProfilePaper>
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-          <Typography variant="h4" component="h1" fontWeight="bold">
-            {t('My Profile')}
-          </Typography>
-          {!editing && (
-            <Button
-              variant="contained"
-              startIcon={<EditIcon />}
-              onClick={() => setEditing(true)}
-            >
-              {t('Edit Profile')}
-            </Button>
-          )}
-        </Box>
+        <ContentWrapper>
+          {/* Header */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={6}>
+            <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+              {t('My Profile')}
+            </Typography>
+            {!editing && (
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={() => setEditing(true)}
+                sx={{
+                  backgroundColor: 'white',
+                  color: 'primary.main',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+                  fontWeight: 'bold',
+                  borderRadius: 2
+                }}
+              >
+                {t('Edit Profile')}
+              </Button>
+            )}
+          </Box>
 
-        {/* Profile Overview */}
-        <Grid container spacing={4}>
-          {/* Left Column - Avatar & Basic Info */}
-          <Grid item xs={12} md={4}>
-            <Box display="flex" flexDirection="column" alignItems="center">
-              <Box position="relative">
-                <ProfileAvatar
-                  src={profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}&background=random`}
-                  alt={profile.fullName}
+          {/* Profile Overview */}
+          <Grid container spacing={4}>
+            {/* Left Column - Avatar & Basic Info */}
+            <Grid item xs={12} md={4}>
+              <Box display="flex" flexDirection="column" alignItems="center">
+                <Box position="relative" mb={2}>
+                  <ProfileAvatar
+                    src={profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}&background=random`}
+                    alt={profile.fullName}
+                  />
+                  <IconButton
+                    color="primary"
+                    sx={{
+                      position: 'absolute',
+                      bottom: 20,
+                      right: 0,
+                      backgroundColor: 'background.paper',
+                      boxShadow: 3,
+                      '&:hover': { backgroundColor: 'background.default' }
+                    }}
+                    onClick={() => setOpenAvatarDialog(true)}
+                  >
+                    <PhotoCameraIcon />
+                  </IconButton>
+                </Box>
+
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  {profile.fullName}
+                </Typography>
+
+                <RoleBadge
+                  label={getRoleDisplayName(profile.role)}
+                  role={profile.role}
+                  size="medium"
+                  icon={<BadgeIcon />}
+                  sx={{ mb: 2 }}
                 />
-                <IconButton
-                  color="primary"
-                  sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    backgroundColor: 'white',
-                    '&:hover': { backgroundColor: 'white' }
-                  }}
-                  onClick={() => setOpenAvatarDialog(true)}
-                >
-                  <PhotoCameraIcon />
-                </IconButton>
+
+                <Box mt={1}>
+                  <Chip
+                    label={profile.isActive ? t('Active') : t('Inactive')}
+                    color={profile.isActive ? 'success' : 'error'}
+                    size="small"
+                    icon={profile.isActive ? <CheckCircleIcon /> : <ErrorIcon />}
+                    variant="outlined"
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                </Box>
               </Box>
 
-              <Typography variant="h5" fontWeight="bold" gutterBottom>
-                {profile.fullName}
-              </Typography>
-
-              <RoleBadge
-                label={getRoleDisplayName(profile.role)}
-                role={profile.role}
-                size="medium"
-                icon={<BadgeIcon />}
-              />
-
-              <Box mt={2}>
-                <Chip
-                  label={profile.isActive ? t('Active') : t('Inactive')}
-                  color={profile.isActive ? 'success' : 'error'}
-                  size="small"
-                  icon={profile.isActive ? <CheckCircleIcon /> : <ErrorIcon />}
-                  variant="outlined"
-                />
-              </Box>
-            </Box>
-
-            {/* Quick Stats */}
-            <ProfileSection mt={3}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                {t('Account Information')}
-              </Typography>
-              <List dense>
-                <ListItem>
-                  <ListItemIcon>
-                    <PersonIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={t('Member Since')}
-                    secondary={formatDate(profile.createdAt)}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <EmailIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={t('Email')}
-                    secondary={profile.email}
-                  />
-                </ListItem>
-                {profile.lastLogin && (
+              {/* Quick Stats */}
+              <ProfileSection mt={3}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  {t('Account Information')}
+                </Typography>
+                <List dense>
                   <ListItem>
                     <ListItemIcon>
-                      <SecurityIcon />
+                      <PersonIcon />
                     </ListItemIcon>
                     <ListItemText
-                      primary={t('Last Login')}
-                      secondary={formatDate(profile.lastLogin)}
+                      primary={t('Member Since')}
+                      secondary={formatDate(profile.createdAt)}
                     />
                   </ListItem>
-                )}
-              </List>
-            </ProfileSection>
-
-            {/* Actions */}
-            <Box mt={3}>
-              <Button
-                variant="outlined"
-                startIcon={<LockIcon />}
-                fullWidth
-                onClick={() => setOpenPasswordDialog(true)}
-              >
-                {t('Change Password')}
-              </Button>
-            </Box>
-          </Grid>
-
-          {/* Right Column - Detailed Info & Edit Form */}
-          <Grid item xs={12} md={8}>
-            {editing ? (
-              // Edit Form
-              <ProfileSection>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  {t('Edit Profile Information')}
-                </Typography>
-
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label={t('Full Name')}
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      required
+                  <ListItem>
+                    <ListItemIcon>
+                      <EmailIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={t('Email')}
+                      secondary={profile.email}
                     />
-                  </Grid>
+                  </ListItem>
+                  {profile.lastLogin && (
+                    <ListItem>
+                      <ListItemIcon>
+                        <SecurityIcon />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={t('Last Login')}
+                        secondary={formatDate(profile.lastLogin)}
+                      />
+                    </ListItem>
+                  )}
+                </List>
+              </ProfileSection>
 
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label={t('Phone Number')}
-                      value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PhoneIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  </Grid>
+              {/* Actions */}
+              <Box mt={3}>
+                <Button
+                  variant="outlined"
+                  startIcon={<LockIcon />}
+                  fullWidth
+                  onClick={() => setOpenPasswordDialog(true)}
+                >
+                  {t('Change Password')}
+                </Button>
+              </Box>
+            </Grid>
 
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label={t('Emergency Contact')}
-                      value={formData.emergencyContact}
-                      onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-                      placeholder={t('Name and phone number')}
-                      helperText={t('In case of emergencies')}
-                    />
-                  </Grid>
+            {/* Right Column - Detailed Info & Edit Form */}
+            <Grid item xs={12} md={8}>
+              {editing ? (
+                // Edit Form
+                <ProfileSection>
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
+                    {t('Edit Profile Information')}
+                  </Typography>
 
-                  <Grid item xs={12}>
-                    <Box display="flex" gap={2}>
-                      <Button
-                        variant="contained"
-                        startIcon={<SaveIcon />}
-                        onClick={handleUpdateProfile}
-                        disabled={saving}
-                      >
-                        {saving ? <CircularProgress size={24} /> : t('Save Changes')}
-                      </Button>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label={t('Full Name')}
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        required
+                        InputProps={{ sx: { borderRadius: 2 } }}
+                      />
+                    </Grid>
 
-                      <Button
-                        variant="outlined"
-                        startIcon={<CancelIcon />}
-                        onClick={() => {
-                          setEditing(false);
-                          setFormData({
-                            fullName: profile.fullName || '',
-                            phoneNumber: profile.phoneNumber || '',
-                            emergencyContact: profile.emergencyContact || ''
-                          });
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label={t('Phone Number')}
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PhoneIcon />
+                            </InputAdornment>
+                          ),
+                          sx: { borderRadius: 2 }
                         }}
-                      >
-                        {t('Cancel')}
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </ProfileSection>
-            ) : (
-              // View Mode
-              <ProfileSection>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  {t('Personal Information')}
-                </Typography>
+                      />
+                    </Grid>
 
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label={t('Full Name')}
-                      value={profile.fullName || t('Not set')}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PersonIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                      variant="outlined"
-                    />
-                  </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label={t('Emergency Contact')}
+                        value={formData.emergencyContact}
+                        onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                        placeholder={t('Name and phone number')}
+                        helperText={t('In case of emergencies')}
+                        InputProps={{ sx: { borderRadius: 2 } }}
+                      />
+                    </Grid>
 
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label={t('Phone Number')}
-                      value={profile.phoneNumber || t('Not set')}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PhoneIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                      variant="outlined"
-                    />
-                  </Grid>
+                    <Grid item xs={12}>
+                      <Box display="flex" gap={2}>
+                        <Button
+                          variant="contained"
+                          startIcon={<SaveIcon />}
+                          onClick={handleUpdateProfile}
+                          disabled={saving}
+                          sx={{ borderRadius: 2, px: 3 }}
+                        >
+                          {saving ? <CircularProgress size={24} /> : t('Save Changes')}
+                        </Button>
 
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label={t('Emergency Contact')}
-                      value={profile.emergencyContact || t('Not set')}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PhoneIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                      variant="outlined"
-                      helperText={t('Contact person in case of emergencies')}
-                    />
+                        <Button
+                          variant="outlined"
+                          startIcon={<CancelIcon />}
+                          onClick={() => {
+                            setEditing(false);
+                            setFormData({
+                              fullName: profile.fullName || '',
+                              phoneNumber: profile.phoneNumber || '',
+                              emergencyContact: profile.emergencyContact || ''
+                            });
+                          }}
+                          sx={{ borderRadius: 2, px: 3 }}
+                        >
+                          {t('Cancel')}
+                        </Button>
+                      </Box>
+                    </Grid>
                   </Grid>
-                </Grid>
-              </ProfileSection>
-            )}
+                </ProfileSection>
+              ) : (
+                // View Mode
+                <ProfileSection>
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
+                    {t('Personal Information')}
+                  </Typography>
 
-            {/* Role-Specific Information */}
-            {profile.role === 'driver' && (
-              <ProfileSection>
-                <Typography variant="h6" gutterBottom fontWeight="bold">
-                  {t('Driver Information')}
-                </Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label={t('License Number')}
-                      value={profile.licenseNumber || t('Not set')}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <DriveEtaIcon />
-                          </InputAdornment>
-                        )
-                      }}
-                      variant="outlined"
-                    />
-                  </Grid>
-                  {profile.stationID && (
+                  <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label={t('Assigned Station')}
-                        value={profile.stationID.name || profile.stationID}
+                        label={t('Full Name')}
+                        value={profile.fullName || t('Not set')}
                         InputProps={{
                           readOnly: true,
                           startAdornment: (
                             <InputAdornment position="start">
-                              <LocationIcon />
+                              <PersonIcon />
+                            </InputAdornment>
+                          ),
+                          sx: { borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.01)' }
+                        }}
+                        variant="outlined"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label={t('Phone Number')}
+                        value={profile.phoneNumber || t('Not set')}
+                        InputProps={{
+                          readOnly: true,
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PhoneIcon />
                             </InputAdornment>
                           )
                         }}
                         variant="outlined"
                       />
                     </Grid>
-                  )}
-                </Grid>
-              </ProfileSection>
-            )}
 
-            {profile.role === 'station_admin' && profile.stationID && (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label={t('Emergency Contact')}
+                        value={profile.emergencyContact || t('Not set')}
+                        InputProps={{
+                          readOnly: true,
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PhoneIcon />
+                            </InputAdornment>
+                          )
+                        }}
+                        variant="outlined"
+                        helperText={t('Contact person in case of emergencies')}
+                      />
+                    </Grid>
+                  </Grid>
+                </ProfileSection>
+              )}
+
+              {/* Role-Specific Information */}
+              {profile.role === 'driver' && (
+                <ProfileSection>
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
+                    {t('Driver Information')}
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label={t('License Number')}
+                        value={profile.licenseNumber || t('Not set')}
+                        InputProps={{
+                          readOnly: true,
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <DriveEtaIcon />
+                            </InputAdornment>
+                          )
+                        }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    {profile.stationID && (
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label={t('Assigned Station')}
+                          value={profile.stationID.name || profile.stationID}
+                          InputProps={{
+                            readOnly: true,
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LocationIcon />
+                              </InputAdornment>
+                            )
+                          }}
+                          variant="outlined"
+                        />
+                      </Grid>
+                    )}
+                  </Grid>
+                </ProfileSection>
+              )}
+
+              {profile.role === 'station_admin' && profile.stationID && (
+                <ProfileSection>
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
+                    {t('Station Administrator')}
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label={t('Managed Station')}
+                    value={profile.stationID.name || profile.stationID}
+                    InputProps={{
+                      readOnly: true,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationIcon />
+                        </InputAdornment>
+                      )
+                    }}
+                    variant="outlined"
+                  />
+                </ProfileSection>
+              )}
+
+              {/* Account Status */}
               <ProfileSection>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  {t('Station Administrator')}
+                  {t('Account Status')}
                 </Typography>
-                <TextField
-                  fullWidth
-                  label={t('Managed Station')}
-                  value={profile.stationID.name || profile.stationID}
-                  InputProps={{
-                    readOnly: true,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LocationIcon />
-                      </InputAdornment>
-                    )
-                  }}
-                  variant="outlined"
-                />
-              </ProfileSection>
-            )}
-
-            {/* Account Status */}
-            <ProfileSection>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                {t('Account Status')}
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        {t('Account Status')}
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {profile.isActive ? (
-                          <CheckCircleIcon color="success" />
-                        ) : (
-                          <ErrorIcon color="error" />
-                        )}
-                        <Typography variant="body1">
-                          {profile.isActive ? t('Active') : t('Inactive')}
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          {t('Account Status')}
                         </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {profile.isActive ? (
+                            <CheckCircleIcon color="success" />
+                          ) : (
+                            <ErrorIcon color="error" />
+                          )}
+                          <Typography variant="body1">
+                            {profile.isActive ? t('Active') : t('Inactive')}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
-                <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        {t('Last Updated')}
-                      </Typography>
-                      <Typography variant="body1">
-                        {formatDate(profile.updatedAt)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          {t('Last Updated')}
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatDate(profile.updatedAt)}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </ProfileSection>
+              </ProfileSection>
+            </Grid>
           </Grid>
-        </Grid>
+        </ContentWrapper>
       </ProfilePaper>
 
       {/* Change Password Dialog */}
@@ -721,8 +771,9 @@ const Profile = () => {
         onClose={() => setOpenPasswordDialog(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle>{t('Change Password')}</DialogTitle>
+        <DialogTitle fontWeight="bold">{t('Change Password')}</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <Grid container spacing={3}>
@@ -749,7 +800,8 @@ const Profile = () => {
                           {showPasswords.current ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
                       </InputAdornment>
-                    )
+                    ),
+                    sx: { borderRadius: 2 }
                   }}
                 />
               </Grid>
@@ -778,7 +830,8 @@ const Profile = () => {
                           {showPasswords.new ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
                       </InputAdornment>
-                    )
+                    ),
+                    sx: { borderRadius: 2 }
                   }}
                 />
               </Grid>
@@ -806,21 +859,23 @@ const Profile = () => {
                           {showPasswords.confirm ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
                       </InputAdornment>
-                    )
+                    ),
+                    sx: { borderRadius: 2 }
                   }}
                 />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenPasswordDialog(false)}>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenPasswordDialog(false)} sx={{ borderRadius: 2 }}>
             {t('Cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleChangePassword}
             disabled={saving}
+            sx={{ borderRadius: 2 }}
           >
             {saving ? <CircularProgress size={24} /> : t('Change Password')}
           </Button>
@@ -833,14 +888,15 @@ const Profile = () => {
         onClose={() => setOpenAvatarDialog(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle>{t('Change Profile Picture')}</DialogTitle>
+        <DialogTitle fontWeight="bold">{t('Change Profile Picture')}</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
               <Avatar
                 src={avatarPreview || profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}&background=random`}
-                sx={{ width: 150, height: 150 }}
+                sx={{ width: 150, height: 150, boxShadow: 3, border: '4px solid white' }}
               />
 
               <input
@@ -856,13 +912,14 @@ const Profile = () => {
                   variant="contained"
                   component="span"
                   startIcon={<PhotoCameraIcon />}
+                  sx={{ borderRadius: 2 }}
                 >
                   {t('Choose Photo')}
                 </Button>
               </label>
 
               {avatarFile && (
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="textSecondary" fontWeight="bold">
                   {t('Selected')}: {avatarFile.name}
                 </Typography>
               )}
@@ -873,14 +930,15 @@ const Profile = () => {
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAvatarDialog(false)}>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setOpenAvatarDialog(false)} sx={{ borderRadius: 2 }}>
             {t('Cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleUploadAvatar}
             disabled={!avatarFile || saving}
+            sx={{ borderRadius: 2 }}
           >
             {saving ? <CircularProgress size={24} /> : t('Upload')}
           </Button>

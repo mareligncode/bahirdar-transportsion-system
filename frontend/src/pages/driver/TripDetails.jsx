@@ -559,9 +559,17 @@ const TripDetails = () => {
                           <span className="font-semibold text-gray-900">
                             {booking.passengerID?.fullName || 'N/A'}
                           </span>
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            Seat #{booking.seatNumber}
-                          </span>
+                          {booking.seatNumbers && booking.seatNumbers.length > 0 ? (
+                            booking.seatNumbers.map((seat) => (
+                              <span key={seat} className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Seat #{seat}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                              Seat #{booking.seatNumber}
+                            </span>
+                          )}
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${booking.checkedIn
                             ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'

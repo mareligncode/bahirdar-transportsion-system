@@ -3,8 +3,11 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { Bell, CheckCheck, Trash2, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import { enUS } from 'date-fns/locale';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const NotificationsPage = () => {
+  const { t, i18n } = useTranslation();
   const {
     notifications,
     unreadCount,
@@ -48,6 +51,11 @@ const NotificationsPage = () => {
     return notification.status === 'failed' || notification.metadata?.error;
   };
 
+  const getDateLocale = () => {
+    // Falls back to enUS as date-fns doesn't have Amharic locale in current version
+    return enUS;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -58,10 +66,10 @@ const NotificationsPage = () => {
               <Link to="/dashboard" className="text-white/80 hover:text-white">
                 <ArrowLeft className="w-6 h-6" />
               </Link>
-              <h1 className="text-2xl font-bold text-white">Notifications</h1>
+              <h1 className="text-2xl font-bold text-white">{t('Notifications')}</h1>
               {unreadCount > 0 && (
                 <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm">
-                  {unreadCount} new
+                  {unreadCount} {t('new')}
                 </span>
               )}
             </div>
@@ -71,7 +79,7 @@ const NotificationsPage = () => {
                 className="text-white/80 hover:text-white flex items-center gap-2"
               >
                 <CheckCheck className="w-5 h-5" />
-                Mark all read
+                {t('Mark all read')}
               </button>
             )}
           </div>
@@ -84,20 +92,20 @@ const NotificationsPage = () => {
           <button
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-lg transition-colors ${filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            All ({notifications.length})
+            {t('All')} ({notifications.length})
           </button>
           <button
             onClick={() => setFilter('unread')}
             className={`px-4 py-2 rounded-lg transition-colors ${filter === 'unread'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            Unread ({unreadCount})
+            {t('Unread')} ({unreadCount})
           </button>
         </div>
 
@@ -106,12 +114,12 @@ const NotificationsPage = () => {
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-500 dark:text-gray-400">Loading notifications...</p>
+              <p className="mt-4 text-gray-500 dark:text-gray-400">{t('Loading notifications...')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <p>No notifications</p>
+              <p>{t('No notifications')}</p>
             </div>
           ) : (
             filtered.map(n => (
@@ -119,8 +127,8 @@ const NotificationsPage = () => {
                 key={n._id}
                 onClick={() => n.status !== 'read' && markAsRead(n._id)}
                 className={`p-4 border-b last:border-0 flex gap-3 transition-colors ${n.status !== 'read'
-                    ? 'bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                   } ${isFailed(n) ? 'border-l-4 border-l-red-500' : ''}`}
               >
                 <span className="text-2xl">{getIcon(n.type)}</span>
@@ -128,14 +136,14 @@ const NotificationsPage = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className={`font-medium ${n.status !== 'read'
-                          ? 'text-gray-900 dark:text-white'
-                          : 'text-gray-600 dark:text-gray-400'
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-gray-600 dark:text-gray-400'
                         }`}>
-                        {n.title}
+                        {t(n.title)}
                       </h3>
                       {isFailed(n) && (
                         <span className="text-xs text-red-600 dark:text-red-400 mt-1 block">
-                          Failed to deliver
+                          {t('Failed to deliver')}
                         </span>
                       )}
                     </div>
@@ -145,7 +153,7 @@ const NotificationsPage = () => {
                           onClick={(e) => handleRetry(e, n._id)}
                           disabled={retrying === n._id}
                           className="text-gray-400 hover:text-blue-500 disabled:opacity-50"
-                          title="Retry"
+                          title={t('Retry')}
                         >
                           <RefreshCw className={`w-4 h-4 ${retrying === n._id ? 'animate-spin' : ''}`} />
                         </button>
@@ -153,7 +161,7 @@ const NotificationsPage = () => {
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteNotification(n._id); }}
                         className="text-gray-400 hover:text-red-500"
-                        title="Delete"
+                        title={t('Delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -165,7 +173,7 @@ const NotificationsPage = () => {
                       dangerouslySetInnerHTML={{ __html: n.message }}
                     />
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{n.message}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t(n.message)}</p>
                   )}
 
                   {n.metadata?.actionURL && (
@@ -174,18 +182,21 @@ const NotificationsPage = () => {
                         to={n.metadata.actionURL}
                         className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg"
                       >
-                        {n.metadata.actionLabel || 'View Details'}
+                        {t(n.metadata.actionLabel || 'View Details')}
                         <ArrowLeft className="w-3 h-3 rotate-180" />
                       </Link>
                     </div>
                   )}
 
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(n.createdAt), {
+                      addSuffix: true,
+                      locale: getDateLocale()
+                    })}
                   </p>
                   {n.metadata?.error && (
                     <p className="text-xs text-red-500 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                      Error: {n.metadata.error}
+                      {t('Error: ')} {n.metadata.error}
                     </p>
                   )}
                 </div>

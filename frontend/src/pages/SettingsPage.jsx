@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from '../hooks/useTranslation';
 import {
   Settings,
   Moon,
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react';
 
 const SettingsPage = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings, updateSetting, toggleTheme, changeLanguage, resetSettings } = useSettings();
   const [activeTab, setActiveTab] = useState('general');
@@ -47,14 +49,14 @@ const SettingsPage = () => {
   ];
 
   const fontSizes = [
-    { value: 'small', label: 'Small', preview: '14px' },
-    { value: 'medium', label: 'Medium', preview: '16px' },
-    { value: 'large', label: 'Large', preview: '18px' }
+    { value: 'small', label: t('Small'), preview: '14px' },
+    { value: 'medium', label: t('Medium'), preview: '16px' },
+    { value: 'large', label: t('Large'), preview: '18px' }
   ];
 
   const tabs = [
-    { id: 'general', label: 'General', icon: Settings, description: 'Language' },
-    { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme and visual settings' },
+    { id: 'general', label: t('General'), icon: Settings, description: t('Language') },
+    { id: 'appearance', label: t('Appearance'), icon: Palette, description: t('Theme and visual settings') },
   ];
 
   const handleSave = () => {
@@ -77,8 +79,8 @@ const SettingsPage = () => {
               <Settings className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Settings</h1>
-              <p className="text-sm sm:text-base text-gray-500 mt-1">Manage preferences</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">{t('Settings')}</h1>
+              <p className="text-sm sm:text-base text-gray-500 mt-1">{t('Manage preferences')}</p>
             </div>
           </div>
         </div>
@@ -91,8 +93,8 @@ const SettingsPage = () => {
                 <Check className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="font-medium text-emerald-800">Settings saved successfully!</p>
-                <p className="text-sm text-emerald-600">Your changes have been applied.</p>
+                <p className="font-medium text-emerald-800">{t('Settings saved successfully!')}</p>
+                <p className="text-sm text-emerald-600">{t('Your changes have been applied.')}</p>
               </div>
             </div>
           </div>
@@ -110,12 +112,10 @@ const SettingsPage = () => {
                       {getInitials(user?.fullName)}
                     </span>
                   </div>
-                  <h3 className="text-base sm:text-lg font-semibold text-white">{user?.fullName || 'User'}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-white">{user?.fullName || t('User')}</h3>
                   <p className="text-xs sm:text-sm text-blue-100 truncate w-full text-center">{user?.email}</p>
                   <div className="mt-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] sm:text-xs text-white">
-                    {user?.role?.split('_').map(word =>
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(' ')}
+                    {user?.role ? t(user.role.toLowerCase()) : ''}
                   </div>
                 </div>
               </div>
@@ -153,14 +153,14 @@ const SettingsPage = () => {
                   className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg"
                 >
                   <Save className="w-5 h-5" />
-                  <span className="font-medium">Save Changes</span>
+                  <span className="font-medium">{t('Save Changes')}</span>
                 </button>
                 <button
                   onClick={resetSettings}
                   className="w-full mt-3 px-4 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center justify-center space-x-2"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span className="text-sm">Reset to Defaults</span>
+                  <span className="text-sm">{t('Reset to Defaults')}</span>
                 </button>
               </div>
             </div>
@@ -177,7 +177,7 @@ const SettingsPage = () => {
                       <div className="p-2 bg-blue-50 rounded-lg">
                         <Languages className="w-5 h-5 text-blue-600" />
                       </div>
-                      <h2 className="text-xl font-semibold text-gray-800">Language Preferences</h2>
+                      <h2 className="text-xl font-semibold text-gray-800">{t('Language Preferences')}</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -194,7 +194,7 @@ const SettingsPage = () => {
                             <span className="text-3xl">{lang.flag}</span>
                             <div className="text-left">
                               <p className={`font-semibold ${settings.language === lang.code ? 'text-blue-700' : 'text-gray-700'
-                                }`}>{lang.name}</p>
+                                }`}>{t(lang.name)}</p>
                               <p className={`text-sm ${settings.language === lang.code ? 'text-blue-500' : 'text-gray-400'
                                 }`}>{lang.native}</p>
                             </div>
@@ -219,7 +219,7 @@ const SettingsPage = () => {
                       <div className="p-2 bg-orange-50 rounded-lg">
                         <Palette className="w-5 h-5 text-orange-600" />
                       </div>
-                      <h2 className="text-xl font-semibold text-gray-800">Theme & Appearance</h2>
+                      <h2 className="text-xl font-semibold text-gray-800">{t('Theme & Appearance')}</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -241,8 +241,8 @@ const SettingsPage = () => {
                             </div>
                           )}
                         </div>
-                        <h3 className="font-semibold text-gray-800 mb-1">Light Mode</h3>
-                        <p className="text-sm text-gray-500">Clean and bright interface</p>
+                        <h3 className="font-semibold text-gray-800 mb-1">{t('Light Mode')}</h3>
+                        <p className="text-sm text-gray-500">{t('Clean and bright interface')}</p>
                         <div className="mt-4 flex space-x-1">
                           <div className="w-6 h-6 bg-gray-200 rounded"></div>
                           <div className="w-6 h-6 bg-gray-300 rounded"></div>
@@ -268,8 +268,8 @@ const SettingsPage = () => {
                             </div>
                           )}
                         </div>
-                        <h3 className="font-semibold text-gray-800 mb-1">Dark Mode</h3>
-                        <p className="text-sm text-gray-500">Easy on the eyes at night</p>
+                        <h3 className="font-semibold text-gray-800 mb-1">{t('Dark Mode')}</h3>
+                        <p className="text-sm text-gray-500">{t('Easy on the eyes at night')}</p>
                         <div className="mt-4 flex space-x-1">
                           <div className="w-6 h-6 bg-gray-700 rounded"></div>
                           <div className="w-6 h-6 bg-gray-800 rounded"></div>
@@ -279,7 +279,7 @@ const SettingsPage = () => {
                     </div>
 
                     <div className="border-t border-gray-100 pt-6">
-                      <h3 className="font-medium text-gray-700 mb-4">Font Size</h3>
+                      <h3 className="font-medium text-gray-700 mb-4">{t('Font Size')}</h3>
                       <div className="grid grid-cols-3 gap-4">
                         {fontSizes.map(size => (
                           <button
@@ -294,7 +294,7 @@ const SettingsPage = () => {
                               }`}>{size.label}</p>
                             <p className={`text-sm mt-1 ${settings.fontSize === size.value ? 'text-blue-500' : 'text-gray-400'
                               }`} style={{ fontSize: size.preview }}>
-                              Preview text
+                              {t('Preview text')}
                             </p>
                           </button>
                         ))}
