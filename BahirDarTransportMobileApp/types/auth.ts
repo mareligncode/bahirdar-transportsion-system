@@ -66,8 +66,10 @@ export interface UpdateProfileFormData {
 }
 export interface ValidationErrors {
   name?: string;
+  fullName?: string;
   email?: string;
   phone?: string;
+  phoneNumber?: string;
   password?: string;
   confirmPassword?: string;
   termsAccepted?: string;
