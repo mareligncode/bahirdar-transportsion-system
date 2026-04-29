@@ -43,6 +43,13 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="map/index"
+          options={{
+            title: translate('map'),
+            href: '/tabs/map',
+          }}
+        />
+        <Tabs.Screen
           name="tickets/index"
           options={{
             title: translate('tickets'),

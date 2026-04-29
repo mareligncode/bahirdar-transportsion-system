@@ -4,6 +4,10 @@ export interface Station {
   city: string;
   location?: string;
   contactPhone?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface StationOption {
@@ -52,6 +56,11 @@ export interface Trip {
   notes?: string;
   tripStatus: 'scheduled' | 'boarding' | 'ongoing' | 'completed' | 'cancelled' | 'delayed';
   isActive: boolean;
+  currentCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+  isRealtimeTracking?: boolean;
 }
 
 export interface SearchTripParams {

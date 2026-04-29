@@ -4,7 +4,7 @@ import { AppText } from '../common/AppText';
 import { usePathname, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Home, Ticket, Car, User } from 'lucide-react-native';
+import { Home, Ticket, Car, User, Navigation } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 const tabs = [
@@ -17,6 +17,11 @@ const tabs = [
     key: 'trips',
     icon: Car,
     route: '/tabs/trips',
+  },
+  {
+    key: 'map',
+    icon: Navigation,
+    route: '/tabs/map',
   },
   {
     key: 'tickets',

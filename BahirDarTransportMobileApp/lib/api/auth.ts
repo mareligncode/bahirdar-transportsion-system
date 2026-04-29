@@ -35,10 +35,10 @@ export const authAPI = {
       const authResponse: AuthResponse = {
         success: true,
         message: data.message || 'Registration successful',
-        accessToken: data.accessToken || data.token,
-        refreshToken: data.refreshToken,
-        user: data.user || data,
-        token: data.accessToken || data.token,
+        accessToken: data.data?.tokens?.accessToken || data.accessToken || data.token,
+        refreshToken: data.data?.tokens?.refreshToken || data.refreshToken,
+        user: data.data?.user || data.user || data,
+        token: data.data?.tokens?.accessToken || data.accessToken || data.token,
         expiresIn: data.expiresIn,
       };
 
