@@ -3,8 +3,6 @@ import { View, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-n
 import * as ImagePicker from 'expo-image-picker';
 import { 
   Upload, 
-  FileText, 
-  CheckCircle, 
   AlertCircle, 
   Banknote, 
   Info, 
@@ -28,7 +26,7 @@ interface ReceiptUploadProps {
 export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess }: ReceiptUploadProps) {
   const [file, setFile] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [bankDetails, setBankDetails] = useState<any>(null);
@@ -54,7 +52,7 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
       }
     };
     fetchInstructions();
-  }, [bookingId]);
+  }, [bookingId, showToast, translate]);
 
   const copyToClipboard = async (text: string, label: string) => {
     await Clipboard.setStringAsync(text);
@@ -84,7 +82,6 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
         return;
       }
       setFile(selectedAsset);
-      setResult(null);
       setError(null);
     }
   };
@@ -106,7 +103,6 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
       );
 
       if (response.success) {
-        setResult(response.data);
         showToast(translate('verification_successful') || 'Receipt verified successfully!', 'success');
         if (onVerificationSuccess) {
           onVerificationSuccess(response.data);
@@ -116,7 +112,7 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
       }
     } catch (err: any) {
       console.error('OCR Verification Error:', err);
-      const msg = err.response?.data?.message || err.message || 'Failed to process receipt. Please try clear image.';
+      const msg = err.response?.data?.message || err.message || translate('failed_to_process_receipt') || 'Failed to process receipt. Please try clear image.';
       setError(msg);
       showToast(msg, 'error');
     } finally {
@@ -126,7 +122,6 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
 
   const reset = () => {
     setFile(null);
-    setResult(null);
     setError(null);
   };
 
@@ -195,9 +190,9 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
             </View>
           </View>
         ) : (
-          <View className="bg-red-50 border border-red-100 rounded-xl p-4 items-center mb-5">
+          <View className={`${isDark ? 'bg-red-900/20 border-red-900/50' : 'bg-red-50 border-red-100'} rounded-xl p-4 items-center mb-5`}>
             <AlertCircle size={24} color="#f87171" className="mb-2" />
-            <AppText className="text-sm font-bold text-red-900">
+            <AppText className={`text-sm font-bold ${isDark ? 'text-red-400' : 'text-red-900'}`}>
               {translate('failed_to_load_bank_details') || 'Failed to load bank details'}
             </AppText>
           </View>
@@ -242,15 +237,15 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
             </View>
 
             {error ? (
-              <View className="bg-red-50 border border-red-100 rounded-xl p-4 flex-row">
+              <View className={`${isDark ? 'bg-red-900/20 border-red-900/50' : 'bg-red-50 border-red-100'} rounded-xl p-4 flex-row`}>
                 <View className="p-2 bg-red-600 rounded-lg mr-3 self-start">
                   <AlertCircle size={20} color="white" />
                 </View>
                 <View className="flex-1">
-                  <AppText className="font-bold text-red-900 mb-1">
+                  <AppText className={`font-bold mb-1 ${isDark ? 'text-red-400' : 'text-red-900'}`}>
                     {translate('validation_failure') || 'Validation Failure'}
                   </AppText>
-                  <AppText className="text-xs text-red-700 mb-3">
+                  <AppText className={`text-xs mb-3 ${isDark ? 'text-red-300' : 'text-red-700'}`}>
                     {error}
                   </AppText>
                   <TouchableOpacity
@@ -267,7 +262,7 @@ export default function ReceiptUpload({ bookingId, amount, onVerificationSuccess
               <TouchableOpacity
                 onPress={handleUpload}
                 disabled={processing}
-                className={`w-full py-4 rounded-xl flex-row items-center justify-center ${processing ? 'bg-gray-400' : 'bg-gray-900'}`}
+                className={`w-full py-4 rounded-xl flex-row items-center justify-center ${processing ? (isDark ? 'bg-gray-700' : 'bg-gray-400') : (isDark ? 'bg-blue-600' : 'bg-gray-900')}`}
               >
                 {processing ? (
                   <>
