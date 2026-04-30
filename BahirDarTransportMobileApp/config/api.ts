@@ -233,6 +233,8 @@ export const API_ENDPOINTS = {
     STATUS: '/payment/status',
     HISTORY: '/payment/history',
     BY_ID: (id: string) => `/payment/${id}`,
+    VERIFY_RECEIPT: '/payment/verify-receipt',
+    INSTRUCTIONS: (bookingId: string) => `/payment/${bookingId}/instructions`,
   },
 
   NOTIFICATIONS: {
