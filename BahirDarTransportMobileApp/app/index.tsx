@@ -3,9 +3,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Image,
-  Dimensions,
-  Animated as RNAnimated,
   StatusBar,
 } from 'react-native';
 import { AppText } from '@/components/common/AppText';
@@ -28,7 +25,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Loader } from '@/components/common/Loader';
 import { useTrips } from '@/hooks/useTrips';
-import { useBooking } from '@/hooks/useBooking';
+
 import { useTheme } from '@/context/ThemeContext';
 import {
   Bus,
@@ -37,18 +34,15 @@ import {
   Ticket,
   CreditCard,
   Users,
-  Star,
   ArrowRight,
   Sparkles,
   CheckCircle,
-  ChevronRight,
   PlayCircle,
   PhoneCall,
-  Mail,
-  Map
+  Mail
 } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+
 
 const HERO_IMAGES = [
   require('@/assets/images/image1.png'),
@@ -61,13 +55,13 @@ const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const { translate } = useTranslation();
-  const { getMyBookings } = useBooking();
+
   const { isDark, colors } = useTheme();
   const [currentSlide, setCurrentSlide] = useState(0);
   const fadeAnim = useSharedValue(1);
   const [imageError, setImageError] = useState(false);
-  const [realTestimonials, setRealTestimonials] = useState<any[]>([]);
-  const { trips, fetchAllTrips, stations, fetchStations, loading: dataLoading } = useTrips();
+
+  const { fetchAllTrips, fetchStations } = useTrips();
   const [stats, setStats] = useState({ activeTrips: 0, totalStations: 0 });
 
   const fadeAnimatedStyle = useAnimatedStyle(() => ({
@@ -122,7 +116,7 @@ export default function LandingPage() {
     if (!isAuthenticated) {
       loadStats();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchAllTrips, fetchStations]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -287,7 +281,7 @@ export default function LandingPage() {
               </AppText>
             </Animated.View>
             <Animated.View entering={FadeInLeft.duration(600).delay(400)}>
-              <AppText variant="bodyLarge" color="white" className="mb-6 opacity-90">
+              <AppText variant="bodyLarge" color="white" className="mb-4 opacity-90">
                 {translate('landing_sub')}
               </AppText>
             </Animated.View>
@@ -404,8 +398,8 @@ export default function LandingPage() {
             ))}
           </ScrollView>
         </View>
-        <View className={`px-4 py-6 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-8">
+        <View className={`px-4 py-4 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-4">
             {translate('try_features')}
           </AppText>
 
@@ -438,7 +432,7 @@ export default function LandingPage() {
 
           <TouchableOpacity
             onPress={() => router.push('/tabs/trips/search')}
-            className={`mt-6 ${isDark ? 'bg-gray-900' : 'bg-white'} py-4 rounded-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-center`}
+            className={`mt-4 ${isDark ? 'bg-gray-900' : 'bg-white'} py-4 rounded-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-center`}
             activeOpacity={0.7}
           >
             <PlayCircle size={20} color={colors.primary} />
@@ -447,8 +441,8 @@ export default function LandingPage() {
             </AppText>
           </TouchableOpacity>
         </View>
-        <View className="px-4 py-8">
-          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-10">
+        <View className="px-4 py-4">
+          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-6">
             {translate('live_stats' as any) || 'System Activity'}
           </AppText>
 
@@ -471,7 +465,7 @@ export default function LandingPage() {
           </View>
         </View>
 
-        <View className="px-4 py-6">
+        <View className="px-4 py-4">
           <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-3xl p-8 shadow-sm relative overflow-hidden border ${isDark ? 'border-transparent' : 'border-blue-100'}`}>
             <View className={`absolute -top-10 -right-10 w-40 h-40 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
             <View className={`absolute -bottom-10 -left-10 w-32 h-32 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
@@ -520,7 +514,7 @@ export default function LandingPage() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row flex-wrap justify-center gap-4 mt-8 pt-6 border-t border-blue-100/50">
+            <View className="flex-row flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-blue-100/50">
               <View className="flex-row items-center">
                 <CheckCircle size={16} color={colors.success} />
                 <AppText variant="caption" color="textSecondary" className="ml-2 font-medium">{translate('no_card_needed')}</AppText>
@@ -537,13 +531,13 @@ export default function LandingPage() {
           </View>
         </View>
 
-        <View className={`px-4 py-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <View className={`px-4 py-6 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
           <View className="items-center">
-            <AppText variant="h2" weight="bold" color={isDark ? 'white' : 'textPrimary'} className="mb-8">
+            <AppText variant="h2" weight="bold" color={isDark ? 'white' : 'textPrimary'} className="mb-4">
               {translate('need_help' as any)}
             </AppText>
 
-            <View className="flex-row space-x-6 mb-8">
+            <View className="flex-row space-x-6 mb-4">
               <TouchableOpacity
                 className={`flex-1 ${isDark ? 'bg-white/10' : 'bg-white'} p-5 rounded-2xl items-center shadow-sm border ${isDark ? 'border-transparent' : 'border-gray-100'}`}
                 activeOpacity={0.7}
@@ -563,7 +557,7 @@ export default function LandingPage() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row flex-wrap justify-center gap-x-6 gap-y-2 mb-10">
+            <View className="flex-row flex-wrap justify-center gap-x-6 gap-y-2 mb-6">
               <TouchableOpacity onPress={() => router.push('/privacy')}>
                 <AppText color={isDark ? 'white' : 'textSecondary'} className="opacity-70">{translate('privacy_policy')}</AppText>
               </TouchableOpacity>

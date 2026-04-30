@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -11,8 +10,6 @@ import {
   Modal,
   FlatList,
   TextInput,
-  Dimensions,
-  KeyboardEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -44,7 +41,7 @@ import {
 import { RegisterFormData } from '@/types/auth';
 import { AppText } from '@/components/common/AppText';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 
 const countryCodes = [
   { code: '+251', flag: '🇪🇹', name: 'Ethiopia', minLength: 9, maxLength: 9, pattern: '9|7' },
@@ -52,7 +49,7 @@ const countryCodes = [
 
 export default function Register() {
   const { translate } = useTranslation();
-  const { isDark, colors } = useTheme();
+  const { isDark } = useTheme();
   const [isCountryOpen, setIsCountryOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [error, setError] = useState('');
@@ -61,7 +58,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
 
   const nameInputRef = useRef<TextInput>(null!);
   const emailInputRef = useRef<TextInput>(null!);
@@ -102,12 +99,12 @@ export default function Register() {
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
-      setIsKeyboardVisible(true);
+
       setKeyboardOffset(e.endCoordinates.height);
     });
 
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setIsKeyboardVisible(false);
+
       setKeyboardOffset(0);
     });
 
@@ -128,7 +125,7 @@ export default function Register() {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSpecialChar = /[@$!%*?&]/.test(password);
     const hasMinLength = password.length >= 8;
 
     console.log('Password criteria check:', {
@@ -581,9 +578,9 @@ export default function Register() {
                             required: true
                           },
                           {
-                            check: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-                            text: translate('one_special'),
-                            description: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '✗',
+                            check: /[@$!%*?&]/.test(password),
+                            text: translate('one_special', { chars: '@$!%*?&' }) || 'At least one special character (@$!%*?&)',
+                            description: /[@$!%*?&]/.test(password) ? '✓' : '✗',
                             required: true
                           },
                         ].map((req, index) => (

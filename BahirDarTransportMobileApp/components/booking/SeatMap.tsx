@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator
+  Alert
 } from 'react-native';
 import { AppText } from '../common/AppText';
 import Animated, {
@@ -14,7 +13,6 @@ import Animated, {
 import { Crown, Armchair, Info, AlertCircle, XCircle, RefreshCw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Trip } from '../../types';
-import { useToast } from '../common/Toast';
 import { bookingsApi } from '../../lib/api/bookings';
 import { useTheme } from '../../context/ThemeContext';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -36,7 +34,7 @@ export default function SeatMap({
   maxSelectable = 8,
   userBookedSeats = [],
 }: SeatMapProps) {
-  const { showToast } = useToast();
+
   const [loading, setLoading] = useState(false);
   const [bookedSeats, setBookedSeats] = useState<Set<number>>(new Set());
   const { isDark, colors } = useTheme();
@@ -77,7 +75,7 @@ export default function SeatMap({
 
     const interval = setInterval(fetchBookedSeats, 15000);
     return () => clearInterval(interval);
-  }, [trip?._id]);
+  }, [trip?._id, fetchBookedSeats]);
 
   const getSeatStatus = useCallback((seatId: string): 'available' | 'selected' | 'booked' => {
     const seatNum = parseInt(seatId, 10);

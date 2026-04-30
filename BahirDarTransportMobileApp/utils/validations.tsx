@@ -2,7 +2,6 @@ import {
   LoginFormData,
   RegisterFormData,
   ForgotPasswordFormData,
-  UpdateProfileFormData,
   ResetPasswordFormData,
   ValidationErrors
 } from '@/types/auth';
@@ -29,11 +28,11 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
   const errors: ValidationErrors = {};
 
   if (!data.fullName || data.fullName.trim() === '') {
-    errors.name = 'Full name is required';
+    errors.fullName = 'Full name is required';
   } else if (data.fullName.trim().length < 2) {
-    errors.name = 'Full name must be at least 2 characters';
+    errors.fullName = 'Full name must be at least 2 characters';
   } else if (data.fullName.trim().split(' ').length < 2) {
-    errors.name = 'Please enter your first and last name';
+    errors.fullName = 'Please enter your first and last name';
   }
 
   if (!data.email || data.email.trim() === '') {
@@ -43,16 +42,16 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
   }
 
   if (!data.phoneNumber || data.phoneNumber.trim() === '') {
-    errors.phone = 'Phone number is required';
+    errors.phoneNumber = 'Phone number is required';
   } else {
     const phoneDigits = data.phoneNumber.replace(/\D/g, '');
     const countryCode = data.phoneNumber.includes('+251') ? '251' : '';
     const numberWithoutCode = phoneDigits.replace(countryCode, '');
 
     if (numberWithoutCode.length < 9) {
-      errors.phone = 'Phone number must be at least 9 digits';
+      errors.phoneNumber = 'Phone number must be at least 9 digits';
     } else if (!/^[79]/.test(numberWithoutCode)) {
-      errors.phone = 'Ethiopian numbers must start with 7 or 9';
+      errors.phoneNumber = 'Ethiopian numbers must start with 7 or 9';
     }
   }
 
@@ -66,8 +65,8 @@ export const validateRegisterForm = (data: RegisterFormData): ValidationErrors =
     errors.password = 'Password must contain at least one uppercase letter';
   } else if (!/(?=.*\d)/.test(data.password)) {
     errors.password = 'Password must contain at least one number';
-  } else if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(data.password)) {
-    errors.password = 'Password must contain at least one special character';
+  } else if (!/(?=.*[@$!%*?&])/.test(data.password)) {
+    errors.password = 'Password must contain at least one special character (@$!%*?&)';
   }
 
   if (!data.confirmPassword || data.confirmPassword.trim() === '') {
@@ -115,8 +114,8 @@ export const validateResetPasswordForm = (data: ResetPasswordFormData): Validati
     errors.password = 'Password must contain at least one uppercase letter';
   } else if (!/(?=.*\d)/.test(data.password)) {
     errors.password = 'Password must contain at least one number';
-  } else if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(data.password)) {
-    errors.password = 'Password must contain at least one special character';
+  } else if (!/(?=.*[@$!%*?&])/.test(data.password)) {
+    errors.password = 'Password must contain at least one special character (@$!%*?&)';
   }
 
   if (data.password !== data.confirmPassword) {
@@ -128,13 +127,13 @@ export const validateResetPasswordForm = (data: ResetPasswordFormData): Validati
 
 export const getPasswordStrength = (password: string) => {
   let score = 0;
-  let feedback = [];
+
 
   if (password.length >= 8) score++;
   if (/[a-z]/.test(password)) score++;
   if (/[A-Z]/.test(password)) score++;
   if (/\d/.test(password)) score++;
-  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) score++;
+  if (/[@$!%*?&]/.test(password)) score++;
 
   const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
   const percentage = Math.min(100, (score / 5) * 100);
