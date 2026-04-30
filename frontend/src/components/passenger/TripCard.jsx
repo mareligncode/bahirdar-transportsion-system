@@ -35,7 +35,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString(t('locale') || 'en-US', {
         hour: '2-digit',
         minute: '2-digit'
       });
@@ -52,10 +52,10 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (date.toDateString() === today.toDateString()) return t('Today');
-      if (date.toDateString() === tomorrow.toDateString()) return t('Tomorrow');
+      if (date.toDateString() === today.toDateString()) return t('today');
+      if (date.toDateString() === tomorrow.toDateString()) return t('tomorrow');
 
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString(t('locale') || 'en-US', {
         month: 'short',
         day: 'numeric'
       });
@@ -72,7 +72,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
       const diffMs = arr - dep;
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${minutes}m`;
+      return t('duration_format', { hours, minutes });
     } catch {
       return '';
     }
@@ -228,12 +228,12 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             <Grid item xs={12} sm={3}>
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem' }}>
-                  {trip.origin?.stationName || 'Unknown'} → {trip.destination?.stationName || 'Unknown'}
+                  {trip.origin?.stationName || t('unknown')} → {trip.destination?.stationName || t('unknown')}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                   <AccessTime sx={{ fontSize: 14, color: '#64748b' }} />
                   <Typography variant="caption" color="text.secondary">
-                    {calculateDuration(trip.departureTime, trip.arrivalTime)} • {trip.vehicle?.carType || 'Bus'}
+                    {calculateDuration(trip.departureTime, trip.arrivalTime)} • {trip.vehicle?.carType || t('bus')}
                   </Typography>
                 </Box>
               </Box>
@@ -310,7 +310,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
             />
             <Chip
               icon={<Person />}
-              label={trip.driver?.fullName?.split(' ')[0] || 'Driver'}
+              label={trip.driver?.fullName?.split(' ')[0] || t('driver')}
               size="small"
               variant="outlined"
             />
@@ -369,7 +369,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
           fontSize: '0.8rem'
         }}>
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {trip.origin?.city || 'City'} → {trip.destination?.city || 'City'}
+            {trip.origin?.city || t('city')} → {trip.destination?.city || t('city')}
           </Typography>
         </Box>
 
@@ -415,7 +415,7 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
               fontSize: '1rem',
               lineHeight: 1.3
             }}>
-              {trip.origin?.stationName || 'Unknown'} {t('to')} {trip.destination?.stationName || 'Unknown'}
+              {trip.origin?.stationName || t('unknown')} {t('to')} {trip.destination?.stationName || t('unknown')}
             </Typography>
 
             {/* Timeline */}
@@ -502,11 +502,11 @@ const TripCard = ({ trip, onSelect, viewMode = 'grid', highlight = false }) => {
               </Avatar>
               <Box>
                 <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                  {trip.vehicle?.carType || 'Bus'} • {trip.vehicle?.plateNumber || 'N/A'}
+                  {trip.vehicle?.carType || t('bus')} • {trip.vehicle?.plateNumber || t('na')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Person sx={{ fontSize: 12 }} />
-                  {t('driver')}: {trip.driver?.fullName || 'N/A'}
+                  {t('driver')}: {trip.driver?.fullName || t('na')}
                 </Typography>
               </Box>
             </Box>

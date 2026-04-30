@@ -16,6 +16,7 @@ import paymentRoutes from './routes/paymentRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
 import queueRoutes from './routes/queueRoutes.js'
 import routeRoutes from './routes/routeRoutes.js'
+import reportRoutes from './routes/reportRoutes.js'
 import LocationSimulator from './services/locationSimulator.js';
 
 connectDB()
@@ -156,6 +157,7 @@ app.use('/api/payment', paymentRoutes)
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/route', routeRoutes);
+app.use('/api/reports', reportRoutes);
 app.set('io', io);
 
 app.get("/", (req, res) => {

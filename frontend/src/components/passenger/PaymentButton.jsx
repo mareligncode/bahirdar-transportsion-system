@@ -19,9 +19,9 @@ import {
 import api from '../../services/api';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const PaymentButton = ({ 
-  bookingId, 
-  amount, 
+const PaymentButton = ({
+  bookingId,
+  amount,
   onSuccess,
   onError,
   variant = 'contained',
@@ -40,18 +40,18 @@ const PaymentButton = ({
     setDialogOpen(true);
     setErrorMessage('');
     setDebugInfo(null);
-    
+
     try {
       console.log('💰 Initializing payment for booking:', bookingId);
       console.log('Amount:', amount);
-      
+
       const requestData = {
         bookingId: bookingId,
         paymentMethod: 'mobile_money'
       };
-      
+
       console.log('Sending request:', requestData);
-      
+
       const response = await api.post('/api/payment/initialize', requestData);
 
       console.log('✅ Payment response:', response.data);
@@ -74,14 +74,14 @@ const PaymentButton = ({
         data: error.response?.data,
         message: error.message
       });
-      
+
       // Get the detailed error message
-      let errorMsg = 'Payment initialization failed';
+      let errorMsg = t('payment_init_failed');
       let debug = {
         status: error.response?.status,
         data: error.response?.data
       };
-      
+
       if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
       } else if (error.response?.data?.error) {
@@ -89,11 +89,11 @@ const PaymentButton = ({
       } else if (error.message) {
         errorMsg = error.message;
       }
-      
+
       setErrorMessage(errorMsg);
       setDebugInfo(debug);
       setPaymentStatus('failed');
-      
+
       if (onError) {
         onError(errorMsg);
       }
@@ -136,33 +136,33 @@ const PaymentButton = ({
       </Button>
 
       {/* Payment Dialog */}
-      <Dialog 
-        open={dialogOpen} 
+      <Dialog
+        open={dialogOpen}
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>
-          {paymentStatus === 'failed' ? t('Payment Failed') : 
-           paymentStatus === 'success' ? t('Payment Successful') : 
-           t('Processing Payment')}
+          {paymentStatus === 'failed' ? t('payment_failed_error') :
+            paymentStatus === 'success' ? t('payment_successful') :
+              t('processing_payment')}
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', pb: 3 }}>
           {!paymentStatus && !errorMessage ? (
             <>
               <CircularProgress size={60} sx={{ mb: 2 }} />
               <Typography>
-                {t('Initializing payment...')}
+                {t('initializing_payment')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                {t('Please wait')}
+                {t('please_wait')}
               </Typography>
             </>
           ) : paymentStatus === 'success' ? (
             <>
               <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
               <Typography>
-                {t('Payment successful!')}
+                {t('payment_completed_success')}
               </Typography>
             </>
           ) : paymentStatus === 'failed' ? (
@@ -173,7 +173,7 @@ const PaymentButton = ({
                   {errorMessage}
                 </Typography>
               </Alert>
-              
+
               {/* Show detailed error in development */}
               {process.env.NODE_ENV === 'development' && debugInfo && (
                 <Paper sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', textAlign: 'left' }}>
@@ -182,22 +182,22 @@ const PaymentButton = ({
                   </Typography>
                 </Paper>
               )}
-              
+
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                {t('Please try again or contact support.')}
+                {t('try_again_contact_support')}
               </Typography>
             </>
           ) : null}
         </DialogContent>
         {(paymentStatus === 'failed' || paymentStatus === 'success') && (
           <DialogActions sx={{ pb: 3, px: 3 }}>
-            <Button 
-              onClick={handleClose} 
-              variant="contained" 
+            <Button
+              onClick={handleClose}
+              variant="contained"
               fullWidth
               color={paymentStatus === 'success' ? 'success' : 'primary'}
             >
-              {paymentStatus === 'success' ? t('Continue') : t('Close')}
+              {paymentStatus === 'success' ? t('continue') : t('close')}
             </Button>
           </DialogActions>
         )}

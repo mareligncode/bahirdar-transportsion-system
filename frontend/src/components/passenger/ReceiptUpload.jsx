@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
+    const { t } = useTranslation();
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [processing, setProcessing] = useState(false);
@@ -38,7 +40,7 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                 }
             } catch (err) {
                 console.error('Failed to load bank details:', err);
-                toast.error('Could not load owner bank details');
+                toast.error(t('could_not_load_bank_details'));
             } finally {
                 setLoadingDetails(false);
             }
@@ -48,7 +50,7 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
 
     const copyToClipboard = (text, label) => {
         navigator.clipboard.writeText(text);
-        toast.success(`${label} copied!`, {
+        toast.success(t('copied_success', { label }), {
             style: {
                 borderRadius: '10px',
                 background: '#333',
@@ -61,7 +63,7 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             if (selectedFile.size > 5 * 1024 * 1024) {
-                toast.error('File size exceeds 5MB limit');
+                toast.error(t('file_too_large'));
                 return;
             }
             setFile(selectedFile);
@@ -73,7 +75,7 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
 
     const handleUpload = async () => {
         if (!file) {
-            toast.error('Please select an image first');
+            toast.error(t('please_select_image'));
             return;
         }
 
@@ -92,14 +94,14 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
 
             if (response.data.success) {
                 setResult(response.data.data);
-                toast.success('Receipt verified successfully!');
+                toast.success(t('receipt_verified_success'));
                 if (onVerificationSuccess) {
                     onVerificationSuccess(response.data.data);
                 }
             }
         } catch (error) {
             console.error('OCR Verification Error:', error);
-            const msg = error.response?.data?.message || 'Failed to process receipt. Please try clear image.';
+            const msg = error.response?.data?.message || t('failed_to_process_receipt');
             setError(msg);
             toast.error(msg);
         } finally {
@@ -124,16 +126,16 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                         <Scan className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-extrabold text-xl text-gray-900 leading-tight">Secure Payment Verification</h3>
+                        <h3 className="font-extrabold text-xl text-gray-900 leading-tight">{t('secure_payment_verification')}</h3>
                         <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 font-bold uppercase tracking-wider">
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            AI Powered OCR System
+                            {t('ai_powered_ocr')}
                         </div>
                     </div>
                 </div>
                 {amount && (
                     <div className="text-right">
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Payable Total</p>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t('payable_total')}</p>
                         <div className="flex items-baseline gap-1 justify-end">
                             <span className="text-sm font-bold text-gray-900">ETB</span>
                             <span className="text-3xl font-black text-gray-900">{amount.toLocaleString()}</span>
@@ -147,10 +149,9 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                            <Banknote className="w-4 h-4 text-blue-500" />
-                            Receiver Bank Details
+                            {t('receiver_bank_details')}
                         </h4>
-                        <span className="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-md border border-amber-100 uppercase">Action Required</span>
+                        <span className="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-md border border-amber-100 uppercase">{t('action_required')}</span>
                     </div>
 
                     {loadingDetails ? (
@@ -165,7 +166,7 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
 
                             <div className="space-y-4">
                                 <div>
-                                    <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">Bank Name</p>
+                                    <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">{t('bank_name')}</p>
                                     <p className="text-lg font-bold text-white flex items-center gap-2">
                                         {bankDetails.bankName}
                                         <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
@@ -173,8 +174,8 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/10">
-                                    <div className="group/item cursor-pointer" onClick={() => copyToClipboard(bankDetails.accountNumber, 'Account Number')}>
-                                        <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">Account Number</p>
+                                    <div className="group/item cursor-pointer" onClick={() => copyToClipboard(bankDetails.accountNumber, t('account_number'))}>
+                                        <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">{t('account_number')}</p>
                                         <div className="flex items-center gap-2">
                                             <p className="text-xl font-mono font-black text-white hover:text-blue-400 transition-colors uppercase tracking-wider">
                                                 {bankDetails.accountNumber}
@@ -183,25 +184,25 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">Account Holder Name</p>
+                                        <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">{t('account_holder_name')}</p>
                                         <p className="text-lg font-extrabold text-blue-50">{bankDetails.accountName}</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                                <p className="text-[10px] text-white/40 italic">Please double-check account name before sending</p>
+                                <p className="text-[10px] text-white/40 italic">{t('check_account_name_hint')}</p>
                                 <button className="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full font-bold transition-all flex items-center gap-1.5">
                                     <ExternalLink className="w-3 h-3" />
-                                    Open App
+                                    {t('open_app')}
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
                             <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                            <p className="text-sm font-bold text-red-900">Failed to load bank details</p>
-                            <p className="text-xs text-red-600 mt-1">Please refresh the page or contact support.</p>
+                            <p className="text-sm font-bold text-red-900">{t('failed_to_load_bank_details')}</p>
+                            <p className="text-xs text-red-600 mt-1">{t('try_refresh_page')}</p>
                         </div>
                     )}
                 </div>
@@ -214,12 +215,12 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                         <div className="w-20 h-20 bg-gray-50 group-hover:bg-blue-100 text-gray-300 group-hover:text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-5 transition-all duration-300 -rotate-3 group-hover:rotate-0">
                             <Upload className="w-10 h-10" />
                         </div>
-                        <h4 className="text-xl font-extrabold text-gray-900">Upload Transfer Screenshot</h4>
-                        <p className="text-sm text-gray-500 mt-2 font-medium">PNG, JPG or JPEG (Max 5MB)</p>
+                        <h4 className="text-xl font-extrabold text-gray-900">{t('upload_receipt_title')}</h4>
+                        <p className="text-sm text-gray-500 mt-2 font-medium">{t('image_formats_hint')}</p>
 
                         <div className="mt-8 flex items-center justify-center gap-3 text-[11px] text-indigo-700 font-black bg-indigo-50 py-3 px-6 rounded-2xl w-fit mx-auto border border-indigo-100">
                             <Info className="w-4 h-4" />
-                            TXN ID & ACCOUNT MUST BE VISIBLE
+                            {t('txn_visibility_hint')}
                         </div>
                     </div>
                 ) : (
@@ -247,23 +248,23 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                                         <CheckCircle className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h4 className="font-extrabold text-xl">Verification successful</h4>
-                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Digital authenticity confirmed</p>
+                                        <h4 className="font-extrabold text-xl">{t('verification_successful')}</h4>
+                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{t('digital_authenticity_confirmed')}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-8 relative z-10">
                                     <div className="space-y-1.5">
-                                        <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Transaction ID</p>
+                                        <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">{t('transaction_id')}</p>
                                         <p className="font-mono text-base font-black text-emerald-950 break-all bg-emerald-600/5 p-2 rounded-lg">{result.transactionId}</p>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Amount Matches</p>
+                                        <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">{t('amount_matches')}</p>
                                         <p className="text-3xl font-black text-emerald-950 leading-none">ETB {result.amount?.toLocaleString()}</p>
                                     </div>
                                     {result.accountNumber && (
                                         <div className="col-span-2 space-y-1.5 pt-4 border-t border-emerald-200/50">
-                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Confirmed Recipient Account</p>
+                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">{t('confirmed_recipient_account')}</p>
                                             <p className="text-lg font-black text-emerald-900 font-mono italic">{result.accountNumber}</p>
                                         </div>
                                     )}
@@ -275,13 +276,13 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                                     <AlertCircle className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-xl text-rose-900">Validation Failure</h4>
+                                    <h4 className="font-black text-xl text-rose-900">{t('validation_failure')}</h4>
                                     <p className="text-sm font-semibold text-rose-700 mt-2 leading-relaxed">{error}</p>
                                     <button
                                         onClick={reset}
                                         className="mt-5 px-6 py-2.5 bg-rose-600 text-white text-xs font-black rounded-xl hover:bg-rose-700 transition-all uppercase tracking-widest shadow-lg shadow-rose-200"
                                     >
-                                        Try Clear Photo
+                                        {t('try_clear_photo')}
                                     </button>
                                 </div>
                             </div>
@@ -296,12 +297,12 @@ const ReceiptUpload = ({ onVerificationSuccess, bookingId, amount }) => {
                                     {processing ? (
                                         <>
                                             <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-                                            SECURELY ANALYZING DATA...
+                                            {t('securely_analyzing')}
                                         </>
                                     ) : (
                                         <>
                                             <ShieldCheck className="w-6 h-6 text-blue-400" />
-                                            VERIFY & RELEASE PAYMENT
+                                            {t('verify_release_payment')}
                                         </>
                                     )}
                                 </span>

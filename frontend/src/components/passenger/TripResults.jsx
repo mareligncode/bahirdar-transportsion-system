@@ -114,7 +114,7 @@ const TripResults = ({
       const diffMs = arr - dep;
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${minutes}m`;
+      return t('duration_format', { hours, minutes });
     } catch {
       return '';
     }
@@ -743,7 +743,7 @@ const TripResults = ({
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               size="small"
-              placeholder={t('min')}
+              placeholder={t('min_price')}
               value={priceRange.min}
               onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
               type="number"
@@ -754,7 +754,7 @@ const TripResults = ({
             />
             <TextField
               size="small"
-              placeholder={t('max')}
+              placeholder={t('max_price')}
               value={priceRange.max}
               onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
               type="number"

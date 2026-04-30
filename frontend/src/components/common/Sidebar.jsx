@@ -84,10 +84,11 @@ export default function Sidebar({ userRole }) {
       { icon: LayoutDashboard, label: t('dashboard'), path: '/admin/dashboard' },
       { icon: Users, label: t('all_users'), path: '/admin/AllUsers' },
       { icon: Shield, label: t('role_management'), path: '/admin/role-management' },
-      { icon: Calendar, label: t('schedules'), path: '/admin/schedules' },
+      // { icon: Calendar, label: t('schedules'), path: '/admin/schedules' },
       { icon: Route, label: t('routes'), path: '/admin/routes' },
       { icon: Car, label: t('vehicles'), path: '/admin/vehicles' },
       { icon: MapPin, label: t('stations'), path: '/admin/stations' },
+      { icon: BarChart3, label: t('reports_analytics'), path: '/admin/reports' },
     ];
 
     switch (userRole) {

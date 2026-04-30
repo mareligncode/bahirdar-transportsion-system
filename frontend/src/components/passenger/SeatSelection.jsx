@@ -104,7 +104,7 @@ const SeatSelection = ({
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString(t('locale') || 'en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric'
@@ -118,7 +118,7 @@ const SeatSelection = ({
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString(t('locale') || 'en-US', {
         hour: '2-digit',
         minute: '2-digit'
       });
@@ -187,7 +187,7 @@ const SeatSelection = ({
                     {t('available_seats')}: {availableSeatsCount}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {t('select_up_to', { count: maxSeats })} seats
+                    {t('select_up_to', { count: maxSeats })} {t('seats')}
                   </Typography>
                 </Box>
                 <Chip
@@ -232,7 +232,7 @@ const SeatSelection = ({
                   return (
                     <Tooltip
                       key={seat.number}
-                      title={seat.isBooked ? t('seat_booked') : `Seat ${seat.number}`}
+                      title={seat.isBooked ? t('seat_booked') : `${t('seat_prefix')} ${seat.number}`}
                       arrow
                     >
                       <Button
@@ -372,7 +372,7 @@ const SeatSelection = ({
                   border: '1px solid #e2e8f0'
                 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.9rem' }}>
-                    {trip?.origin?.stationName || 'Unknown'} → {trip?.destination?.stationName || 'Unknown'}
+                    {trip?.origin?.stationName || t('unknown')} → {trip?.destination?.stationName || t('unknown')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                     <Schedule sx={{ fontSize: 14, color: '#64748b' }} />
@@ -383,7 +383,7 @@ const SeatSelection = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                     <DirectionsBus sx={{ fontSize: 14, color: '#64748b' }} />
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                      {trip?.vehicle?.carType || 'Bus'} • {trip?.vehicle?.plateNumber || 'N/A'}
+                      {trip?.vehicle?.carType || t('bus')} • {trip?.vehicle?.plateNumber || t('na')}
                     </Typography>
                   </Box>
                 </Paper>
@@ -416,7 +416,7 @@ const SeatSelection = ({
                       return (
                         <Chip
                           key={seatNumber}
-                          label={`Seat ${seatNumber}`}
+                          label={`${t('seat_prefix')} ${seatNumber}`}
                           size="small"
                           onDelete={() => handleSeatClick({ number: seatNumber, isBooked: false })}
                           sx={{

@@ -25,7 +25,7 @@ import BookingGuide from './pages/passenger/BookingGuide';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
-import Schedules from './pages/admin/Schedules';
+// import Schedules from './pages/admin/Schedules';
 import Vehicles from './pages/admin/Vehicles';
 
 // Profile Pages
@@ -36,6 +36,7 @@ import AllUsers from './pages/admin/AllUsers';
 import RoleManagement from './pages/admin/RoleManagement';
 import Stations from './pages/admin/Stations';
 import RoutesPage from './pages/admin/Routes';
+import AdminReports from './pages/admin/Reports';
 
 // Station Admin Pages
 import StationDashboard from './pages/station/Dashboard';
@@ -366,7 +367,7 @@ function App() {
               />
 
               {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
-              <Route
+              {/* <Route
                 path="/admin/schedules"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin', 'super_admin']}>
@@ -375,7 +376,7 @@ function App() {
                     </Layout>
                   </ProtectedRoute>
                 }
-              />
+              /> */}
 
               <Route
                 path="/admin/drivers"
@@ -450,6 +451,17 @@ function App() {
                   <ProtectedRoute allowedRoles={['super_admin']}>
                     <Layout showSidebar>
                       <RoleManagement />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute allowedRoles={['super_admin']}>
+                    <Layout showSidebar>
+                      <AdminReports />
                     </Layout>
                   </ProtectedRoute>
                 }

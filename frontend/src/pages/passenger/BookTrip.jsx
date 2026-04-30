@@ -44,7 +44,7 @@ import PaymentButton from '../../components/passenger/PaymentButton';
 import ReceiptUpload from '../../components/passenger/ReceiptUpload';
 import toast from 'react-hot-toast';
 
-const steps = ['Search Trips', 'Select Trip', 'Choose Seats', 'Payment'];
+const steps = ['search_trips_step', 'select_trip_step', 'choose_seats_step', 'payment_step'];
 
 export default function BookTrip() {
   const { t } = useTranslation();
@@ -98,7 +98,7 @@ export default function BookTrip() {
   // Check authentication
   useEffect(() => {
     if (!isAuthenticated && activeStep > 0) {
-      toast.error(t('Please login to continue'));
+      toast.error(t('please_login_to_continue'));
       navigate('/login');
     }
   }, [isAuthenticated, activeStep, navigate, t]);
@@ -110,7 +110,7 @@ export default function BookTrip() {
       setStations(stationsData);
     } catch (error) {
       console.error('Error fetching stations:', error);
-      toast.error(t('Failed to load stations'));
+      toast.error(t('failed_to_load_stations'));
     }
   };
 
@@ -126,7 +126,7 @@ export default function BookTrip() {
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
-      toast.error(error.response?.data?.message || t('Failed to load trip details'));
+      toast.error(error.response?.data?.message || t('failed_to_load_trip_details'));
       navigate('/passenger/book-trip');
     } finally {
       setLoading(false);
@@ -152,7 +152,7 @@ export default function BookTrip() {
 
   const handleSearch = useCallback(async (searchParams) => {
     if (!searchParams.origin || !searchParams.destination || !searchParams.date) {
-      toast.error(t('Please fill all search fields'));
+      toast.error(t('please_fill_all_search_fields'));
       return;
     }
 
@@ -192,19 +192,19 @@ export default function BookTrip() {
       setAvailableTrips(trips);
 
       if (trips.length === 0) {
-        toast.success(t('No trips found for your search criteria'), {
+        toast.success(t('no_trips_found_criteria'), {
           icon: 'ℹ️',
           duration: 4000
         });
       } else {
-        toast.success(t('Found {{count}} trips', { count: trips.length }));
+        toast.success(t('found_trips_count', { count: trips.length }));
       }
 
       setActiveStep(1);
     } catch (error) {
       console.error('❌ Search error:', error);
       console.error('Error response:', error.response?.data);
-      const errorMessage = error.response?.data?.message || t('Failed to search trips');
+      const errorMessage = error.response?.data?.message || t('failed_to_search_trips');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -214,7 +214,7 @@ export default function BookTrip() {
 
   const handleTripSelect = useCallback((trip) => {
     if (trip.availableSeats === 0) {
-      toast.error(t('This trip is sold out'));
+      toast.error(t('trip_sold_out_error'));
       return;
     }
     setSelectedTrip(trip);
@@ -232,12 +232,12 @@ export default function BookTrip() {
 
   const handleProceedToPayment = useCallback(async () => {
     if (!selectedTrip || selectedSeats.length === 0) {
-      toast.error(t('Please select at least one seat'));
+      toast.error(t('select_at_least_one_seat'));
       return;
     }
 
     if (!isAuthenticated) {
-      toast.error(t('Please login to continue'));
+      toast.error(t('please_login_to_continue'));
       navigate('/login');
       return;
     }
@@ -298,7 +298,7 @@ export default function BookTrip() {
       console.error('Booking error:', error);
       console.error('Error details:', error.response?.data);
 
-      let errorMessage = t('Failed to create booking');
+      let errorMessage = t('failed_to_create_booking');
 
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -316,7 +316,7 @@ export default function BookTrip() {
 
   const handlePaymentSuccess = useCallback(() => {
     setPaymentStatus('success');
-    toast.success(t('Payment completed successfully!'));
+    toast.success(t('payment_completed_success'));
 
     const bookingId = createdBooking?._id;
 
@@ -328,7 +328,7 @@ export default function BookTrip() {
   const handlePaymentError = useCallback((error) => {
     console.error('Payment error in BookTrip:', error);
     setPaymentStatus('failed');
-    toast.error(error || t('Payment failed'));
+    toast.error(error || t('payment_failed_error'));
   }, [t]);
 
   const handleBack = useCallback(() => {
@@ -437,7 +437,7 @@ export default function BookTrip() {
         return (
           <Paper key="payment-step" sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-              {t('Complete Payment')}
+              {t('complete_payment')}
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
               {t('You have {{count}} seat(s) to pay for.', { count: seatCount })}
@@ -481,7 +481,7 @@ export default function BookTrip() {
                       fontWeight: 600
                     }}
                   >
-                    Seat {seat}
+                    {t('seat_prefix')} {seat}
                   </Typography>
                 ))}
               </Box>
@@ -599,7 +599,7 @@ export default function BookTrip() {
     return (
       <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
         <CircularProgress size={60} />
-        <Typography sx={{ mt: 2 }}>{t('Loading...')}</Typography>
+        <Typography sx={{ mt: 2 }}>{t('loading_label')}</Typography>
       </Container>
     );
   }
@@ -649,42 +649,42 @@ export default function BookTrip() {
         fullWidth
       >
         <DialogTitle sx={{ textAlign: 'center', pt: 3 }}>
-          {paymentStatus === 'success' ? t('Payment Successful') :
-            paymentStatus === 'failed' ? t('Payment Failed') :
-              t('Processing Payment')}
+          {paymentStatus === 'success' ? t('payment_successful') :
+            paymentStatus === 'failed' ? t('payment_failed_error') :
+              t('processing_payment')}
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', pb: 3 }}>
           {!paymentStatus ? (
             <>
               <CircularProgress size={60} sx={{ mb: 2 }} />
               <Typography>
-                {bookingLoading ? t('Creating your booking...') : t('Redirecting to payment...')}
+                {bookingLoading ? t('creating_your_booking') : t('redirecting_to_payment')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                {t('Please do not close this window')}
+                {t('do_not_close_window')}
               </Typography>
             </>
           ) : paymentStatus === 'success' ? (
             <>
               <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('Payment Successful!')}
+                {t('payment_successful')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('Your booking has been confirmed.')}
+                {t('booking_confirmed')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                {t('Redirecting to confirmation page...')}
+                {t('redirecting_to_confirmation')}
               </Typography>
             </>
           ) : (
             <>
               <ErrorIcon color="error" sx={{ fontSize: 60, mb: 2 }} />
               <Typography variant="h6" sx={{ mb: 1, color: '#ef4444' }}>
-                {t('Payment Failed')}
+                {t('payment_failed_error')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('Please try again or contact support.')}
+                {t('try_again_contact_support')}
               </Typography>
             </>
           )}
