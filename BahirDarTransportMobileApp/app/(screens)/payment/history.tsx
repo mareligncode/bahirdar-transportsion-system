@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,7 @@ import {
   Clock,
   AlertCircle,
   Receipt,
-  Calendar,
-  Filter
+  Calendar
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -34,13 +33,17 @@ import { useTheme } from '../../../context/ThemeContext';
 export default function PaymentHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { payments, getPaymentHistory, loading } = usePayment();
   const { translate } = useTranslation();
   const { isDark, colors } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'success' | 'pending' | 'failed'>('all');
+
+  const fetchHistory = useCallback(async () => {
+    await getPaymentHistory();
+  }, [getPaymentHistory]);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,12 +52,8 @@ export default function PaymentHistoryScreen() {
       } else {
         router.replace('/auth/Login');
       }
-    }, [isAuthenticated])
+    }, [isAuthenticated, fetchHistory, router])
   );
-
-  const fetchHistory = async () => {
-    await getPaymentHistory();
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -200,7 +199,7 @@ export default function PaymentHistoryScreen() {
 
         {item.gatewayTransactionID && (
           <AppText variant="caption" color={colors.textTertiary} className="mt-2">
-            Ref: {item.gatewayTransactionID}
+            {translate('reference_label') || 'Ref'}: {item.gatewayTransactionID}
           </AppText>
         )}
       </TouchableOpacity>

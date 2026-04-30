@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   ActivityIndicator,
   FlatList,
   StatusBar
@@ -27,9 +26,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { AppText } from '@/components/common/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Trip } from '@/types/trip';
-import Animated, { FadeInDown, FadeInUp, SlideInRight } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
+
 
 // Bahir Dar Meneharia Center
 const INITIAL_REGION = {
@@ -100,6 +99,12 @@ export default function LiveMapScreen() {
   const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard');
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [showTripList, setShowTripList] = useState(false);
+  
+  // Use ref to avoid useEffect dependency issues with selectedTrip
+  const selectedTripRef = useRef(selectedTrip);
+  useEffect(() => {
+    selectedTripRef.current = selectedTrip;
+  }, [selectedTrip]);
 
   // 1. Fetch data
   const syncData = useCallback(async () => {
@@ -131,7 +136,7 @@ export default function LiveMapScreen() {
       setUserLocation(initialLocation);
       
       // Auto-focus on start if no selected trip
-      if (!selectedTrip) {
+      if (!selectedTripRef.current) {
         mapRef.current?.animateToRegion({
           latitude: initialLocation.coords.latitude,
           longitude: initialLocation.coords.longitude,
@@ -222,7 +227,7 @@ export default function LiveMapScreen() {
         </View>
         <View className={`px-2 py-1 rounded-full ${item.tripStatus === 'ongoing' ? 'bg-green-500/20' : 'bg-blue-500/20'}`}>
           <AppText variant="caption" weight="bold" color={item.tripStatus === 'ongoing' ? '#22c55e' : '#3b82f6'} className="uppercase">
-            {item.tripStatus}
+            {translate(item.tripStatus as any) || item.tripStatus}
           </AppText>
         </View>
       </View>
@@ -252,8 +257,8 @@ export default function LiveMapScreen() {
             <Activity size={20} color="white" />
           </View>
           <View>
-            <AppText variant="h3" weight="bold" color={colors.textPrimary}>Live Fleet</AppText>
-            <AppText variant="caption" color={colors.textSecondary}>{activeTrips.length} nodes active</AppText>
+            <AppText variant="h3" weight="bold" color={colors.textPrimary}>{translate('live_fleet') || 'Live Fleet'}</AppText>
+            <AppText variant="caption" color={colors.textSecondary}>{activeTrips.length} {translate('nodes_active') || 'nodes active'}</AppText>
           </View>
         </View>
         <TouchableOpacity 
@@ -394,7 +399,7 @@ export default function LiveMapScreen() {
                   <TouchableOpacity onPress={() => setShowTripList(false)} className="mr-4">
                     <ArrowLeft size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
-                  <AppText variant="h2" weight="bold" color={colors.textPrimary}>Active Transports</AppText>
+                  <AppText variant="h2" weight="bold" color={colors.textPrimary}>{translate('active_transports') || 'Active Transports'}</AppText>
                 </View>
 
                 {tripsLoading ? (
@@ -408,7 +413,7 @@ export default function LiveMapScreen() {
                     ListEmptyComponent={
                       <View className="items-center py-20">
                         <Navigation size={48} color={colors.textTertiary} className="opacity-20 mb-4" />
-                        <AppText color={colors.textSecondary}>No active trips at the moment</AppText>
+                        <AppText color={colors.textSecondary}>{translate('no_active_trips') || 'No active trips at the moment'}</AppText>
                       </View>
                     }
                   />
@@ -434,7 +439,7 @@ export default function LiveMapScreen() {
               </View>
               <View className="flex-1">
                 <AppText variant="caption" weight="bold" color={colors.primary} className="uppercase tracking-widest mb-1">
-                  Tracking Active
+                  {translate('tracking_active') || 'Tracking Active'}
                 </AppText>
                 <AppText weight="bold" color={colors.textPrimary} className="text-xl">
                   {selectedTrip.vehicle?.plateNumber}
@@ -459,8 +464,4 @@ export default function LiveMapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-});
+
