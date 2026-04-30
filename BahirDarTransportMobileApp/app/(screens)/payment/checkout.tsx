@@ -28,8 +28,9 @@ import { Booking } from '../../../types';
 import { AppText } from '../../../components/common/AppText';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useTheme } from '../../../context/ThemeContext';
+import ReceiptUpload from '../../../components/payment/ReceiptUpload';
 
-type PaymentMethodType = 'mobile_money' | 'card' | 'cash';
+type PaymentMethodType = 'mobile_money' | 'card' | 'bank_transfer' | 'cash';
 
 export default function PaymentCheckoutScreen() {
   const { bookingIds, bookingId, seatCount } = useLocalSearchParams<{
@@ -455,6 +456,12 @@ const handleVerification = useCallback(async () => {
       description: translate('card_payment_desc')
     },
     {
+      id: 'bank_transfer',
+      name: translate('bank_transfer') || 'Bank Transfer',
+      icon: Banknote,
+      description: translate('bank_transfer_desc') || 'Upload a bank transfer receipt'
+    },
+    {
       id: 'cash',
       name: translate('cash_payment'),
       icon: Banknote,
@@ -609,25 +616,51 @@ const handleVerification = useCallback(async () => {
             )}
           </TouchableOpacity>
         ))}
-        <TouchableOpacity
-          onPress={handlePayment}
-          disabled={paymentLoading || processing || verifying}
-          className={`
-            py-4 rounded-xl flex-row items-center justify-center mt-6
-            ${paymentLoading || processing || verifying ? 'bg-gray-300' : 'bg-blue-600'}
-          `}
-        >
-          {paymentLoading || processing || verifying ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <>
-              <CreditCard size={20} color="white" />
-              <AppText className="text-white font-semibold ml-2 text-base">
-                {translate('pay_btn', { amount: formatCurrency(backendAmount || totalAmount) })}
-              </AppText>
-            </>
-          )}
-        </TouchableOpacity>
+        
+        {selectedMethod === 'bank_transfer' ? (
+          <View className="mt-4">
+            <ReceiptUpload 
+              bookingId={parsedBookingIds[0]} 
+              amount={backendAmount || totalAmount} 
+              onVerificationSuccess={(data) => {
+                setPaymentCompleted(true);
+                setShowWebView(false);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                
+                setTimeout(() => {
+                  router.replace({
+                    pathname: '/(screens)/booking/confirmation',
+                    params: {
+                      bookingIds: JSON.stringify(parsedBookingIds),
+                      success: 'true',
+                      txRef: data.payment?.gatewayTransactionID || ''
+                    }
+                  });
+                }, 1000);
+              }}
+            />
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={handlePayment}
+            disabled={paymentLoading || processing || verifying}
+            className={`
+              py-4 rounded-xl flex-row items-center justify-center mt-6
+              ${paymentLoading || processing || verifying ? 'bg-gray-300' : 'bg-blue-600'}
+            `}
+          >
+            {paymentLoading || processing || verifying ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <CreditCard size={20} color="white" />
+                <AppText className="text-white font-semibold ml-2 text-base">
+                  {translate('pay_btn', { amount: formatCurrency(backendAmount || totalAmount) })}
+                </AppText>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           onPress={handleVerification}
           disabled={verifying || paymentCompleted}

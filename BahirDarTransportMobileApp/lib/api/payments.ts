@@ -140,5 +140,40 @@ export const paymentsApi = {
     } catch (error: any) {
       throw error;
     }
+  },
+
+  getPaymentInstructions: async (bookingId: string) => {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.PAYMENTS.INSTRUCTIONS(bookingId));
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  verifyReceipt: async (bookingId: string, imageUri: string, mimeType: string = 'image/jpeg') => {
+    try {
+      const formData = new FormData();
+      formData.append('bookingId', bookingId);
+      
+      const filename = imageUri.split('/').pop() || 'receipt.jpg';
+      
+      // @ts-ignore - React Native FormData expects this structure for files
+      formData.append('receipt', {
+        uri: imageUri,
+        name: filename,
+        type: mimeType
+      });
+
+      const response = await apiClient.post(API_ENDPOINTS.PAYMENTS.VERIFY_RECEIPT, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
   }
 };
