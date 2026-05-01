@@ -66,10 +66,10 @@ const NotificationsPage = () => {
               <Link to="/dashboard" className="text-white/80 hover:text-white">
                 <ArrowLeft className="w-6 h-6" />
               </Link>
-              <h1 className="text-2xl font-bold text-white">{t('Notifications')}</h1>
+              <h1 className="text-2xl font-bold text-white">{t('notifications_page_title', 'Notifications')}</h1>
               {unreadCount > 0 && (
                 <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm">
-                  {unreadCount} {t('new')}
+                  {unreadCount} {t('new', 'new')}
                 </span>
               )}
             </div>
@@ -79,7 +79,7 @@ const NotificationsPage = () => {
                 className="text-white/80 hover:text-white flex items-center gap-2"
               >
                 <CheckCheck className="w-5 h-5" />
-                {t('Mark all read')}
+                {t('mark_all_read', 'Mark all read')}
               </button>
             )}
           </div>
@@ -96,7 +96,7 @@ const NotificationsPage = () => {
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            {t('All')} ({notifications.length})
+            {t('all', 'All')} ({notifications.length})
           </button>
           <button
             onClick={() => setFilter('unread')}
@@ -105,7 +105,7 @@ const NotificationsPage = () => {
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            {t('Unread')} ({unreadCount})
+            {t('unread', 'Unread')} ({unreadCount})
           </button>
         </div>
 
@@ -114,12 +114,12 @@ const NotificationsPage = () => {
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-500 dark:text-gray-400">{t('Loading notifications...')}</p>
+              <p className="mt-4 text-gray-500 dark:text-gray-400">{t('loading_notifications', 'Loading notifications...')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <p>{t('No notifications')}</p>
+              <p>{t('no_notifications', 'No notifications')}</p>
             </div>
           ) : (
             filtered.map(n => (
@@ -143,7 +143,7 @@ const NotificationsPage = () => {
                       </h3>
                       {isFailed(n) && (
                         <span className="text-xs text-red-600 dark:text-red-400 mt-1 block">
-                          {t('Failed to deliver')}
+                          {t('failed_to_deliver', 'Failed to deliver')}
                         </span>
                       )}
                     </div>
@@ -153,7 +153,7 @@ const NotificationsPage = () => {
                           onClick={(e) => handleRetry(e, n._id)}
                           disabled={retrying === n._id}
                           className="text-gray-400 hover:text-blue-500 disabled:opacity-50"
-                          title={t('Retry')}
+                          title={t('retry', 'Retry')}
                         >
                           <RefreshCw className={`w-4 h-4 ${retrying === n._id ? 'animate-spin' : ''}`} />
                         </button>
@@ -161,7 +161,7 @@ const NotificationsPage = () => {
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteNotification(n._id); }}
                         className="text-gray-400 hover:text-red-500"
-                        title={t('Delete')}
+                        title={t('delete', 'Delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -176,17 +176,7 @@ const NotificationsPage = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t(n.message)}</p>
                   )}
 
-                  {n.metadata?.actionURL && (
-                    <div className="mt-3">
-                      <Link
-                        to={n.metadata.actionURL}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg"
-                      >
-                        {t(n.metadata.actionLabel || 'View Details')}
-                        <ArrowLeft className="w-3 h-3 rotate-180" />
-                      </Link>
-                    </div>
-                  )}
+
 
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                     {formatDistanceToNow(new Date(n.createdAt), {
@@ -196,7 +186,7 @@ const NotificationsPage = () => {
                   </p>
                   {n.metadata?.error && (
                     <p className="text-xs text-red-500 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                      {t('Error: ')} {n.metadata.error}
+                      {t('error_label', 'Error: ')} {n.metadata.error}
                     </p>
                   )}
                 </div>

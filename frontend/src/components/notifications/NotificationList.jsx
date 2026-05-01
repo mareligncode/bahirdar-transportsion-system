@@ -1,8 +1,10 @@
 import React from 'react';
 import NotificationItem from './NotificationItem';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const NotificationList = ({ notifications, loading, onNotificationClick }) => {
+  const { t } = useTranslation();
   if (loading && notifications.length === 0) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -14,7 +16,7 @@ const NotificationList = ({ notifications, loading, onNotificationClick }) => {
   if (notifications.length === 0) {
     return (
       <div className="text-center py-8 px-4">
-        <p className="text-gray-500 dark:text-gray-400">No notifications</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('no_notifications', 'No notifications')}</p>
       </div>
     );
   }

@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapPin, Info, Bus, Navigation, Map as MapIcon, Crosshair, ZoomIn, Layers, Activity, ChevronRight, Locate } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const LiveMap = () => {
+    const { t } = useTranslation();
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markersRef = useRef({});
@@ -146,13 +148,13 @@ const LiveMap = () => {
             const marker = window.L.marker([lat, lng], { icon: busIcon }).addTo(mapInstance.current);
             marker.bindPopup(`
                 <div class="p-3 font-sans min-w-[150px]">
-                    <p class="text-[10px] font-black text-blue-500 uppercase mb-1">Fleet Signal detected</p>
+                    <p class="text-[10px] font-black text-blue-500 uppercase mb-1">${t('map_fleet_signal', 'Fleet Signal detected')}</p>
                     <h4 class="font-black text-gray-900 m-0 text-md truncate">${data.vehicle?.plateNumber || 'T-LIVE'}</h4>
                     <p class="text-[10px] font-bold text-gray-500 mb-3 uppercase tracking-tighter">${data.origin?.stationName} → ${data.destination?.stationName}</p>
                     <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden shadow-inner">
                         <div class="bg-blue-600 h-full w-[65%] shadow-[0_0_8px_rgba(37,99,235,0.8)]"></div>
                     </div>
-                    <p class="text-[8px] text-right text-gray-400 mt-1 uppercase font-bold tracking-widest">In Transit</p>
+                    <p class="text-[8px] text-right text-gray-400 mt-1 uppercase font-bold tracking-widest">${t('map_in_transit', 'In Transit')}</p>
                 </div>
             `);
             markersRef.current[id] = marker;
@@ -167,7 +169,7 @@ const LiveMap = () => {
                 mapInstance.current.flyTo([latitude, longitude], 16, { duration: 2 });
                 if (userMarkerRef.current) userMarkerRef.current.remove();
                 const userIcon = window.L.divIcon({ html: `<div class="w-5 h-5 bg-blue-500 rounded-full border-4 border-white shadow-2xl animate-pulse ring-4 ring-blue-500/20"></div>`, className: '' });
-                userMarkerRef.current = window.L.marker([latitude, longitude], { icon: userIcon }).addTo(mapInstance.current).bindPopup("<b>Your Location</b>");
+                userMarkerRef.current = window.L.marker([latitude, longitude], { icon: userIcon }).addTo(mapInstance.current).bindPopup(`<b>${t('map_your_location', 'Your Location')}</b>`);
             });
         }
     };
@@ -206,7 +208,16 @@ const LiveMap = () => {
         let brng = (Math.atan2(y, x) * 180) / Math.PI;
         brng = (brng + 360) % 360;
 
-        const directions = ['North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', 'North-West'];
+        const directions = [
+            t('map_dir_north', 'North'),
+            t('map_dir_ne', 'North-East'),
+            t('map_dir_east', 'East'),
+            t('map_dir_se', 'South-East'),
+            t('map_dir_south', 'South'),
+            t('map_dir_sw', 'South-West'),
+            t('map_dir_west', 'West'),
+            t('map_dir_nw', 'North-West')
+        ];
         const index = Math.round((brng % 360) / 45);
         return { distance, direction: directions[index === 8 ? 0 : index] };
     };
@@ -226,7 +237,7 @@ const LiveMap = () => {
                 setDistanceInfo(info);
                 routeLineRef.current = window.L.polyline([[userLocation.lat, userLocation.lng], [destination.lat, destination.lng]], { color: '#ef4444', weight: 4, dashArray: '5, 10', opacity: 0.8 }).addTo(mapInstance.current);
             } else {
-                setDistanceInfo({ msg: "Locate yourself first to measure!" });
+                setDistanceInfo({ msg: t('map_locate_first', "Locate yourself first to measure!") });
             }
         } else {
             setDistanceInfo(null);
@@ -256,8 +267,8 @@ const LiveMap = () => {
                             <Activity className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-white tracking-tighter leading-tight">Master Console</h2>
-                            <p className="text-[10px] text-blue-400/80 font-black uppercase tracking-[0.2em]">Fleet Intelligence</p>
+                            <h2 className="text-xl font-black text-white tracking-tighter leading-tight">{t('map_master_console', 'Master Console')}</h2>
+                            <p className="text-[10px] text-blue-400/80 font-black uppercase tracking-[0.2em]">{t('map_fleet_intel', 'Fleet Intelligence')}</p>
                         </div>
                     </div>
                 </div>
@@ -274,7 +285,7 @@ const LiveMap = () => {
                                     <Bus className={`w-5 h-5 ${selectedTrip?._id === trip._id ? 'text-white' : 'text-blue-500'}`} />
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${selectedTrip?._id === trip._id ? 'bg-white/30 text-white' : 'bg-green-500/20 text-green-400'}`}>
-                                    LIVE
+                                    {t('map_live', 'LIVE')}
                                 </div>
                             </div>
                             <h3 className={`text-lg font-black ${selectedTrip?._id === trip._id ? 'text-white' : 'text-gray-100'} tracking-tight`}>{trip.vehicle?.plateNumber}</h3>
@@ -282,22 +293,22 @@ const LiveMap = () => {
                                 {trip.origin?.city || trip.origin?.stationName} → {trip.destination?.city || trip.destination?.stationName}
                             </p>
                             <div className="flex items-center justify-between">
-                                <span className={`text-[10px] font-black uppercase tracking-widest ${selectedTrip?._id === trip._id ? 'text-blue-200' : 'text-gray-600'}`}>Tracking ID: {trip._id.slice(-6)}</span>
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${selectedTrip?._id === trip._id ? 'text-blue-200' : 'text-gray-600'}`}>{t('map_tracking_id', 'Tracking ID:')} {trip._id.slice(-6)}</span>
                                 <ChevronRight className={`w-5 h-5 ${selectedTrip?._id === trip._id ? 'text-white' : 'text-gray-600'} group-hover:translate-x-1.5 transition-transform`} />
                             </div>
                         </div>
                     )) : (
                         <div className="text-center py-28 opacity-40">
                             <Navigation className="w-16 h-16 text-gray-700 mx-auto mb-5 animate-pulse" />
-                            <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em]">Awaiting Telemetry</p>
+                            <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em]">{t('map_awaiting_telemetry', 'Awaiting Telemetry')}</p>
                         </div>
                     )}
                 </div>
 
                 <div className="p-6 border-t border-white/5 bg-black/40">
                     <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">
-                        <span>Active Fleet Nodes</span>
-                        <span className={`${stats.online ? 'text-green-400' : 'text-red-400'}`}>{stats.count} ACTIVE</span>
+                        <span>{t('map_active_fleet_nodes', 'Active Fleet Nodes')}</span>
+                        <span className={`${stats.online ? 'text-green-400' : 'text-red-400'}`}>{stats.count} {t('map_active', 'ACTIVE')}</span>
                     </div>
                     <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5 shadow-inner">
                         <div
@@ -338,9 +349,9 @@ const LiveMap = () => {
                                 </div>
                             ) : (
                                 <div>
-                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Target Assessment</p>
+                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t('map_target_assessment', 'Target Assessment')}</p>
                                     <div className="flex gap-4 items-baseline">
-                                        <p className="text-xl font-black text-white">{distanceInfo.distance} <span className="text-[10px] text-gray-500 uppercase tracking-widest">km</span></p>
+                                        <p className="text-xl font-black text-white">{distanceInfo.distance} <span className="text-[10px] text-gray-500 uppercase tracking-widest">{t('map_km', 'km')}</span></p>
                                         <p className="text-sm font-black text-blue-400 uppercase tracking-widest">{distanceInfo.direction}</p>
                                     </div>
                                 </div>
@@ -358,8 +369,8 @@ const LiveMap = () => {
                         <div className="flex items-center gap-5">
                             <div className={`w-5 h-5 rounded-full ${stats.online ? 'bg-green-500 shadow-[0_0_25px_rgba(34,197,94,1)] animate-pulse' : 'bg-red-500 shadow-[0_0_25px_rgba(239,68,68,1)]'}`}></div>
                             <div>
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] leading-none mb-2">Network Status</p>
-                                <p className="text-[13px] font-black text-white tracking-widest uppercase">{stats.online ? 'Interlink Active' : 'Uplink Failed'}</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] leading-none mb-2">{t('map_network_status', 'Network Status')}</p>
+                                <p className="text-[13px] font-black text-white tracking-widest uppercase">{stats.online ? t('map_interlink_active', 'Interlink Active') : t('map_uplink_failed', 'Uplink Failed')}</p>
                             </div>
                         </div>
                         <div className="w-px h-12 bg-white/10"></div>
@@ -368,8 +379,8 @@ const LiveMap = () => {
                                 <Bus className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] leading-none mb-2">Fleet Count</p>
-                                <p className="text-[13px] font-black text-white tracking-widest uppercase">{stats.count} Transports</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] leading-none mb-2">{t('map_fleet_count', 'Fleet Count')}</p>
+                                <p className="text-[13px] font-black text-white tracking-widest uppercase">{stats.count} {t('map_transports', 'Transports')}</p>
                             </div>
                         </div>
                     </div>
@@ -379,8 +390,8 @@ const LiveMap = () => {
                     <div className="absolute inset-0 z-50 bg-[#0f172a] flex items-center justify-center">
                         <div className="text-center">
                             <div className="w-28 h-28 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-10 shadow-[0_0_60px_rgba(37,99,235,0.5)]"></div>
-                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] mb-2">Establishing Link</h2>
-                            <p className="text-blue-500/50 font-black uppercase text-[10px] tracking-[0.5em] animate-pulse">Scanning Meneharia Satellite Array...</p>
+                            <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] mb-2">{t('map_establishing_link', 'Establishing Link')}</h2>
+                            <p className="text-blue-500/50 font-black uppercase text-[10px] tracking-[0.5em] animate-pulse">{t('map_scanning_array', 'Scanning Meneharia Satellite Array...')}</p>
                         </div>
                     </div>
                 )}

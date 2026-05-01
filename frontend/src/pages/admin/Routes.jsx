@@ -82,7 +82,7 @@ const RoutesPage = () => {
                 setRoutes(response.data.data);
             }
         } catch (err) {
-            setError(t('failed_to_fetch_routes'));
+            setError(t('failed_to_fetch_routes', 'Failed to fetch routes'));
         } finally {
             setLoading(false);
         }
@@ -165,28 +165,28 @@ const RoutesPage = () => {
             setFormLoading(true);
             if (selectedRoute) {
                 await api.put(`/api/route/${selectedRoute._id}`, routeForm);
-                showSnackbar(t('route_updated_successfully'));
+                showSnackbar(t('route_updated_successfully', 'Route updated successfully'));
             } else {
                 await api.post('/api/route', routeForm);
-                showSnackbar(t('route_created_successfully'));
+                showSnackbar(t('route_created_successfully', 'Route created successfully'));
             }
             fetchRoutes();
             handleCloseDialog();
         } catch (err) {
-            showSnackbar(err.response?.data?.message || t('error_saving_route'), 'error');
+            showSnackbar(err.response?.data?.message || t('error_saving_route', 'Error saving route'), 'error');
         } finally {
             setFormLoading(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm(t('confirm_delete_route'))) return;
+        if (!window.confirm(t('confirm_delete_route', 'Are you sure you want to delete this route?'))) return;
         try {
             await api.delete(`/api/route/${id}`);
-            showSnackbar(t('route_deleted_successfully'));
+            showSnackbar(t('route_deleted_successfully', 'Route deleted successfully'));
             fetchRoutes();
         } catch (err) {
-            showSnackbar(err.response?.data?.message || t('failed_to_delete_route'), 'error');
+            showSnackbar(err.response?.data?.message || t('failed_to_delete_route', 'Failed to delete route'), 'error');
         }
     };
 
@@ -210,10 +210,10 @@ const RoutesPage = () => {
                     <Grid item>
                         <Typography variant="h4" sx={{ display: 'flex', alignItems: 'center' }}>
                             <RouteIcon sx={{ mr: 2, color: 'primary.main', fontSize: 35 }} />
-                            {t('Station Routes')}
+                            {t('station_routes', 'Station Routes')}
                         </Typography>
                         <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                            {t('Define paths between stations to enable schedules and queueing')}
+                            {t('define_paths_desc', 'Define paths between stations to enable schedules and queueing')}
                         </Typography>
                     </Grid>
                     <Grid item>
@@ -223,7 +223,7 @@ const RoutesPage = () => {
                             onClick={() => handleOpenDialog()}
                             sx={{ py: 1, px: 3, borderRadius: 2 }}
                         >
-                            {t('Create New Route')}
+                            {t('create_new_route', 'Create New Route')}
                         </Button>
                         <IconButton onClick={fetchRoutes} sx={{ ml: 1 }}>
                             <RefreshIcon />
@@ -234,23 +234,23 @@ const RoutesPage = () => {
 
             {/* Filter and Sort (Stabilized Layout) */}
             <Paper variant="outlined" sx={{ mb: 4, p: 2, borderRadius: 2, backgroundColor: 'grey.50' }}>
-                <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: { xs: 'column', sm: 'row' }, 
-                    gap: 2, 
-                    alignItems: 'center' 
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2,
+                    alignItems: 'center'
                 }}>
                     <FormControl sx={{ minWidth: { xs: '100%', sm: 250 }, flexGrow: 1 }} size="small" variant="outlined">
-                        <InputLabel id="destination-filter-label">{t('Filter by Destination')}</InputLabel>
+                        <InputLabel id="destination-filter-label">{t('filter_by_destination', 'Filter by Destination')}</InputLabel>
                         <Select
                             labelId="destination-filter-label"
                             value={filters.destination}
-                            label={t('Filter by Destination')}
+                            label={t('filter_by_destination', 'Filter by Destination')}
                             onChange={(e) => setFilters({ destination: e.target.value })}
                             sx={{ backgroundColor: 'white' }}
                         >
                             <MenuItem value="">
-                                <em>{t('All Destinations')}</em>
+                                <em>{t('all_destinations', 'All Destinations')}</em>
                             </MenuItem>
                             {stations.map(s => (
                                 <MenuItem key={s._id} value={s._id}>
@@ -261,17 +261,17 @@ const RoutesPage = () => {
                     </FormControl>
 
                     <FormControl sx={{ minWidth: { xs: '100%', sm: 200 }, flexGrow: 1 }} size="small" variant="outlined">
-                        <InputLabel id="price-sort-label">{t('Price Ordering')}</InputLabel>
+                        <InputLabel id="price-sort-label">{t('price_ordering', 'Price Ordering')}</InputLabel>
                         <Select
                             labelId="price-sort-label"
                             value={sortOrder}
-                            label={t('Price Ordering')}
+                            label={t('price_ordering', 'Price Ordering')}
                             onChange={(e) => setSortOrder(e.target.value)}
                             sx={{ backgroundColor: 'white' }}
                         >
-                            <MenuItem value="">{t('Default (No Sort)')}</MenuItem>
-                            <MenuItem value="asc">{t('Price: Low to High')}</MenuItem>
-                            <MenuItem value="desc">{t('Price: High to Low')}</MenuItem>
+                            <MenuItem value="">{t('default_no_sort', 'Default (No Sort)')}</MenuItem>
+                            <MenuItem value="asc">{t('price_low_to_high', 'Price: Low to High')}</MenuItem>
+                            <MenuItem value="desc">{t('price_high_to_low', 'Price: High to Low')}</MenuItem>
                         </Select>
                     </FormControl>
                 </Box>
@@ -286,13 +286,13 @@ const RoutesPage = () => {
                     <Table>
                         <TableHead sx={{ bgcolor: 'grey.50' }}>
                             <TableRow>
-                                <TableCell><strong>{t('Route Name')}</strong></TableCell>
-                                <TableCell><strong>{t('Origin')}</strong></TableCell>
-                                <TableCell><strong>{t('Destination')}</strong></TableCell>
-                                <TableCell><strong>{t('Base Price')}</strong></TableCell>
-                                <TableCell><strong>{t('Duration')}</strong></TableCell>
-                                <TableCell><strong>{t('Distance')}</strong></TableCell>
-                                <TableCell align="right"><strong>{t('Actions')}</strong></TableCell>
+                                <TableCell><strong>{t('route_name', 'Route Name')}</strong></TableCell>
+                                <TableCell><strong>{t('origin', 'Origin')}</strong></TableCell>
+                                <TableCell><strong>{t('destination', 'Destination')}</strong></TableCell>
+                                <TableCell><strong>{t('base_price', 'Base Price')}</strong></TableCell>
+                                <TableCell><strong>{t('duration', 'Duration')}</strong></TableCell>
+                                <TableCell><strong>{t('distance', 'Distance')}</strong></TableCell>
+                                <TableCell align="right"><strong>{t('actions', 'Actions')}</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -300,7 +300,7 @@ const RoutesPage = () => {
                                 <TableRow>
                                     <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                                         <Typography color="textSecondary">
-                                            {filters.destination ? t('No routes found for this destination') : t('No routes defined yet')}
+                                            {filters.destination ? t('no_routes_found_destination', 'No routes found for this destination') : t('no_routes_defined_yet', 'No routes defined yet')}
                                         </Typography>
                                         {!filters.destination && (
                                             <Button
@@ -308,7 +308,7 @@ const RoutesPage = () => {
                                                 onClick={() => handleOpenDialog()}
                                                 sx={{ mt: 2 }}
                                             >
-                                                {t('Define First Route')}
+                                                {t('define_first_route', 'Define First Route')}
                                             </Button>
                                         )}
                                     </TableCell>
@@ -353,12 +353,12 @@ const RoutesPage = () => {
                                             </Box>
                                         </TableCell>
                                         <TableCell align="right">
-                                            <Tooltip title={t('Edit')}>
+                                            <Tooltip title={t('edit', 'Edit')}>
                                                 <IconButton onClick={() => handleOpenDialog(route)} size="small" color="primary">
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title={t('Delete')}>
+                                            <Tooltip title={t('delete', 'Delete')}>
                                                 <IconButton onClick={() => handleDelete(route._id)} size="small" color="error">
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
@@ -376,17 +376,17 @@ const RoutesPage = () => {
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <MapIcon color="primary" />
-                    {selectedRoute ? t('Update Route') : t('Define New Route')}
+                    {selectedRoute ? t('update_route', 'Update Route') : t('define_new_route', 'Define New Route')}
                 </DialogTitle>
                 <DialogContent dividers>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12} sm={6}>
                             <FormControl fullWidth required>
-                                <InputLabel>{t('Origin Station')}</InputLabel>
+                                <InputLabel>{t('origin_station', 'Origin Station')}</InputLabel>
                                 <Select
                                     name="origin"
                                     value={routeForm.origin}
-                                    label={t('Origin Station')}
+                                    label={t('origin_station', 'Origin Station')}
                                     onChange={handleInputChange}
                                     disabled={user?.role === 'station_admin'}
                                 >
@@ -400,11 +400,11 @@ const RoutesPage = () => {
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <FormControl fullWidth required>
-                                <InputLabel>{t('Destination Station')}</InputLabel>
+                                <InputLabel>{t('destination_station', 'Destination Station')}</InputLabel>
                                 <Select
                                     name="destination"
                                     value={routeForm.destination}
-                                    label={t('Destination Station')}
+                                    label={t('destination_station', 'Destination Station')}
                                     onChange={handleInputChange}
                                 >
                                     {stations.map(station => (
@@ -418,7 +418,7 @@ const RoutesPage = () => {
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
-                                label={t('Route Name')}
+                                label={t('route_name', 'Route Name')}
                                 name="routeName"
                                 value={routeForm.routeName}
                                 onChange={handleInputChange}
@@ -430,7 +430,7 @@ const RoutesPage = () => {
                             <TextField
                                 fullWidth
                                 type="number"
-                                label={t('Base Price (ETB)')}
+                                label={t('base_price_etb', 'Base Price (ETB)')}
                                 name="basePrice"
                                 value={routeForm.basePrice}
                                 onChange={handleInputChange}
@@ -441,7 +441,7 @@ const RoutesPage = () => {
                         <Grid item xs={12} sm={4}>
                             <TextField
                                 fullWidth
-                                label={t('Duration')}
+                                label={t('duration', 'Duration')}
                                 name="estimatedDuration"
                                 value={routeForm.estimatedDuration}
                                 onChange={handleInputChange}
@@ -454,7 +454,7 @@ const RoutesPage = () => {
                             <TextField
                                 fullWidth
                                 type="number"
-                                label={t('Distance (km)')}
+                                label={t('distance_km', 'Distance (km)')}
                                 name="distance"
                                 value={routeForm.distance}
                                 onChange={handleInputChange}
@@ -464,14 +464,14 @@ const RoutesPage = () => {
                     </Grid>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, px: 3 }}>
-                    <Button onClick={handleCloseDialog} color="inherit">{t('Cancel')}</Button>
+                    <Button onClick={handleCloseDialog} color="inherit">{t('cancel', 'Cancel')}</Button>
                     <Button
                         onClick={handleSubmit}
                         variant="contained"
                         disabled={formLoading || !routeForm.origin || !routeForm.destination || !routeForm.basePrice}
                         sx={{ minWidth: 120 }}
                     >
-                        {formLoading ? <CircularProgress size={24} /> : (selectedRoute ? t('Update') : t('Create'))}
+                        {formLoading ? <CircularProgress size={24} /> : (selectedRoute ? t('update', 'Update') : t('create', 'Create'))}
                     </Button>
                 </DialogActions>
             </Dialog>

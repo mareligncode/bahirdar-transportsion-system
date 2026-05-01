@@ -16,10 +16,12 @@ import {
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from '../../hooks/useTranslation';
 import JoinQueueModal from './JoinQueueModal';
 
 const QueueManagement = () => {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [queue, setQueue] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +51,7 @@ const QueueManagement = () => {
             }
         } catch (error) {
             console.error('Error fetching queue:', error);
-            toast.error('Failed to fetch queue data');
+            toast.error(t('failed_to_fetch_queue', 'Failed to fetch queue data'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -106,7 +108,7 @@ const QueueManagement = () => {
             }
         } catch (error) {
             console.error('Error dispatching next vehicle:', error);
-            const errorMsg = error.response?.data?.message || 'No vehicles available in queue';
+            const errorMsg = error.response?.data?.message || t('no_vehicles_in_queue', 'No vehicles available in queue');
             toast.error(errorMsg);
         }
     };
@@ -122,12 +124,12 @@ const QueueManagement = () => {
         try {
             const response = await api.put(`/api/queue/reorder/${queueID}`, { newPosition: newIndex + 1 });
             if (response.data.success) {
-                toast.success('Queue reordered');
+                toast.success(t('queue_reordered', 'Queue reordered'));
                 fetchQueue();
             }
         } catch (error) {
             console.error('Error reordering queue:', error);
-            toast.error('Failed to reorder queue');
+            toast.error(t('failed_to_reorder_queue', 'Failed to reorder queue'));
         }
     };
 
@@ -158,8 +160,8 @@ const QueueManagement = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Queue Management</h1>
-                    <p className="text-gray-600">Manage vehicle dispatching for {stationInfo?.stationName || 'your station'}</p>
+                    <h1 className="text-3xl font-bold text-gray-900">{t('queue_management', 'Queue Management')}</h1>
+                    <p className="text-gray-600">{t('manage_vehicle_dispatching_for', 'Manage vehicle dispatching for')} {stationInfo?.stationName || t('your_station', 'your station')}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -170,7 +172,7 @@ const QueueManagement = () => {
                             onChange={(e) => setSelectedRoute(e.target.value)}
                             className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none min-w-[180px] cursor-pointer"
                         >
-                            <option value="all">All Routes (Wait Order)</option>
+                            <option value="all">{t('all_routes_wait_order', 'All Routes (Wait Order)')}</option>
                             {routes.map(r => (
                                 <option key={r._id} value={r._id}>
                                     {r.routeName}
@@ -193,7 +195,7 @@ const QueueManagement = () => {
                         className="flex items-center gap-2 px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shadow-sm font-bold"
                     >
                         <Plus className="w-5 h-5" />
-                        Add Vehicle to Queue
+                        {t('add_vehicle_to_queue', 'Add Vehicle to Queue')}
                     </button>
 
                     <button
@@ -201,7 +203,7 @@ const QueueManagement = () => {
                         className="flex items-center gap-2 px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-md transition-all active:scale-95"
                     >
                         <UserCheck className="w-5 h-5" />
-                        Dispatch {selectedRoute === 'all' ? 'Next' : 'Route'} Vehicle
+                        {selectedRoute === 'all' ? t('dispatch_next_vehicle', 'Dispatch Next Vehicle') : t('dispatch_route_vehicle', 'Dispatch Route Vehicle')}
                     </button>
                 </div>
             </div>
@@ -220,7 +222,7 @@ const QueueManagement = () => {
                             <Users className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-blue-600 font-medium">In Queue</p>
+                            <p className="text-sm text-blue-600 font-medium">{t('in_queue', 'In Queue')}</p>
                             <p className="text-2xl font-bold text-blue-900">{queue.length}</p>
                         </div>
                     </div>
@@ -232,9 +234,9 @@ const QueueManagement = () => {
                             <Car className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-green-600 font-medium">Ready for Dispatch</p>
+                            <p className="text-sm text-green-600 font-medium">{t('ready_for_dispatch', 'Ready for Dispatch')}</p>
                             <p className="text-2xl font-bold text-green-900">
-                                {queue.length > 0 ? (queue[0].vehicle?.plateNumber || queue[0].vehicleID?.plateNumber || 'N/A') : 'None'}
+                                {queue.length > 0 ? (queue[0].vehicle?.plateNumber || queue[0].vehicleID?.plateNumber || t('na', 'N/A')) : t('none', 'None')}
                             </p>
                         </div>
                     </div>
@@ -246,8 +248,8 @@ const QueueManagement = () => {
                             <Clock className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-indigo-600 font-medium">Average Wait</p>
-                            <p className="text-2xl font-bold text-indigo-900">14 min</p>
+                            <p className="text-sm text-indigo-600 font-medium">{t('average_wait', 'Average Wait')}</p>
+                            <p className="text-2xl font-bold text-indigo-900">14 {t('min', 'min')}</p>
                         </div>
                     </div>
                 </div>
@@ -255,8 +257,8 @@ const QueueManagement = () => {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                    <h2 className="font-semibold text-gray-800">Live Vehicle Queue</h2>
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Updated just now</span>
+                    <h2 className="font-semibold text-gray-800">{t('live_vehicle_queue', 'Live Vehicle Queue')}</h2>
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">{t('updated_just_now', 'Updated just now')}</span>
                 </div>
 
                 {queue.length === 0 ? (
@@ -264,20 +266,20 @@ const QueueManagement = () => {
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Search className="w-10 h-10 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900">The queue is empty</h3>
-                        <p className="text-gray-500 mt-1">Vehicles will appear here as they join the station queue.</p>
+                        <h3 className="text-lg font-medium text-gray-900">{t('queue_is_empty', 'The queue is empty')}</h3>
+                        <p className="text-gray-500 mt-1">{t('queue_empty_desc', 'Vehicles will appear here as they join the station queue.')}</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider">
-                                    <th className="px-6 py-4">Position</th>
-                                    <th className="px-6 py-4">Vehicle</th>
-                                    <th className="px-6 py-4">Driver</th>
-                                    <th className="px-6 py-4">Joined At</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-center">Actions</th>
+                                    <th className="px-6 py-4">{t('position', 'Position')}</th>
+                                    <th className="px-6 py-4">{t('vehicle', 'Vehicle')}</th>
+                                    <th className="px-6 py-4">{t('driver', 'Driver')}</th>
+                                    <th className="px-6 py-4">{t('joined_at', 'Joined At')}</th>
+                                    <th className="px-6 py-4">{t('status', 'Status')}</th>
+                                    <th className="px-6 py-4 text-center">{t('actions', 'Actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -295,10 +297,10 @@ const QueueManagement = () => {
                                         <td className="px-6 py-4">
                                             <div>
                                                 <p className="font-bold text-gray-900">
-                                                    {item.vehicle?.plateNumber || item.vehicleID?.plateNumber || 'N/A'}
+                                                    {item.vehicle?.plateNumber || item.vehicleID?.plateNumber || t('na', 'N/A')}
                                                 </p>
                                                 <p className="text-xs text-gray-500 uppercase">
-                                                    {item.vehicle?.carType || item.vehicleID?.carType || 'Unknown'}
+                                                    {item.vehicle?.carType || item.vehicleID?.carType || t('unknown', 'Unknown')}
                                                 </p>
                                             </div>
                                         </td>
@@ -308,7 +310,7 @@ const QueueManagement = () => {
                                                     {(item.driver?.fullName || item.driverID?.fullName)?.charAt(0) || 'D'}
                                                 </div>
                                                 <span className="text-sm font-medium text-gray-700">
-                                                    {item.driver?.fullName || item.driverID?.fullName || 'Anonymous'}
+                                                    {item.driver?.fullName || item.driverID?.fullName || t('anonymous', 'Anonymous')}
                                                 </span>
                                             </div>
                                         </td>
@@ -316,9 +318,9 @@ const QueueManagement = () => {
                                             {new Date(item.checkInTime || item.joinedAt || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${index === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase \${index === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                                 }`}>
-                                                {index === 0 ? 'Next Up' : 'Waiting'}
+                                                {index === 0 ? t('next_up', 'Next Up') : t('waiting', 'Waiting')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -327,7 +329,7 @@ const QueueManagement = () => {
                                                     onClick={() => handleReorder(item._id, 'up')}
                                                     disabled={index === 0}
                                                     className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    title="Move Up"
+                                                    title={t('move_up', 'Move Up')}
                                                 >
                                                     <MoveUp className="w-4 h-4" />
                                                 </button>
@@ -335,7 +337,7 @@ const QueueManagement = () => {
                                                     onClick={() => handleReorder(item._id, 'down')}
                                                     disabled={index === queue.length - 1}
                                                     className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    title="Move Down"
+                                                    title={t('move_down', 'Move Down')}
                                                 >
                                                     <MoveDown className="w-4 h-4" />
                                                 </button>
@@ -343,7 +345,7 @@ const QueueManagement = () => {
                                                 <button
                                                     onClick={() => handleLeaveQueue(item._id)}
                                                     className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                    title="Remove From Queue"
+                                                    title={t('remove_from_queue', 'Remove From Queue')}
                                                 >
                                                     <AlertCircle className="w-4 h-4" />
                                                 </button>
@@ -362,10 +364,9 @@ const QueueManagement = () => {
                     <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                    <h4 className="font-bold text-amber-900">Queue Policy Reminder</h4>
+                    <h4 className="font-bold text-amber-900">{t('queue_policy_reminder', 'Queue Policy Reminder')}</h4>
                     <p className="text-sm text-amber-700 mt-1">
-                        Dispatching a vehicle will automatically change its status to 'On Trip' and notify the driver.
-                        Removing a vehicle from the queue will notify the driver of the cancellation.
+                        {t('queue_policy_desc', "Dispatching a vehicle will automatically change its status to 'On Trip' and notify the driver. Removing a vehicle from the queue will notify the driver of the cancellation.")}
                     </p>
                 </div>
             </div>

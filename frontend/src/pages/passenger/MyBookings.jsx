@@ -817,16 +817,16 @@ const MyBookings = () => {
               gap: 1
             }}>
               <ConfirmationNumber sx={{ fontSize: 32, color: '#3b82f6' }} />
-              {t('My Bookings')}
+              {t('my_bookings')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              {t('View and manage your trip bookings')}
+              {t('my_bookings_desc')}
             </Typography>
           </Box>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Tooltip title={t('Refresh')}>
+          <Tooltip title={t('refresh')}>
             <IconButton
               onClick={() => fetchBookings(true)}
               disabled={refreshing}
@@ -851,7 +851,7 @@ const MyBookings = () => {
               px: 3
             }}
           >
-            {t('Book New Trip')}
+            {t('book_new_trip')}
           </Button>
         </Box>
       </Box>
@@ -867,13 +867,13 @@ const MyBookings = () => {
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              {t('Filter by Status')}
+              {t('filter_by_status')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {['all', 'confirmed', 'pending', 'completed', 'cancelled'].map((status) => (
                 <Chip
                   key={status}
-                  label={status === 'all' ? t('All') : t(status.charAt(0).toUpperCase() + status.slice(1))}
+                  label={t(status)}
                   onClick={() => setFilterStatus(status)}
                   color={filterStatus === status ? 'primary' : 'default'}
                   variant={filterStatus === status ? 'filled' : 'outlined'}
@@ -888,11 +888,11 @@ const MyBookings = () => {
 
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              {t('Filter by Date')}
+              {t('filter_by_date')}
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label={t('Booking Date')}
+                label={t('booking_date')}
                 value={searchDate}
                 onChange={setSearchDate}
                 renderInput={(params) => (
@@ -900,7 +900,7 @@ const MyBookings = () => {
                     {...params}
                     size="small"
                     fullWidth
-                    placeholder={t('Select date')}
+                    placeholder={t('select_date')}
                   />
                 )}
               />
@@ -909,26 +909,26 @@ const MyBookings = () => {
 
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              {t('Summary')}
+              {t('summary')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.length} color="primary">
                   <ConfirmationNumber color="action" />
                 </Badge>
-                <Typography variant="body2">{t('Total')}</Typography>
+                <Typography variant="body2">{t('total')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.filter(b => b.status === 'confirmed').length} color="success">
                   <CheckCircle color="action" />
                 </Badge>
-                <Typography variant="body2">{t('Confirmed')}</Typography>
+                <Typography variant="body2">{t('confirmed')}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Badge badgeContent={bookings.filter(b => b.status === 'pending').length} color="warning">
                   <Pending color="action" />
                 </Badge>
-                <Typography variant="body2">{t('Pending')}</Typography>
+                <Typography variant="body2">{t('pending')}</Typography>
               </Box>
             </Box>
           </Grid>
@@ -958,9 +958,8 @@ const MyBookings = () => {
                       setFilterStatus('all');
                       setSearchDate(null);
                     }}
-                    sx={{ textTransform: 'none' }}
                   >
-                    {t('Clear Filters')}
+                    {t('clear_filters')}
                   </Button>
                 )}
               </Box>
@@ -992,13 +991,13 @@ const MyBookings = () => {
               <Cancel />
             </Avatar>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {t('Cancel Booking')}
+              {t('cancel_booking')}
             </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: '#64748b' }}>
-            {t('Are you sure you want to cancel this booking?')}
+            {t('confirm_cancel_booking')}
             {selectedBooking && (
               <Box sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: '8px' }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1008,7 +1007,7 @@ const MyBookings = () => {
                   {formatDateTime(selectedBooking.tripID?.departureTime)}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: '#1e40af' }}>
-                  {t('Refund Amount')}: ETB {getTotalPrice(selectedBooking).toLocaleString()}
+                  {t('refund_amount_label')}: ETB {getTotalPrice(selectedBooking).toLocaleString()}
                 </Typography>
               </Box>
             )}
@@ -1020,7 +1019,7 @@ const MyBookings = () => {
             variant="outlined"
             sx={{ borderRadius: '8px' }}
           >
-            {t('Keep Booking')}
+            {t('keep_booking')}
           </Button>
           <Button
             onClick={handleCancelBooking}
@@ -1032,7 +1031,7 @@ const MyBookings = () => {
               px: 3
             }}
           >
-            {cancelling ? <CircularProgress size={24} /> : t('Yes, Cancel')}
+            {cancelling ? <CircularProgress size={24} /> : t('yes_cancel')}
           </Button>
         </DialogActions>
       </Dialog>

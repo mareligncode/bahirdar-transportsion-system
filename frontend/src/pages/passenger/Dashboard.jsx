@@ -605,7 +605,7 @@ export default function PassengerDashboard() {
             </Link>
 
             <Link
-              to="/help"
+              to="/passenger/support"
               className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-purple-50 hover:border-purple-200 transition-all group"
             >
               <div className="flex flex-col items-center text-center">

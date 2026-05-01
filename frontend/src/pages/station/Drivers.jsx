@@ -46,7 +46,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 const Drivers = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  
+
   // State management
   const [drivers, setDrivers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -54,17 +54,17 @@ const Drivers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   // Dialog states
   const [driverDetailsDialog, setDriverDetailsDialog] = useState(false);
   const [toggleDialogOpen, setToggleDialogOpen] = useState(false);
-  
+
   // Form states
   const [newDriver, setNewDriver] = useState({
     fullName: '',
@@ -73,9 +73,9 @@ const Drivers = () => {
     password: '',
     licenseNumber: ''
   });
-  
+
   const [selectedDriver, setSelectedDriver] = useState(null);
-  
+
   // Stats
   const [stats, setStats] = useState({
     totalDrivers: 0,
@@ -91,41 +91,41 @@ const Drivers = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       // Fetch station users (passengers and drivers)
       const usersRes = await api.get('/api/auth/station-users');
       const allUsers = usersRes.data.data.users || [];
-      
+
       // Filter only drivers
       const driverUsers = allUsers.filter(user => user.role === 'driver');
       setDrivers(driverUsers);
-      
+
       // Fetch vehicles for the station
       const vehiclesRes = await api.get('/api/vehicles');
       const stationVehicles = vehiclesRes.data.data.vehicles || [];
       setVehicles(stationVehicles);
-      
+
       // Fetch trips
       const tripsRes = await api.get('/api/trip');
       const stationTrips = tripsRes.data.data || [];
       setTrips(stationTrips);
-      
+
       // Calculate stats
       calculateStats(driverUsers, stationVehicles, stationTrips);
-      
+
     } catch (err) {
       console.error('Error fetching data:', err);
-      let errorMessage = t('Failed to load drivers data. Please try again.');
-      
+      let errorMessage = t('failed_load_drivers_retry', 'Failed to load drivers data. Please try again.');
+
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.status === 403) {
-        errorMessage = t('Access denied. You may not have permission to view drivers.');
+        errorMessage = t('access_denied_view_drivers', 'Access denied. You may not have permission to view drivers.');
       } else if (err.response?.status === 401) {
-        errorMessage = t('Session expired. Please login again.');
+        errorMessage = t('session_expired_login', 'Session expired. Please login again.');
         navigate('/login');
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -135,31 +135,31 @@ const Drivers = () => {
   // Calculate statistics
   const calculateStats = (driverList, vehicleList, tripList) => {
     const today = new Date().toISOString().split('T')[0];
-    
+
     const totalDrivers = driverList.length;
     const activeDrivers = driverList.filter(d => d.isActive).length;
-    
+
     // On duty = drivers with vehicles currently on trip
-    const onDuty = driverList.filter(d => 
-      d.isActive && 
-      vehicleList.some(v => 
-        v.driverID && 
-        v.driverID._id === d._id && 
+    const onDuty = driverList.filter(d =>
+      d.isActive &&
+      vehicleList.some(v =>
+        v.driverID &&
+        v.driverID._id === d._id &&
         v.currentStatus === 'on_trip'
       )
     ).length;
-    
-    const available = driverList.filter(d => 
-      d.isActive && 
+
+    const available = driverList.filter(d =>
+      d.isActive &&
       !vehicleList.some(v => v.driverID && v.driverID._id === d._id)
     ).length;
-    
+
     const assignedVehicles = vehicleList.filter(v => v.driverID).length;
-    
-    const totalTripsToday = tripList.filter(t => 
+
+    const totalTripsToday = tripList.filter(t =>
       new Date(t.departureTime).toISOString().split('T')[0] === today
     ).length;
-    
+
     setStats({
       totalDrivers,
       activeDrivers,
@@ -176,7 +176,7 @@ const Drivers = () => {
 
     try {
       await api.post('/api/auth/toggle-status', { userId: selectedDriver._id });
-      
+
       setSuccess(t(`Driver ${selectedDriver.isActive ? 'deactivated' : 'activated'} successfully`));
       setToggleDialogOpen(false);
       fetchData();
@@ -198,9 +198,9 @@ const Drivers = () => {
   // Get today's trips for driver
   const getTodaysTrips = (driverId) => {
     const today = new Date().toISOString().split('T')[0];
-    return trips.filter(trip => 
-      trip.driver && 
-      trip.driver._id === driverId && 
+    return trips.filter(trip =>
+      trip.driver &&
+      trip.driver._id === driverId &&
       new Date(trip.departureTime).toISOString().split('T')[0] === today
     );
   };
@@ -210,29 +210,29 @@ const Drivers = () => {
     // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         driver.fullName?.toLowerCase().includes(searchLower) ||
         driver.email?.toLowerCase().includes(searchLower) ||
         driver.phoneNumber?.includes(searchTerm) ||
         (driver.licenseNumber && driver.licenseNumber.toLowerCase().includes(searchLower));
-      
+
       if (!matchesSearch) return false;
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'active') return driver.isActive;
       if (statusFilter === 'inactive') return !driver.isActive;
-      
+
       const vehicle = getDriverVehicle(driver._id);
-      
+
       if (statusFilter === 'available') return driver.isActive && !vehicle;
       if (statusFilter === 'assigned') return driver.isActive && vehicle;
       if (statusFilter === 'on_trip') {
         return driver.isActive && vehicle && vehicle.currentStatus === 'on_trip';
       }
     }
-    
+
     return true;
   });
 
@@ -244,7 +244,7 @@ const Drivers = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    if (!dateString) return t('N/A');
+    if (!dateString) return t('not_available_short', 'N/A');
     try {
       return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
     } catch {
@@ -284,17 +284,17 @@ const Drivers = () => {
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight="bold">
-            {t('Drivers Management')}
+            {t('drivers_management', 'Drivers Management')}
           </Typography>
           <Box display="flex" gap={2}>
-            
+
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
               onClick={fetchData}
               disabled={loading}
             >
-              {t('Refresh')}
+              {t('refresh', 'Refresh')}
             </Button>
           </Box>
         </Box>
@@ -305,7 +305,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('Total Drivers')}
+                  {t('total_drivers', 'Total Drivers')}
                 </Typography>
                 <Typography variant="h4">
                   {stats.totalDrivers}
@@ -317,7 +317,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('Active Drivers')}
+                  {t('active_drivers', 'Active Drivers')}
                 </Typography>
                 <Typography variant="h4" color="success.main">
                   {stats.activeDrivers}
@@ -329,7 +329,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('On Duty')}
+                  {t('on_duty', 'On Duty')}
                 </Typography>
                 <Typography variant="h4" color="warning.main">
                   {stats.onDuty}
@@ -341,7 +341,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('Available (No Vehicle)')}
+                  {t('available_no_vehicle', 'Available (No Vehicle)')}
                 </Typography>
                 <Typography variant="h4" color="primary.main">
                   {stats.available}
@@ -353,7 +353,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('Assigned Vehicles')}
+                  {t('assigned_vehicles', 'Assigned Vehicles')}
                 </Typography>
                 <Typography variant="h4">
                   {stats.assignedVehicles}
@@ -365,7 +365,7 @@ const Drivers = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  {t('Today\'s Trips')}
+                  {t('todays_trips', 'Today\'s Trips')}
                 </Typography>
                 <Typography variant="h4">
                   {stats.totalTripsToday}
@@ -380,27 +380,27 @@ const Drivers = () => {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label={t('Search Drivers')}
+              label={t('search_drivers', 'Search Drivers')}
               variant="outlined"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('Search by name, email, phone, or license...')}
+              placeholder={t('search_drivers_placeholder', 'Search by name, email, phone, or license...')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth>
-              <InputLabel>{t('Status')}</InputLabel>
+              <InputLabel>{t('status', 'Status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label={t('Status')}
+                label={t('status', 'Status')}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <MenuItem value="all">{t('All Status')}</MenuItem>
-                <MenuItem value="active">{t('Active Only')}</MenuItem>
-                <MenuItem value="inactive">{t('Inactive Only')}</MenuItem>
-                <MenuItem value="available">{t('Available (No Vehicle)')}</MenuItem>
-                <MenuItem value="assigned">{t('Assigned (With Vehicle)')}</MenuItem>
-                <MenuItem value="on_trip">{t('Currently On Trip')}</MenuItem>
+                <MenuItem value="all">{t('all_status', 'All Status')}</MenuItem>
+                <MenuItem value="active">{t('active_only', 'Active Only')}</MenuItem>
+                <MenuItem value="inactive">{t('inactive_only', 'Inactive Only')}</MenuItem>
+                <MenuItem value="available">{t('available_no_vehicle', 'Available (No Vehicle)')}</MenuItem>
+                <MenuItem value="assigned">{t('assigned_with_vehicle', 'Assigned (With Vehicle)')}</MenuItem>
+                <MenuItem value="on_trip">{t('currently_on_trip', 'Currently On Trip')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -414,12 +414,12 @@ const Drivers = () => {
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Alert 
-            severity="error" 
+          <Alert
+            severity="error"
             sx={{ m: 2 }}
             action={
               <Button color="inherit" size="small" onClick={clearError}>
-                {t('DISMISS')}
+                {t('dismiss_upper', 'DISMISS')}
               </Button>
             }
           >
@@ -431,12 +431,12 @@ const Drivers = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('Driver')}</TableCell>
-                    <TableCell>{t('Contact')}</TableCell>
-                    <TableCell>{t('Vehicle & Status')}</TableCell>
-                    <TableCell>{t('Trips')}</TableCell>
-                    <TableCell>{t('Created')}</TableCell>
-                    <TableCell>{t('Actions')}</TableCell>
+                    <TableCell>{t('driver', 'Driver')}</TableCell>
+                    <TableCell>{t('contact', 'Contact')}</TableCell>
+                    <TableCell>{t('vehicle_and_status', 'Vehicle & Status')}</TableCell>
+                    <TableCell>{t('trips', 'Trips')}</TableCell>
+                    <TableCell>{t('created', 'Created')}</TableCell>
+                    <TableCell>{t('actions', 'Actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -444,7 +444,7 @@ const Drivers = () => {
                     <TableRow>
                       <TableCell colSpan={6} align="center">
                         <Typography color="textSecondary">
-                          {t('No drivers found')}
+                          {t('no_drivers_found', 'No drivers found')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -453,7 +453,7 @@ const Drivers = () => {
                       const vehicle = getDriverVehicle(driver._id);
                       const driverTrips = getDriverTrips(driver._id);
                       const todaysTrips = getTodaysTrips(driver._id);
-                      
+
                       return (
                         <TableRow key={driver._id} hover>
                           <TableCell>
@@ -466,10 +466,10 @@ const Drivers = () => {
                                   {driver.fullName}
                                 </Typography>
                                 <Typography variant="body2" color="textSecondary">
-                                  {t('ID')}: {driver._id?.substring(0, 8)}...
+                                  {t('id_upper', 'ID')}: {driver._id?.substring(0, 8)}...
                                 </Typography>
                                 <Chip
-                                  label={driver.isActive ? t('Active') : t('Inactive')}
+                                  label={driver.isActive ? t('active', 'Active') : t('inactive', 'Inactive')}
                                   size="small"
                                   color={driver.isActive ? 'success' : 'error'}
                                   sx={{ mt: 0.5 }}
@@ -484,7 +484,7 @@ const Drivers = () => {
                             </Typography>
                             {driver.licenseNumber && (
                               <Typography variant="body2" color="textSecondary">
-                                {t('License')}: {driver.licenseNumber}
+                                {t('license', 'License')}: {driver.licenseNumber}
                               </Typography>
                             )}
                           </TableCell>
@@ -499,36 +499,36 @@ const Drivers = () => {
                                   size="small"
                                   color={
                                     vehicle.currentStatus === 'active' || vehicle.currentStatus === 'on_trip' ? 'success' :
-                                    vehicle.currentStatus === 'available' ? 'primary' : 'default'
+                                      vehicle.currentStatus === 'available' ? 'primary' : 'default'
                                   }
                                   sx={{ mt: 0.5 }}
                                 />
                               </Box>
                             ) : (
                               <Typography color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                                {t('No vehicle assigned')}
+                                {t('no_vehicle_assigned', 'No vehicle assigned')}
                               </Typography>
                             )}
                           </TableCell>
                           <TableCell>
                             <Typography>
-                              {t('Today')}: {todaysTrips.length}
+                              {t('today', 'Today')}: {todaysTrips.length}
                             </Typography>
                             <Typography variant="body2" color="textSecondary">
-                              {t('Total')}: {driverTrips.length}
+                              {t('total', 'Total')}: {driverTrips.length}
                             </Typography>
                           </TableCell>
                           <TableCell>
                             {formatDate(driver.createdAt)}
                             {driver.lastLogin && (
                               <Typography variant="body2" color="textSecondary">
-                                {t('Last login')}: {formatDate(driver.lastLogin)}
+                                {t('last_login_lower', 'Last login')}: {formatDate(driver.lastLogin)}
                               </Typography>
                             )}
                           </TableCell>
                           <TableCell>
                             <Box display="flex" gap={1}>
-                              <Tooltip title={t('View Details')}>
+                              <Tooltip title={t('view_details', 'View Details')}>
                                 <IconButton
                                   size="small"
                                   color="info"
@@ -541,7 +541,7 @@ const Drivers = () => {
                                 </IconButton>
                               </Tooltip>
 
-                              <Tooltip title={driver.isActive ? t('Deactivate') : t('Activate')}>
+                              <Tooltip title={driver.isActive ? t('deactivate', 'Deactivate') : t('activate_action', 'Activate')}>
                                 <IconButton
                                   size="small"
                                   color={driver.isActive ? 'error' : 'success'}
@@ -562,7 +562,7 @@ const Drivers = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, 50]}
               component="div"
@@ -575,19 +575,19 @@ const Drivers = () => {
           </>
         )}
       </Paper>
-        
 
-        {/* Driver Details Dialog */}
-       <Dialog
+
+      {/* Driver Details Dialog */}
+      <Dialog
         open={driverDetailsDialog}
         onClose={() => setDriverDetailsDialog(false)}
         maxWidth="md"
         fullWidth
-       >
+      >
         {selectedDriver ? (
           <>
             <DialogTitle>
-              {t('Driver Details')}
+              {t('driver_details', 'Driver Details')}
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={3}>
@@ -613,53 +613,53 @@ const Drivers = () => {
                       sx={{ mb: 1 }}
                     />
                     <Chip
-                      label={selectedDriver.isActive ? t('Active') : t('Inactive')}
+                      label={selectedDriver.isActive ? t('active', 'Active') : t('inactive', 'Inactive')}
                       color={selectedDriver.isActive ? 'success' : 'error'}
                     />
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} md={8}>
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      {t('Contact Information')}
+                      {t('contact_information', 'Contact Information')}
                     </Typography>
-                    <Typography>{t('Email')}: {selectedDriver.email}</Typography>
-                    <Typography>{t('Phone')}: {selectedDriver.phoneNumber}</Typography>
+                    <Typography>{t('email', 'Email')}: {selectedDriver.email}</Typography>
+                    <Typography>{t('phone', 'Phone')}: {selectedDriver.phoneNumber}</Typography>
                     {selectedDriver.licenseNumber && (
-                      <Typography>{t('License')}: {selectedDriver.licenseNumber}</Typography>
+                      <Typography>{t('license', 'License')}: {selectedDriver.licenseNumber}</Typography>
                     )}
                     {selectedDriver.emergencyContact && (
                       <Typography>
-                        {t('Emergency Contact')}: {selectedDriver.emergencyContact}
+                        {t('emergency_contact', 'Emergency Contact')}: {selectedDriver.emergencyContact}
                       </Typography>
                     )}
                   </Box>
 
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      {t('Assignment Information')}
+                      {t('assignment_information', 'Assignment Information')}
                     </Typography>
                     {(() => {
                       const vehicle = getDriverVehicle(selectedDriver._id);
                       const driverTrips = getDriverTrips(selectedDriver._id);
                       const todaysTrips = getTodaysTrips(selectedDriver._id);
-                      
+
                       return (
                         <>
                           <Typography>
-                            {t('Assigned Vehicle')}: {vehicle ? `${vehicle.plateNumber} (${vehicle.carType})` : t('Not assigned')}
+                            {t('assigned_vehicle', 'Assigned Vehicle')}: {vehicle ? `${vehicle.plateNumber} (${vehicle.carType})` : t('not_assigned', 'Not assigned')}
                           </Typography>
                           {vehicle && (
                             <Typography>
-                              {t('Vehicle Status')}: {vehicle.currentStatus}
+                              {t('vehicle_status', 'Vehicle Status')}: {vehicle.currentStatus}
                             </Typography>
                           )}
                           <Typography>
-                            {t('Total Trips')}: {driverTrips.length}
+                            {t('total_trips', 'Total Trips')}: {driverTrips.length}
                           </Typography>
                           <Typography>
-                            {t('Today\'s Trips')}: {todaysTrips.length}
+                            {t('todays_trips', 'Today\'s Trips')}: {todaysTrips.length}
                           </Typography>
                         </>
                       );
@@ -668,14 +668,14 @@ const Drivers = () => {
 
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      {t('Account Information')}
+                      {t('account_information', 'Account Information')}
                     </Typography>
                     <Typography>
-                      {t('Created')}: {formatDate(selectedDriver.createdAt)}
+                      {t('created', 'Created')}: {formatDate(selectedDriver.createdAt)}
                     </Typography>
                     {selectedDriver.lastLogin && (
                       <Typography>
-                        {t('Last Login')}: {formatDate(selectedDriver.lastLogin)}
+                        {t('last_login', 'Last Login')}: {formatDate(selectedDriver.lastLogin)}
                       </Typography>
                     )}
                   </Box>
@@ -684,7 +684,7 @@ const Drivers = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setDriverDetailsDialog(false)}>
-                {t('Close')}
+                {t('close', 'Close')}
               </Button>
             </DialogActions>
           </>
@@ -693,37 +693,37 @@ const Drivers = () => {
             <CircularProgress />
           </Box>
         )}
-       </Dialog>
+      </Dialog>
 
-       {/* Toggle Status Dialog */}
-       <Dialog
+      {/* Toggle Status Dialog */}
+      <Dialog
         open={toggleDialogOpen}
         onClose={() => setToggleDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-       >
+      >
         <DialogTitle>
-          {selectedDriver?.isActive ? t('Deactivate Driver') : t('Activate Driver')}
+          {selectedDriver?.isActive ? t('deactivate_driver', 'Deactivate Driver') : t('activate_driver', 'Activate Driver')}
         </DialogTitle>
         <DialogContent>
           {selectedDriver && (
-            <Alert 
-              severity={selectedDriver.isActive ? 'warning' : 'info'} 
+            <Alert
+              severity={selectedDriver.isActive ? 'warning' : 'info'}
               sx={{ mt: 2 }}
             >
               <Typography>
-                {t('Are you sure you want to')}{' '}
-                <strong>{selectedDriver.isActive ? t('deactivate') : t('activate')}</strong>{' '}
-                {t('the driver')} <strong>{selectedDriver.fullName}</strong>?
+                {t('are_you_sure_to', 'Are you sure you want to')}{' '}
+                <strong>{selectedDriver.isActive ? t('deactivate_lower', 'deactivate') : t('activate_lower', 'activate')}</strong>{' '}
+                {t('the_driver', 'the driver')} <strong>{selectedDriver.fullName}</strong>?
               </Typography>
               {selectedDriver.isActive && (
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  {t('Deactivated drivers cannot log in to the system.')}
+                  {t('deactivated_drivers_login', 'Deactivated drivers cannot log in to the system.')}
                 </Typography>
               )}
               {!selectedDriver.isActive && (
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  {t('Activated drivers will be able to log in and use the system.')}
+                  {t('activated_drivers_login', 'Activated drivers will be able to log in and use the system.')}
                 </Typography>
               )}
             </Alert>
@@ -731,41 +731,41 @@ const Drivers = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setToggleDialogOpen(false)}>
-            {t('Cancel')}
+            {t('cancel', 'Cancel')}
           </Button>
           <Button
             variant="contained"
             color={selectedDriver?.isActive ? 'error' : 'success'}
             onClick={handleToggleStatus}
           >
-            {selectedDriver?.isActive ? t('Deactivate') : t('Activate')}
+            {selectedDriver?.isActive ? t('deactivate', 'Deactivate') : t('activate_action', 'Activate')}
           </Button>
         </DialogActions>
-       </Dialog>
+      </Dialog>
 
-       {/* Snackbars for feedback */}
-       <Snackbar
+      {/* Snackbars for feedback */}
+      <Snackbar
         open={!!success}
         autoHideDuration={6000}
         onClose={clearSuccess}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-       >
+      >
         <Alert onClose={clearSuccess} severity="success" sx={{ width: '100%' }}>
           {success}
         </Alert>
-       </Snackbar>
+      </Snackbar>
 
-       <Snackbar
+      <Snackbar
         open={!!error}
         autoHideDuration={6000}
         onClose={clearError}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-       >
+      >
         <Alert onClose={clearError} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
-       </Snackbar>
-     </Box>
+      </Snackbar>
+    </Box>
   );
 };
 
