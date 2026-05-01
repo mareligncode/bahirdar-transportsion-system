@@ -17,7 +17,8 @@ import {
   ChevronLeftIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
-  UserIcon
+  UserIcon,
+  MapIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
@@ -47,11 +48,11 @@ const StationDashboard = () => {
 
   // Data states
   const [recentTrips, setRecentTrips] = useState([]);
-  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [routes, setRoutes] = useState([]);
   const [vehicles, setVehicles] = useState([]);
 
   // Pagination states
-  const [tripsPage, setTripsPage] = useState(1);
+  const [routesPage, setRoutesPage] = useState(1);
   const [vehiclesPage, setVehiclesPage] = useState(1);
   const itemsPerPage = 3;
 
@@ -112,11 +113,13 @@ const StationDashboard = () => {
       const [
         tripsRes,
         vehiclesRes,
-        stationUsersRes
+        stationUsersRes,
+        routesRes
       ] = await Promise.allSettled([
         api.get('/api/trip', { params: { limit: 100 } }),
         api.get('/api/vehicles', { params: { limit: 100 } }),
-        api.get('/api/auth/station-users')
+        api.get('/api/auth/station-users'),
+        api.get('/api/route')
       ]);
 
       if (tripsRes.status === 'fulfilled') {
@@ -125,8 +128,6 @@ const StationDashboard = () => {
           (tripsData?.trips || tripsData?.data || []);
 
         console.log('Trips data:', trips);
-
-        const now = new Date();
 
         const activeTrips = trips.filter(t =>
           t && ['scheduled', 'boarding', 'ongoing'].includes(t.tripStatus)
@@ -146,15 +147,6 @@ const StationDashboard = () => {
 
         setRecentTrips(sortedTrips.slice(0, 5));
 
-        const upcoming = trips
-          .filter(t =>
-            t && t.tripStatus === 'scheduled' &&
-            t.departureTime && new Date(t.departureTime) > now
-          )
-          .sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime));
-
-        setUpcomingTrips(upcoming);
-
         setStats(prev => ({
           ...prev,
           totalTrips: trips.length,
@@ -162,6 +154,21 @@ const StationDashboard = () => {
           completedTrips,
           cancelledTrips
         }));
+      }
+
+      if (routesRes.status === 'fulfilled') {
+        const routesData = extractData(routesRes.value);
+        const allRoutes = Array.isArray(routesData) ? routesData :
+          (routesData?.routes || routesData?.data || []);
+        console.log('Routes data:', allRoutes);
+
+        let filteredRoutes = allRoutes;
+        if (user?.stationID) {
+          filteredRoutes = allRoutes.filter(r =>
+            (r.origin?._id || r.origin) === user.stationID
+          );
+        }
+        setRoutes(filteredRoutes);
       }
 
       if (vehiclesRes.status === 'fulfilled') {
@@ -264,10 +271,10 @@ const StationDashboard = () => {
   };
 
   // Pagination functions
-  const getPaginatedTrips = () => {
-    const startIndex = (tripsPage - 1) * itemsPerPage;
+  const getPaginatedRoutes = () => {
+    const startIndex = (routesPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return upcomingTrips.slice(startIndex, endIndex);
+    return routes.slice(startIndex, endIndex);
   };
 
   const getPaginatedVehicles = () => {
@@ -276,11 +283,11 @@ const StationDashboard = () => {
     return vehicles.slice(startIndex, endIndex);
   };
 
-  const totalTripsPages = Math.ceil(upcomingTrips.length / itemsPerPage);
+  const totalRoutesPages = Math.ceil(routes.length / itemsPerPage);
   const totalVehiclesPages = Math.ceil(vehicles.length / itemsPerPage);
 
-  const goToTripsPage = (page) => {
-    setTripsPage(Math.max(1, Math.min(page, totalTripsPages)));
+  const goToRoutesPage = (page) => {
+    setRoutesPage(Math.max(1, Math.min(page, totalRoutesPages)));
   };
 
   const goToVehiclesPage = (page) => {
@@ -334,7 +341,7 @@ const StationDashboard = () => {
           </button>
         </div>
         <span className="text-xs text-gray-500">
-          {t('showing')} {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, label === 'trips' ? upcomingTrips.length : vehicles.length)} {t('of')} {label === 'trips' ? upcomingTrips.length : vehicles.length}
+          {t('showing')} {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, label === 'routes' ? routes.length : vehicles.length)} {t('of')} {label === 'routes' ? routes.length : vehicles.length}
         </span>
       </div>
     );
@@ -476,7 +483,7 @@ const StationDashboard = () => {
             <div className="relative p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Vehicles</p>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('vehicles')}</p>
                   <p className="text-4xl font-bold text-gray-800 mt-2">{stats.totalVehicles}</p>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
@@ -507,7 +514,7 @@ const StationDashboard = () => {
             <div className="relative p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Drivers</p>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{t('drivers')}</p>
                   <p className="text-4xl font-bold text-gray-800 mt-2">{stats.totalDrivers}</p>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
@@ -516,11 +523,11 @@ const StationDashboard = () => {
               </div>
               <div className="mt-6 flex gap-3">
                 <div className="flex-1 bg-green-50 rounded-lg p-2 text-center">
-                  <p className="text-xs text-green-600 font-medium">Active</p>
+                  <p className="text-xs text-green-600 font-medium">{t('active')}</p>
                   <p className="text-lg font-bold text-green-700">{stats.activeDrivers || 0}</p>
                 </div>
                 <div className="flex-1 bg-yellow-50 rounded-lg p-2 text-center">
-                  <p className="text-xs text-yellow-600 font-medium">Available</p>
+                  <p className="text-xs text-yellow-600 font-medium">{t('available')}</p>
                   <p className="text-lg font-bold text-yellow-700">{stats.availableDrivers || 0}</p>
                 </div>
               </div>
@@ -530,61 +537,61 @@ const StationDashboard = () => {
 
         {/* Two Column Layout with Pagination */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Upcoming Trips with Pagination */}
+          {/* Available Routes with Pagination */}
           <div className={`backdrop-blur-xl rounded-xl shadow-lg p-6 border ${isDark ? 'bg-gray-800/50 border-white/5' : 'bg-white/70 border-white/20'
             } glass-card`}>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <CalendarIcon className="h-5 w-5 text-blue-600" />
+                  <MapIcon className="h-5 w-5 text-blue-600" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-800">{t('upcoming_trips')}</h2>
+                <h2 className="text-lg font-semibold text-gray-800">{t('routes', 'Available Routes')}</h2>
               </div>
-              <Link to="/station/Trips" className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 group">
+              <Link to="/admin/routes" className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 group">
                 {t('view_all')}
                 <ChevronRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
-            {upcomingTrips.length === 0 ? (
+            {routes.length === 0 ? (
               <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-                <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">{t('no_upcoming_trips')}</p>
-                <p className="text-sm text-gray-400 mt-1">{t('schedule_trip_hint')}</p>
+                <MapIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">{t('no_available_routes', 'No available routes')}</p>
+                <p className="text-sm text-gray-400 mt-1">{t('routes_not_defined_yet', 'Routes not defined yet')}</p>
               </div>
             ) : (
               <>
                 <div className="space-y-4 min-h-[320px]">
-                  {getPaginatedTrips().map((trip, index) => (
-                    <div key={trip._id} className="group relative">
+                  {getPaginatedRoutes().map((route, index) => (
+                    <div key={route._id} className="group relative">
                       <div className={`relative flex gap-4 p-4 rounded-lg transition-colors ${isDark ? 'bg-gray-700/50 hover:bg-blue-900/20' : 'bg-gray-50 hover:bg-blue-50'
                         }`}>
                         <div className="flex-shrink-0">
                           <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {(tripsPage - 1) * itemsPerPage + index + 1}
+                            {(routesPage - 1) * itemsPerPage + index + 1}
                           </div>
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="font-semibold text-gray-800">
-                                {trip.origin?.stationName || 'N/A'} → {trip.destination?.stationName || 'N/A'}
+                                {route.routeName || `${route.origin?.stationName || 'N/A'} → ${route.destination?.stationName || 'N/A'}`}
                               </p>
                               <div className="flex items-center mt-2 text-sm text-gray-600">
                                 <ClockIcon className="h-4 w-4 mr-1" />
-                                {trip.departureTime ? format(new Date(trip.departureTime), 'PPp') : 'N/A'}
+                                {route.estimatedDuration || 'N/A'}
                               </div>
                               <div className="mt-3 flex items-center gap-3 text-xs">
-                                <span className="px-2 py-1 bg-white rounded-full shadow-sm">
-                                  🚌 {trip.vehicle?.plateNumber || 'N/A'}
+                                <span className="px-2 py-1 bg-white rounded-full shadow-sm text-green-700 font-medium">
+                                  ETB {route.basePrice || '0'}
                                 </span>
-                                <span className="px-2 py-1 bg-white rounded-full shadow-sm">
-                                  👤 {trip.driver?.fullName || 'N/A'}
+                                <span className="px-2 py-1 bg-white rounded-full shadow-sm text-gray-600">
+                                  {route.distance || 0} km
                                 </span>
                               </div>
                             </div>
-                            <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusColor(trip.tripStatus)}`}>
-                              {trip.tripStatus}
+                            <span className={`px-3 py-1 text-xs rounded-full font-medium ${isDark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-800'}`}>
+                              {t('route', 'Route')}
                             </span>
                           </div>
                         </div>
@@ -594,10 +601,10 @@ const StationDashboard = () => {
                 </div>
 
                 <Pagination
-                  currentPage={tripsPage}
-                  totalPages={totalTripsPages}
-                  onPageChange={goToTripsPage}
-                  label="trips"
+                  currentPage={routesPage}
+                  totalPages={totalRoutesPages}
+                  onPageChange={goToRoutesPage}
+                  label="routes"
                 />
               </>
             )}
@@ -650,7 +657,7 @@ const StationDashboard = () => {
                                 {vehicle.plateNumber}
                               </p>
                               <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${getStatusColor(vehicle.currentStatus)}`}>
-                                {vehicle.currentStatus}
+                                {t(vehicle.currentStatus) || vehicle.currentStatus}
                               </span>
                             </div>
                             <p className="text-sm text-gray-600 mt-1">
@@ -658,11 +665,11 @@ const StationDashboard = () => {
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                               <span className="flex items-center gap-1">
-                                <span className="font-medium">Capacity:</span> {vehicle.totalCapacity || 0} seats
+                                <span className="font-medium">{t('capacity')}:</span> {vehicle.totalCapacity || 0} {t('seats')}
                               </span>
                               {vehicle.driverID && (
                                 <span className="flex items-center gap-1">
-                                  <span className="font-medium">Driver:</span> {typeof vehicle.driverID === 'object' ? vehicle.driverID.fullName : 'Assigned'}
+                                  <span className="font-medium">{t('driver')}:</span> {typeof vehicle.driverID === 'object' ? vehicle.driverID.fullName : t('Assigned')}
                                 </span>
                               )}
                             </div>
@@ -705,17 +712,17 @@ const StationDashboard = () => {
           </Link>
 
           <Link
-            to="/station/Trips"
+            to="/admin/routes"
             className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
             <div className="relative flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform">
-                <CalendarIcon className="h-8 w-8" />
+                <MapIcon className="h-8 w-8" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold mb-1">{t('create_new_trip')}</h3>
-                <p className="text-blue-100 text-sm">{t('schedule_new_journey_hint')}</p>
+                <h3 className="text-xl font-bold mb-1">{t('create_new_route', 'Create New Route')}</h3>
+                <p className="text-blue-100 text-sm">{t('define_new_path_hint', 'Define a new path between stations')}</p>
               </div>
               <ChevronRightIcon className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
             </div>

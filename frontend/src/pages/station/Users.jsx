@@ -140,17 +140,17 @@ const Users = () => {
           await fetchStationInfo();
         }
       } else {
-        setError(response.data.message || t('Failed to fetch users'));
+        setError(response.data.message || t('failed_fetch_users', 'Failed to fetch users'));
       }
     } catch (err) {
       console.error('❌ Fetch users error:', err);
 
       if (err.response?.status === 403) {
-        setError(t('Access denied. You may not have permission to view station users.'));
+        setError(t('access_denied_station_users', 'Access denied. You may not have permission to view station users.'));
       } else if (err.response?.status === 401) {
-        setError(t('Session expired. Please login again.'));
+        setError(t('session_expired_login', 'Session expired. Please login again.'));
       } else {
-        setError(err.response?.data?.message || t('Failed to load users. Please try again.'));
+        setError(err.response?.data?.message || t('failed_load_users_retry', 'Failed to load users. Please try again.'));
       }
     } finally {
       setLoading(false);
@@ -231,7 +231,7 @@ const Users = () => {
     // Validation
     const errors = {};
     if (!assignForm.licenseNumber.trim()) {
-      errors.licenseNumber = 'License number is required';
+      errors.licenseNumber = t('license_number_required', 'License number is required');
     }
 
     if (Object.keys(errors).length > 0) {
@@ -253,17 +253,17 @@ const Users = () => {
       const response = await api.post('/api/auth/assign-driver', formData);
 
       if (response.data.success) {
-        setSuccess('✅ Passenger assigned as driver successfully');
+        setSuccess(`✅ ${t('passenger_assigned_driver_success', 'Passenger assigned as driver successfully')}`);
         setAssignDialogOpen(false);
         fetchUsers(); // Refresh the list
       } else {
-        setError(response.data.message || 'Failed to assign driver role');
+        setError(response.data.message || t('failed_assign_driver_role', 'Failed to assign driver role'));
       }
     } catch (err) {
       console.error('❌ Assign driver error:', err);
       const errorMessage = err.response?.data?.message ||
         err.response?.data?.error ||
-        'Failed to assign driver role. Please try again.';
+        t('failed_assign_driver_role_retry', 'Failed to assign driver role. Please try again.');
       setError(errorMessage);
     } finally {
       setAssignLoading(false);
@@ -303,17 +303,17 @@ const Users = () => {
         // Also refresh from server to be safe
         setTimeout(() => fetchUsers(), 500);
       } else {
-        setError(response.data.message || 'Failed to update user status');
+        setError(response.data.message || t('failed_update_user_status', 'Failed to update user status'));
       }
     } catch (err) {
       console.error('❌ Toggle status error:', err);
 
-      let errorMessage = 'Failed to update user status';
+      let errorMessage = t('failed_update_user_status', 'Failed to update user status');
       if (err.response?.status === 403) {
         if (err.response?.data?.message?.includes('Cannot manage users from other stations')) {
-          errorMessage = 'Cannot manage users from other stations. This user may belong to a different station.';
+          errorMessage = t('cannot_manage_other_station_users', 'Cannot manage users from other stations. This user may belong to a different station.');
         } else {
-          errorMessage = 'You do not have permission to perform this action.';
+          errorMessage = t('no_permission_action', 'You do not have permission to perform this action.');
         }
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -356,7 +356,7 @@ const Users = () => {
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight="bold">
-            Passenger Management
+            {t('passenger_management', 'Passenger Management')}
           </Typography>
           <Box display="flex" gap={2}>
             <Button
@@ -365,7 +365,7 @@ const Users = () => {
               onClick={fetchUsers}
               disabled={loading}
             >
-              Refresh
+              {t('refresh', 'Refresh')}
             </Button>
           </Box>
         </Box>
@@ -374,9 +374,9 @@ const Users = () => {
         {stationInfo && (
           <Alert severity="info" sx={{ mb: 3 }} icon={<LocationIcon />}>
             <Typography variant="body2">
-              <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode}) |
-              <strong> City:</strong> {stationInfo.city} |
-              <strong> Location:</strong> {stationInfo.location}
+              <strong>{t('station_label', 'Station:')}</strong> {stationInfo.stationName} ({stationInfo.stationCode}) |
+              <strong> {t('city_label', 'City:')}</strong> {stationInfo.city} |
+              <strong> {t('location_label', 'Location:')}</strong> {stationInfo.location}
             </Typography>
           </Alert>
         )}
@@ -387,7 +387,7 @@ const Users = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Total Passengers
+                  {t('total_passengers', 'Total Passengers')}
                 </Typography>
                 <Typography variant="h4">
                   {users.length}
@@ -399,7 +399,7 @@ const Users = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Active Passengers
+                  {t('active_passengers', 'Active Passengers')}
                 </Typography>
                 <Typography variant="h4" color="success.main">
                   {activeCount}
@@ -411,7 +411,7 @@ const Users = () => {
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Inactive Passengers
+                  {t('inactive_passengers', 'Inactive Passengers')}
                 </Typography>
                 <Typography variant="h4" color="error.main">
                   {inactiveCount}
@@ -426,25 +426,25 @@ const Users = () => {
           <Grid item xs={12} md={8}>
             <TextField
               fullWidth
-              label="Search Passengers"
+              label={t('search_passengers', 'Search Passengers')}
               variant="outlined"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, email, phone..."
+              placeholder={t('search_passengers_placeholder', 'Search by name, email, phone...')}
               size="small"
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('status', 'Status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('status', 'Status')}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="all">{t('all_status', 'All Status')}</MenuItem>
+                <MenuItem value="active">{t('active', 'Active')}</MenuItem>
+                <MenuItem value="inactive">{t('inactive', 'Inactive')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -466,7 +466,7 @@ const Users = () => {
             sx={{ m: 2 }}
             action={
               <Button color="inherit" size="small" onClick={clearError}>
-                Dismiss
+                {t('dismiss', 'Dismiss')}
               </Button>
             }
           >
@@ -478,12 +478,12 @@ const Users = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Passenger</TableCell>
-                    <TableCell>Contact</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Emergency Contact</TableCell>
-                    <TableCell>Last Login</TableCell>
-                    <TableCell>Actions</TableCell>
+                    <TableCell>{t('passenger_table_head', 'Passenger')}</TableCell>
+                    <TableCell>{t('contact', 'Contact')}</TableCell>
+                    <TableCell>{t('status', 'Status')}</TableCell>
+                    <TableCell>{t('emergency_contact', 'Emergency Contact')}</TableCell>
+                    <TableCell>{t('last_login', 'Last Login')}</TableCell>
+                    <TableCell>{t('actions', 'Actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -491,7 +491,7 @@ const Users = () => {
                     <TableRow>
                       <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                         <Typography color="textSecondary">
-                          No passengers found
+                          {t('no_passengers_found', 'No passengers found')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -515,7 +515,7 @@ const Users = () => {
                                 {user.fullName}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                ID: {user._id?.substring(0, 8)}...
+                                {t('id_label', 'ID:')} {user._id?.substring(0, 8)}...
                               </Typography>
                             </Box>
                           </Box>
@@ -534,7 +534,7 @@ const Users = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={user.isActive ? 'Active' : 'Inactive'}
+                            label={user.isActive ? t('active', 'Active') : t('inactive', 'Inactive')}
                             color={user.isActive ? 'success' : 'error'}
                             size="small"
                             icon={user.isActive ? <CheckCircleIcon /> : <CancelIcon />}
@@ -545,7 +545,7 @@ const Users = () => {
                             <Typography variant="body2">{user.emergencyContact}</Typography>
                           ) : (
                             <Typography variant="caption" color="textSecondary">
-                              Not provided
+                              {t('not_provided', 'Not provided')}
                             </Typography>
                           )}
                         </TableCell>
@@ -558,7 +558,7 @@ const Users = () => {
                         </TableCell>
                         <TableCell>
                           <Stack direction="row" spacing={1}>
-                            <Tooltip title="View Details">
+                            <Tooltip title={t('view_details', 'View Details')}>
                               <IconButton
                                 size="small"
                                 color="info"
@@ -568,7 +568,7 @@ const Users = () => {
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title="Assign as Driver">
+                            <Tooltip title={t('assign_as_driver', 'Assign as Driver')}>
                               <IconButton
                                 size="small"
                                 color="warning"
@@ -578,7 +578,7 @@ const Users = () => {
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title={user.isActive ? 'Deactivate' : 'Activate'}>
+                            <Tooltip title={user.isActive ? t('deactivate', 'Deactivate') : t('activate_action', 'Activate')}>
                               <IconButton
                                 size="small"
                                 color={user.isActive ? 'error' : 'success'}
@@ -617,7 +617,7 @@ const Users = () => {
         fullWidth
       >
         <DialogTitle>
-          Assign Passenger as Driver
+          {t('assign_passenger_as_driver', 'Assign Passenger as Driver')}
           {selectedUser && (
             <Typography variant="body2" color="textSecondary">
               {selectedUser.fullName} ({selectedUser.email})
@@ -628,7 +628,7 @@ const Users = () => {
           <Box mt={2}>
             <TextField
               fullWidth
-              label="License Number"
+              label={t('license_number', 'License Number')}
               value={assignForm.licenseNumber}
               onChange={(e) => setAssignForm({
                 ...assignForm,
@@ -639,37 +639,37 @@ const Users = () => {
               required
               size="small"
               sx={{ mb: 2 }}
-              placeholder="Enter driver's license number"
+              placeholder={t('enter_license_number', "Enter driver's license number")}
             />
 
             {stationInfo && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                  <strong>Station:</strong> {stationInfo.stationName} ({stationInfo.stationCode})
+                  <strong>{t('station_label', 'Station:')}</strong> {stationInfo.stationName} ({stationInfo.stationCode})
                 </Typography>
                 <Typography variant="body2">
-                  This driver will be assigned to your station automatically.
+                  {t('driver_auto_assign_station', 'This driver will be assigned to your station automatically.')}
                 </Typography>
               </Alert>
             )}
 
             <Alert severity="warning" sx={{ mt: 2 }}>
               <Typography variant="body2" fontWeight="bold">
-                Important Notes:
+                {t('important_notes', 'Important Notes:')}
               </Typography>
               <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                <li>This will change the user's role from passenger to driver</li>
-                <li>The user will need to provide license information for trips</li>
-                <li>They can be assigned to vehicles after this change</li>
-                <li>They will be assigned to your station automatically</li>
-                <li>This action cannot be undone without super admin</li>
+                <li>{t('note_change_role', "This will change the user's role from passenger to driver")}</li>
+                <li>{t('note_provide_license', 'The user will need to provide license information for trips')}</li>
+                <li>{t('note_assign_vehicle', 'They can be assigned to vehicles after this change')}</li>
+                <li>{t('note_auto_station', 'They will be assigned to your station automatically')}</li>
+                <li>{t('note_cannot_undo', 'This action cannot be undone without super admin')}</li>
               </ul>
             </Alert>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAssignDialogOpen(false)} disabled={assignLoading}>
-            Cancel
+            {t('cancel', 'Cancel')}
           </Button>
           <Button
             variant="contained"
@@ -678,7 +678,7 @@ const Users = () => {
             disabled={assignLoading}
             startIcon={assignLoading ? <CircularProgress size={20} /> : <PersonAddIcon />}
           >
-            {assignLoading ? 'Assigning...' : 'Assign as Driver'}
+            {assignLoading ? t('assigning', 'Assigning...') : t('assign_as_driver', 'Assign as Driver')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -693,7 +693,7 @@ const Users = () => {
         {selectedUserDetails ? (
           <>
             <DialogTitle>
-              Passenger Details
+              {t('passenger_details', 'Passenger Details')}
             </DialogTitle>
             <DialogContent dividers>
               <Grid container spacing={3}>
@@ -704,7 +704,7 @@ const Users = () => {
                       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                       badgeContent={
                         <Chip
-                          label={selectedUserDetails.isActive ? 'Active' : 'Inactive'}
+                          label={selectedUserDetails.isActive ? t('active', 'Active') : t('inactive', 'Inactive')}
                           color={selectedUserDetails.isActive ? 'success' : 'error'}
                           size="small"
                           sx={{ position: 'absolute', bottom: 0, right: 0 }}
@@ -729,7 +729,7 @@ const Users = () => {
                     </Typography>
 
                     <Chip
-                      label="PASSENGER"
+                      label={t('passenger_upper', 'PASSENGER')}
                       color="primary"
                       sx={{ mb: 1 }}
                     />
@@ -739,7 +739,7 @@ const Users = () => {
                 <Grid item xs={12} md={8}>
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      Contact Information
+                      {t('contact_information', 'Contact Information')}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
@@ -754,7 +754,7 @@ const Users = () => {
                         <Box display="flex" alignItems="center" gap={1}>
                           <WarningIcon fontSize="small" color="warning" />
                           <Typography>
-                            Emergency: {selectedUserDetails.emergencyContact}
+                            {t('emergency', 'Emergency:')} {selectedUserDetails.emergencyContact}
                           </Typography>
                         </Box>
                       )}
@@ -763,13 +763,13 @@ const Users = () => {
 
                   <Box mb={3}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                      Account Information
+                      {t('account_information', 'Account Information')}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Grid container spacing={2}>
                         <Grid item xs={6}>
                           <Typography variant="caption" color="textSecondary">
-                            Created
+                            {t('created', 'Created')}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1}>
                             <CalendarIcon fontSize="small" color="action" />
@@ -780,7 +780,7 @@ const Users = () => {
                         </Grid>
                         <Grid item xs={6}>
                           <Typography variant="caption" color="textSecondary">
-                            Last Login
+                            {t('last_login', 'Last Login')}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1}>
                             <CalendarIcon fontSize="small" color="action" />
@@ -796,7 +796,7 @@ const Users = () => {
                   {selectedUserDetails.stationID && (
                     <Box>
                       <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                        Station Information
+                        {t('station_information', 'Station Information')}
                       </Typography>
                       <Paper variant="outlined" sx={{ p: 2 }}>
                         <Box display="flex" alignItems="center" gap={1}>
@@ -815,13 +815,13 @@ const Users = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setViewDialogOpen(false)}>
-                Close
+                {t('close', 'Close')}
               </Button>
             </DialogActions>
           </>
         ) : (
           <Box display="flex" justifyContent="center" p={5}>
-            <Typography>No user data available</Typography>
+            <Typography>{t('no_user_data', 'No user data available')}</Typography>
           </Box>
         )}
       </Dialog>
@@ -834,7 +834,7 @@ const Users = () => {
         fullWidth
       >
         <DialogTitle>
-          {selectedUser?.isActive ? 'Deactivate Passenger' : 'Activate Passenger'}
+          {selectedUser?.isActive ? t('deactivate_passenger', 'Deactivate Passenger') : t('activate_passenger', 'Activate Passenger')}
         </DialogTitle>
         <DialogContent>
           {selectedUser && (
@@ -844,8 +844,8 @@ const Users = () => {
                 sx={{ mt: 2 }}
               >
                 <Typography variant="body2">
-                  Are you sure you want to{' '}
-                  <strong>{selectedUser.isActive ? 'deactivate' : 'activate'}</strong>{' '}
+                  {t('are_you_sure_to', 'Are you sure you want to')}{' '}
+                  <strong>{selectedUser.isActive ? t('deactivate_lower', 'deactivate') : t('activate_lower', 'activate')}</strong>{' '}
                   <strong>{selectedUser.fullName}</strong>?
                 </Typography>
               </Alert>
@@ -853,7 +853,7 @@ const Users = () => {
               {selectedUser.isActive && (
                 <Alert severity="warning" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>Warning:</strong> Deactivated passengers cannot log in to the system or make bookings.
+                    <strong>{t('warning', 'Warning:')}</strong> {t('warning_deactivated_login', 'Deactivated passengers cannot log in to the system or make bookings.')}
                   </Typography>
                 </Alert>
               )}
@@ -861,7 +861,7 @@ const Users = () => {
               {!selectedUser.isActive && (
                 <Alert severity="success" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>Note:</strong> Activated passengers will be able to log in and make bookings normally.
+                    <strong>{t('note', 'Note:')}</strong> {t('note_activated_login', 'Activated passengers will be able to log in and make bookings normally.')}
                   </Typography>
                 </Alert>
               )}
@@ -870,7 +870,7 @@ const Users = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setToggleDialogOpen(false)} disabled={actionLoading}>
-            Cancel
+            {t('cancel', 'Cancel')}
           </Button>
           <Button
             variant="contained"
@@ -879,7 +879,7 @@ const Users = () => {
             disabled={actionLoading}
             startIcon={actionLoading ? <CircularProgress size={20} /> : null}
           >
-            {actionLoading ? 'Processing...' : (selectedUser?.isActive ? 'Deactivate' : 'Activate')}
+            {actionLoading ? t('processing', 'Processing...') : (selectedUser?.isActive ? t('deactivate', 'Deactivate') : t('activate_action', 'Activate'))}
           </Button>
         </DialogActions>
       </Dialog>

@@ -639,10 +639,10 @@ export default function BookingConfirmation() {
       <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
         <CircularProgress size={60} thickness={4} />
         <Typography variant="h6" sx={{ mt: 3, color: '#64748b' }}>
-          Loading your booking...
+          {t('loading_your_booking')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Please wait while we fetch your details
+          {t('please_wait_fetching_details')}
         </Typography>
       </Container>
     );
@@ -662,10 +662,10 @@ export default function BookingConfirmation() {
           }}
         >
           <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-            ⚠️ {error || 'Booking not found'}
+            ⚠️ {error || t('booking_not_found')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            The booking you're looking for doesn't exist or you don't have permission to view it.
+            {t('booking_not_found_desc')}
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">
             <Button
@@ -673,14 +673,14 @@ export default function BookingConfirmation() {
               onClick={() => navigate('/passenger/my-bookings')}
               startIcon={<ReceiptIcon />}
             >
-              View My Bookings
+              {t('view_all_bookings')}
             </Button>
             <Button
               variant="outlined"
               onClick={() => navigate('/passenger/book-trip')}
               startIcon={<DirectionsBus />}
             >
-              Book New Trip
+              {t('book_another_trip')}
             </Button>
           </Stack>
         </Alert>
@@ -731,7 +731,7 @@ export default function BookingConfirmation() {
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
             }}
           >
-            Back to My Bookings
+            {t('back_to_my_bookings')}
           </Button>
 
           <Tooltip title="Refresh booking">
@@ -763,15 +763,15 @@ export default function BookingConfirmation() {
               }}>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    🎉 Payment Successful!
+                    🎉 {t('payment_successful_title')}
                   </Typography>
                   <Typography variant="body2">
-                    Your booking has been confirmed. Check your email for the ticket.
+                    {t('payment_confirmed_msg')}
                   </Typography>
                 </Box>
                 <Chip
                   icon={<CheckCircleIcon />}
-                  label="Confirmed"
+                  label={t('confirmed')}
                   color="success"
                   sx={{ fontWeight: 600, px: 1 }}
                 />
@@ -831,7 +831,7 @@ export default function BookingConfirmation() {
                 </Avatar>
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {isConfirmed ? 'Booking Confirmed' : isPending ? 'Payment Pending' : 'Booking Details'}
+                    {isConfirmed ? t('booking_confirmed') : isPending ? t('payment_pending') : t('booking_details')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="body2" color="text.secondary">
@@ -850,7 +850,7 @@ export default function BookingConfirmation() {
                 {isGroupBooking && (
                   <Chip
                     icon={<EventSeat />}
-                    label={`${seatCount} Seats`}
+                    label={`${seatCount} ${t('seats')}`}
                     color="primary"
                     sx={{ fontWeight: 600 }}
                   />
@@ -863,7 +863,7 @@ export default function BookingConfirmation() {
                 />
                 {booking.ticketNumber && (
                   <Chip
-                    label={`Ticket: ${booking.ticketNumber}`}
+                    label={`${t('ticket')}: ${booking.ticketNumber}`}
                     variant="outlined"
                     sx={{ fontWeight: 500 }}
                   />
@@ -878,7 +878,7 @@ export default function BookingConfirmation() {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                       <Box sx={{ flex: 1, textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                          From
+                          {t('from')}
                         </Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                           {origin.stationName || 'N/A'}
@@ -894,7 +894,7 @@ export default function BookingConfirmation() {
                       </Box>
                       <Box sx={{ flex: 1, textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                          To
+                          {t('to')}
                         </Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                           {destination.stationName || 'N/A'}
@@ -914,7 +914,7 @@ export default function BookingConfirmation() {
                             <AccessTime sx={{ color: '#3b82f6' }} />
                             <Box>
                               <Typography variant="caption" color="text.secondary">
-                                Departure
+                                {t('departure')}
                               </Typography>
                               <Typography variant="body1" sx={{ fontWeight: 600 }}>
                                 {formatDate(trip.departureTime)}
@@ -930,7 +930,7 @@ export default function BookingConfirmation() {
                             <AccessTime sx={{ color: '#10b981' }} />
                             <Box>
                               <Typography variant="caption" color="text.secondary">
-                                Arrival
+                                {t('arrival')}
                               </Typography>
                               <Typography variant="body1" sx={{ fontWeight: 600 }}>
                                 {formatDate(trip.arrivalTime)}
@@ -949,7 +949,7 @@ export default function BookingConfirmation() {
                     <Grid item xs={12} sm={6}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Passenger Details
+                          {t('passenger_details')}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <PersonIcon fontSize="small" sx={{ color: '#64748b' }} />
@@ -969,7 +969,7 @@ export default function BookingConfirmation() {
                     <Grid item xs={12} sm={6}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Seat Information
+                          {t('seat_information')}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar sx={{
@@ -981,11 +981,11 @@ export default function BookingConfirmation() {
                           </Avatar>
                           <Box>
                             <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
-                              {seatCount === 1 ? seatNumbers[0] : `${seatCount} Seats`}
+                              {seatCount === 1 ? seatNumbers[0] : `${seatCount} ${t('seats')}`}
                             </Typography>
                             {isGroupBooking && (
                               <Typography variant="caption" color="text.secondary" display="block">
-                                Seats: {seatNumbers.join(', ')}
+                                {t('seats')}: {seatNumbers.join(', ')}
                               </Typography>
                             )}
                             <Typography variant="caption" color="text.secondary">
@@ -1001,7 +1001,7 @@ export default function BookingConfirmation() {
                     <Box sx={{ mt: 3 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Driver Information
+                          {t('driver_information')}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar src={driver.profilePicture} />
@@ -1010,7 +1010,7 @@ export default function BookingConfirmation() {
                               {driver.fullName}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              License: {driver.licenseNumber || 'N/A'}
+                              {t('license')}: {driver.licenseNumber || 'N/A'}
                             </Typography>
                           </Box>
                         </Box>
@@ -1022,12 +1022,12 @@ export default function BookingConfirmation() {
                     <Box sx={{ mt: 3 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '12px' }}>
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          Payment Information
+                          {t('payment_information')}
                         </Typography>
                         <Grid container spacing={2}>
                           <Grid item xs={6}>
                             <Typography variant="caption" color="text.secondary" display="block">
-                              Payment Status
+                              {t('payment_status')}
                             </Typography>
                             <Chip
                               size="small"
@@ -1038,7 +1038,7 @@ export default function BookingConfirmation() {
                           </Grid>
                           <Grid item xs={6}>
                             <Typography variant="caption" color="text.secondary" display="block">
-                              Payment Method
+                              {t('payment_method')}
                             </Typography>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {booking.paymentMethod || 'Mobile Money'}
@@ -1098,13 +1098,13 @@ export default function BookingConfirmation() {
                         )}
                       </Paper>
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                        Scan for ticket details
+                        {t('scan_for_ticket_details')}
                       </Typography>
                     </Box>
 
                     <Box sx={{ mb: 3 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Total Amount
+                        {t('total_amount_label')}
                       </Typography>
                       <Typography variant="h3" sx={{
                         fontWeight: 800,
@@ -1114,12 +1114,12 @@ export default function BookingConfirmation() {
                         ETB {totalAmount.toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                        {seatCount} seat(s) × ETB {pricePerSeat.toLocaleString()}
+                        {seatCount} {t('seats')} × ETB {pricePerSeat.toLocaleString()}
                       </Typography>
                     </Box>
 
                     <Stack spacing={2} sx={{ mt: 'auto' }}>
-                      <Tooltip title="Print your ticket">
+                      <Tooltip title={t('print_ticket')}>
                         <Button
                           variant="outlined"
                           startIcon={<PrintIcon />}
@@ -1131,11 +1131,11 @@ export default function BookingConfirmation() {
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
                           }}
                         >
-                          Print Ticket
+                          {t('print_ticket')}
                         </Button>
                       </Tooltip>
 
-                      <Tooltip title="Download as PDF">
+                      <Tooltip title={t('download_pdf')}>
                         <Button
                           variant="outlined"
                           startIcon={<DownloadIcon />}
@@ -1147,11 +1147,11 @@ export default function BookingConfirmation() {
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
                           }}
                         >
-                          Download PDF
+                          {t('download_pdf')}
                         </Button>
                       </Tooltip>
 
-                      <Tooltip title="Email ticket">
+                      <Tooltip title={t('email_ticket')}>
                         <Button
                           variant="outlined"
                           startIcon={<EmailIcon />}
@@ -1163,11 +1163,11 @@ export default function BookingConfirmation() {
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
                           }}
                         >
-                          Email Ticket
+                          {t('email_ticket')}
                         </Button>
                       </Tooltip>
 
-                      <Tooltip title="Share via WhatsApp">
+                      <Tooltip title={t('share')}>
                         <Button
                           variant="outlined"
                           startIcon={<WhatsAppIcon />}
@@ -1184,7 +1184,7 @@ export default function BookingConfirmation() {
                             }
                           }}
                         >
-                          Share
+                          {t('share')}
                         </Button>
                       </Tooltip>
 
@@ -1204,7 +1204,7 @@ export default function BookingConfirmation() {
                             '&:hover': { boxShadow: '0 6px 16px rgba(239, 68, 68, 0.4)' }
                           }}
                         >
-                          Cancel Booking
+                          {t('cancel_booking')}
                         </Button>
                       )}
 
@@ -1222,7 +1222,7 @@ export default function BookingConfirmation() {
                             '&:hover': { boxShadow: '0 6px 16px rgba(245, 158, 11, 0.4)' }
                           }}
                         >
-                          Process Refund
+                          {t('process_refund')}
                         </Button>
                       )}
                     </Stack>
@@ -1242,15 +1242,15 @@ export default function BookingConfirmation() {
               gap: 2
             }}>
               <Typography variant="caption" color="text.secondary">
-                Booking Date: {formatDate(booking.bookingDate || booking.createdAt)}
+                {t('booking_date')}: {formatDate(booking.bookingDate || booking.createdAt)}
               </Typography>
               {isGroupBooking && (
                 <Typography variant="caption" color="primary" sx={{ fontWeight: 500 }}>
-                  Group Booking • {seatCount} seats
+                  {t('group_booking')} • {seatCount} {t('seats')}
                 </Typography>
               )}
               <Typography variant="caption" color="text.secondary">
-                Terms & Conditions apply
+                {t('terms_conditions_apply')}
               </Typography>
             </Box>
           </Paper>
@@ -1267,18 +1267,18 @@ export default function BookingConfirmation() {
                 <CancelIcon />
               </Avatar>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Cancel Booking
+                {t('cancel_booking')}
               </Typography>
             </Box>
           </DialogTitle>
           <DialogContent>
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
-              Are you sure you want to cancel this booking? This action cannot be undone.
+              {t('cancel_booking_confirm')}
             </DialogContentText>
 
             <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
               <Typography variant="body2">
-                Refund amount: <strong>ETB {totalAmount.toLocaleString()}</strong>
+                {t('refund_amount_label')}: <strong>ETB {totalAmount.toLocaleString()}</strong>
               </Typography>
               <Typography variant="caption">
                 Refund will be processed to your original payment method.
@@ -1289,7 +1289,7 @@ export default function BookingConfirmation() {
               fullWidth
               multiline
               rows={3}
-              label="Reason for cancellation (optional)"
+              label={t('reason_for_cancellation')}
               value={cancellationReason}
               onChange={(e) => setCancellationReason(e.target.value)}
               sx={{ mt: 2 }}
@@ -1301,7 +1301,7 @@ export default function BookingConfirmation() {
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
-              Keep Booking
+              {t('keep_booking')}
             </Button>
             <Button
               onClick={handleCancel}
@@ -1310,7 +1310,7 @@ export default function BookingConfirmation() {
               disabled={cancelling}
               sx={{ borderRadius: '8px', px: 3 }}
             >
-              {cancelling ? <CircularProgress size={24} /> : 'Yes, Cancel Booking'}
+              {cancelling ? <CircularProgress size={24} /> : t('yes_cancel_booking')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1326,28 +1326,28 @@ export default function BookingConfirmation() {
                 <PaymentIcon />
               </Avatar>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Process Refund
+                {t('process_refund')}
               </Typography>
             </Box>
           </DialogTitle>
           <DialogContent>
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
-              Process a refund for this booking. The amount will be returned to the passenger's original payment method.
+              {t('process_refund_info')}
             </DialogContentText>
 
             <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
               <Typography variant="body2">
-                Maximum refund: <strong>ETB {totalAmount.toLocaleString()}</strong>
+                {t('maximum_refund')}: <strong>ETB {totalAmount.toLocaleString()}</strong>
               </Typography>
             </Alert>
 
             <TextField
               fullWidth
-              label="Refund Amount"
+              label={t('refund_amount_label')}
               type="number"
               value={refundAmount}
               onChange={(e) => setRefundAmount(e.target.value)}
-              placeholder={`Max: ${totalAmount.toLocaleString()}`}
+              placeholder={`${t('maximum_refund')}: ${totalAmount.toLocaleString()}`}
               sx={{ mt: 2 }}
               InputProps={{
                 startAdornment: <Typography sx={{ mr: 1, color: '#64748b' }}>ETB</Typography>
@@ -1358,7 +1358,7 @@ export default function BookingConfirmation() {
               fullWidth
               multiline
               rows={3}
-              label="Reason for refund"
+              label={t('reason_for_refund')}
               value={refundReason}
               onChange={(e) => setRefundReason(e.target.value)}
               sx={{ mt: 2 }}
@@ -1370,7 +1370,7 @@ export default function BookingConfirmation() {
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleRefund}
@@ -1379,7 +1379,7 @@ export default function BookingConfirmation() {
               disabled={!refundAmount || refunding}
               sx={{ borderRadius: '8px', px: 3 }}
             >
-              {refunding ? <CircularProgress size={24} /> : 'Process Refund'}
+              {refunding ? <CircularProgress size={24} /> : t('process_refund')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1395,13 +1395,13 @@ export default function BookingConfirmation() {
                 <EmailIcon />
               </Avatar>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Email Ticket
+                {t('email_ticket')}
               </Typography>
             </Box>
           </DialogTitle>
           <DialogContent>
             <DialogContentText sx={{ color: '#64748b', mb: 2 }}>
-              Send your ticket to your email address for easy access.
+              {t('email_ticket_info')}
             </DialogContentText>
 
             <Paper sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: '8px' }}>
@@ -1409,7 +1409,7 @@ export default function BookingConfirmation() {
                 {user?.email}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                This is your registered email address
+                {t('registered_email_info')}
               </Typography>
             </Paper>
           </DialogContent>
@@ -1419,7 +1419,7 @@ export default function BookingConfirmation() {
               variant="outlined"
               sx={{ borderRadius: '8px' }}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               onClick={sendEmailTicket}
@@ -1427,7 +1427,7 @@ export default function BookingConfirmation() {
               disabled={emailSending}
               sx={{ borderRadius: '8px', px: 3 }}
             >
-              {emailSending ? <CircularProgress size={24} /> : 'Send Email'}
+              {emailSending ? <CircularProgress size={24} /> : t('send_email')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1439,7 +1439,7 @@ export default function BookingConfirmation() {
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
           <Alert severity="success" sx={{ borderRadius: '8px' }}>
-            Booking code copied to clipboard!
+            {t('booking_code_copied')}
           </Alert>
         </Snackbar>
 
@@ -1464,7 +1464,7 @@ export default function BookingConfirmation() {
               }
             }}
           >
-            Book Another Trip
+            {t('book_another_trip')}
           </Button>
           <Button
             variant="outlined"
@@ -1476,7 +1476,7 @@ export default function BookingConfirmation() {
               py: 1.2
             }}
           >
-            View All Bookings
+            {t('view_all_bookings')}
           </Button>
         </Box>
       </Container>

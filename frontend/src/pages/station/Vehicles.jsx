@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Car, Wrench, Fuel, Edit, Trash2, User, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle, Eye, Image as ImageIcon, CreditCard, Phone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
@@ -23,6 +24,7 @@ const carTypeLabels = {
 };
 
 export default function Vehicles() {
+  const { t } = useTranslation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -66,18 +68,18 @@ export default function Vehicles() {
       const user = await fetchUserProfile();
 
       if (!user) {
-        toast.error('Failed to fetch user profile');
+        toast.error(t('failed_fetch_user_profile', 'Failed to fetch user profile'));
         return null;
       }
 
       if (user.role !== 'station_admin') {
-        toast.error('Only station admins can access this page');
+        toast.error(t('only_station_admins', 'Only station admins can access this page'));
         return null;
       }
 
       // IMPORTANT: User model has stationID field
       if (!user.stationID) {
-        toast.error('You are not assigned to any station. Please contact super admin.');
+        toast.error(t('not_assigned_station_super_admin', 'You are not assigned to any station. Please contact super admin.'));
         return null;
       }
 
@@ -105,9 +107,9 @@ export default function Vehicles() {
       console.error('Error fetching user profile:', error);
 
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please login again');
+        toast.error(t('session_expired_login', 'Session expired. Please login again'));
       } else {
-        toast.error('Failed to fetch user information');
+        toast.error(t('failed_fetch_user_info', 'Failed to fetch user information'));
       }
       return null;
     }
@@ -214,18 +216,18 @@ export default function Vehicles() {
         setTotalItems(vehiclesData.length);
         calculateStats(vehiclesData);
       } else {
-        toast.error(response.data.message || 'Failed to fetch vehicles');
+        toast.error(response.data.message || t('failed_fetch_vehicles', 'Failed to fetch vehicles'));
         setVehicles([]);
         setTotalItems(0);
       }
     } catch (error) {
       console.error('Error fetching vehicles:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to fetch vehicles';
+      const errorMsg = error.response?.data?.message || t('failed_fetch_vehicles', 'Failed to fetch vehicles');
 
       if (error.response?.status === 403) {
-        toast.error('You do not have permission to view vehicles');
+        toast.error(t('no_permission_view_vehicles', 'You do not have permission to view vehicles'));
       } else if (error.response?.status === 401) {
-        toast.error('Session expired. Please login again');
+        toast.error(t('session_expired_login', 'Session expired. Please login again'));
       } else {
         toast.error(errorMsg);
       }
@@ -253,20 +255,20 @@ export default function Vehicles() {
   };
 
   const handleDelete = async (vehicle) => {
-    if (!window.confirm(`Are you sure you want to delete vehicle ${vehicle.plateNumber}?`)) return;
+    if (!window.confirm(t('confirm_delete_vehicle', 'Are you sure you want to delete vehicle?'))) return;
 
     try {
       await api.delete(`/api/vehicles/${vehicle._id}`);
-      toast.success('Vehicle deleted successfully');
+      toast.success(t('vehicle_deleted_success', 'Vehicle deleted successfully'));
       fetchVehicles();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       const errorMsg = error.response?.data?.message || 'Failed to delete vehicle';
 
       if (errorMsg.includes('on_trip')) {
-        toast.error('Cannot delete a vehicle that is currently on a trip');
+        toast.error(t('cannot_delete_on_trip_vehicle', 'Cannot delete a vehicle that is currently on a trip'));
       } else if (errorMsg.includes('permission')) {
-        toast.error('You do not have permission to delete this vehicle');
+        toast.error(t('no_permission_delete_vehicle', 'You do not have permission to delete this vehicle'));
       } else {
         toast.error(errorMsg);
       }
@@ -286,7 +288,7 @@ export default function Vehicles() {
   const handleStatusUpdate = async (vehicle, status) => {
     try {
       await api.post(`/api/vehicles/${vehicle._id}/status`, { status });
-      toast.success(`Vehicle status updated to ${status}`);
+      toast.success(t('vehicle_status_updated', 'Vehicle status updated'));
       fetchVehicles();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -321,18 +323,18 @@ export default function Vehicles() {
 
   // Check insurance expiry
   const checkInsuranceStatus = (insuranceExpiry) => {
-    if (!insuranceExpiry) return { status: 'unknown', label: 'No insurance' };
+    if (!insuranceExpiry) return { status: 'unknown', label: t('no_insurance', 'No insurance') };
 
     const expiryDate = new Date(insuranceExpiry);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
 
     if (expiryDate < today) {
-      return { status: 'expired', label: 'Expired' };
+      return { status: 'expired', label: t('expired', 'Expired') };
     } else if (daysUntilExpiry <= 30) {
-      return { status: 'expiring', label: 'Expiring soon' };
+      return { status: 'expiring', label: t('expiring_soon', 'Expiring soon') };
     } else {
-      return { status: 'valid', label: 'Valid' };
+      return { status: 'valid', label: t('valid', 'Valid') };
     }
   };
 
@@ -394,11 +396,11 @@ export default function Vehicles() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Vehicles Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('vehicles_management', 'Vehicles Management')}</h1>
           <p className="text-gray-600">
             {currentUserStation ?
-              `Managing vehicles for ${currentUserStation.stationName || 'your station'}` :
-              'Manage fleet vehicles and maintenance'}
+              `${t('managing_vehicles_for', 'Managing vehicles for')} ${currentUserStation.stationName || t('your_station', 'your station')}` :
+              t('manage_fleet_vehicles', 'Manage fleet vehicles and maintenance')}
           </p>
         </div>
         {currentUserStation && (
@@ -407,7 +409,7 @@ export default function Vehicles() {
             className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            Add New Vehicle
+            {t('add_new_vehicle', 'Add New Vehicle')}
           </button>
         )}
       </div>
@@ -420,8 +422,8 @@ export default function Vehicles() {
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
                 {userProfile?.stationID
-                  ? 'Your assigned station could not be found. Please contact super admin.'
-                  : 'You are not assigned to any station. Please contact super admin to get stationID assigned.'}
+                  ? t('assigned_station_not_found', 'Your assigned station could not be found. Please contact super admin.')
+                  : t('not_assigned_station_id', 'You are not assigned to any station. Please contact super admin to get stationID assigned.')}
               </p>
             </div>
           </div>
@@ -433,7 +435,7 @@ export default function Vehicles() {
             <div className="card p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Vehicles</p>
+                  <p className="text-sm text-gray-600">{t('total_vehicles', 'Total Vehicles')}</p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
                 <Car className="w-8 h-8 text-primary-500" />
@@ -442,7 +444,7 @@ export default function Vehicles() {
             <div className="card p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Active & Available</p>
+                  <p className="text-sm text-gray-600">{t('active_and_available', 'Active & Available')}</p>
                   <p className="text-2xl font-bold">{stats.active}</p>
                 </div>
                 <Car className="w-8 h-8 text-green-500" />
@@ -451,7 +453,7 @@ export default function Vehicles() {
             <div className="card p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Under Maintenance</p>
+                  <p className="text-sm text-gray-600">{t('under_maintenance', 'Under Maintenance')}</p>
                   <p className="text-2xl font-bold">{stats.maintenance}</p>
                 </div>
                 <Wrench className="w-8 h-8 text-yellow-500" />
@@ -460,7 +462,7 @@ export default function Vehicles() {
             <div className="card p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Capacity</p>
+                  <p className="text-sm text-gray-600">{t('total_capacity', 'Total Capacity')}</p>
                   <p className="text-2xl font-bold">{stats.totalCapacity}</p>
                 </div>
                 <Fuel className="w-8 h-8 text-blue-500" />
@@ -473,14 +475,14 @@ export default function Vehicles() {
             {vehicles.length === 0 ? (
               <div className="text-center py-12">
                 <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No vehicles found in your station</h3>
-                <p className="text-gray-600 mb-6">Add your first vehicle to get started</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('no_vehicles_found_station', 'No vehicles found in your station')}</h3>
+                <p className="text-gray-600 mb-6">{t('add_first_vehicle_start', 'Add your first vehicle to get started')}</p>
                 <button
                   onClick={() => setShowModal(true)}
                   className="btn-primary flex items-center gap-2 mx-auto"
                 >
                   <Plus className="w-5 h-5" />
-                  Add New Vehicle
+                  {t('add_new_vehicle', 'Add New Vehicle')}
                 </button>
               </div>
             ) : (
@@ -489,16 +491,16 @@ export default function Vehicles() {
                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                   <div>
                     <p className="text-sm text-gray-700">
-                      Showing <span className="font-semibold">{startIndex + 1}</span> to{' '}
-                      <span className="font-semibold">{Math.min(endIndex, totalItems)}</span> of{' '}
-                      <span className="font-semibold">{totalItems}</span> vehicles
+                      {t('showing', 'Showing')} <span className="font-semibold">{startIndex + 1}</span> {t('to_lower', 'to')}{' '}
+                      <span className="font-semibold">{Math.min(endIndex, totalItems)}</span> {t('of_lower', 'of')}{' '}
+                      <span className="font-semibold">{totalItems}</span> {t('vehicles_lower', 'vehicles')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Station: {currentUserStation.stationName || 'Your Station'}
+                      {t('station', 'Station:')} {currentUserStation.stationName || t('your_station', 'Your Station')}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-700">Items per page:</span>
+                    <span className="text-sm text-gray-700">{t('items_per_page', 'Items per page:')}</span>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => {
@@ -520,25 +522,25 @@ export default function Vehicles() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Vehicle
+                          {t('vehicle_single', 'Vehicle')}
                         </th>
                         <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Specifications
+                          {t('specifications', 'Specifications')}
                         </th>
                         <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Driver Assignment
+                          {t('driver_assignment', 'Driver Assignment')}
                         </th>
                         <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Owner Details
+                          {t('owner_details', 'Owner Details')}
                         </th>
                         <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Maintenance & Insurance
+                          {t('maintenance_and_insurance', 'Maintenance & Insurance')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Status
+                          {t('status_vehicle', 'Status')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Actions
+                          {t('actions', 'Actions')}
                         </th>
                       </tr>
                     </thead>
@@ -570,12 +572,12 @@ export default function Vehicles() {
                             </td>
                             <td className="hidden md:table-cell px-6 py-4">
                               <div>
-                                <div className="font-medium">Capacity: {vehicle.totalCapacity} seats</div>
+                                <div className="font-medium">{t('capacity', 'Capacity:')} {vehicle.totalCapacity} {t('seats', 'seats')}</div>
                                 <div className="text-sm text-gray-600">
-                                  Fuel: {vehicle.fuelType} • {vehicle.make} {vehicle.model}
+                                  {t('fuel', 'Fuel:')} {vehicle.fuelType} • {vehicle.make} {vehicle.model}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                  Color: {vehicle.color || 'N/A'}
+                                  {t('color', 'Color:')} {vehicle.color || t('not_available_short', 'N/A')}
                                 </div>
                               </div>
                             </td>
@@ -584,7 +586,7 @@ export default function Vehicles() {
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4 text-gray-400" />
                                   <span className="font-medium">
-                                    {vehicle.driverID?.fullName || 'Not Assigned'}
+                                    {vehicle.driverID?.fullName || t('not_assigned_upper', 'Not Assigned')}
                                   </span>
                                 </div>
                                 {vehicle.driverID?.phoneNumber && (
@@ -620,14 +622,14 @@ export default function Vehicles() {
                             </td>
                             <td className="hidden lg:table-cell px-6 py-4">
                               <div className="text-sm space-y-1">
-                                <div>Last Service: {formatDate(vehicle.lastServiceDate)}</div>
-                                <div>Next Service: {formatDate(vehicle.nextServiceDate)}</div>
+                                <div>{t('last_service', 'Last Service:')} {formatDate(vehicle.lastServiceDate)}</div>
+                                <div>{t('next_service', 'Next Service:')} {formatDate(vehicle.nextServiceDate)}</div>
                                 {vehicle.insuranceExpiry && (
                                   <div className={`text-xs px-2 py-1 rounded-full inline-block ${insuranceStatus.status === 'expired' ? 'bg-red-100 text-red-800' :
                                     insuranceStatus.status === 'expiring' ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-green-100 text-green-800'
                                     }`}>
-                                    Ins. {insuranceStatus.label}: {formatDate(vehicle.insuranceExpiry)}
+                                    {t('ins', 'Ins.')} {insuranceStatus.label}: {formatDate(vehicle.insuranceExpiry)}
                                   </div>
                                 )}
                               </div>
@@ -642,11 +644,11 @@ export default function Vehicles() {
                                   onChange={(e) => handleStatusUpdate(vehicle, e.target.value)}
                                   className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
                                 >
-                                  <option value="active">Active</option>
-                                  <option value="available">Available</option>
-                                  <option value="maintenance">Maintenance</option>
-                                  <option value="on_trip">On Trip</option>
-                                  <option value="inactive">Inactive</option>
+                                  <option value="active">{t('active_status', 'Active')}</option>
+                                  <option value="available">{t('available_status', 'Available')}</option>
+                                  <option value="maintenance">{t('maintenance_status', 'Maintenance')}</option>
+                                  <option value="on_trip">{t('on_trip_status', 'On Trip')}</option>
+                                  <option value="inactive">{t('inactive_status', 'Inactive')}</option>
                                 </select>
                               </div>
                             </td>
@@ -655,21 +657,21 @@ export default function Vehicles() {
                                 <button
                                   onClick={() => handleViewImages(vehicle)}
                                   className="text-blue-600 hover:text-blue-700"
-                                  title="View images"
+                                  title={t('view_images', 'View images')}
                                 >
                                   <ImageIcon className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleEdit(vehicle)}
                                   className="text-primary-600 hover:text-primary-700"
-                                  title="Edit vehicle"
+                                  title={t('edit_vehicle', 'Edit vehicle')}
                                 >
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(vehicle)}
                                   className="text-red-600 hover:text-red-700"
-                                  title="Delete vehicle"
+                                  title={t('delete_vehicle', 'Delete vehicle')}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -686,7 +688,7 @@ export default function Vehicles() {
                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="text-sm text-gray-700">
-                      Page <span className="font-semibold">{currentPage}</span> of{' '}
+                      {t('page_lowercase', 'Page')} <span className="font-semibold">{currentPage}</span> {t('of_lower', 'of')}{' '}
                       <span className="font-semibold">{totalPages}</span>
                     </div>
 
@@ -760,7 +762,7 @@ export default function Vehicles() {
 
                     {/* Go to Page Input */}
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-700">Go to page:</span>
+                      <span className="text-sm text-gray-700">{t('go_to_page', 'Go to page:')}</span>
                       <input
                         type="number"
                         min="1"

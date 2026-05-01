@@ -21,6 +21,7 @@ import PassengerDashboard from './pages/passenger/Dashboard';
 import BookTrip from './pages/passenger/BookTrip';
 import MyBookings from './pages/passenger/MyBookings';
 import BookingConfirmation from './pages/passenger/BookingConfirmation';
+import TicketView from './pages/passenger/TicketView';
 import BookingGuide from './pages/passenger/BookingGuide';
 
 // Admin Pages
@@ -42,9 +43,9 @@ import AdminReports from './pages/admin/Reports';
 import StationDashboard from './pages/station/Dashboard';
 import QueueManagement from './pages/station/QueueManagement';
 import StationUsers from './pages/station/Users';
-import StationReports from './pages/station/Reports';
+// import StationReports from './pages/station/Reports';
 import Drivers from './pages/station/Drivers';
-import Trips from './pages/station/Trips';
+// import Trips from './pages/station/Trips';
 import Vehicle from './pages/station/Vehicles';
 
 // Driver Pages
@@ -211,6 +212,17 @@ function App() {
               />
 
               <Route
+                path="/passenger/booking/:bookingId/ticket"
+                element={
+                  <ProtectedRoute allowedRoles={['passenger']}>
+                    <Layout showSidebar>
+                      <TicketView />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
                 path="/passenger/support"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
@@ -333,7 +345,7 @@ function App() {
                 }
               />
 
-              <Route
+              {/* <Route
                 path="/station/Trips"
                 element={
                   <ProtectedRoute allowedRoles={['station_admin']}>
@@ -342,7 +354,7 @@ function App() {
                     </Layout>
                   </ProtectedRoute>
                 }
-              />
+              /> */}
 
               <Route
                 path="/station/vehicles"
@@ -355,16 +367,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/station/reports"
-                element={
-                  <ProtectedRoute allowedRoles={['station_admin']}>
-                    <Layout showSidebar>
-                      <StationReports />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
+              ?
 
               {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
               {/* <Route
