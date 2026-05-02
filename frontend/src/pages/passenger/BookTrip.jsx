@@ -591,7 +591,7 @@ export default function BookTrip() {
     availableTrips, handleTripSelect, handleBack, selectedTrip,
     selectedSeats, handleSeatSelection, handleProceedToPayment,
     bookingLoading, getTotalAmount, createdBooking, getSeatNumbers,
-    t, theme, handlePaymentSuccess, handlePaymentError, selectedTrip?.price,
+    t, theme, paymentMethod, handlePaymentSuccess, handlePaymentError, selectedTrip?.price,
     bookedSeats // Add bookedSeats to dependencies
   ]);
 

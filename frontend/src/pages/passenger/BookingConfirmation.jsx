@@ -53,7 +53,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import confetti from 'canvas-confetti';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -93,7 +92,6 @@ export default function BookingConfirmation() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Helper function to get seat numbers from booking
@@ -161,16 +159,8 @@ export default function BookingConfirmation() {
   // Confetti effect
   useEffect(() => {
     if (paymentSuccess) {
-      setShowConfetti(true);
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
-      });
       toast.success('Payment successful! Your booking is confirmed.', {
         duration: 5000,
-        icon: '🎉',
       });
 
       // Force refresh after payment success
@@ -699,21 +689,6 @@ export default function BookingConfirmation() {
 
   return (
     <>
-      {showConfetti && (
-        <canvas
-          id="confetti-canvas"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 9999
-          }}
-        />
-      )}
-
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{
           mb: 3,
@@ -763,7 +738,7 @@ export default function BookingConfirmation() {
               }}>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    🎉 {t('payment_successful_title')}
+                    {t('payment_successful_title')}
                   </Typography>
                   <Typography variant="body2">
                     {t('payment_confirmed_msg')}
