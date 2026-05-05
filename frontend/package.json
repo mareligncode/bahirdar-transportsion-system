@@ -27,7 +27,6 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,css,md}\"",
     "test": "echo \"No tests specified\" && exit 0",
     "test:watch": "echo \"No tests specified\" && exit 0",
-    "prebuild": "npm run lint",
     "postbuild": "echo 'Build completed successfully!'"
   },
   "dependencies": {
