@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+config/.env
+**/config/.env
+
+ ## npx expo start --tunnel 
+even if
+# It's not on the same WiFi network
+# You're using mobile data
+# Your computer is on a restricted network
+# You're behind a firewall
+
+the number pasenger in searfch page is  integrate whith seat selection
+tiket isssue
+.expo/

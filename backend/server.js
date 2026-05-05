@@ -1,18 +1,175 @@
 import express from 'express'
 import cors from 'cors'
-const app = express()
-import connectdb from './config/database.js'
-const PORT = 5000
-connectdb()
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({
-    extended:true
-}))
-app.get("/", (req,res) => {
-    res.send("wellcome")
-    
-})
-app.listen(PORT, () => {
-    console.log(`server runing on the port http://localhost:${PORT}`)
-})
+import helmet from 'helmet'
+import { rateLimit } from 'express-rate-limit'
+import http from 'http'
+import mongoose from 'mongoose'
+import { Server } from 'socket.io'
+import initSuperAdmin from './config/initSuperAdmin.js'
+import authRoutes from './routes/authRoutes.js'
+import stationRoutes from './routes/stationRoutes.js'
+import vehicleRoutes from './routes/vehicleRoutes.js'
+import connectDB from './config/database.js'
+import tripRoutes from './routes/tripRoutes.js'
+import bookingRoutes from './routes/bookingRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
+import notificationRoutes from './routes/notificationRoutes.js'
+import queueRoutes from './routes/queueRoutes.js'
+import routeRoutes from './routes/routeRoutes.js'
+import reportRoutes from './routes/reportRoutes.js'
+import LocationSimulator from './services/locationSimulator.js';
+
+connectDB()
+initSuperAdmin()
+
+const PORT = process.env.PORT || 5000
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+global.io = io;
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+    socket.on('join-user-room', (userID) => {
+        socket.join(`user-${userID}`);
+        console.log(`User ${userID} joined room user-${userID}`);
+    });
+
+    socket.on('join-trip', (tripID) => {
+        socket.join(`trip-${tripID}`);
+        console.log(`Socket ${socket.id} joined trip room: trip-${tripID}`);
+    });
+
+    socket.on('update-location', async (data) => {
+        const { tripId, latitude, longitude } = data;
+
+        if (!tripId || !latitude || !longitude) return;
+
+        // Broadcast to specific trip room (for passengers following a specific bus)
+        io.to(`trip-${tripId}`).emit('location-broadcast', {
+            latitude,
+            longitude,
+            timestamp: new Date()
+        });
+
+        // Broadcast to Public Live Map
+        io.emit('trip-location-update', {
+            tripId,
+            coordinates: [latitude, longitude],
+            isGPS: true,
+            timestamp: new Date()
+        });
+
+        // PERSIST the real-time status to the database (and vehicle location)
+        try {
+            await mongoose.model('Trip').findByIdAndUpdate(tripId, {
+                currentCoordinates: { lat: latitude, lng: longitude },
+                isRealtimeTracking: true,
+                lastGpsUpdate: new Date()
+            });
+        } catch (err) {
+            console.error('Failed to update trip GPS status:', err);
+        }
+
+        try {
+            await mongoose.model('Vehicle').findByIdAndUpdate(vehicleID, {
+                lastKnownLocation: {
+                    type: 'Point',
+                    coordinates: [longitude, latitude]
+                },
+                locationUpdatedAt: new Date()
+            });
+        } catch (err) {
+            console.error('Failed to save last known location:', err);
+        }
+    });
+
+    socket.on('join-public-map', () => {
+        socket.join('public-live-map');
+        console.log(`Socket ${socket.id} joined public live map`);
+    });
+
+    socket.on('join-admin-room', (userID) => {
+        socket.join('admin-room');
+        console.log(`Admin ${userID} joined admin room`);
+    });
+
+    socket.on('leave-room', (room) => {
+        socket.leave(room);
+        console.log(`User left room: ${room}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+app.use(helmet());
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many requests from this IP, please try again after 15 minutes'
+    }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 100,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many login attempts, please try again after an hour'
+    }
+});
+
+// Middleware
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// app.use('/api', generalLimiter);
+// app.use('/api/auth', authLimiter);
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/station', stationRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/trip', tripRoutes);
+app.use('/api/booking', bookingRoutes);
+app.use('/api/payment', paymentRoutes)
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/queue', queueRoutes);
+app.use('/api/route', routeRoutes);
+app.use('/api/reports', reportRoutes);
+app.set('io', io);
+
+app.get("/", (req, res) => {
+    res.send("Bahir Dar Transport System API is running ...")
+});
+
+server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+    console.log(`Socket.io enabled for real-time notifications`)
+
+    // Start Live Location Simulation
+    const simulator = new LocationSimulator(io);
+    simulator.start();
+});
+
