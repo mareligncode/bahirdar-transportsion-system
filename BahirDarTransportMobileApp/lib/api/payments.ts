@@ -4,7 +4,6 @@ import {
   PaymentInitializeRequest,
   PaymentInitializeResponse,
   PaymentVerifyResponse,
-  PaymentVerifyResult,
   PaymentHistoryResponse,
   ApiResponse 
 } from '../../types';
@@ -17,7 +16,7 @@ interface RefundData {
 export const paymentsApi = {
   initializePayment: async (
     bookingId: string, 
-    paymentMethod: 'mobile_money' | 'card' | 'cash' = 'mobile_money'
+    paymentMethod: 'mobile_money' | 'card' | 'cash' | 'bank_transfer' = 'mobile_money'
   ): Promise<PaymentInitializeResponse> => {
     try {
       const requestData: PaymentInitializeRequest = {
