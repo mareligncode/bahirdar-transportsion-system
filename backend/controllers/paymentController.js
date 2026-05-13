@@ -231,6 +231,9 @@ export const initializePayment = async (req, res) => {
         console.log('💰 Payment initialized successfully');
         console.log('🔗 Checkout URL:', chapaResponse.data.data.checkout_url);
 
+        const frontendUrl = req.get('origin') || process.env.CLIENT_URL || 'http://localhost:5173';
+        console.log('🔗 Detected Frontend URL:', frontendUrl);
+
         const payment = new Payment({
             bookingID: bookingId,
             passengerID: userId,
@@ -241,6 +244,7 @@ export const initializePayment = async (req, res) => {
             paymentMethod: paymentMethod,
             paymentStatus: 'pending',
             checkoutUrl: chapaResponse.data.data.checkout_url,
+            frontendUrl: frontendUrl,
             gatewayResponse: chapaResponse.data,
             createdBy: userId
         });
@@ -342,9 +346,10 @@ export const verifyPayment = async (req, res) => {
         }
         if (payment.paymentStatus === 'success' || payment.paymentStatus === 'failed' || payment.paymentStatus === 'cancelled') {
             const bookingIdStr = payment.bookingID?._id || payment.bookingID;
+            const clientUrl = payment.frontendUrl || process.env.CLIENT_URL || 'http://localhost:5173';
             const redirectUrl = payment.paymentStatus === 'success'
-                ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
-                : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_${payment.paymentStatus}`;
+                ? `${clientUrl}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
+                : `${clientUrl}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_${payment.paymentStatus}`;
 
             if (req.headers.accept?.includes('text/html')) {
                 return res.redirect(redirectUrl);
@@ -484,10 +489,10 @@ export const verifyPayment = async (req, res) => {
                             paymentMethod: payment.paymentMethod
                         },
                         actionURL: newPaymentStatus === 'success'
-                            ? `${process.env.CLIENT_URL}/dashboard/bookings/${booking?._id}`
+                            ? `${payment.frontendUrl || process.env.CLIENT_URL}/dashboard/bookings/${booking?._id}`
                             : newPaymentStatus === 'failed' || newPaymentStatus === 'cancelled'
-                                ? `${process.env.CLIENT_URL}/booking/${booking?._id}/pay`
-                                : `${process.env.CLIENT_URL}/dashboard/bookings`,
+                                ? `${payment.frontendUrl || process.env.CLIENT_URL}/booking/${booking?._id}/pay`
+                                : `${payment.frontendUrl || process.env.CLIENT_URL}/dashboard/bookings`,
                         actionText: newPaymentStatus === 'success' ? 'View Booking' : 'Retry Payment'
                     }
                 };
@@ -514,13 +519,14 @@ export const verifyPayment = async (req, res) => {
         // Return response
         if (req.headers.accept?.includes('text/html')) {
             // For browser redirect
+            const clientUrl = payment.frontendUrl || process.env.CLIENT_URL || 'http://localhost:5173';
             let redirectUrl;
             if (newPaymentStatus === 'success') {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`;
+                redirectUrl = `${clientUrl}/booking/confirmation?bookingId=${bookingIdStr}&success=true`;
             } else if (newPaymentStatus === 'failed' || newPaymentStatus === 'cancelled') {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`;
+                redirectUrl = `${clientUrl}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`;
             } else {
-                redirectUrl = `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`;
+                redirectUrl = `${clientUrl}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`;
             }
 
             return res.redirect(redirectUrl);
@@ -538,10 +544,10 @@ export const verifyPayment = async (req, res) => {
                 payment,
                 booking,
                 redirectUrl: newPaymentStatus === 'success'
-                    ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
+                    ? `${payment.frontendUrl || process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&success=true`
                     : newPaymentStatus === 'failed' || newPaymentStatus === 'cancelled'
-                        ? `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`
-                        : `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`
+                        ? `${payment.frontendUrl || process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&error=payment_failed`
+                        : `${payment.frontendUrl || process.env.CLIENT_URL}/booking/confirmation?bookingId=${bookingIdStr}&status=${newPaymentStatus}`
             }
         });
 
