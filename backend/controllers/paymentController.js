@@ -9,6 +9,7 @@ import Station from '../models/Station.js'; // Added Station support
 import OCRProcessor from '../utils/ocrProcessor.js';
 import NotificationService from '../services/notificationService.js';
 import cloudinary from '../config/cloudinary.js';
+import { getPublicApiBaseUrl } from '../utils/publicApiBaseUrl.js';
 
 export const initializePayment = async (req, res) => {
     try {
@@ -148,6 +149,8 @@ export const initializePayment = async (req, res) => {
             description = 'Transport Booking Payment';
         }
 
+        const publicApiBase = getPublicApiBaseUrl(req);
+
         const chapaRequest = {
             amount: amount.toString(),
             currency: 'ETB',
@@ -155,8 +158,8 @@ export const initializePayment = async (req, res) => {
             first_name: user.fullName.split(' ')[0] || 'Customer',
             last_name: user.fullName.split(' ').slice(1).join(' ') || 'User',
             tx_ref: tx_ref,
-            callback_url: `${process.env.BASE_URL}/api/payment/webhook`,
-            return_url: `${process.env.BASE_URL}/api/payment/verify/${tx_ref}`,
+            callback_url: `${publicApiBase}/api/payment/webhook`,
+            return_url: `${publicApiBase}/api/payment/verify/${tx_ref}`,
             customization: {
                 title: 'BD Transport',
                 description: description
