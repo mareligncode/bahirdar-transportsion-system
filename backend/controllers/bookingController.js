@@ -70,9 +70,9 @@ export const createBooking = async (req, res) => {
         // }
 
         const booking = new Booking({
-            passengerID: req.user.id,
+            passengerID: req.user._id || req.user.id,
             tripID: trip._id,
-            vehicleID: trip.vehicle,
+            vehicleID: trip.vehicle?._id || trip.vehicle,
             seatNumber,
             specialRequests,
             passengerDetails: passengerDetails || {
@@ -84,7 +84,7 @@ export const createBooking = async (req, res) => {
             totalPrice: trip.price,
             pricePerSeat: trip.price,
             boardingPass,
-            createdBy: req.user.id
+            createdBy: req.user._id || req.user.id
         });
 
         trip.availableSeats -= 1;

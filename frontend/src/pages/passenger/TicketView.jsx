@@ -404,7 +404,7 @@ export default function TicketView() {
                     <Stack direction="row" spacing={2} justifyContent="center">
                         <Button
                             variant="contained"
-                            onClick={() => navigate('/passenger/my-booking')}
+                            onClick={() => navigate('/passenger/my-bookings')}
                             startIcon={<ReceiptIcon />}
                         >
                             {t('view all bookings')}
@@ -441,7 +441,7 @@ ${t('confirmation number')} : ${booking.bookingNumber || booking._id?.slice(-6).
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/passenger/my-booking')}>
+                <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/passenger/my-bookings')}>
                     {t('back to my bookings')}
                 </Button>
                 <Stack direction="row" spacing={1}>

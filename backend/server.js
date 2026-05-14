@@ -1,4 +1,7 @@
 import express from 'express'
+import dotenv from 'dotenv'
+
+dotenv.config()
 import cors from 'cors'
 import helmet from 'helmet'
 import { rateLimit } from 'express-rate-limit'
@@ -27,9 +30,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        origin: function (origin, callback) {
+            return callback(null, true);
+        },
         methods: ["GET", "POST"],
-        credentials: true
+        credentials: true,
+        allowedHeaders: ["ngrok-skip-browser-warning"]
     }
 });
 
@@ -110,7 +116,10 @@ io.on('connection', (socket) => {
     });
 });
 
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP to allow raw ngrok/socket connections
+    crossOriginResourcePolicy: false
+}));
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 100,
@@ -135,10 +144,13 @@ const authLimiter = rateLimit({
 
 // Middleware
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: function (origin, callback) {
+        // Allow all origins in development
+        return callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma', 'Expires', 'ngrok-skip-browser-warning']
 }));
 
 app.use(express.json());

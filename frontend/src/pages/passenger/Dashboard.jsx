@@ -86,11 +86,10 @@ export default function PassengerDashboard() {
 
       console.log('All trips fetched:', allTrips.length);
 
-      // Filter for available trips (future dates + available seats)
+      // Filter for available trips (available seats + correct status)
+      // The backend already handles the date filtering mostly, so we can be more inclusive here
       const availableTrips = allTrips.filter(trip => {
-        const departureTime = new Date(trip.departureTime);
         return trip.availableSeats > 0 &&
-          departureTime > now &&
           ['scheduled', 'boarding'].includes(trip.tripStatus);
       });
 
@@ -297,7 +296,7 @@ export default function PassengerDashboard() {
 
   const handleViewBookingDetails = (bookingId) => {
     if (bookingId) {
-      navigate(`/passenger/my-booking/${bookingId}`);
+      navigate(`/passenger/booking/${bookingId}/ticket`);
     } else {
       toast.error(t('Invalid booking ID'));
     }
@@ -563,7 +562,7 @@ export default function PassengerDashboard() {
                   </div>
                 ))}
                 <Link
-                  to="/passenger/my-booking"
+                  to="/passenger/my-bookings"
                   className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-center gap-1 pt-2 border-t"
                 >
                   {t('View Complete History')}
@@ -592,7 +591,7 @@ export default function PassengerDashboard() {
             </button>
 
             <Link
-              to="/passenger/my-booking"
+              to="/passenger/my-bookings"
               className="bg-white rounded-xl shadow-sm p-6 text-left hover:bg-blue-50 hover:border-blue-200 transition-all group"
             >
               <div className="flex flex-col items-center text-center">

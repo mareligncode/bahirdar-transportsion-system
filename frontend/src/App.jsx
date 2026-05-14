@@ -62,6 +62,8 @@ import About from './pages/public/About';
 import Contact from './pages/public/Contact';
 import FAQ from './pages/public/FAQ';
 import LiveMap from './pages/public/LiveMap';
+import TermsAndConditions from './pages/public/TermsAndConditions';
+import PrivacyPolicy from './pages/public/PrivacyPolicy';
 
 // Notification Pages - ADD THIS
 import NotificationsPage from './pages/notifications/NotificationsPage';
@@ -96,6 +98,8 @@ function App() {
               <Route path="/contact" element={<Layout><Contact /></Layout>} />
               <Route path="/faq" element={<Layout><FAQ /></Layout>} />
               <Route path="/live-map" element={<Layout><LiveMap /></Layout>} />
+              <Route path="/terms" element={<Layout><TermsAndConditions /></Layout>} />
+              <Route path="/privacy" element={<Layout><PrivacyPolicy /></Layout>} />
 
               <Route
                 path="/settings"
@@ -201,7 +205,7 @@ function App() {
               />
 
               <Route
-                path="/passenger/my-booking"
+                path="/passenger/my-bookings"
                 element={
                   <ProtectedRoute allowedRoles={['passenger']}>
                     <Layout showSidebar>
@@ -209,6 +213,11 @@ function App() {
                     </Layout>
                   </ProtectedRoute>
                 }
+              />
+
+              <Route
+                path="/passenger/my-booking"
+                element={<Navigate to="/passenger/my-bookings" replace />}
               />
 
               <Route
@@ -366,8 +375,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
-              ?
 
               {/* ===== ADMIN ROUTES (Shared for station_admin & super_admin) ===== */}
               {/* <Route

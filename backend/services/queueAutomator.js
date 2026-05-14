@@ -64,7 +64,7 @@ class QueueAutomator {
 
             // 4. Create the Trip automatically
             const departureTime = new Date();
-            departureTime.setMinutes(departureTime.getMinutes() + 15); // Default 15 mins from now for boarding
+            departureTime.setMinutes(departureTime.getMinutes() + 50); // Default 50 mins from now for boarding
 
             const arrivalTime = new Date(departureTime);
 

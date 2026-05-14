@@ -158,7 +158,16 @@ export const getAllTrips = async (req, res) => {
             query.isActive = true;
             query.tripStatus = { $in: ['scheduled', 'boarding'] };
             query.availableSeats = { $gt: 0 };
-            query.departureTime = { $gt: new Date() };
+
+            // Show trips that are either currently boarding (even if past time)
+            // or scheduled for the future. Also restrict to today onwards to avoid stale trips.
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            query.$or = [
+                { tripStatus: 'boarding' },
+                { departureTime: { $gte: startOfToday } }
+            ];
         }
 
         // Add filters

@@ -59,7 +59,7 @@ export default function Sidebar({ userRole }) {
     const passengerItems = [
       { icon: LayoutDashboard, label: t('dashboard'), path: '/dashboard' },
       { icon: Ticket, label: t('book_trip'), path: '/passenger/book-trip' },
-      { icon: Calendar, label: t('my_booking'), path: '/passenger/my-booking' },
+      { icon: Calendar, label: t('my_booking'), path: '/passenger/my-bookings' },
       { icon: MessageSquare, label: t('Support'), path: '/passenger/support' },
     ];
 
