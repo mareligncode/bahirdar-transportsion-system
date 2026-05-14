@@ -7,7 +7,7 @@ import { sendEmail } from '../utils/emailService.js';
 
 
 class NotificationService {
-    
+
     /**
      * Create a notification
      */
@@ -15,22 +15,22 @@ class NotificationService {
         try {
             const notification = new Notification(notificationData);
             await notification.save();
-            
+
             if (notification.channel === 'email' || notification.channel === 'all') {
                 await this.sendEmailNotification(notification);
             }
-            
+
             if (notification.channel === 'in_app' || notification.channel === 'all') {
                 await this.sendInAppNotification(notification);
             }
-            
+
             return notification;
         } catch (error) {
             console.error('Error creating notification:', error);
             throw new Error('Failed to create notification');
         }
     }
-    
+
     /**
      * Send email notification with proper template
      */
@@ -40,20 +40,20 @@ class NotificationService {
             if (!user || !user.email) {
                 throw new Error('User not found or email not available');
             }
-            
+
             const template = this.getEmailTemplate(notification);
-            
+
             await sendEmail({
                 to: user.email,
                 subject: template.subject,
                 html: template.html,
                 text: template.text
             });
-            
+
             notification.status = 'sent';
             notification.sentAt = new Date();
             await notification.save();
-            
+
         } catch (error) {
             console.error('Error sending email notification:', error);
             notification.status = 'failed';
@@ -62,14 +62,14 @@ class NotificationService {
             throw error;
         }
     }
-    
+
     /**
      * Send in-app notification via Socket.io
      */
     static async sendInAppNotification(notification) {
         try {
             const io = global.io; // Socket.io instance should be available globally
-            
+
             if (io) {
                 io.to(`user-${notification.userID}`).emit('notification', {
                     id: notification._id,
@@ -81,11 +81,11 @@ class NotificationService {
                     metadata: notification.metadata
                 });
             }
-            
+
             notification.status = 'delivered';
             notification.deliveredAt = new Date();
             await notification.save();
-            
+
         } catch (error) {
             console.error('Error sending in-app notification:', error);
             notification.status = 'failed';
@@ -94,7 +94,7 @@ class NotificationService {
             throw error;
         }
     }
-    
+
     /**
      * Get email template based on notification type
      */
@@ -102,7 +102,7 @@ class NotificationService {
         // The user data should be populated when the notification is created
         // But we'll use the metadata.userName if available, otherwise fall back to User model
         const userName = notification.metadata?.userName || 'Valued Customer';
-        
+
         switch (notification.type) {
             case 'payment_success':
                 return this.getPaymentSuccessTemplate(notification);
@@ -134,14 +134,14 @@ class NotificationService {
                 return this.getDefaultTemplate(notification);
         }
     }
-    
+
     /**
      * Booking Confirmation Template
      */
     static getBookingConfirmationTemplate(notification) {
         const booking = notification.metadata.booking;
         const trip = notification.metadata.trip;
-        
+
         return {
             subject: 'Booking Confirmed - Your Trip is Ready!',
             html: `
@@ -219,14 +219,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Payment Success Template
      */
     static getPaymentSuccessTemplate(notification) {
         const payment = notification.metadata.payment;
         const booking = notification.metadata.booking;
-        
+
         return {
             subject: 'Payment Successful - Booking Confirmed!',
             html: `
@@ -291,14 +291,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Payment Failed Template
      */
     static getPaymentFailedTemplate(notification) {
         const payment = notification.metadata.payment;
         const booking = notification.metadata.booking;
-        
+
         return {
             subject: 'Payment Failed - Please Try Again',
             html: `
@@ -373,13 +373,13 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Trip Update Template
      */
     static getTripUpdateTemplate(notification) {
         const trip = notification.metadata.trip;
-        
+
         return {
             subject: 'Trip Information Updated',
             html: `
@@ -446,13 +446,13 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Trip Cancellation Template
      */
     static getTripCancellationTemplate(notification) {
         const trip = notification.metadata.trip;
-        
+
         return {
             subject: 'Trip Cancelled - Refund Information',
             html: `
@@ -530,13 +530,13 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Trip Delay Template
      */
     static getTripDelayTemplate(notification) {
         const trip = notification.metadata.trip;
-        
+
         return {
             subject: 'Trip Delayed - Updated Schedule',
             html: `
@@ -609,14 +609,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Trip Reminder Template
      */
     static getTripReminderTemplate(notification) {
         const trip = notification.metadata.trip;
         const booking = notification.metadata.booking;
-        
+
         return {
             subject: 'Trip Reminder - Your Journey is Coming Up',
             html: `
@@ -702,14 +702,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Booking Cancellation Template
      */
     static getBookingCancellationTemplate(notification) {
         const booking = notification.metadata.booking;
         const trip = notification.metadata.trip;
-        
+
         return {
             subject: 'Booking Cancelled - Refund Processed',
             html: `
@@ -783,14 +783,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Refund Processed Template
      */
     static getRefundProcessedTemplate(notification) {
         const payment = notification.metadata.payment;
         const booking = notification.metadata.booking;
-        
+
         return {
             subject: 'Refund Processed Successfully',
             html: `
@@ -858,14 +858,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Driver Assignment Template
      */
     static getDriverAssignmentTemplate(notification) {
         const trip = notification.metadata.trip;
         const driver = notification.metadata.driver;
-        
+
         return {
             subject: 'Driver Assigned to Your Trip',
             html: `
@@ -943,14 +943,14 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Driver Update Template
      */
     static getDriverUpdateTemplate(notification) {
         const trip = notification.metadata.trip;
         const driver = notification.metadata.driver;
-        
+
         return {
             subject: 'Driver Information Updated',
             html: `
@@ -1017,13 +1017,13 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Station Announcement Template
      */
     static getStationAnnouncementTemplate(notification) {
         const station = notification.metadata.station;
-        
+
         return {
             subject: 'Station Announcement - Important Information',
             html: `
@@ -1088,7 +1088,7 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * System Alert Template
      */
@@ -1155,7 +1155,7 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Promotional Template
      */
@@ -1229,7 +1229,7 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Default Template
      */
@@ -1276,29 +1276,29 @@ Best regards,
 Bahir Dar Transport System Team`
         };
     }
-    
+
     /**
      * Get user notifications
      */
     static async getUserNotifications(userID, options = {}) {
         const { page = 1, limit = 20, type, status, priority } = options;
-        
+
         const query = { userID };
-        
+
         if (type) query.type = type;
         if (status) query.status = status;
         if (priority) query.priority = priority;
-        
+
         const skip = (page - 1) * limit;
-        
+
         const notifications = await Notification.find(query)
             .populate('userID', 'fullName email')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit));
-            
+
         const total = await Notification.countDocuments(query);
-        
+
         return {
             notifications,
             pagination: {
@@ -1308,7 +1308,7 @@ Bahir Dar Transport System Team`
             }
         };
     }
-    
+
     /**
      * Mark notification as read
      */
@@ -1317,20 +1317,20 @@ Bahir Dar Transport System Team`
             _id: notificationID,
             userID: userID
         });
-        
+
         if (!notification) {
             throw new Error('Notification not found');
         }
-        
+
         return await notification.markAsRead();
     }
-    
+
     /**
      * Send notification to multiple users
      */
     static async sendToMultipleUsers(notificationData, userIds) {
         const notifications = [];
-        
+
         for (const userID of userIds) {
             try {
                 const notification = await this.createNotification({
@@ -1342,7 +1342,7 @@ Bahir Dar Transport System Team`
                 console.error(`Failed to send notification to user ${userID}:`, error);
             }
         }
-        
+
         return notifications;
     }
 }
