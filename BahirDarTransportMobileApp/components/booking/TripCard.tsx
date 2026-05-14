@@ -41,7 +41,7 @@ export const TripCard: React.FC<TripCardProps> = ({
 
     const tripId = trip._id;
 
-    const isAvailable = trip.availableSeats > 0 && trip.tripStatus === 'scheduled';
+    const isAvailable = trip.availableSeats > 0 && (trip.tripStatus === 'scheduled' || trip.tripStatus === 'boarding');
 
     if (!isAvailable) {
       Alert.alert(translate('not_available') || 'Not Available', translate('trip_unavailable') || 'This trip is fully booked or unavailable.');

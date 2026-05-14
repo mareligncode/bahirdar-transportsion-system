@@ -248,6 +248,10 @@ export default function PaymentCheckoutScreen() {
       url.includes('payment_status=success') ||
       url.includes('transaction/success') ||
       url.includes('checkout/success') ||
+      // Intercept Chapa's callback to our backend /payment/verify/ endpoint
+      // This fires when Chapa redirects back to BASE_URL/api/payment/verify/...
+      url.includes('/api/payment/verify/') ||
+      url.includes('/payment/verify/') ||
       (url.includes('chapa.co/payment') && url.includes('success')) ||
       (url.includes('chapa.co/receipt') && url.includes('success')) ||
       (url.includes('chapa.co/transaction') && url.includes('success')) ||
@@ -508,7 +512,7 @@ export default function PaymentCheckoutScreen() {
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right', 'bottom']}>
       <View className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center`}>
         <TouchableOpacity onPress={handleGoToConfirmation} className="mr-3">
           <ArrowLeft size={24} color={isDark ? colors.textSecondary : "#4b5563"} />
@@ -518,7 +522,11 @@ export default function PaymentCheckoutScreen() {
         </AppText>
       </View>
 
-      <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderColor: isDark ? 'rgba(59,130,246,0.2)' : '#bfdbfe' }} className="p-5 rounded-xl border mb-6">
           <AppText className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center`}>{translate('total_amount')}</AppText>
           <AppText className={`text-3xl font-bold ${isDark ? colors.primary : '#2563eb'} text-center`}>
@@ -551,8 +559,8 @@ export default function PaymentCheckoutScreen() {
                 {allSeatNumbers.length} {allSeatNumbers.length === 1 ? translate('passenger_label') : translate('passengers')} × {formatCurrency(pricePerSeat)}
               </AppText>
 
-              <View className={`flex-row justify-between items-center pt-4 border-t ${isDark ? 'border-blue-900/30' : 'border-gray-100'}`}>
-                <View>
+              <View className={`flex-row flex-wrap justify-between items-start pt-4 border-t ${isDark ? 'border-blue-900/30' : 'border-gray-100'}`}>
+                <View className="mr-4 mb-2">
                   <AppText className="text-gray-600 font-medium">{translate('total_amount')}</AppText>
                   {allSeatNumbers.length > 1 && (
                     <AppText className="text-xs text-gray-500">
@@ -650,7 +658,7 @@ export default function PaymentCheckoutScreen() {
             ) : (
               <>
                 <CreditCard size={20} color="white" />
-                <AppText className="text-white font-semibold ml-2 text-base">
+                <AppText className="text-white font-semibold ml-2 text-base flex-shrink" numberOfLines={1} adjustsFontSizeToFit>
                   {translate('pay_btn', { amount: formatCurrency(backendAmount || totalAmount) })}
                 </AppText>
               </>

@@ -7,7 +7,6 @@ import {
   SearchTripParams,
   StationOption,
   Station,
-  TripSearchResponse
 } from '../types/trip';
 
 export const useTrips = () => {
@@ -192,7 +191,7 @@ export const useTrips = () => {
 
   useEffect(() => {
     fetchStations();
-  }, []);
+  }, [fetchStations]);
 
   return {
     trips,
