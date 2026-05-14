@@ -20,7 +20,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bahirdartransport.app",
       "associatedDomains": [
-        "applinks:10.161.142.167"
+        "applinks:bahirdar-transportsion-system.onrender.com"
       ],
       "infoPlist": {
         "NSPhotoLibraryAddUsageDescription": "This app needs access to save QR codes to your photo library",
@@ -54,26 +54,22 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.167",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.167",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPrefix": "/booking/confirmation"
             },
             {
               "scheme": "http",
-              "host": "10.161.142.220",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPrefix": "/redirect.html"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.167",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPrefix": "/redirect.html"
             },
             {
@@ -93,14 +89,12 @@
           "data": [
             {
               "scheme": "http",
-              "host": "10.161.142.220",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPattern": ".*reset-password.*"
             },
             {
               "scheme": "https",
-              "host": "10.161.142.220",
-              "port": "8081",
+              "host": "bahirdar-transportsion-system.onrender.com",
               "pathPattern": ".*reset-password.*"
             }
           ],
@@ -139,7 +133,7 @@
     "scheme": "bahirdartransport",
     "extra": {
       "router": {
-        "origin": "https://10.161.142.167:8081"
+        "origin": "https://bahirdar-transportsion-system.onrender.com"
       },
       "eas": {
         "projectId": "671e7939-7848-4df0-a58f-1162bd5ec1a5"

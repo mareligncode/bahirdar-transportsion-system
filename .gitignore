@@ -1,6 +1,6 @@
 node_modules/
 .env
 dist/
-build
+build/
 *.log
-README.md
+.DS_Store

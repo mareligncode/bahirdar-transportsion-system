@@ -344,6 +344,7 @@ export default function BookingDetailScreen() {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -420,16 +421,16 @@ export default function BookingDetailScreen() {
             </View>
 
             <View className="p-4">
-              <View className="flex-row items-center justify-between mb-4">
-                <View className="flex-row items-center">
+              <View className="flex-row flex-wrap items-center justify-between mb-4">
+                <View className="flex-row items-center mb-2">
                   <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }} className="w-8 h-8 rounded-full items-center justify-center mr-3">
                     <MapPin size={16} color={colors.primary} />
                   </View>
                   <AppText variant="bodyMedium" weight="medium" color={colors.text}>{translate('seat')} Number(s)</AppText>
                 </View>
-                <View className="flex-row gap-1">
+                <View className="flex-row flex-wrap justify-end gap-1 flex-1 ml-4 mb-2">
                   {seatNumbers.map((seat: number, index: number) => (
-                    <View key={index} style={{ backgroundColor: colors.primary }} className="px-4 py-2 rounded-lg shadow-sm">
+                    <View key={index} style={{ backgroundColor: colors.primary }} className="px-3 py-1.5 rounded-lg shadow-sm">
                       <AppText variant="bodyLarge" weight="bold" color="white">{seat}</AppText>
                     </View>
                   ))}

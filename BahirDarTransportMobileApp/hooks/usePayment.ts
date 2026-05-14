@@ -24,7 +24,7 @@ export const usePayment = () => {
   const initializePayment = useCallback(async (
     bookingId: string,
     amount: number,
-    method: 'mobile_money' | 'card' | 'cash' = 'mobile_money'
+    method: 'mobile_money' | 'card' | 'cash' | 'bank_transfer' = 'mobile_money'
   ): Promise<{ checkoutUrl: string; txRef: string; amount: number } | null> => {
     if (!user) {
       showToast('Please login to continue', 'error');

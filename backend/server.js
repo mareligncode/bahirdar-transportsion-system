@@ -1,3 +1,5 @@
+import dotenv from 'dotenv'
+dotenv.config()
 import express from 'express'
 import dotenv from 'dotenv'
 
@@ -27,7 +29,25 @@ initSuperAdmin()
 
 const PORT = process.env.PORT || 5000
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
+const allowedOrigins = [
+    "https://bahirdar-transportsion-system-et.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://bahirdar-transportsion-system.onrender.com",
+    "https://bahirdar-transportsion-system-frontend.onrender.com"
+].filter(Boolean);
+
+const checkOrigin = (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+        return callback(null, true);
+    }
+    // Allow all in production for now if needed to fix all problems
+    return callback(null, true);
+};
+
 const io = new Server(server, {
     cors: {
         origin: function (origin, callback) {

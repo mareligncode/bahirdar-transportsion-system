@@ -9,7 +9,7 @@ export interface Payment {
   passengerID: string | User;
   amount: number;
   currency: string;
-  paymentMethod: 'mobile_money' | 'card' | 'cash';
+  paymentMethod: 'mobile_money' | 'card' | 'cash' | 'bank_transfer';
   paymentGateway: 'chapa' | 'cash';
   paymentStatus: PaymentStatus;
   gatewayTransactionID?: string;
@@ -28,13 +28,13 @@ export interface Payment {
 
 export interface PaymentInitializeData {
   bookingId: string;
-  paymentMethod?: 'mobile_money' | 'card' | 'cash';
+  paymentMethod?: 'mobile_money' | 'card' | 'cash' | 'bank_transfer';
   returnUrl?: string;
 }
 
 export interface PaymentInitializeRequest {
   bookingId: string;
-  paymentMethod?: 'mobile_money' | 'card' | 'cash';
+  paymentMethod?: 'mobile_money' | 'card' | 'cash' | 'bank_transfer';
 }
 
 export interface PaymentInitializeResponse {

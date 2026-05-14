@@ -41,7 +41,7 @@ export default function BookingsListScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past' | 'pending'>('all');
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -76,7 +76,7 @@ export default function BookingsListScreen() {
 
   const getFilteredBookings = () => {
     const now = new Date();
-    
+
     switch (filter) {
       case 'upcoming':
         return bookings.filter(b => {
@@ -139,7 +139,7 @@ export default function BookingsListScreen() {
     const needsPayment = item.status?.toLowerCase() === 'pending' &&
       (!item.paymentStatus || item.paymentStatus === 'pending');
     const isPaid = item.paymentStatus === 'success';
-    
+
     const cardStyle = {
       opacity: fadeAnim,
       transform: [{ translateY: slideAnim }]
@@ -155,7 +155,7 @@ export default function BookingsListScreen() {
           activeOpacity={0.95}
           style={isDark ? { elevation: 0, shadowOpacity: 0 } : {}}
           className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} mb-3 rounded-xl overflow-hidden shadow-lg border`}>
-        <View className="p-4">
+          <View className="p-4">
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center flex-1">
                 <LinearGradient
@@ -185,14 +185,14 @@ export default function BookingsListScreen() {
               </View>
             </View>
 
-            <View className="flex-row items-center gap-4 mb-3">
-              <View className="flex-row items-center">
+            <View className="flex-row flex-wrap items-center gap-4 mb-3">
+              <View className="flex-row items-center mb-1">
                 <Calendar size={14} color={colors.textSecondary} />
                 <AppText className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} ml-1.5`}>
                   {departureTime ? formatDate(departureTime) : translate('not_available')}
                 </AppText>
               </View>
-              <View className="flex-row items-center">
+              <View className="flex-row items-center mb-1">
                 <Clock size={14} color={colors.textSecondary} />
                 <AppText className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} ml-1.5`}>
                   {departureTime ? formatTime(departureTime) : translate('not_available')}
@@ -200,10 +200,10 @@ export default function BookingsListScreen() {
               </View>
             </View>
 
-            <View className={`flex-row items-center justify-between pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-              <View className="flex-row items-center">
-                <AppText className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mr-2`}>{translate('seats_label')}</AppText>
-                <View className="flex-row gap-1">
+            <View className={`flex-row justify-between pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+              <View className="flex-row flex-wrap items-center flex-1 pr-2">
+                <AppText className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mr-2 mb-1`}>{translate('seats_label')}</AppText>
+                <View className="flex-row flex-wrap gap-1 mb-1">
                   {seatNumbers.map((seat, idx) => (
                     <View key={idx} className="bg-blue-500 px-3 py-1 rounded-lg">
                       <AppText className="text-white text-xs font-bold">{seat}</AppText>
@@ -211,7 +211,7 @@ export default function BookingsListScreen() {
                   ))}
                 </View>
               </View>
-              <AppText className="font-bold text-blue-600 text-base">
+              <AppText className="font-bold text-blue-600 text-base mt-0.5">
                 {formatCurrency(totalAmount)}
               </AppText>
             </View>
@@ -234,7 +234,7 @@ export default function BookingsListScreen() {
     const totalCount = bookings.length;
 
     return (
-      <Animated.View 
+      <Animated.View
         style={{
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
@@ -247,7 +247,7 @@ export default function BookingsListScreen() {
           className="px-4 pt-2 pb-6"
         >
           <View className="flex-row items-center justify-between mb-4">
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.back()}
               className="w-10 h-10 rounded-full bg-white/20 items-center justify-center"
             >
@@ -270,9 +270,9 @@ export default function BookingsListScreen() {
           </View>
         </LinearGradient>
 
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
           className={`px-4 py-3 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
         >
           <View className="flex-row gap-2">
@@ -291,9 +291,9 @@ export default function BookingsListScreen() {
                   }
                 `}
               >
-                  <AppText className={filter === filterType ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-600'} weight={filter === filterType ? 'bold' : 'medium'}>
-                    {translate(`${filterType}_tickets` as any)}
-                  </AppText>
+                <AppText className={filter === filterType ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-600'} weight={filter === filterType ? 'bold' : 'medium'}>
+                  {translate(`${filterType}_tickets` as any)}
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -304,11 +304,11 @@ export default function BookingsListScreen() {
 
   const renderEmptyState = () => {
     const filteredBookings = getFilteredBookings();
-    
+
     if (filteredBookings.length > 0) return null;
 
     return (
-      <Animated.View 
+      <Animated.View
         style={{
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
@@ -319,7 +319,7 @@ export default function BookingsListScreen() {
           <Receipt size={40} color={isDark ? colors.textTertiary : '#9CA3AF'} />
         </View>
         <AppText className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'} text-center`}>
-          {filter !== 'all' 
+          {filter !== 'all'
             ? translate('no_bookings_title', { filter: translate(`${filter}_tickets` as any) })
             : translate('no_bookings_general')}
         </AppText>
@@ -378,8 +378,8 @@ export default function BookingsListScreen() {
           paddingBottom: insets.bottom + 20,
         }}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
