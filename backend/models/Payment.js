@@ -68,6 +68,9 @@ const paymentSchema = new mongoose.Schema({
     reasonForFailure: {
         type: String
     },
+    frontendUrl: {
+        type: String
+    },
     metadata: {
         type: Object,
         default: {}

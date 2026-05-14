@@ -27,7 +27,7 @@ transporter.verify((error) => {
 
 export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     try {
-        const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+        const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
         const expiryTime = process.env.PASSWORD_RESET_EXPIRY || '15 minutes';
 
         const mailOptions = {
@@ -174,7 +174,7 @@ export const sendPasswordChangedEmail = async (email, userName) => {
                         </div>
                         
                         <p style="margin-top: 30px;">
-                            <a href="${process.env.FRONTEND_URL}/login" 
+                            <a href="${process.env.CLIENT_URL}/login" 
                                style="color: #3498db; text-decoration: none;">
                                 Click here to login with your new password
                             </a>

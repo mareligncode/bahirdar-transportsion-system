@@ -26,6 +26,7 @@ initSuperAdmin()
 
 const PORT = process.env.PORT || 5000
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const allowedOrigins = [
     "https://bahirdar-transportsion-system-et.onrender.com",
