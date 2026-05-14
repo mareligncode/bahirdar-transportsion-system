@@ -358,34 +358,7 @@ export default function SearchScreen() {
             </View>
           )}
 
-          {/* Travel Tips */}
-          <View className="mt-6 px-4 mb-6">
-            <AppText variant="bodyLarge" weight="semibold" color={colors.textPrimary} className="mb-3">
-              {translate('travel_tips')}
-            </AppText>
-            <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
-              <View className="space-y-3">
-                <View className="flex-row items-center mb-3">
-                  <Clock size={20} color={colors.primary} />
-                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
-                    {translate('arrival_tip')}
-                  </AppText>
-                </View>
-                <View className="flex-row items-center mb-3">
-                  <Users size={20} color={colors.primary} />
-                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
-                    {translate('passenger_tip')}
-                  </AppText>
-                </View>
-                <View className="flex-row items-center">
-                  <Calendar size={20} color={colors.primary} />
-                  <AppText variant="bodyMedium" color={colors.textSecondary} className="ml-3 flex-1">
-                    {translate('booking_tip')}
-                  </AppText>
-                </View>
-              </View>
-            </View>
-          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

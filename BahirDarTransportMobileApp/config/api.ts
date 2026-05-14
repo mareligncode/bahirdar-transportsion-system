@@ -9,7 +9,7 @@ export const getPlatformBaseUrl = (): string => {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
 
-    url = 'http://10.161.142.167:5000/api';
+    url = 'https://bahirdar-transportsion-system.onrender.com/api';
   }
   return url;
 };
