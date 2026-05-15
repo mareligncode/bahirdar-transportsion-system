@@ -162,7 +162,7 @@ app.use((req, res, next) => {
         res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, ngrok-skip-browser-warning, Accept');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, ngrok-skip-browser-warning, Accept, Cache-Control, Pragma, Expires');
 
     // Handle Preflight
     if (req.method === 'OPTIONS') {
