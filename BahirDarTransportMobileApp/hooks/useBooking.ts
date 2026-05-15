@@ -222,6 +222,11 @@ export const useBooking = () => {
   }, [bookings, currentBooking, setBookings, setCurrentBooking, showToast]);
 
   const getBookingById = useCallback(async (id: string): Promise<Booking | null> => {
+    if (!id || typeof id !== 'string' || id === '[object Object]' || id === 'undefined' || id === 'null') {
+      console.warn('⚠️ [useBooking.getBookingById] Invalid ID prevented:', id);
+      return null;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -295,21 +300,31 @@ export const useBooking = () => {
   }, [clearBookingState]);
 
   const canCancelBooking = useCallback((booking: Booking): boolean => {
+    const status = booking.status?.toLowerCase();
     const cancellableStatuses = ['pending', 'confirmed'];
-    if (!cancellableStatuses.includes(booking.status?.toLowerCase())) {
+    
+    if (!cancellableStatuses.includes(status)) {
       return false;
     }
 
+    // Pending bookings can always be cancelled (they are unpaid)
+    if (status === 'pending') {
+      return true;
+    }
+
+    // For confirmed bookings, enforce the 2-hour rule
     let departureTime: Date | null = null;
     if (booking.tripID && typeof booking.tripID === 'object') {
-      departureTime = booking.tripID.departureTime
-        ? new Date(booking.tripID.departureTime)
+      departureTime = (booking.tripID as any).departureTime
+        ? new Date((booking.tripID as any).departureTime)
         : null;
     }
 
+    if (!departureTime) return false;
+
     const now = new Date();
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    return departureTime ? departureTime > twoHoursFromNow : false;
+    return departureTime > twoHoursFromNow;
   }, []);
 
   const getTripBookings = useCallback(async (tripId: string): Promise<Booking[]> => {

@@ -52,8 +52,8 @@ export const translations = {
         passengers: 'passengers',
         status_completed: 'Completed',
         status_pending: 'Pending',
-        loading_trips: 'Loading trips...',
-        loading_tickets: 'Loading your tickets...',
+        dashboard_loading: 'Loading dashboard...',
+        failed_to_load_dashboard: 'Failed to load dashboard data. Please refresh.',
         at: 'at',
         last_updated: 'Last Updated',
         checking_auth: 'Checking authentication...',
@@ -82,6 +82,9 @@ export const translations = {
         seats: 'Seats',
         trip_count: '{{count}} trips found',
         payment_failed_title: 'Payment Failed',
+        recent_bookings: 'Recent Bookings',
+        favorite_routes: 'Favorite Routes',
+        passenger_id: 'Passenger ID',
 
         // Auth
         login: 'Login',
@@ -225,6 +228,7 @@ export const translations = {
         reset_filters: 'Reset Filters',
         no_trips_found: 'No Trips Found',
         no_trips_available: 'No trips available',
+        loading_trips: 'Loading trips...',
         no_search_results_desc: 'No trips found for your search criteria. Try different dates or stations.',
         no_trips_general_desc: 'There are no trips available at the moment. Please check back later.',
         search_again: 'Search Again',
@@ -414,7 +418,7 @@ export const translations = {
         stats_pending: 'Pending',
         status_completed_dashboard: 'Completed',
         total_spent_label: 'Total Spent',
-        dashboard_loading: 'Loading dashboard...',
+
         view_all: 'View All',
         no_trips_now: 'No trips currently available',
 
@@ -640,6 +644,7 @@ export const translations = {
 
         // Tickets & QR
         loading_ticket_details: 'Loading ticket details...',
+        loading_tickets: 'Loading tickets...',
         view_my_tickets: 'View My Tickets',
         copied_to_clipboard: 'Copied to clipboard!',
         seat_numbers: 'Seat Number(s)',
@@ -647,6 +652,7 @@ export const translations = {
         save_to_gallery: 'Save to Gallery',
         share_ticket: 'Share Ticket',
         download_ticket: 'Download Ticket',
+        preparing_share: 'Preparing share...',
         share: 'Share',
         qr_code: 'QR Code',
         view_ticket_details_btn: 'View Ticket Details',
@@ -774,6 +780,21 @@ export const translations = {
         privacy_section_3_title: '3. Data Protection',
         privacy_section_3_content: 'We implement industry-standard security measures to protect your data from unauthorized access.',
         privacy_consent: 'By continuing to use this app, you acknowledge that you have read and understood our Privacy Policy.',
+
+        // Ticket Generation
+        mengedenya: 'Mengedenya',
+        public_transport_service: 'Public Transport Service',
+        tin_label: 'TIN',
+        plate_no: 'Plate No',
+        passenger_receipt: 'Passenger',
+        tariff: 'Tariff',
+        total_fee: 'Total Fee',
+        ticket_date: 'Ticket Date',
+        confirmation_number: 'Confirmation Number',
+        association_name: 'Association',
+        agent: 'Agent',
+        authorized_note: 'Authorized for one time travel only',
+        complaints_note: 'For complaints call 9325',
     },
     am: {
         language_code: 'am',
@@ -824,8 +845,8 @@ export const translations = {
         passengers: 'ተጓዦች',
         status_completed: 'ተጠናቋል',
         status_pending: 'በመጠባበቅ ላይ',
-        loading_trips: 'ጉዞዎችን በመጫን ላይ...',
-        loading_tickets: 'ትኬቶችን በመጫን ላይ...',
+        dashboard_loading: 'ዳሽቦርዱን በመጫን ላይ...',
+        failed_to_load_dashboard: 'ዳሽቦርድ ውሂብን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።',
         at: 'በ',
         last_updated: 'ለመጨረሻ ጊዜ የተሻሻለው',
         checking_auth: 'ማንነትዎን በማረጋገጥ ላይ...',
@@ -847,6 +868,9 @@ export const translations = {
         seats: 'መቀመጫዎች',
         trip_count: '{{count}} ጉዞዎች ተገኝተዋል',
         payment_failed_title: 'ክፍያው አልተሳካም',
+        recent_bookings: 'የቅርብ ጊዜ ጉዞዎች',
+        favorite_routes: 'ተመራጭ መንገዶች',
+        passenger_id: 'ተሳፋሪ መታወቂያ',
         settings: 'ማስተካከያዎች',
         help_support: 'እርዳታ እና ድጋፍ',
         about: 'ስለ እኛ',
@@ -997,6 +1021,7 @@ export const translations = {
         reset_filters: 'ዳግም አስጀምር',
         no_trips_found: 'ምንም ጉዞዎች አልተገኙም',
         no_trips_available: 'የሚገኙ ጉዞዎች የሉም',
+        loading_trips: 'ጉዞዎችን በመጫን ላይ...',
         no_search_results_desc: 'ለፍለጋዎ የሚመጥን ጉዞ አልተገኘም:: እባክዎ ቀኑን ወይም ጣቢያውን ይቀይሩ::',
         no_trips_general_desc: 'በአሁኑ ጊዜ የሚገኙ ጉዞዎች የሉም:: እባክዎ ቆይተው ይሞክሩ::',
         search_again: 'እንደገና ፈልግ',
@@ -1186,7 +1211,7 @@ export const translations = {
         stats_pending: 'በመጠባበቅ ላይ',
         status_completed_dashboard: 'ተጠናቋል',
         total_spent_label: 'ጠቅላላ ወጪ',
-        dashboard_loading: 'ዳሽቦርዱን በመጫን ላይ...',
+
         view_all: 'ሁሉንም እይ',
         no_trips_now: 'በአሁኑ ጊዜ የሚገኙ ጉዞዎች የሉም',
 
@@ -1382,6 +1407,7 @@ export const translations = {
 
         // Tickets & QR
         loading_ticket_details: 'የትኬት ዝርዝሮችን በመጫን ላይ...',
+        loading_tickets: 'ትኬቶችን በመጫን ላይ...',
         view_my_tickets: 'የእኔን ትኬቶች እይ',
         copied_to_clipboard: 'ወደ ክሊፕቦርድ ተቀድቷል!',
         seat_numbers: 'የመቀመጫ ቁጥር(ዎች)',
@@ -1389,6 +1415,7 @@ export const translations = {
         save_to_gallery: 'ወደ ጋለሪ አስቀምጥ',
         share_ticket: 'ትኬት አጋራ',
         download_ticket: 'ትኬት አውርድ',
+        preparing_share: 'ለማጋራት በመዘጋጀት ላይ...',
         share: 'አጋራ',
         qr_code: 'የኪውአር ኮድ',
         view_ticket_details_btn: 'የትኬት ዝርዝሮችን እይ',
@@ -1549,5 +1576,20 @@ export const translations = {
         privacy_section_3_title: '3. የመረጃ ጥበቃ',
         privacy_section_3_content: 'መረጃዎን ካልተፈቀደለት አካል ለመጠበቅ የኢንዱስትሪ ደረጃውን የጠበቀ የደህንነት እርምጃዎችን እንተገብራለን::',
         privacy_consent: 'ይህንን መተግበሪያ መጠቀሙን በመቀጠል፣ የቀረበውን የግላዊነት ፖሊሲ አንብበው እንደተረዱ ያረጋግጣሉ::',
+
+        // Ticket Generation
+        mengedenya: 'መንገደኛው',
+        public_transport_service: 'የሕዝብ ትራንስፖርት አገልግሎት',
+        tin_label: 'የግብር ከፋይ መለያ ቁጥር (TIN)',
+        plate_no: 'የሰሌዳ ቁጥር',
+        passenger_receipt: 'ተጓዥ',
+        tariff: 'ታሪፍ',
+        total_fee: 'ጠቅላላ ክፍያ',
+        ticket_date: 'የተቆረጠበት ቀን',
+        confirmation_number: 'የማረጋገጫ ቁጥር',
+        association_name: 'ማህበር',
+        agent: 'ወኪል',
+        authorized_note: 'ለአንድ ጊዜ ጉዞ ብቻ የሚያገለግል',
+        complaints_note: 'ለቅሬታ በ 9325 ይደውሉ',
     }
 };

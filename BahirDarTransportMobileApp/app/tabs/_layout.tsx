@@ -57,6 +57,12 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="tickets/[id]"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
             title: translate('profile'),

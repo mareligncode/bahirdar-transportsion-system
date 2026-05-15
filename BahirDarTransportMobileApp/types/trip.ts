@@ -26,6 +26,7 @@ export interface Vehicle {
   features?: string[];
   images?: string[];
   color?: string;
+  associationName?: string;
 }
 
 export interface Driver {

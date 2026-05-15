@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
+import { formatCurrency } from '../../../utils/helpers';
 import { useTrips } from '@/hooks/useTrips';
 import { useBooking } from '@/hooks/useBooking';
 import { usePayment } from '@/hooks/usePayment';
@@ -22,19 +22,16 @@ import { CustomDrawerContent } from '@/components/layout/CustomDrawerContent';
 import {
   Card,
   Badge,
-  EmptyState,
   Button,
   Loader,
   AppText
 } from '@/components/common';
 import {
   Calendar,
-  Ticket,
   MapPin,
   Clock,
   Car,
   User,
-  TrendingUp,
   AlertCircle,
   PlusCircle,
   History,
@@ -48,23 +45,14 @@ import {
   Sparkles,
   Shield,
   Menu,
-  Star,
   Award,
   Gift,
   Timer,
   Wallet,
-  Percent,
-  Zap,
-  Compass,
-  Coffee,
-  Wifi,
-  Thermometer,
-  Battery,
 } from 'lucide-react-native';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Trip } from '@/types/trip';
 import { Booking } from '@/types';
-import { APP_CONSTANTS } from '@/constants/routes';
 import { useTheme } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -99,14 +87,13 @@ export default function PassengerDashboard() {
   const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { trips, loading: tripsLoading, fetchAllTrips } = useTrips();
+  const { trips, fetchAllTrips } = useTrips();
   const { bookings, fetchMyBookings, loading: bookingsLoading } = useBooking();
-  const { payments, getPaymentHistory } = usePayment();
+  const { getPaymentHistory } = usePayment();
   const { colors, isDark } = useTheme();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
-  const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([]);
   const [popularRoutes, setPopularRoutes] = useState<Trip[]>([]);
   const [totalSpent, setTotalSpent] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -121,11 +108,76 @@ export default function PassengerDashboard() {
     }
   }, [isAuthenticated, authLoading]);
 
+
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const fetchUserData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [bookingsData, , tripsData] = await Promise.all([
+        fetchMyBookings().then(() => bookings),
+        getPaymentHistory(),
+        fetchAllTrips({ 
+          limit: 20, 
+          _t: Date.now() // Cache busting
+        })
+      ]);
+
+      if (bookingsData) {
+        setUserBookings(bookingsData);
+        
+        // Calculate total spent
+        const spent = bookingsData
+          .filter(b => b.status === 'confirmed' || b.status === 'completed')
+          .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+        setTotalSpent(spent);
+      }
+
+      const tripsToFilter = tripsData || trips;
+      
+      const upcoming = tripsToFilter
+        .filter(trip => {
+          const status = trip.tripStatus?.toLowerCase();
+          // Be inclusive: show any trip that the backend says is available
+          return (status === 'scheduled' || status === 'boarding') && (trip.availableSeats ?? 0) > 0;
+        })
+        .slice(0, 5);
+
+      // Improved popular logic: Sort by occupancy (how many seats are taken)
+      const popular = tripsToFilter
+        .map(trip => ({ ...trip }))
+        .sort((a, b) => {
+          const aTotal = a.totalSeats || 50;
+          const bTotal = b.totalSeats || 50;
+          const aOcc = aTotal - (a.availableSeats ?? aTotal);
+          const bOcc = bTotal - (b.availableSeats ?? bTotal);
+          return bOcc - aOcc; 
+        })
+        .slice(0, 5);
+        
+      setPopularRoutes(popular.length > 0 ? popular : upcoming);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError(translate('failed_to_load_dashboard'));
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchMyBookings, getPaymentHistory, fetchAllTrips, bookings, trips, translate]);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchUserData]);
 
   useEffect(() => {
     if (menuVisible) {
@@ -141,60 +193,7 @@ export default function PassengerDashboard() {
         useNativeDriver: true,
       }).start();
     }
-  }, [menuVisible]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowWelcome(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([
-        fetchMyBookings(),
-        getPaymentHistory(),
-        fetchAllTrips({ limit: 10 })
-      ]);
-      const userBookingsList = bookings.filter((b: Booking) =>
-        (typeof b.passengerID === 'string' && b.passengerID === user?._id) ||
-        (typeof b.passengerID === 'object' && b.passengerID?._id === user?._id)
-      );
-      setUserBookings(userBookingsList);
-
-      const spent = payments
-        ?.filter(p => p.paymentStatus === 'success')
-        .reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      setTotalSpent(spent);
-
-      const now = new Date();
-      const upcoming = trips
-        .filter(trip =>
-          new Date(trip.departureTime) > now &&
-          trip.tripStatus === 'scheduled' &&
-          (trip.availableSeats ?? 0) > 0
-        )
-        .slice(0, 5);
-      setUpcomingTrips(upcoming);
-
-      const popular = trips
-        .filter(trip =>
-          new Date(trip.departureTime) > now &&
-          trip.tripStatus === 'scheduled'
-        )
-        // sort by most booked (least available relative to total) or just fallback to least available
-        .sort((a, b) => (a.availableSeats ?? 0) - (b.availableSeats ?? 0))
-        .slice(0, 5);
-      setPopularRoutes(popular.length > 0 ? popular : upcoming);
-
-    } catch (error) {
-      setError(translate('something_went_wrong'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [menuVisible, slideAnim]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -235,11 +234,7 @@ export default function PassengerDashboard() {
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    return `${formatDateStr(dateString)} ${translate('at')} ${formatTimeStr(dateString)}`;
-  };
-
-  const navigationActions = {
+  const navigationActions = React.useMemo(() => ({
     bookTrip: () => router.push('/tabs/trips/search'),
     myBookings: () => router.push('/(screens)/booking'),
     paymentHistory: () => router.push('/(screens)/payment/history'),
@@ -269,7 +264,7 @@ export default function PassengerDashboard() {
     about: () => router.push('/menu/about'),
     contact: () => router.push('/menu/support/contact'),
     feedback: () => router.push('/menu/support/feedback'),
-  };
+  }), []);
 
   const quickActions = [
     {
@@ -301,34 +296,6 @@ export default function PassengerDashboard() {
       bgColor: 'bg-pink-500',
     },
   ];
-
-  const featureActions = [
-    {
-      title: translate('search_trips'),
-      icon: Search,
-      onPress: navigationActions.searchTrips,
-      color: '#3b82f6',
-    },
-    {
-      title: translate('popular_routes'),
-      icon: Compass,
-      onPress: navigationActions.viewAllTrips,
-      color: '#10b981',
-    },
-    {
-      title: translate('special_offers'),
-      icon: Percent,
-      onPress: navigationActions.bookTrip,
-      color: '#f59e0b',
-    },
-    {
-      title: translate('quick_book'),
-      icon: Zap,
-      onPress: navigationActions.bookTrip,
-      color: '#8b5cf6',
-    },
-  ];
-  const now = new Date();
 
   const { activeBookings, pendingCount, completedCount } = React.useMemo(() => {
     const now = new Date();
@@ -378,14 +345,7 @@ export default function PassengerDashboard() {
       color: colors.accent,
       onPress: navigationActions.paymentHistory,
     },
-  ], [activeBookings, pendingCount, completedCount, totalSpent, translate]);
-
-  const amenities = [
-    { icon: Wifi, label: translate('amenity_wifi'), color: '#3b82f6' },
-    { icon: Coffee, label: translate('amenity_refreshments'), color: '#10b981' },
-    { icon: Thermometer, label: translate('amenity_ac'), color: '#f59e0b' },
-    { icon: Battery, label: translate('amenity_charging'), color: '#8b5cf6' },
-  ];
+  ], [activeBookings, pendingCount, completedCount, totalSpent, translate, colors, navigationActions]);
 
   const HeaderRightActions = () => {
     const unreadCount = useUnreadCount();
@@ -442,17 +402,29 @@ export default function PassengerDashboard() {
         <HeaderRightActions />
       </View>
 
-      <View className="mt-4">
-        <AppText variant="h1" color={isDark ? 'white' : 'black'}>
-          {getGreeting()}
-        </AppText>
-        <AppText variant="bodyLarge" color={isDark ? colors.gray400 : colors.gray600} className="mt-1">
-          {user?.fullName?.split(' ')[0] || translate('passenger_label')}! 👋
-        </AppText>
+      <View className="mt-4 flex-row items-center justify-between">
+        <View>
+          <AppText variant="h1" color={isDark ? 'white' : 'black'}>
+            {getGreeting()}
+          </AppText>
+          <AppText variant="bodyLarge" color={isDark ? colors.gray400 : colors.gray600} className="mt-1">
+            {user?.fullName?.split(' ')[0] || translate('passenger_label')}! 👋
+          </AppText>
+        </View>
+        
+        {/* Passenger Info Badge - similar to website */}
+        <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} px-3 py-2 rounded-xl border ${isDark ? 'border-blue-800' : 'border-blue-100'} flex-row items-center`}>
+          <User size={14} color={colors.primary} />
+          <AppText variant="caption" weight="bold" color={colors.primary} className="ml-1 text-[10px]">
+            {translate('passenger_id')}: {user?._id?.slice(-8).toUpperCase() || 'N/A'}
+          </AppText>
+        </View>
       </View>
+
       {showWelcome && pendingCount > 0 && (
-        <View className="mt-4 bg-yellow-50 p-3 rounded-xl border border-yellow-200">
-          <AppText variant="bodySmall" color="#B45309">
+        <View className="mt-4 bg-yellow-50 p-3 rounded-xl border border-yellow-200 flex-row items-center">
+          <AlertCircle size={16} color="#B45309" />
+          <AppText variant="bodySmall" color="#B45309" className="ml-2 flex-1">
             {translate('pending_payment_warn', { count: pendingCount })}
           </AppText>
         </View>
@@ -603,26 +575,28 @@ export default function PassengerDashboard() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Stats Section Moved to Top */}
         <View className="px-4 mt-4">
-          <View className="flex-row flex-wrap -mx-1">
+          <View className="flex-row -mx-1">
             {memoizedStats.map((stat, index) => (
               <TouchableOpacity
                 key={index}
-                className="w-1/4 px-1"
+                className="flex-1 px-1"
                 onPress={stat.onPress}
                 activeOpacity={0.7}
               >
-                <Card className={`border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200'} p-2 items-center`}>
+                <Card className={`border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200'} p-1.5 items-center justify-center h-[95px]`}>
                   <View
-                    className="w-10 h-10 rounded-full items-center justify-center mb-1"
+                    className="w-9 h-9 rounded-full items-center justify-center mb-1"
                     style={{ backgroundColor: `${stat.color}15` }}
                   >
-                    <stat.icon size={20} color={stat.color} />
+                    <stat.icon size={18} color={stat.color} />
                   </View>
-                  <AppText variant="bodyLarge" weight="bold" color={isDark ? 'white' : colors.gray900}>
+                  <AppText variant="bodyMedium" weight="bold" color={isDark ? 'white' : colors.gray900} numberOfLines={1}>
                     {stat.value}
                   </AppText>
-                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">
+                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center text-[10px] mt-0.5" numberOfLines={1}>
                     {stat.label}
                   </AppText>
                 </Card>
@@ -630,33 +604,15 @@ export default function PassengerDashboard() {
             ))}
           </View>
         </View>
-        <View className="px-4 mt-6">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {featureActions.map((action, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={action.onPress}
-                className="mr-3 items-center"
-                activeOpacity={0.7}
-              >
-                <View
-                  className="w-14 h-14 rounded-full items-center justify-center mb-1"
-                  style={{ backgroundColor: `${action.color}20` }}
-                >
-                  <action.icon size={24} color={action.color} />
-                </View>
-                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">{action.title}</AppText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+
         <View className="px-4 mt-6">
           <View className="flex-row items-center justify-between mb-3">
-            <AppText variant="h3">
-              🔥 {translate('popular_trips')}
+            <AppText variant="h2" weight="bold">
+              🚌 {translate('available_trips')}
             </AppText>
-            <TouchableOpacity onPress={navigationActions.viewAllTrips}>
-              <AppText variant="bodySmall" color={colors.primary}>{translate('view_all')}</AppText>
+            <TouchableOpacity onPress={navigationActions.viewAllTrips} className="flex-row items-center">
+              <AppText variant="bodyMedium" weight="semibold" color={colors.primary}>{translate('view_all')}</AppText>
+              <ChevronRight size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -670,32 +626,71 @@ export default function PassengerDashboard() {
               contentContainerStyle={{ paddingRight: 16 }}
             />
           ) : (
-            <Card className="p-6 items-center">
-              <MapPin size={32} color={colors.textTertiary} />
-              <AppText color={isDark ? colors.gray400 : colors.gray600} className="text-center mt-2">
+            <Card className="p-8 items-center bg-gray-50 dark:bg-gray-800/50 border-dashed border-2 border-gray-200 dark:border-gray-700">
+              <MapPin size={40} color={colors.textTertiary} className="mb-2" />
+              <AppText color={isDark ? colors.gray400 : colors.gray600} className="text-center font-medium">
                 {translate('no_trips_now')}
+              </AppText>
+              <AppText variant="caption" color={colors.textTertiary} className="text-center mt-1">
+                {translate('no_trips_general_desc')}
               </AppText>
             </Card>
           )}
         </View>
+
+        {/* Recent Bookings Section - to match website */}
         <View className="px-4 mt-6">
-          <AppText variant="h3" className="mb-3">
-            ✨ {translate('onboard_amenities')}
-          </AppText>
-          <View className="flex-row flex-wrap">
-            {amenities.map((item, index) => (
-              <View key={index} className="w-1/4 items-center mb-4">
-                <View
-                  className="w-12 h-12 rounded-full items-center justify-center mb-1"
-                  style={{ backgroundColor: `${item.color}20` }}
-                >
-                  <item.icon size={20} color={item.color} />
-                </View>
-                <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600} className="text-center">{item.label}</AppText>
-              </View>
-            ))}
+          <View className="flex-row items-center justify-between mb-3">
+            <AppText variant="h2" weight="bold">
+              🕒 {translate('recent_bookings')}
+            </AppText>
+            <TouchableOpacity onPress={navigationActions.myBookings} className="flex-row items-center">
+              <AppText variant="bodyMedium" weight="semibold" color={colors.primary}>{translate('view_all')}</AppText>
+              <ChevronRight size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
+          
+          <Card className={`p-0 overflow-hidden border ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
+            {userBookings.length === 0 ? (
+              <View className="p-8 items-center">
+                <History size={40} color={colors.textTertiary} className="mb-2" />
+                <AppText color={isDark ? colors.gray400 : colors.gray600}>{translate('no_bookings_general')}</AppText>
+              </View>
+            ) : (
+              <View>
+                {userBookings.slice(0, 3).map((booking, index) => {
+                  const trip = getTripFromBooking(booking);
+                  return (
+                    <TouchableOpacity
+                      key={booking._id}
+                      onPress={() => navigationActions.viewBooking(booking._id)}
+                      className={`p-4 flex-row items-center justify-between ${index !== 2 && index !== userBookings.length - 1 ? (isDark ? 'border-b border-gray-800' : 'border-b border-gray-100') : ''}`}
+                    >
+                      <View className="flex-1">
+                        <AppText weight="bold" color={isDark ? 'white' : colors.gray900}>
+                          {trip?.origin?.stationName} → {trip?.destination?.stationName}
+                        </AppText>
+                        <AppText variant="caption" color={colors.textSecondary} className="mt-1">
+                          {formatDateStr(trip?.departureTime || '')} • {formatCurrency(booking.totalPrice || 0)}
+                        </AppText>
+                      </View>
+                      <Badge 
+                        text={booking.status?.toUpperCase()} 
+                        variant={getBadgeVariant(booking.status || '')}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </Card>
         </View>
+
+
+
+
+
+
         <View className="px-4 mt-6">
           <AppText variant="h3" className="mb-3">
             🚀 {translate('quick_actions')}
@@ -708,16 +703,16 @@ export default function PassengerDashboard() {
                 onPress={action.onPress}
                 activeOpacity={0.8}
               >
-                <Card className="p-3">
+                <Card className="p-3 h-[85px] justify-center">
                   <View className="flex-row items-center">
-                    <View className={`w-10 h-10 rounded-full ${action.bgColor} items-center justify-center mr-2`}>
-                      <action.icon size={18} color="white" />
+                    <View className={`w-10 h-10 rounded-full ${action.bgColor} items-center justify-center mr-3`}>
+                      <action.icon size={20} color="white" />
                     </View>
                     <View className="flex-1">
-                      <AppText weight="semibold" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
+                      <AppText weight="bold" color={isDark ? 'white' : colors.gray900} variant="bodySmall" numberOfLines={1}>
                         {action.title}
                       </AppText>
-                      <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>
+                      <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} numberOfLines={2} className="mt-0.5">
                         {action.description}
                       </AppText>
                     </View>
@@ -728,7 +723,7 @@ export default function PassengerDashboard() {
           </View>
         </View>
 
-        <View className="px-4 mt-6">
+        <View className="px-4 mt-2">
           <TouchableOpacity
             onPress={navigationActions.bookTrip}
             className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4"
@@ -744,7 +739,7 @@ export default function PassengerDashboard() {
             </View>
           </TouchableOpacity>
         </View>
-        <View className="px-4 mt-6 mb-8">
+        <View className="px-4 mt-2 mb-8">
           <Card className={`${isDark ? 'bg-green-900/20 border-green-900/50' : 'bg-green-50 border-green-200'}`}>
             <View className="p-3 flex-row items-center">
               <Shield size={20} color={colors.success} />

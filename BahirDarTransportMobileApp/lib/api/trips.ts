@@ -47,11 +47,9 @@ export const tripsApi = {
     try {
       const response = await apiClient.get(API_ENDPOINTS.TRIPS.BASE, {
         params: {
-          status: filters?.status,
+          ...filters,
           origin,
           destination,
-          date: filters?.date,
-          limit: filters?.limit,
         },
       });
       return response.data;
@@ -115,7 +113,7 @@ export const tripsApi = {
       const data = res.data?.data ?? res.data ?? [];
       const result = await tryBookings(Array.isArray(data) ? data : []);
       return { data: result };
-    } catch (_) {
+    } catch {
       try {
         const response = await apiClient.get(API_ENDPOINTS.BOOKINGS.BASE, {
           params: { tripId, status: 'confirmed,pending' },
@@ -123,7 +121,7 @@ export const tripsApi = {
         const bookings = response.data?.data ?? response.data ?? [];
         const result = await tryBookings(Array.isArray(bookings) ? bookings : []);
         return { data: result };
-      } catch (__) {
+      } catch {
         try {
           const response = await apiClient.get(API_ENDPOINTS.BOOKINGS.MY_BOOKINGS);
           const allBookings = response.data?.data ?? response.data ?? [];
@@ -134,7 +132,7 @@ export const tripsApi = {
           });
           const result = await tryBookings(forTrip);
           return { data: result };
-        } catch (err) {
+        } catch {
           return { data: { bookedSeats: [] } };
         }
       }

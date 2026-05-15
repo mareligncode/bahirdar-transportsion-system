@@ -184,7 +184,7 @@ export default function PaymentCheckoutScreen() {
                   txRef: globalTxRef
                 }
               });
-            }, 1000);
+            }, 300);
             return;
           }
         } else {
@@ -202,7 +202,7 @@ export default function PaymentCheckoutScreen() {
                 txRef: globalTxRef
               }
             });
-          }, 1000);
+          }, 300);
           return;
         }
       }
@@ -248,14 +248,16 @@ export default function PaymentCheckoutScreen() {
       url.includes('payment_status=success') ||
       url.includes('transaction/success') ||
       url.includes('checkout/success') ||
+      url.includes('checkout/test-payment/success') ||
+      url.includes('checkout/payment-receipt') ||
+      url.includes('payment-receipt') ||
       // Intercept Chapa's callback to our backend /payment/verify/ endpoint
-      // This fires when Chapa redirects back to BASE_URL/api/payment/verify/...
       url.includes('/api/payment/verify/') ||
       url.includes('/payment/verify/') ||
       (url.includes('chapa.co/payment') && url.includes('success')) ||
-      (url.includes('chapa.co/receipt') && url.includes('success')) ||
+      (url.includes('chapa.co/receipt')) ||
       (url.includes('chapa.co/transaction') && url.includes('success')) ||
-      (url.includes('chapa.co') && (url.includes('success') || url.includes('completed'))) ||
+      (url.includes('chapa.co') && (url.includes('success') || url.includes('completed') || url.includes('receipt'))) ||
       url.includes('/booking/confirmation') ||
       url.includes('booking/confirmation') ||
       url.includes('payment=completed') ||
@@ -267,8 +269,17 @@ export default function PaymentCheckoutScreen() {
       url.includes('status=cancelled') ||
       url.includes('payment/failed') ||
       url.includes('payment/cancelled');
-    if (url.includes('chapa.co') && !paymentCompleted) {
 
+    // Chapa specific: If we are on a Chapa domain and not completed,
+    // start a more aggressive verification timer if it looks like a receipt/success page
+    if (url.includes('chapa.co') && !paymentCompleted) {
+      const isLikelySuccess = 
+        url.includes('receipt') || 
+        url.includes('success') || 
+        url.includes('completed') ||
+        url.includes('test-payment') ||
+        url.includes('checkout/test');
+      
       if (chapaTimerRef.current) {
         clearTimeout(chapaTimerRef.current);
       }
@@ -277,16 +288,17 @@ export default function PaymentCheckoutScreen() {
         if (!paymentCompleted) {
           handleVerification();
         }
-      }, 10000);
+      }, isLikelySuccess ? 1500 : 7000); // Very fast check if it looks like success
     }
 
     if (isPaymentSuccess) {
-
+      console.log('✅ Payment success detected from URL:', url);
       setShowWebView(false);
       setPaymentCompleted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast(translate('success'), 'success');
 
+      // Reduce delay to back to confirmation page
       setTimeout(() => {
         router.replace({
           pathname: '/(screens)/booking/confirmation',
@@ -296,7 +308,7 @@ export default function PaymentCheckoutScreen() {
             ...(globalTxRef && { txRef: globalTxRef })
           }
         });
-      }, 1000);
+      }, 300); // Reduced from 1000ms
 
       return false;
     }

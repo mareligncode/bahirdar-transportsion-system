@@ -5,26 +5,22 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Dimensions,
   Animated as RNAnimated,
 } from 'react-native';
 import { AppText } from '@/components/common/AppText';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { API_BASE_URL, API_ENDPOINTS } from '../../../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ArrowLeft,
   Info,
   Clock,
   Bus,
-  User,
   ChevronRight,
   CreditCard,
   MapPin,
   Calendar,
-  Users,
   AlertCircle,
   CheckCircle,
   X,
@@ -46,15 +42,15 @@ import { useTrips } from '../../../hooks/useTrips';
 import { useToast } from '../../../components/common/Toast';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useTheme } from '../../../context/ThemeContext';
-import { Trip, Vehicle, Station } from '../../../types';
+import { Trip, Station } from '../../../types';
 
-const { width } = Dimensions.get('window');
+// width removed (unused)
 
 export default function SeatSelectionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const {
     selectedTrip,
@@ -78,46 +74,29 @@ export default function SeatSelectionScreen() {
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
   const slideAnim = useRef(new RNAnimated.Value(50)).current;
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/auth/Login');
-      return;
+  const fetchMyBookedSeats = useCallback(async (tripId: string): Promise<void> => {
+    try {
+      // Get user's own bookings for this trip
+      const myBookings = await getMyBookings(true);
+      const mySeatsForThisTrip = myBookings
+        .filter((b: any) => {
+          const bTripId = typeof b.tripID === 'object' ? b.tripID?._id : b.tripID;
+          return bTripId === tripId && b.status !== 'cancelled';
+        })
+        .flatMap((b: any) => b.seatNumbers || (b.seatNumber ? [b.seatNumber] : []));
+
+      const mySeatsSet = new Set<string>(mySeatsForThisTrip.map((s: any) => s.toString()));
+      setMyBookedSeats(mySeatsSet);
+
+      console.log('📍 My booked seats on this trip:', Array.from(mySeatsSet).join(', ') || 'none');
+
+    } catch (error) {
+      console.error('❌ Error fetching my booked seats:', error);
+      setMyBookedSeats(new Set<string>());
     }
+  }, [getMyBookings]);
 
-    if (!selectedTrip && id && !isInitialized) {
-      fetchTripDetails(id);
-    } else if (selectedTrip && !isInitialized) {
-      setTrip(selectedTrip);
-      fetchMyBookedSeats(selectedTrip._id);
-      setIsInitialized(true);
-
-      RNAnimated.parallel([
-        RNAnimated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(slideAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [isAuthenticated, selectedTrip, id, isInitialized]);
-
-  // Refresh booked seats when the screen gains focus
-  useFocusEffect(
-    useCallback(() => {
-      if (!isInitialized) return;
-      // Refresh the user's booked seats for the current trip
-      if (selectedTrip && selectedTrip._id) {
-        fetchMyBookedSeats(selectedTrip._id);
-      }
-    }, [isInitialized, selectedTrip])
-  );
-
-  const fetchTripDetails = async (tripId: string): Promise<void> => {
+  const fetchTripDetails = useCallback(async (tripId: string): Promise<void> => {
     setLoading(true);
     try {
       const data = await getTripById(tripId);
@@ -149,29 +128,48 @@ export default function SeatSelectionScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getTripById, fetchMyBookedSeats, fadeAnim, slideAnim, router]);
 
-  const fetchMyBookedSeats = async (tripId: string): Promise<void> => {
-    try {
-      // Get user's own bookings for this trip
-      const myBookings = await getMyBookings(true);
-      const mySeatsForThisTrip = myBookings
-        .filter((b: any) => {
-          const bTripId = typeof b.tripID === 'object' ? b.tripID?._id : b.tripID;
-          return bTripId === tripId && b.status !== 'cancelled';
-        })
-        .flatMap((b: any) => b.seatNumbers || (b.seatNumber ? [b.seatNumber] : []));
-
-      const mySeatsSet = new Set<string>(mySeatsForThisTrip.map((s: any) => s.toString()));
-      setMyBookedSeats(mySeatsSet);
-
-      console.log('📍 My booked seats on this trip:', Array.from(mySeatsSet).join(', ') || 'none');
-
-    } catch (error) {
-      console.error('❌ Error fetching my booked seats:', error);
-      setMyBookedSeats(new Set<string>());
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/auth/Login');
+      return;
     }
-  };
+
+    if (!selectedTrip && id && !isInitialized) {
+      fetchTripDetails(id);
+    } else if (selectedTrip && !isInitialized) {
+      setTrip(selectedTrip);
+      fetchMyBookedSeats(selectedTrip._id);
+      setIsInitialized(true);
+
+      RNAnimated.parallel([
+        RNAnimated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(slideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isAuthenticated, selectedTrip, id, isInitialized, router, fetchTripDetails, fetchMyBookedSeats, fadeAnim, slideAnim]);
+
+  // Refresh booked seats when the screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (!isInitialized) return;
+      // Refresh the user's booked seats for the current trip
+      if (selectedTrip && selectedTrip._id) {
+        fetchMyBookedSeats(selectedTrip._id);
+      }
+    }, [isInitialized, selectedTrip, fetchMyBookedSeats])
+  );
+
+
 
   const handleSeatSelect = (seatNumber: number): void => {
     const seatStr = seatNumber.toString();

@@ -344,7 +344,7 @@ export default function BookingDetailScreen() {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -361,14 +361,14 @@ export default function BookingDetailScreen() {
               { translateY: slideAnim },
             ]
           }}
-          className="mx-4 mt-4"
+          className="mx-5 mt-6"
         >
           <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-transparent'} rounded-2xl overflow-hidden shadow-lg border`}>
             <LinearGradient
               colors={['#3b82f6', '#1e40af']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              className="p-4"
+              className="p-6"
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 items-center">
@@ -391,13 +391,13 @@ export default function BookingDetailScreen() {
               </View>
             </LinearGradient>
 
-            <View style={{ borderColor: colors.border, borderBottomWidth: 1 }} className="p-4">
+            <View style={{ borderColor: colors.border, borderBottomWidth: 1 }} className="p-6">
               <View className="flex-row justify-between">
                 <View className="items-center flex-1">
                   <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }} className="w-10 h-10 rounded-full items-center justify-center mb-2">
                     <Clock size={20} color={isDark ? '#60a5fa' : colors.primary} />
                   </View>
-                  <AppText variant="caption" color={colors.textSecondary}>{translate('departure') || 'Departure'}</AppText>
+                  <AppText variant="bodySmall" weight="bold" color={colors.textSecondary}>{translate('departure') || 'Departure'}</AppText>
                   <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mt-1">
                     {formatTime(trip.departureTime)}
                   </AppText>
@@ -409,7 +409,7 @@ export default function BookingDetailScreen() {
                   <View style={{ backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#d1fae5' }} className="w-10 h-10 rounded-full items-center justify-center mb-2">
                     <Clock size={20} color="#10b981" />
                   </View>
-                  <AppText variant="caption" color={colors.textSecondary}>{translate('arrival') || 'Arrival'}</AppText>
+                  <AppText variant="bodySmall" weight="bold" color={colors.textSecondary}>{translate('arrival') || 'Arrival'}</AppText>
                   <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mt-1">
                     {formatTime(trip.arrivalTime)}
                   </AppText>
@@ -420,13 +420,13 @@ export default function BookingDetailScreen() {
               </View>
             </View>
 
-            <View className="p-4">
+            <View className="p-6">
               <View className="flex-row flex-wrap items-center justify-between mb-4">
                 <View className="flex-row items-center mb-2">
                   <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }} className="w-8 h-8 rounded-full items-center justify-center mr-3">
                     <MapPin size={16} color={colors.primary} />
                   </View>
-                  <AppText variant="bodyMedium" weight="medium" color={colors.text}>{translate('seat')} Number(s)</AppText>
+                  <AppText variant="bodyLarge" weight="bold" color={colors.text}>{translate('seat')} Number(s)</AppText>
                 </View>
                 <View className="flex-row flex-wrap justify-end gap-1 flex-1 ml-4 mb-2">
                   {seatNumbers.map((seat: number, index: number) => (
@@ -437,10 +437,10 @@ export default function BookingDetailScreen() {
                 </View>
               </View>
 
-              <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.05)' : '#eff6ff' }} className="p-4 rounded-xl">
+              <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.05)' : '#eff6ff' }} className="p-5 rounded-2xl">
                 <AppText variant="bodyMedium" weight="bold" color={colors.text} className="mb-3">{translate('payment_information')}</AppText>
                 <View className="flex-row justify-between items-center mb-2">
-                  <AppText variant="bodySmall" color={colors.textSecondary}>{translate('status') || 'Status'}</AppText>
+                  <AppText variant="bodyMedium" weight="bold" color={colors.textSecondary}>{translate('status') || 'Status'}</AppText>
                   <View className={`px-3 py-1 rounded-full ${booking.paymentStatus === 'success' ? (isDark ? 'bg-green-900/30' : 'bg-green-100') :
                       booking.paymentStatus === 'pending' ? (isDark ? 'bg-yellow-900/30' : 'bg-yellow-100') : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                     }`}>
@@ -470,7 +470,7 @@ export default function BookingDetailScreen() {
           </View>
         </Animated.View>
 
-        <View className="px-4 pb-8 gap-3">
+        <View className="px-6 pb-12 gap-4">
           {needsPayment && (
             <TouchableOpacity
               onPress={handleMakePayment}

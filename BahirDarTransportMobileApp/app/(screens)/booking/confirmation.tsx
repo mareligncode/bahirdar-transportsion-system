@@ -114,7 +114,7 @@ export default function BookingConfirmationScreen() {
 
   const handleViewTicketDetail = () => {
     if (booking && !isCancelled) {
-      router.push(`/tabs/tickets/${booking._id}`);
+      router.push(`/tabs/tickets/${String(booking._id)}`);
     }
   };
 

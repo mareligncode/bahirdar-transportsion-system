@@ -63,6 +63,7 @@ export default function TicketDetailScreen() {
   const { translate } = useTranslation();
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [compLoading, setCompLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
@@ -87,45 +88,64 @@ export default function TicketDetailScreen() {
   useEffect(() => {
     if (Platform.OS === 'android') {
       (async () => {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        setMediaPermission(status === 'granted');
+        try {
+          const { status } = await MediaLibrary.requestPermissionsAsync();
+          setMediaPermission(status === 'granted');
+        } catch (err) {
+          console.warn('⚠️ MediaLibrary permission request failed:', err);
+          // Don't crash, just set permission to false
+          setMediaPermission(false);
+        }
       })();
     }
   }, []);
 
   const fetchBooking = async () => {
-    const data = await getBookingById(id);
-    if (data) {
-      setBooking(data);
+    console.log('🔍 Fetching booking for ID:', id);
+    setCompLoading(true);
+    try {
+      const data = await getBookingById(id);
+      if (data) {
+        console.log('✅ Booking found:', data._id);
+        setBooking(data);
 
-      if (data.status?.toLowerCase() === 'pending') {
-        try {
-          const allMyBookings = await getMyBookings();
-          if (allMyBookings && allMyBookings.length > 0) {
-            const currentTripId = typeof data.tripID === 'object' && data.tripID !== null ? data.tripID._id : data.tripID;
+        if (data.status?.toLowerCase() === 'pending') {
+          try {
+            const allMyBookings = await getMyBookings();
+            if (allMyBookings && allMyBookings.length > 0) {
+              const currentTripId = typeof data.tripID === 'object' && data.tripID !== null ? data.tripID._id : data.tripID;
 
-            const sameTripPending = allMyBookings.filter(b => {
-              const bTripId = typeof b.tripID === 'object' && b.tripID !== null ? b.tripID._id : b.tripID;
-              return bTripId === currentTripId &&
-                b.status?.toLowerCase() === 'pending' &&
-                b._id !== data._id;
-            });
+              const sameTripPending = allMyBookings.filter(b => {
+                const bTripId = typeof b.tripID === 'object' && b.tripID !== null ? b.tripID._id : b.tripID;
+                return bTripId === currentTripId &&
+                  b.status?.toLowerCase() === 'pending' &&
+                  b._id !== data._id;
+              });
 
-            if (sameTripPending.length > 0) {
-              setRelatedBookingIds([data._id, ...sameTripPending.map(b => b._id)]);
+              if (sameTripPending.length > 0) {
+                setRelatedBookingIds([data._id, ...sameTripPending.map(b => b._id)]);
+              } else {
+                setRelatedBookingIds([data._id]);
+              }
             } else {
               setRelatedBookingIds([data._id]);
             }
-          } else {
+          } catch (err) {
+            console.error('Error fetching related bookings:', err);
             setRelatedBookingIds([data._id]);
           }
-        } catch (err) {
-          console.error('Error fetching related bookings:', err);
+        } else {
           setRelatedBookingIds([data._id]);
         }
       } else {
-        setRelatedBookingIds([data._id]);
+        console.warn('❌ Booking not found for ID:', id);
+        setBooking(null);
       }
+    } catch (err) {
+      console.error('❌ Error in fetchBooking:', err);
+      setBooking(null);
+    } finally {
+      setCompLoading(false);
     }
   };
 
@@ -154,10 +174,12 @@ export default function TicketDetailScreen() {
     const origin = (trip.origin || {}) as Station;
     const destination = (trip.destination || {}) as Station;
     const vehicle = (trip.vehicle || {}) as Vehicle;
-    const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
-    const arrivalTime = trip.arrivalTime ? new Date(trip.arrivalTime) : null;
     const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
-    const totalAmount = booking.totalPrice || booking.amount || ((trip.price || 0) * seatNumbers.length);
+    const seatCount = seatNumbers.length;
+    const totalAmount = booking.totalPrice || booking.amount || ((trip.price || 0) * seatCount);
+    const pricePerSeat = totalAmount / seatCount;
+    const passengerName = booking.passengerDetails?.fullName || user?.fullName || 'N/A';
+    const passengerPhone = booking.passengerDetails?.phoneNumber || user?.phoneNumber || '';
 
     return `
       <!DOCTYPE html>
@@ -167,233 +189,101 @@ export default function TicketDetailScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${translate('app_name')} - ${translate('ticket')}</title>
         <style>
+          @page { size: 80mm 200mm; margin: 0; }
           body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'Courier New', Courier, monospace; 
             margin: 0; 
-            padding: 20px; 
-            background: #f3f4f6; 
+            padding: 10mm; 
+            background: white; 
+            color: black;
+            width: 80mm;
           }
           .ticket { 
-            max-width: 400px; 
-            margin: 0 auto; 
-            background: white; 
-            border-radius: 24px; 
-            overflow: hidden; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+            width: 100%;
+            text-align: left;
+            line-height: 1.4;
           }
           .header { 
-            background: linear-gradient(135deg, #3b82f6, #1e40af); 
-            padding: 24px; 
             text-align: center; 
+            margin-bottom: 5mm; 
           }
-          .header h1 { 
-            color: white; 
-            margin: 0; 
-            font-size: 24px; 
+          .header .brand { 
             font-weight: bold; 
-          }
-          .header p { 
-            color: #bfdbfe; 
-            margin: 8px 0 0; 
-            font-size: 14px; 
-          }
-          .content { 
-            padding: 24px; 
-          }
-          .status-badge { 
-            display: inline-block; 
-            padding: 6px 12px; 
-            border-radius: 20px; 
-            font-size: 12px; 
-            font-weight: bold; 
-            margin-bottom: 16px; 
-            text-transform: uppercase;
-          }
-          .status-confirmed { 
-            background: #dcfce7; 
-            color: #166534; 
-          }
-          .status-pending { 
-            background: #fef3c7; 
-            color: #92400e; 
-          }
-          .status-cancelled { 
-            background: #fee2e2; 
-            color: #991b1b; 
-          }
-          .info-row { 
-            display: flex; 
-            justify-content: space-between; 
-            margin-bottom: 12px; 
-            padding-bottom: 12px;
-            border-bottom: 1px solid #e5e7eb;
-          }
-          .info-row:last-child {
-            border-bottom: none;
-          }
-          .label { 
-            color: #6b7280; 
-            font-size: 14px; 
-          }
-          .value { 
-            font-weight: 600; 
-            color: #1f2937; 
-            font-size: 14px;
-          }
-          .route { 
-            text-align: center; 
-            margin: 24px 0; 
-            padding: 16px;
-            background: #f9fafb;
-            border-radius: 12px;
-          }
-          .route h2 { 
-            margin: 0; 
             font-size: 18px; 
-            font-weight: 700;
-            color: #1f2937;
-          }
-          .route-time {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 16px;
-          }
-          .time-block {
-            flex: 1;
-            text-align: center;
-          }
-          .time-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 4px;
-          }
-          .time-value {
-            font-size: 16px;
-            font-weight: 700;
-            color: #3b82f6;
+            display: block;
+            margin-bottom: 2px;
           }
           .divider { 
-            height: 1px; 
-            background: linear-gradient(90deg, transparent, #e5e7eb, transparent); 
-            margin: 24px 0; 
+            border-top: 1px dashed black; 
+            margin: 3mm 0; 
           }
-          .footer { 
-            background: #f9fafb; 
-            padding: 16px; 
-            text-align: center; 
-            font-size: 11px; 
-            color: #6b7280; 
-            border-top: 1px dashed #d1d5db; 
+          .info-row { 
+            margin-bottom: 1.5mm; 
+            font-size: 13px;
           }
-          .qr-placeholder { 
-            width: 120px; 
-            height: 120px; 
-            background: #f3f4f6; 
-            margin: 16px auto; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border: 2px dashed #d1d5db; 
-            border-radius: 12px; 
-          }
-          .seat-tag {
-            background: #3b82f6;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            display: inline-block;
-          }
-          .amount {
-            font-size: 24px;
-            font-weight: 800;
-            color: #1e40af;
+          .bold { font-weight: bold; }
+          .center { text-align: center; }
+          .qr-container {
             text-align: center;
-            margin: 16px 0;
+            margin: 5mm 0;
           }
-          .barcode {
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-size: 24px;
-            letter-spacing: 4px;
-            margin: 16px 0;
+          .qr-placeholder {
+            width: 40mm;
+            height: 40mm;
+            border: 1px solid black;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
           }
         </style>
       </head>
       <body>
         <div class="ticket">
           <div class="header">
-            <h1>Bahir Dar Transport</h1>
-            <p>${translate('e_ticket')}</p>
+            <span class="brand">🚌 ${translate('mengedenya')}</span>
+            <div style="font-size: 12px;">${translate('public_transport_service')}</div>
           </div>
-          <div class="content">
-            <div class="status-badge status-${booking.status?.toLowerCase() || 'pending'}">
-              ${translate(`ticket_status_${booking.status?.toLowerCase()}` as any).toUpperCase()}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">${translate('booking')} #</span>
-              <span class="value">${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}</span>
-            </div>
-            
-            <div class="info-row">
-              <span class="label">${translate('ticket')} #</span>
-              <span class="value">${booking.ticketNumber || translate('not_available')}</span>
-            </div>
-            
-            <div class="route">
-              <h2>${origin.stationName || translate('unknown')} → ${destination.stationName || translate('unknown')}</h2>
-              <div class="route-time">
-                <div class="time-block">
-                  <div class="time-label">${translate('departure')}</div>
-                  <div class="time-value">${departureTime ? departureTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : translate('not_available')}</div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${departureTime ? formatDate(departureTime.toISOString()) : ''}</div>
-                </div>
-                <div class="time-block">
-                  <div class="time-label">${translate('arrival')}</div>
-                  <div class="time-value" style="color: #10b981;">${arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : translate('not_available')}</div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${arrivalTime ? formatDate(arrivalTime.toISOString()) : ''}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin-bottom: 16px;">
-              ${seatNumbers.map((seat, index) => (
-      `<span class="seat-tag" ${index > 0 ? 'style="margin-left: 4px;"' : ''}>${translate('seat_label_static')} ${seat}</span>`
-    )).join('')}
-            </div>
-            
-            <div class="info-row">
-              <span class="label">${translate('passenger_label')}</span>
-              <span class="value">${booking.passengerDetails?.fullName || user?.fullName || translate('unknown')}</span>
-            </div>
-            
-            <div class="info-row">
-              <span class="label">${translate('vehicle')}</span>
-              <span class="value">${vehicle.carType || translate('bus')} • ${vehicle.plateNumber || translate('not_available')}</span>
-            </div>
-            
-            <div class="info-row">
-              <span class="label">${translate('payment')}</span>
-              <span class="value" style="color: ${booking.paymentStatus === 'success' ? '#16a34a' : '#ca8a04'}">${translate(`ticket_status_${booking.paymentStatus || 'pending'}` as any).toUpperCase()}</span>
-            </div>
-            
-            <div class="amount">
-              ${formatCurrency(totalAmount)}
-            </div>
-            
-            <div class="barcode">
-              ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
-            </div>
-            
-            <div class="qr-placeholder">
-              <span style="color: #9ca3af;">QR Code</span>
-            </div>
+
+          <div class="info-row">
+            ${translate('from')} ${origin.stationName || ''} - ${destination.stationName || ''} ${destination.city ? `(${destination.city})` : ''}
           </div>
-          <div class="footer">
-            ${translate('share_thank_you')}<br/>
-            ${translate('computer_generated_note')}
+          <div class="info-row">${translate('tin_label')} : 0049849051</div>
+          <div class="info-row">${translate('seats_label')} .. ${seatNumbers.join(', ')} ..</div>
+          <div class="info-row bold">${translate('plate_no')} : ${vehicle.plateNumber || ''}</div>
+          <div class="info-row bold">${translate('ticket_number_label')} : ${booking.ticketNumber || ''}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">${translate('travel_date')} : ${trip.departureTime ? formatDate(trip.departureTime) : ''} ${trip.departureTime ? formatTime(trip.departureTime) : ''}</div>
+          <div class="info-row">${translate('passenger_receipt')} : ${passengerName}</div>
+          <div class="info-row">${translate('phone_number')} : ${passengerPhone}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">${translate('tariff')} : ${pricePerSeat.toFixed(2)} ${translate('etb')}</div>
+          <div class="info-row">${translate('service')} : 0.00 ${translate('etb')}</div>
+          <div class="info-row bold">${translate('total_fee')} : ${totalAmount.toFixed(2)} ${translate('etb')}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">${translate('ticket_date')} : ${formatDate(booking.bookingDate || booking.createdAt || '')} ${formatTime(booking.bookingDate || booking.createdAt || '')}</div>
+          <div class="info-row">${translate('association_name')} : ${vehicle.associationName || 'N/A'}</div>
+          <div class="info-row">${translate('agent')} : system</div>
+          <div class="info-row bold">${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">✓ ${translate('authorized_note')}</div>
+          <div class="info-row">✓ ${translate('complaints_note')}</div>
+          
+          <div class="qr-container">
+            <div class="qr-placeholder">QR Code Verification</div>
+          </div>
+          
+          <div class="center" style="font-size: 10px; margin-top: 5mm;">
+            #1 Choice for Travelers
           </div>
         </div>
       </body>
@@ -433,42 +323,41 @@ export default function TicketDetailScreen() {
 
 
   const handleShare = async () => {
-    if (!booking) return;
+    if (!booking || !viewShotRef.current) return;
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      showToast(translate('preparing_share') || 'Preparing to share...', 'info');
+
+      // Capture the ticket as an image first
+      const uri = await captureRef(viewShotRef.current, {
+        format: 'png',
+        quality: 0.9,
+      });
 
       const trip = typeof booking.tripID === 'object' && booking.tripID !== null
         ? booking.tripID as Trip
         : {} as Trip;
       const origin = (trip.origin || {}) as Station;
       const destination = (trip.destination || {}) as Station;
-      const departureTime = trip.departureTime ? new Date(trip.departureTime) : null;
       const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);
-      const totalAmount = booking.totalPrice || booking.amount || 0;
 
-      const message = `🚌 *${translate('app_name')} - ${translate('ticket')}*\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `*${translate('from')}:* ${origin.stationName || translate('unknown')}\n` +
-        `*${translate('to')}:* ${destination.stationName || translate('unknown')}\n` +
-        `*${translate('date')}:* ${departureTime ? formatDate(departureTime.toISOString()) : translate('not_available')}\n` +
-        `*${translate('time')}:* ${departureTime ? formatTime(departureTime.toISOString()) : translate('not_available')}\n` +
-        `*${translate('seats')}:* ${seatNumbers.join(', ')}\n` +
-        `*${translate('booking')} #:* ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}\n` +
-        `*${translate('total_amount')}:* ${formatCurrency(totalAmount)}\n` +
-        `*${translate('status')}:* ${translate(`ticket_status_${booking.status?.toLowerCase()}` as any).toUpperCase()}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `${translate('share_thank_you')}`;
+      const shareTitle = `${translate('app_name')} - ${translate('ticket')}`;
+      const shareMessage = `${translate('from')}: ${origin.stationName}\n${translate('to')}: ${destination.stationName}\n${translate('seat_numbers')}: ${seatNumbers.join(', ')}`;
 
-      const result = await Share.share({
-        message,
-        title: translate('ticket')
-      });
-
-      if (result.action === Share.sharedAction) {
-        showToast(translate('ticket_shared_success'), 'success');
-      } else if (result.action === Share.dismissedAction) {
-        console.log('Share dismissed');
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: shareTitle,
+          UTI: 'public.png',
+        });
+        showToast(translate('ticket_shared_success') || 'Ticket shared successfully!', 'success');
+      } else {
+        // Fallback to basic text share if Sharing API is not available
+        await Share.share({
+          message: `🚌 ${shareTitle}\n\n${shareMessage}`,
+          title: shareTitle
+        });
       }
 
     } catch (error: any) {
@@ -512,7 +401,7 @@ export default function TicketDetailScreen() {
       showToast(`Failed: ${error?.message || 'Unknown error'}`, 'error');
     }
   };
-  if (loading && !refreshing) {
+  if ((loading || compLoading) && !refreshing) {
     return (
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'} justify-center items-center`}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -534,12 +423,17 @@ export default function TicketDetailScreen() {
           <AppText variant="h2" weight="bold" color={isDark ? 'white' : colors.gray800} className="mt-4">
             {translate('booking_not_found')}
           </AppText>
-          <AppText color={isDark ? colors.gray400 : colors.gray500} className="text-center mt-2">
+          <AppText color={isDark ? colors.gray400 : colors.gray500} className="text-center mt-2 mb-4">
             {translate('booking_not_found_msg')}
           </AppText>
+
+          <View className={`px-4 py-2 rounded-lg mb-6 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            <AppText variant="caption" color={colors.textTertiary}>ID: {id}</AppText>
+          </View>
+
           <TouchableOpacity
             onPress={() => router.push('/tabs/tickets')}
-            className="mt-6 bg-blue-600 py-3 px-6 rounded-xl"
+            className="bg-blue-600 py-4 px-8 rounded-2xl shadow-lg"
           >
             <AppText weight="semibold" color="white">{translate('view_my_tickets')}</AppText>
           </TouchableOpacity>
@@ -561,14 +455,24 @@ export default function TicketDetailScreen() {
   const isPending = booking.status?.toLowerCase() === 'pending';
   const isCancelled = booking.status?.toLowerCase() === 'cancelled';
   const isPaid = booking.paymentStatus === 'success';
-  const qrValue = JSON.stringify({
-    id: booking._id,
-    bookingNumber: booking.bookingNumber,
-    ticketNumber: booking.ticketNumber,
-    seatNumbers,
-    departureTime: trip.departureTime,
-    passengerName: booking.passengerDetails?.fullName || user?.fullName,
-  });
+  const seatCount = seatNumbers.length;
+  const pricePerSeat = totalAmount / seatCount;
+  const passengerName = booking.passengerDetails?.fullName || user?.fullName || 'N/A';
+
+  const qrValue = `
+${translate('public_transport_service')}
+${translate('from')} ${origin.stationName || 'N/A'} - ${destination.stationName || 'N/A'}
+TIN : 0049849051
+${translate('seats_label')} .. ${seatNumbers.join(', ')} ..
+${translate('plate_no')} : ${vehicle.plateNumber || 'N/A'}
+${translate('ticket_number_label')} : ${booking.ticketNumber || booking._id?.slice(-6).toUpperCase()}
+${translate('travel_date')} : ${formatDate(trip.departureTime || '')} ${formatTime(trip.departureTime || '')}
+${translate('passenger_receipt')} : ${passengerName}
+${translate('tariff')} : ${pricePerSeat.toFixed(2)} ${translate('etb')}
+${translate('total_fee')} : ${totalAmount.toFixed(2)} ${translate('etb')}
+${translate('ticket_date')} : ${formatDate(booking.bookingDate || booking.createdAt || '')}
+${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
+`.trim();
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`} edges={['top', 'left', 'right', 'bottom']}>
@@ -641,146 +545,95 @@ export default function TicketDetailScreen() {
         <ViewShot
           ref={viewShotRef}
           options={{ format: 'png', quality: 0.9 }}
-          style={{ backgroundColor: isDark ? colors.background : '#f9fafb' }} 
+          style={{ backgroundColor: 'white' }} 
         >
-          <View className={`mx-4 mt-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl overflow-hidden border shadow-sm`}>
-            <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderBottomColor: isDark ? 'rgba(59,130,246,0.2)' : '#bfdbfe' }} className="p-4 border-b">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1 items-center">
-                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('from')}</AppText>
-                  <AppText weight="bold" color={isDark ? 'white' : colors.gray900} className="text-center">
-                    {origin.stationName || translate('not_available')}
-                  </AppText>
-                  {origin.city && (
-                    <AppText variant="caption" color={isDark ? colors.textTertiary : colors.gray500}>{origin.city}</AppText>
-                  )}
-                </View>
-                <View className="px-4">
-                  <Bus size={24} color={isDark ? colors.primary : colors.primary} />
-                </View>
-                <View className="flex-1 items-center">
-                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('to')}</AppText>
-                  <AppText weight="bold" color={isDark ? 'white' : colors.gray900} className="text-center">
-                    {destination.stationName || translate('not_available')}
-                  </AppText>
-                  {destination.city && (
-                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{destination.city}</AppText>
-                  )}
-                </View>
-              </View>
+          <View className="mx-4 mt-4 bg-white p-6 shadow-sm border border-gray-200" style={{ minHeight: 500 }}>
+            <View className="items-center mb-6">
+              <AppText weight="bold" className="text-xl">🚌 {translate('mengedenya')}</AppText>
+              <AppText variant="caption" className="text-gray-600">{translate('public_transport_service')}</AppText>
             </View>
-            <View className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <View className="flex-row gap-4">
-                <View className="flex-1">
-                  <View className="flex-row items-center gap-1 mb-1">
-                    <Clock size={14} color={colors.primary} />
-                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('departure')}</AppText>
-                  </View>
-                  <AppText variant="bodySmall" weight="semibold" color={isDark ? 'white' : colors.gray900}>
-                    {trip.departureTime ? formatDate(trip.departureTime) : translate('not_available')} {translate('at')} {trip.departureTime ? formatTime(trip.departureTime) : translate('not_available')}
-                  </AppText>
-                </View>
-                <View className="flex-1">
-                  <View className="flex-row items-center gap-1 mb-1">
-                    <Clock size={14} color="#10b981" />
-                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500}>{translate('arrival')}</AppText>
-                  </View>
-                  <AppText variant="bodySmall" weight="semibold" color={isDark ? 'white' : colors.gray900}>
-                    {trip.arrivalTime ? formatDate(trip.arrivalTime) : translate('not_available')} {translate('at')} {trip.arrivalTime ? formatTime(trip.arrivalTime) : translate('not_available')}
-                  </AppText>
-                </View>
-              </View>
-            </View>
-            <View className="p-4 gap-3">
-              <View className="flex-row items-center justify-between">
-                <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('seat_numbers')}</AppText>
-                <View className="flex-row gap-1">
-                  {seatNumbers.map((seat: number, index: number) => (
-                    <View key={index} className="bg-blue-500 px-3 py-1 rounded-full">
-                      <AppText weight="bold" color="white" variant="bodySmall">{seat}</AppText>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <View className="flex-row items-center justify-between">
-                <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('vehicle')}</AppText>
-                <AppText weight="500" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
-                  {vehicle.carType || translate('bus')} • {vehicle.plateNumber || translate('not_available')}
-                </AppText>
-              </View>
-              {driver?.fullName && (
-                <View className="flex-row items-center justify-between">
-                  <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>{translate('driver')}</AppText>
-                  <AppText weight="500" color={isDark ? 'white' : colors.gray900} variant="bodySmall">
-                    {driver.fullName}
-                  </AppText>
-                </View>
-              )}
-              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <AppText weight="semibold" color={isDark ? colors.gray300 : colors.gray700} variant="bodyMedium" className="mb-2">
-                  {translate('passenger_info')}
-                </AppText>
-                <View className="gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <User size={14} color={colors.textSecondary} />
-                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
-                      {booking.passengerDetails?.fullName || user?.fullName}
-                    </AppText>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Phone size={14} color={colors.textSecondary} />
-                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
-                      {booking.passengerDetails?.phoneNumber || user?.phoneNumber}
-                    </AppText>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Mail size={14} color={colors.textSecondary} />
-                    <AppText color={isDark ? colors.gray300 : colors.gray600} variant="bodySmall">
-                      {booking.passengerDetails?.email || user?.email}
-                    </AppText>
-                  </View>
-                </View>
-              </View>
-              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <AppText weight="semibold" color={isDark ? colors.gray300 : colors.gray700} variant="bodyMedium" className="mb-2">
-                  {translate('payment_information')}
-                </AppText>
-                <View className="flex-row justify-between items-center">
-                  <View className="flex-row items-center gap-2">
-                    <CreditCard size={14} color={colors.textSecondary} />
-                    <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray600}>{translate('status')}</AppText>
-                  </View>
-                  <View className={`px-2 py-1 rounded-full ${isPaid ? (isDark ? 'bg-green-900/30' : 'bg-green-100') :
-                    booking.paymentStatus === 'pending' ? (isDark ? 'bg-yellow-900/30' : 'bg-yellow-100') : (isDark ? 'bg-gray-700' : 'bg-gray-100')
-                    }`}>
-                    <AppText variant="caption" weight="bold" color={isPaid ? (isDark ? '#4ade80' : '#15803d') :
-                      booking.paymentStatus === 'pending' ? (isDark ? '#fbbf24' : '#a16207') : (isDark ? colors.textTertiary : '#374151')
-                      }>
-                      {translate(`ticket_status_${booking.paymentStatus || 'pending'}` as any).toUpperCase()}
-                    </AppText>
-                  </View>
-                </View>
-              </View>
-              <View className={`mt-2 pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <View className="flex-row justify-between items-center">
-                  <AppText variant="bodyLarge" weight="semibold" color={isDark ? colors.gray300 : colors.gray700}>
-                    {translate('total_amount')}
-                  </AppText>
-                  <AppText variant="h2" weight="bold" color={isDark ? '#60a5fa' : colors.primary}>
-                    {formatCurrency(totalAmount)}
-                  </AppText>
-                </View>
-                {seatNumbers.length > 1 && (
-                  <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="text-right mt-1">
-                    {seatNumbers.length} {translate('seats')} × {formatCurrency(totalAmount / seatNumbers.length)}
-                  </AppText>
-                )}
-              </View>
-            </View>
-            <View className={`p-3 ${isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-gray-50 border-gray-200'} border-t`}>
-              <AppText variant="caption" color={isDark ? colors.textTertiary : colors.gray400} className="text-center">
-                {translate('booked_on')} {formatDate(booking.bookingDate || booking.createdAt || '')}
+
+            <View className="mb-2">
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('from')} {origin.stationName} - {destination.stationName} {destination.city ? `(${destination.city})` : ''}
               </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('tin_label')} : 0049849051
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('seats_label')} .. {seatNumbers.join(', ')} ..
+              </AppText>
+              <AppText variant="bodySmall" weight="bold" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('plate_no')} : {vehicle.plateNumber || 'N/A'}
+              </AppText>
+              <AppText variant="bodySmall" weight="bold" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('ticket_number_label')} : {booking.ticketNumber || 'N/A'}
+              </AppText>
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+
+            <View className="mb-2">
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('travel_date')} : {formatDate(trip.departureTime || '')} {formatTime(trip.departureTime || '')}
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('passenger_receipt')} : {passengerName}
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('phone_number')} : {booking.passengerDetails?.phoneNumber || user?.phoneNumber || 'N/A'}
+              </AppText>
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+
+            <View className="mb-2">
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('tariff')} : {pricePerSeat.toFixed(2)} {translate('etb')}
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('service')} : 0.00 {translate('etb')}
+              </AppText>
+              <AppText variant="bodySmall" weight="bold" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('total_fee')} : {totalAmount.toFixed(2)} {translate('etb')}
+              </AppText>
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+
+            <View className="mb-2">
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('ticket_date')} : {formatDate(booking.bookingDate || booking.createdAt || '')} {formatTime(booking.bookingDate || booking.createdAt || '')}
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('association_name')} : {vehicle.associationName || 'N/A'}
+              </AppText>
+              <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('agent')} : system
+              </AppText>
+              <AppText variant="bodySmall" weight="bold" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                {translate('confirmation_number')} : {booking.bookingNumber || booking._id?.slice(-6).toUpperCase()}
+              </AppText>
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+
+            <View className="mb-6">
+              <AppText variant="caption" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                ✓ {translate('authorized_note')}
+              </AppText>
+              <AppText variant="caption" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                ✓ {translate('complaints_note')}
+              </AppText>
+            </View>
+
+            <View className="items-center mt-auto">
+              <QrCodeDisplay
+                value={qrValue}
+                size={120}
+                showActions={false}
+              />
+              <AppText variant="caption" className="mt-4 text-gray-400">#1 Choice for Travelers</AppText>
             </View>
           </View>
         </ViewShot>
@@ -805,27 +658,36 @@ export default function TicketDetailScreen() {
               </AppText>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            onPress={handleDownloadPDF}
-            className="flex-row items-center justify-center py-3 bg-blue-600 rounded-xl gap-2"
-          >
-            <Download size={20} color="white" />
-            <AppText weight="medium" color="white">Download PDF Ticket</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleSaveToGallery}
-            className="flex-row items-center justify-center py-3 bg-green-600 rounded-xl gap-2"
-          >
-            <Save size={20} color="white" />
-            <AppText weight="medium" color="white">Save to Gallery</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleShare}
-            className="flex-row items-center justify-center py-3 bg-purple-600 rounded-xl gap-2"
-          >
-            <Share2 size={20} color="white" />
-            <AppText weight="medium" color="white">Share Ticket</AppText>
-          </TouchableOpacity>
+          <View className="gap-3 mt-4">
+            <TouchableOpacity
+              onPress={handleDownloadPDF}
+              className="flex-row items-center justify-center py-4 bg-blue-600 rounded-xl shadow-sm"
+              activeOpacity={0.8}
+            >
+              <Download size={20} color="white" />
+              <AppText weight="bold" color="white" className="ml-2">Download PDF Ticket</AppText>
+            </TouchableOpacity>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={handleSaveToGallery}
+                className="flex-1 flex-row items-center justify-center py-4 bg-emerald-600 rounded-xl shadow-sm"
+                activeOpacity={0.8}
+              >
+                <Save size={20} color="white" />
+                <AppText weight="bold" color="white" className="ml-2">Save Image</AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleShare}
+                className="flex-1 flex-row items-center justify-center py-4 bg-indigo-600 rounded-xl shadow-sm"
+                activeOpacity={0.8}
+              >
+                <Share2 size={20} color="white" />
+                <AppText weight="bold" color="white" className="ml-2">Share Ticket</AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
       <Modal
