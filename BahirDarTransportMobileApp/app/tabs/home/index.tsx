@@ -351,18 +351,18 @@ export default function PassengerDashboard() {
     const unreadCount = useUnreadCount();
     
     return (
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-center gap-4">
         <TouchableOpacity
           onPress={navigationActions.notifications}
           className="relative"
           activeOpacity={0.7}
         >
-          <View className={`w-10 h-10 ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} rounded-full items-center justify-center`}>
-            <Bell size={20} color={colors.primary} />
+          <View className={`w-11 h-11 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full items-center justify-center`}>
+            <Bell size={22} color={colors.textPrimary} />
           </View>
           {unreadCount > 0 && (
-            <View className="absolute -top-1 -right-1 bg-red-500 rounded-full px-1 min-w-[18px] h-5 items-center justify-center">
-              <AppText variant="caption" weight="bold" color="white">{unreadCount}</AppText>
+            <View className="absolute top-0 right-0 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center border-2 border-white dark:border-gray-900">
+              <AppText variant="caption" weight="bold" color="white" className="text-[9px]">{unreadCount}</AppText>
             </View>
           )}
         </TouchableOpacity>
@@ -372,7 +372,7 @@ export default function PassengerDashboard() {
             logout();
             router.replace('/auth/Login');
           }}
-          className={`w-10 h-10 ${isDark ? 'bg-red-900/30' : 'bg-red-100'} rounded-full items-center justify-center`}
+          className={`w-11 h-11 ${isDark ? 'bg-red-900/20' : 'bg-red-50'} rounded-full items-center justify-center`}
           activeOpacity={0.7}
         >
           <LogOut size={20} color={colors.danger} />
@@ -383,18 +383,18 @@ export default function PassengerDashboard() {
 
   const CustomHeader = () => (
     <View className={`${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} px-4 pb-4 border-b`}>
-      <View className="flex-row justify-between items-center">
-        <View className="flex-row items-center">
+      <View className="flex-row justify-between items-center py-2">
+        <View className="flex-row items-center flex-1 pr-4">
           <TouchableOpacity
             onPress={() => setMenuVisible(true)}
-            className="mr-3 p-2 -ml-2"
+            className={`mr-3 w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full items-center justify-center`}
             activeOpacity={0.7}
           >
-            <Menu size={24} color={colors.textPrimary} />
+            <Menu size={22} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          <View>
-            <AppText variant="h2" color={colors.primary}>
+          <View className="flex-1">
+            <AppText variant="h2" color={colors.primary} weight="bold" numberOfLines={1}>
               {translate('app_name')}
             </AppText>
           </View>
@@ -402,31 +402,41 @@ export default function PassengerDashboard() {
         <HeaderRightActions />
       </View>
 
-      <View className="mt-4 flex-row items-center justify-between">
-        <View>
-          <AppText variant="h1" color={isDark ? 'white' : 'black'}>
+      <View className="mt-6 flex-row items-end justify-between">
+        <View className="flex-1 mr-4">
+          <AppText variant="h1" color={isDark ? 'white' : 'black'} weight="bold">
             {getGreeting()}
           </AppText>
           <AppText variant="bodyLarge" color={isDark ? colors.gray400 : colors.gray600} className="mt-1">
-            {user?.fullName?.split(' ')[0] || translate('passenger_label')}! 👋
+            {user?.fullName || translate('passenger_label')}! 👋
           </AppText>
         </View>
         
         {/* Passenger Info Badge - similar to website */}
-        <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} px-3 py-2 rounded-xl border ${isDark ? 'border-blue-800' : 'border-blue-100'} flex-row items-center`}>
-          <User size={14} color={colors.primary} />
-          <AppText variant="caption" weight="bold" color={colors.primary} className="ml-1 text-[10px]">
-            {translate('passenger_id')}: {user?._id?.slice(-8).toUpperCase() || 'N/A'}
-          </AppText>
+        <View className={`${isDark ? 'bg-blue-900/20' : 'bg-blue-50/50'} px-4 py-2.5 rounded-2xl border ${isDark ? 'border-blue-800/50' : 'border-blue-100'} flex-row items-center shadow-sm`}>
+          <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-800' : 'bg-blue-100'} items-center justify-center mr-2`}>
+            <User size={12} color={colors.primary} />
+          </View>
+          <View>
+            <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="text-[9px] uppercase tracking-widest">
+              {translate('passenger_id')}
+            </AppText>
+            <AppText variant="caption" weight="bold" color={colors.primary} className="text-[11px]">
+              {user?._id || 'N/A'}
+            </AppText>
+          </View>
         </View>
       </View>
 
-      {showWelcome && pendingCount > 0 && (
-        <View className="mt-4 bg-yellow-50 p-3 rounded-xl border border-yellow-200 flex-row items-center">
-          <AlertCircle size={16} color="#B45309" />
-          <AppText variant="bodySmall" color="#B45309" className="ml-2 flex-1">
+      {showWelcome && (pendingCount ?? 0) > 0 && (
+        <View className="mt-5 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-800/50 flex-row items-center shadow-sm">
+          <View className="bg-amber-100 dark:bg-amber-800/50 p-2 rounded-full">
+            <AlertCircle size={18} color={isDark ? '#fbbf24' : '#b45309'} />
+          </View>
+          <AppText variant="bodySmall" color={isDark ? '#fbbf24' : '#b45309'} weight="medium" className="ml-3 flex-1">
             {translate('pending_payment_warn', { count: pendingCount })}
           </AppText>
+          <ChevronRight size={16} color={isDark ? '#fbbf24' : '#b45309'} />
         </View>
       )}
     </View>
