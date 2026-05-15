@@ -280,7 +280,7 @@ export const useBooking = () => {
     } finally {
       setLoading(false);
     }
-  }, [setCurrentBooking, showToast]);
+  }, [setCurrentBooking, showToast, bookings]);
 
   const selectTrip = useCallback((trip: Trip | null) => {
     setSelectedTrip(trip);

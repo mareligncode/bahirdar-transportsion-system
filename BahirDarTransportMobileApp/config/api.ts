@@ -8,8 +8,8 @@ export const getPlatformBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     url = process.env.EXPO_PUBLIC_API_URL;
   } else {
-
-    url = 'https://bahirdar-transportsion-system.onrender.com/api';
+    url = 'https://myong-inapproachable-oliva.ngrok-free.dev/api';
+    // url = 'http://192.168.137.1/api';
   }
   return url;
 };

@@ -626,7 +626,7 @@ export default function SeatSelectionScreen() {
                         ? translate('fully_booked')
                         : selectedSeats.length === 0
                           ? translate('select_seats')
-                          : translate('continue_to_booking')}
+                          : translate('proceed_to_payment')}
                     </AppText>
                     {selectedSeats.length > 1 && (
                       <AppText variant="caption" color="white" className="opacity-90">

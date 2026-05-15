@@ -19,8 +19,9 @@ import Animated, {
   useSharedValue,
   withDelay
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Loader } from '@/components/common/Loader';
@@ -39,7 +40,11 @@ import {
   CheckCircle,
   PlayCircle,
   PhoneCall,
-  Mail
+  Mail,
+  Globe,
+  Zap,
+  Sun,
+  Moon
 } from 'lucide-react-native';
 
 
@@ -53,16 +58,20 @@ const HERO_IMAGES = [
 const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 
 export default function LandingPage() {
+  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const { translate } = useTranslation();
+  const { translate, language, setLanguage } = useTranslation();
 
-  const { isDark, colors } = useTheme();
+  const { isDark, colors, setTheme } = useTheme();
   const [currentSlide, setCurrentSlide] = useState(0);
   const fadeAnim = useSharedValue(1);
   const [imageError, setImageError] = useState(false);
 
   const { fetchAllTrips, fetchStations } = useTrips();
   const [stats, setStats] = useState({ activeTrips: 0, totalStations: 0 });
+
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [expandedFeature, setExpandedFeature] = useState<number | null>(null);
 
   const fadeAnimatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -256,28 +265,37 @@ export default function LandingPage() {
           <View className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
 
           <View className="absolute top-6 left-4 right-4">
-            <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center justify-between gap-x-4">
               <View className="flex-row items-center">
                 <Sparkles size={28} color="#FFD700" />
-                <AppText variant="h2" weight="bold" color="white" className="ml-2">
+                <AppText variant="h2" weight="bold" color="primary" className="ml-2">
                   {translate('app_name_full')}
                 </AppText>
               </View>
-              <TouchableOpacity
-                onPress={() => router.push('/auth/Login')}
-                className="border border-white/30 px-4 py-2 rounded-full"
-                activeOpacity={0.7}
-              >
-                <AppText weight="medium" color="white">{translate('sign_in')}</AppText>
-              </TouchableOpacity>
+              <View className="flex-row items-center gap-x-3">
+                <TouchableOpacity
+                  onPress={() => setTheme(isDark ? 'light' : 'dark')}
+                  activeOpacity={0.7}
+                  className="bg-amber-500 w-10 h-10 rounded-full items-center justify-center shadow-md"
+                >
+                  {isDark ? <Sun size={20} color="white" /> : <Moon size={20} color="white" />}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setLanguage(language === 'en' ? 'am' : 'en')}
+                  activeOpacity={0.7}
+                  className="bg-blue-600 w-10 h-10 rounded-full items-center justify-center shadow-md"
+                >
+                  <Globe size={20} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
           <View className="absolute bottom-6 left-4 right-4">
             <Animated.View entering={FadeInLeft.duration(600).delay(200)}>
               <AppText variant="h1" weight="bold" color="white" className="mb-2 leading-tight">
-                {translate('smart_travel')}{' '}
-                <AppText weight="bold" color="accent">Bahir Dar</AppText>
+                <AppText weight="bold" color="#fbbf24">{translate('smart_travel')}</AppText> <AppText weight="bold" color="#fb923c">{translate('bahir_dar')}</AppText>
               </AppText>
             </Animated.View>
             <Animated.View entering={FadeInLeft.duration(600).delay(400)}>
@@ -286,16 +304,40 @@ export default function LandingPage() {
               </AppText>
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.duration(600).delay(600)}>
+            <Animated.View entering={FadeInLeft.duration(600).delay(600)} className="flex-row items-center gap-x-3">
               <TouchableOpacity
                 onPress={() => router.push('/auth/Register')}
-                className="bg-white py-4 px-6 rounded-full flex-row items-center justify-center active:opacity-90 shadow-lg"
-                activeOpacity={0.8}
+                activeOpacity={0.9}
+                className="flex-1 rounded-2xl overflow-hidden shadow-lg"
               >
-                <AppText variant="h3" weight="bold" color="primary">
-                  {translate('get_started')}
-                </AppText>
-                <ArrowRight size={20} color="#1a56db" className="ml-2" />
+                <LinearGradient
+                  colors={['#facc15', '#fb923c']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  className="px-4 py-4 flex-row items-center justify-center"
+                >
+                  <AppText weight="bold" color="white" className="text-lg">
+                    {translate('get_started')}
+                  </AppText>
+                  <ArrowRight size={20} color="white" className="ml-2" />
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/auth/Login')}
+                activeOpacity={0.8}
+                className="flex-1 rounded-2xl overflow-hidden shadow-lg"
+              >
+                <LinearGradient
+                  colors={['#facc15', '#fb923c']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  className="px-4 py-4 flex-row items-center justify-center"
+                >
+                  <AppText weight="bold" color="white" className="text-lg">
+                    {translate('sign_in')}
+                  </AppText>
+                </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -316,7 +358,7 @@ export default function LandingPage() {
           </View>
         </View>
 
-        <View className="px-4 py-4 -mt-8">
+        <View className="px-4 py-4 mt-2">
           <AppText variant="h3" weight="bold" color="textPrimary" className="mb-4">
             {translate('quick_highlights' as any) || 'Quick Highlights'}
           </AppText>
@@ -364,171 +406,188 @@ export default function LandingPage() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {steps.map((step, index) => (
-              <Animated.View
-                key={index}
-                entering={FadeInRight.duration(500).delay(200 * index)}
-                className="w-64 mr-4"
-              >
-                <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} p-5 rounded-xl shadow-sm border`}>
-                  <View className="flex-row items-center mb-4">
-                    <View className={`w-12 h-12 ${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-full items-center justify-center mr-4`}>
-                      <AppText weight="bold" color="primary">
-                        {step.number}
-                      </AppText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
+            {steps.map((step, index) => {
+              const isExpanded = expandedStep === index;
+              return (
+                <Animated.View
+                  key={index}
+                  entering={FadeInRight.duration(500).delay(200 * index)}
+                  className="w-72 mr-4"
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => setExpandedStep(isExpanded ? null : index)}
+                    className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} p-5 rounded-2xl shadow-sm border`}
+                  >
+                    <View className="flex-row items-center mb-4">
+                      <View className={`w-12 h-12 ${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-full items-center justify-center mr-4`}>
+                        <AppText weight="bold" color="primary">
+                          {step.number}
+                        </AppText>
+                      </View>
+                      <View className="flex-1">
+                        <AppText weight="bold" color="textPrimary" className="text-lg">
+                          {step.title}
+                        </AppText>
+                      </View>
                     </View>
-                    <View className="flex-1">
-                      <AppText weight="semibold" color="textPrimary">
-                        {step.title}
+
+                    {isExpanded && (
+                      <Animated.View entering={FadeInDown.duration(300)}>
+                        <AppText color="textSecondary" className="mb-4 leading-relaxed">
+                          {step.description}
+                        </AppText>
+                        <View className="flex-row items-center bg-blue-50/50 p-3 rounded-xl">
+                          <step.icon size={18} color={colors.primary} />
+                          <AppText variant="caption" color="primary" weight="semibold" className="ml-2 uppercase">
+                            {translate('get_started')}
+                          </AppText>
+                        </View>
+                      </Animated.View>
+                    )}
+
+                    {!isExpanded && (
+                      <AppText variant="caption" color="primary" weight="medium" className="opacity-60">
+                        {translate('tap_to_learn_more')} →
                       </AppText>
-                    </View>
-                  </View>
-                  <AppText variant="bodySmall" color="textSecondary" className="mb-4">
-                    {step.description}
-                  </AppText>
-                  <View className="flex-row items-center">
-                    <step.icon size={16} color={colors.primary} />
-                    <AppText variant="bodySmall" color="primary" className="ml-2">
-                      {translate('personal_info')}
-                    </AppText>
-                  </View>
-                </View>
-              </Animated.View>
-            ))}
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
           </ScrollView>
         </View>
-        <View className={`px-4 py-4 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-4">
-            {translate('try_features')}
+        <View className="px-4 py-8">
+          <AppText variant="h3" weight="bold" color="textPrimary" className="mb-4">
+            {translate('why_choose_us')}
           </AppText>
 
-          <View className="flex-row flex-wrap -mx-2">
-            {quickDemos.map((demo, index) => (
-              <Animated.View
-                key={demo.id}
-                entering={FadeInUp.duration(500).delay(300 + (index * 100))}
-                className="w-1/2 px-2 mb-4"
-              >
-                <TouchableOpacity
-                  onPress={() => router.push(demo.route)}
-                  activeOpacity={0.8}
-                >
-                  <View className={`${isDark ? `bg-gradient-to-br ${demo.color}` : 'bg-white border border-gray-100 shadow-sm'} p-6 rounded-2xl items-center`}>
-                    <View className={`w-12 h-12 rounded-full items-center justify-center mb-3 ${isDark ? 'bg-white/10' : 'bg-blue-50'}`}>
-                      <demo.icon size={24} color={isDark ? 'white' : colors.primary} />
-                    </View>
-                    <AppText weight="bold" color={isDark ? 'white' : 'textPrimary'} className="text-center">
-                      {demo.title}
-                    </AppText>
-                    <AppText variant="caption" color={isDark ? 'white' : 'textSecondary'} className="mt-1 opacity-70">
-                      {demo.time}
-                    </AppText>
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            onPress={() => router.push('/tabs/trips/search')}
-            className={`mt-4 ${isDark ? 'bg-gray-900' : 'bg-white'} py-4 rounded-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-row items-center justify-center`}
-            activeOpacity={0.7}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="py-2"
+            contentContainerStyle={{ paddingRight: 16 }}
           >
-            <PlayCircle size={20} color={colors.primary} />
-            <AppText weight="semibold" color="primary" className="ml-2">
-              {translate('full_demo')}
-            </AppText>
-          </TouchableOpacity>
+            {[
+              {
+                titleKey: 'online_payment_title',
+                descKey: 'online_payment_desc',
+                icon: Globe,
+                color: '#3b82f6',
+              },
+              {
+                titleKey: 'safe_secure_title',
+                descKey: 'safe_secure_desc',
+                icon: Shield,
+                color: '#10b981',
+              },
+              {
+                titleKey: 'pay_faster_title',
+                descKey: 'pay_faster_desc',
+                icon: Zap,
+                color: '#f59e0b',
+              },
+            ].map((feature, index) => {
+              const isExpanded = expandedFeature === index;
+              return (
+                <Animated.View
+                  key={index}
+                  entering={FadeInUp.duration(600).delay(200 * index)}
+                  className="w-80 mr-4"
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => setExpandedFeature(isExpanded ? null : index)}
+                    className={`relative ${isDark ? 'bg-gray-800/50' : 'bg-white'} rounded-3xl p-6 shadow-sm border ${isDark ? 'border-gray-700' : (isExpanded ? 'border-blue-200 bg-blue-50/20' : 'border-gray-100')}`}
+                  >
+                    <View className="flex-row items-center">
+                      <View
+                        className="w-14 h-14 rounded-2xl items-center justify-center mr-4 shadow-sm"
+                        style={{ backgroundColor: `${feature.color}15` }}
+                      >
+                        <feature.icon size={28} color={feature.color} />
+                      </View>
+                      <View className="flex-1">
+                        <AppText variant="h3" weight="bold" color="textPrimary">
+                          {translate(feature.titleKey as any)}
+                        </AppText>
+                        {!isExpanded && (
+                          <AppText variant="caption" color="textSecondary" className="mt-1">
+                            {translate('view_details')} →
+                          </AppText>
+                        )}
+                      </View>
+                    </View>
+
+                    {isExpanded && (
+                      <Animated.View entering={FadeInUp.duration(400)} className="mt-4 pt-4 border-t border-gray-100/50">
+                        <AppText color="textSecondary" className="leading-relaxed text-base">
+                          {translate(feature.descKey as any)}
+                        </AppText>
+                      </Animated.View>
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
         </View>
-        <View className="px-4 py-4">
-          <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-6">
-            {translate('live_stats' as any) || 'System Activity'}
-          </AppText>
-
-          <View className="flex-row space-x-4">
-            <Animated.View
-              entering={FadeInUp.duration(600).delay(400)}
-              className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} p-6 rounded-3xl shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'} items-center`}
-            >
-              <AppText variant="h1" color="primary" weight="bold">{stats.activeTrips}</AppText>
-              <AppText variant="bodySmall" color="textSecondary" className="mt-2">{translate('active_trips' as any) || 'Active Trips'}</AppText>
-            </Animated.View>
-
-            <Animated.View
-              entering={FadeInUp.duration(600).delay(600)}
-              className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} p-6 rounded-3xl shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'} items-center`}
-            >
-              <AppText variant="h1" color="success" weight="bold">{stats.totalStations}</AppText>
-              <AppText variant="bodySmall" color="textSecondary" className="mt-2">{translate('total_stations' as any) || 'Active Stations'}</AppText>
-            </Animated.View>
-          </View>
-        </View>
 
         <View className="px-4 py-4">
-          <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-3xl p-8 shadow-sm relative overflow-hidden border ${isDark ? 'border-transparent' : 'border-blue-100'}`}>
+          <LinearGradient
+            colors={isDark ? ['#1e3a8a33', '#1e1b4b33'] : ['#eff6ff', '#e0e7ff']}
+            className="rounded-3xl p-8 shadow-sm relative overflow-hidden border border-blue-100/20"
+          >
             <View className={`absolute -top-10 -right-10 w-40 h-40 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
             <View className={`absolute -bottom-10 -left-10 w-32 h-32 rounded-full ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/20'}`} />
 
-            <AppText variant="h2" weight="bold" color="textPrimary" className="text-center mb-4">
-              {translate('ready_to_travel')}
+            <AppText variant="h2" weight="bold" align="center" className="mb-4">
+              <AppText weight="bold" color="#fb923c">{translate('ready_to_travel')}</AppText>
             </AppText>
-            <AppText color="textSecondary" className="text-center mb-8 text-lg">
+            <AppText color="textSecondary" align="center" className="mb-8 text-lg">
               {translate('join_passengers')}
             </AppText>
 
-            <View className="gap-y-4">
-              <Animated.View
-                entering={ZoomIn.duration(600).delay(800)}
-                style={pulseAnimatedStyle}
-              >
-                <TouchableOpacity
-                  onPress={() => router.push('/auth/Register')}
-                  className="bg-blue-600 py-4 items-center rounded-2xl active:opacity-90 shadow-md"
-                  activeOpacity={0.8}
-                >
-                  <AppText weight="bold" color="white" className="text-center text-lg">
-                    {translate('create_account')}
-                  </AppText>
-                </TouchableOpacity>
+            <View className="gap-y-6">
+              <Animated.View entering={ZoomIn.duration(600).delay(800)}>
+                <Animated.View style={pulseAnimatedStyle}>
+                  <TouchableOpacity
+                    onPress={() => router.push('/auth/Register')}
+                    className="bg-blue-600 py-4 items-center rounded-2xl shadow-lg active:opacity-90"
+                    activeOpacity={0.8}
+                  >
+                    <AppText weight="bold" color="white" className="text-lg">
+                      {translate('create_account')}
+                    </AppText>
+                  </TouchableOpacity>
+                </Animated.View>
               </Animated.View>
 
-              <TouchableOpacity
-                onPress={() => router.push('/auth/Login')}
-                className={`bg-transparent items-center border-2 ${isDark ? 'border-white/30' : 'border-blue-200'} py-4 rounded-2xl active:opacity-90`}
-                activeOpacity={0.8}
-              >
-                <AppText weight="bold" color={isDark ? 'white' : 'primary'} className="text-center text-lg">
-                  {translate('sign_in')}
-                </AppText>
-              </TouchableOpacity>
+              <View className="items-center">
+                <View className="flex-row items-center">
+                  <AppText color="textSecondary">
+                    {translate('already_have_account')} 
+                  </AppText>
+                  <TouchableOpacity onPress={() => router.push('/auth/Login')} className="ml-1">
+                    <AppText weight="bold" color="primary">
+                      {translate('sign_in')}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
 
-              <TouchableOpacity
-                onPress={() => router.replace('/tabs/trips/search')}
-                className="py-3 items-center flex-row justify-center"
-              >
-                <AppText color="primary" className="font-semibold">
-                  {translate('explore_guest')}
-                </AppText>
-                <ArrowRight size={18} color={colors.primary} className="ml-2" />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.replace('/tabs/trips/search')}
+                  className="mt-6 py-2 border-b border-blue-200"
+                >
+                  <AppText color="primary" weight="semibold">
+                    {translate('explore_guest')} →
+                  </AppText>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View className="flex-row flex-wrap justify-center gap-4 mt-6 pt-4 border-t border-blue-100/50">
-              <View className="flex-row items-center">
-                <CheckCircle size={16} color={colors.success} />
-                <AppText variant="caption" color="textSecondary" className="ml-2 font-medium">{translate('no_card_needed')}</AppText>
-              </View>
-              <View className="flex-row items-center">
-                <CheckCircle size={16} color={colors.success} />
-                <AppText variant="caption" color="textSecondary" className="ml-2 font-medium">{translate('free_to_use')}</AppText>
-              </View>
-              <View className="flex-row items-center">
-                <CheckCircle size={16} color={colors.success} />
-                <AppText variant="caption" color="textSecondary" className="ml-2 font-medium">{translate('setup_1min')}</AppText>
-              </View>
-            </View>
-          </View>
+          </LinearGradient>
         </View>
 
         <View className={`px-4 py-6 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -570,7 +629,7 @@ export default function LandingPage() {
             </View>
 
             <AppText variant="caption" color={isDark ? 'white' : 'textSecondary'} className="opacity-50 text-center mb-2">
-              © 2024 {translate('app_name_full')}. {translate('making_travel_better')}
+              © {new Date().getFullYear()} {translate('app_name_full')}. {translate('making_travel_better')}
             </AppText>
             <AppText variant="caption" color={isDark ? 'white' : 'textSecondary'} className="opacity-30">
               Available on Web, iOS & Android
