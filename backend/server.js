@@ -29,6 +29,7 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 const allowedOrigins = [
+    "https://bahirdar-transportsion-system.vercel.app",
     "https://bahirdar-transportsion-system-et.onrender.com",
     "http://localhost:5173",
     "http://localhost:3000",
@@ -37,19 +38,16 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const checkOrigin = (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
-        return callback(null, true);
-    }
-    // Allow all in production for now if needed to fix all problems
-    return callback(null, true);
+    // Always allow all origins and reflect them for credentials support
+    callback(null, true);
 };
 
 const io = new Server(server, {
     cors: {
         origin: checkOrigin,
-        methods: ["GET", "POST"],
-        credentials: true
+        methods: ["GET", "POST", "OPTIONS"],
+        credentials: true,
+        allowedHeaders: ["*", "ngrok-skip-browser-warning", "Authorization"]
     }
 });
 
@@ -130,7 +128,10 @@ io.on('connection', (socket) => {
     });
 });
 
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP to allow raw ngrok/socket connections
+    crossOriginResourcePolicy: false
+}));
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 100,
@@ -153,12 +154,32 @@ const authLimiter = rateLimit({
     }
 });
 
-// Middleware
+// CORS Logging & Management
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, ngrok-skip-browser-warning, Accept');
+
+    // Handle Preflight
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 app.use(cors({
-    origin: checkOrigin,
+    origin: function (origin, callback) {
+        // Broadly allow all for "all parts" support
+        callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma', 'Expires']
+    allowedHeaders: ["*", "Content-Type", "Authorization", "X-Requested-With", "Accept", "Cache-Control", "Pragma", "Expires", "ngrok-skip-browser-warning"],
+    exposedHeaders: ["*", "Set-Cookie"]
 }));
 
 app.use(express.json());

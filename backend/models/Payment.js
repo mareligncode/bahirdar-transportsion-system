@@ -115,6 +115,7 @@ paymentSchema.virtual('trip', {
 });
 
 // Indexes
+paymentSchema.index({ gatewayTransactionID: 1 });
 paymentSchema.index({ bookingID: 1 }, { unique: true });
 paymentSchema.index({ chapaReference: 1 });
 paymentSchema.index({ passengerID: 1 });

@@ -23,7 +23,7 @@ export const NotificationProvider = ({ children }) => {
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated || !user) return;
-    
+
     setLoading(true);
     try {
       const response = await notificationService.getUserNotifications();
@@ -41,7 +41,7 @@ export const NotificationProvider = ({ children }) => {
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
     if (!isAuthenticated || !user) return;
-    
+
     try {
       const response = await notificationService.getUnreadCount();
       if (response.success) {
@@ -65,7 +65,11 @@ export const NotificationProvider = ({ children }) => {
     if (!isAuthenticated || !user || !token) return;
 
     const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      auth: { token }
+      auth: { token },
+      transports: ['websocket'],
+      extraHeaders: {
+        "ngrok-skip-browser-warning": "true"
+      }
     });
 
     setSocket(socketInstance);
@@ -77,10 +81,10 @@ export const NotificationProvider = ({ children }) => {
 
     socketInstance.on('notification', (notification) => {
       console.log('New notification received:', notification);
-      
+
       // Add to state
       setNotifications(prev => [notification, ...prev]);
-      
+
       // Update unread count
       if (notification.status !== 'read') {
         setUnreadCount(prev => prev + 1);
@@ -102,8 +106,8 @@ export const NotificationProvider = ({ children }) => {
     try {
       const response = await notificationService.markAsRead(notificationId);
       if (response.success) {
-        setNotifications(prev => 
-          prev.map(n => 
+        setNotifications(prev =>
+          prev.map(n =>
             n._id === notificationId ? { ...n, status: 'read' } : n
           )
         );
@@ -118,13 +122,13 @@ export const NotificationProvider = ({ children }) => {
     try {
       // Note: You might need to implement a bulk mark as read endpoint
       const unreadNotifications = notifications.filter(n => n.status !== 'read');
-      
+
       // Mark each unread notification as read
       await Promise.all(
         unreadNotifications.map(n => notificationService.markAsRead(n._id))
       );
-      
-      setNotifications(prev => 
+
+      setNotifications(prev =>
         prev.map(n => ({ ...n, status: 'read' }))
       );
       setUnreadCount(0);
@@ -141,7 +145,7 @@ export const NotificationProvider = ({ children }) => {
           const filtered = prev.filter(n => n._id !== notificationId);
           return filtered;
         });
-        
+
         // Recalculate unread count
         setUnreadCount(prev => {
           const deleted = notifications.find(n => n._id === notificationId);

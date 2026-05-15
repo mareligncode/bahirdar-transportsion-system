@@ -79,7 +79,12 @@ const LiveMap = () => {
 
     useEffect(() => {
         syncTrips();
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+            transports: ['websocket'],
+            extraHeaders: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        });
 
         socket.on('connect', () => {
             setStats(prev => ({ ...prev, online: true }));

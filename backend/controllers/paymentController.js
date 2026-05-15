@@ -366,24 +366,36 @@ export const verifyPayment = async (req, res) => {
             });
         }
         let verifyResponse;
-        try {
-            verifyResponse = await axios.get(
-                `${process.env.CHAPA_TEST_URL}/transaction/verify/${tx_ref}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.CHAPA_TEST_SECRET_KEY}`
-                    },
-                    timeout: 10000
-                }
-            );
-        } catch (chapaError) {
-            console.error('Chapa API verification failed:', chapaError.response?.data || chapaError.message);
+        let attempts = 0;
+        const maxAttempts = 2;
 
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to verify with payment gateway',
-                error: chapaError.response?.data?.message || chapaError.message
-            });
+        while (attempts < maxAttempts) {
+            try {
+                verifyResponse = await axios.get(
+                    `${process.env.CHAPA_TEST_URL}/transaction/verify/${tx_ref}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${process.env.CHAPA_TEST_SECRET_KEY}`
+                        },
+                        timeout: 30000 // Increased to 30s
+                    }
+                );
+                break; // Success! Exit loop
+            } catch (chapaError) {
+                attempts++;
+                console.error(`Chapa API verification attempt ${attempts} failed:`, chapaError.response?.data || chapaError.message);
+
+                if (attempts >= maxAttempts) {
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to verify with payment gateway',
+                        error: chapaError.response?.data?.message || chapaError.message || 'Connection timed out',
+                        details: chapaError.response?.data
+                    });
+                }
+                // Wait 1.5 seconds before retrying
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
         }
         if (!verifyResponse.data || !verifyResponse.data.data) {
             console.error('Invalid Chapa response structure:', verifyResponse.data);
