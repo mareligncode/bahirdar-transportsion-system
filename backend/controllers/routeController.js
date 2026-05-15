@@ -15,6 +15,16 @@ export const createRoute = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Origin or Destination station not found' });
         }
 
+        // If Station Admin, force origin to their station
+        if (req.user.role === 'station_admin') {
+            if (origin !== req.user.stationID.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Station admins can only create routes starting from their own station'
+                });
+            }
+        }
+
         const route = new Route({
             origin,
             destination,
@@ -52,6 +62,11 @@ export const getAllRoutes = async (req, res) => {
             query.origin = origin;
         }
 
+        // If Station Admin, only show routes starting from their station
+        if (req.user.role === 'station_admin') {
+            query.origin = req.user.stationID;
+        }
+
         const routes = await Route.find(query)
             .populate('origin', 'stationName city')
             .populate('destination', 'stationName city');
@@ -76,6 +91,11 @@ export const getRouteById = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Route not found' });
         }
 
+        // If Station Admin, verify it's their station
+        if (req.user.role === 'station_admin' && route.origin._id.toString() !== req.user.stationID.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to view routes from other stations' });
+        }
+
         res.status(200).json({ success: true, data: route });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -93,6 +113,11 @@ export const updateRoute = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Route not found' });
         }
 
+        // If Station Admin, verify it's their station
+        if (req.user.role === 'station_admin' && route.origin.toString() !== req.user.stationID.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to update routes from other stations' });
+        }
+
         res.status(200).json({ success: true, message: 'Route updated', data: route });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -101,8 +126,15 @@ export const updateRoute = async (req, res) => {
 
 export const deleteRoute = async (req, res) => {
     try {
-        const route = await Route.findByIdAndDelete(req.params.id);
-        if (!route) return res.status(404).json({ message: 'Not found' });
+        const route = await Route.findById(req.params.id);
+        if (!route) return res.status(404).json({ success: false, message: 'Route not found' });
+
+        // If Station Admin, verify it's their station
+        if (req.user.role === 'station_admin' && route.origin.toString() !== req.user.stationID.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to delete routes from other stations' });
+        }
+
+        await Route.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Route deleted' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
