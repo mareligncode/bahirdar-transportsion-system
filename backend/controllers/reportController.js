@@ -9,12 +9,16 @@ import mongoose from 'mongoose';
 
 export const getDashboardStats = async (req, res) => {
     try {
-        const { stationId } = req.query;
-        let matchQuery = {};
+        let effectiveStationId = stationId;
 
-        if (stationId) {
+        // Force Station Admin to only see their own station's stats
+        if (req.user.role === 'station_admin') {
+            effectiveStationId = req.user.stationID.toString();
+        }
+
+        if (effectiveStationId) {
             // Find trips originating from this station
-            const tripsAtStation = await Trip.find({ origin: stationId }).select('_id');
+            const tripsAtStation = await Trip.find({ origin: effectiveStationId }).select('_id');
             const tripIds = tripsAtStation.map(t => t._id);
             matchQuery.tripID = { $in: tripIds };
         }
@@ -77,7 +81,12 @@ const getTripIdsByStation = async (stationId) => {
 
 export const getRevenueReport = async (req, res) => {
     try {
-        const { period = 'month', stationId } = req.query;
+        let { period = 'month', stationId } = req.query;
+
+        // Force Station Admin to only see their own revenue
+        if (req.user.role === 'station_admin') {
+            stationId = req.user.stationID.toString();
+        }
 
         let groupBy = {
             $dateToString: { format: "%Y-%m", date: "$createdAt" }
@@ -133,11 +142,15 @@ export const getRevenueReport = async (req, res) => {
 
 export const getBookingStats = async (req, res) => {
     try {
-        const { stationId } = req.query;
-        let matchQuery = {};
+        let effectiveStationId = stationId;
 
-        if (stationId) {
-            const tripIds = await getTripIdsByStation(stationId);
+        // Force Station Admin
+        if (req.user.role === 'station_admin') {
+            effectiveStationId = req.user.stationID.toString();
+        }
+
+        if (effectiveStationId) {
+            const tripIds = await getTripIdsByStation(effectiveStationId);
             matchQuery.tripID = { $in: tripIds };
         }
 
@@ -177,6 +190,12 @@ export const getBookingStats = async (req, res) => {
 
 export const getStationPerformance = async (req, res) => {
     try {
+        // If Station Admin, they can only see their own performance, or we could block this for them if it's meant to be comparative
+        let matchQuery = {};
+        if (req.user.role === 'station_admin') {
+            matchQuery = { 'trip.origin': new mongoose.Types.ObjectId(req.user.stationID) };
+        }
+
         const stats = await Booking.aggregate([
             {
                 $lookup: {
@@ -187,6 +206,7 @@ export const getStationPerformance = async (req, res) => {
                 }
             },
             { $unwind: '$trip' },
+            { $match: matchQuery },
             {
                 $group: {
                     _id: '$trip.origin',
@@ -206,7 +226,7 @@ export const getStationPerformance = async (req, res) => {
             {
                 $project: {
                     _id: 1,
-                    name: '$station.name',
+                    name: '$station.stationName',
                     city: '$station.city',
                     totalBookings: 1,
                     revenue: 1
@@ -238,8 +258,13 @@ export const getStationsControl = async (req, res) => {
 
 export const getRecentActivity = async (req, res) => {
     try {
-        const { stationId } = req.query;
+        let { stationId } = req.query;
         let bookingMatch = {};
+
+        // Force Station Admin
+        if (req.user.role === 'station_admin') {
+            stationId = req.user.stationID.toString();
+        }
 
         if (stationId) {
             const tripIds = await getTripIdsByStation(stationId);

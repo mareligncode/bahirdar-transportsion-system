@@ -15,7 +15,6 @@ export const createRoute = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Origin or Destination station not found' });
         }
 
-        // If Station Admin, force origin to their station
         if (req.user.role === 'station_admin') {
             if (origin !== req.user.stationID.toString()) {
                 return res.status(403).json({

@@ -32,6 +32,16 @@ export const createVehicle = async (req, res) => {
             });
         }
 
+        // Check permissions
+        if (req.user.role === 'station_admin') {
+            if (stationID !== req.user.stationID.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Station admins can only add vehicles to their own station'
+                });
+            }
+        }
+
         if (!station.isActive) {
             return res.status(400).json({
                 success: false,
