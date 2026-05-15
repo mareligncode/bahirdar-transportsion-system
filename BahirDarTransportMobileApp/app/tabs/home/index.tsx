@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -582,6 +583,36 @@ export default function PassengerDashboard() {
             </AppText>
             <View className={`${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} px-3 py-1 rounded-full`}>
               <AppText variant="label" color={colors.primary}>{translate('search')}</AppText>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Promo Banner Section */}
+        <View className="px-4 mt-6">
+          <TouchableOpacity 
+            onPress={navigationActions.bookTrip}
+            activeOpacity={0.9}
+            className="rounded-2xl overflow-hidden shadow-lg"
+          >
+            <View className="relative h-44">
+              <Image 
+                source={require('../../../assets/images/banner.png')} 
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+              <View className="absolute inset-0 bg-black/30 p-5 justify-end">
+                <View className="bg-blue-600 self-start px-2 py-1 rounded-md mb-2">
+                  <AppText variant="caption" weight="bold" color="white" className="uppercase tracking-widest">
+                    {translate('limited_offer')}
+                  </AppText>
+                </View>
+                <AppText variant="h2" color="white" weight="bold">
+                  {translate('explore_bahirdar')}
+                </AppText>
+                <AppText variant="bodySmall" color="white" className="mt-1">
+                  {translate('explore_bahirdar_desc')}
+                </AppText>
+              </View>
             </View>
           </TouchableOpacity>
         </View>
