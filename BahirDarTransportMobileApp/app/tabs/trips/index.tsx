@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Dimensions
 } from 'react-native';
 import { AppText } from '@/components/common/AppText';
 import { StatusBar } from 'expo-status-bar';
@@ -14,14 +13,12 @@ import { useLocalSearchParams, router } from 'expo-router';
 import {
   Calendar,
   Users,
-  MapPin,
   Search,
   Filter,
   Bus,
   X,
   ArrowRight,
   Clock,
-  ChevronDown,
   TrendingUp,
   Star,
   Clock3
@@ -29,17 +26,15 @@ import {
 import { useTrips } from '../../../hooks/useTrips';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Button } from '../../../components/common/Button';
-import { Input } from '../../../components/common/Input';
-import { Select } from '../../../components/common/Select';
 import { TripCard } from '../../../components/booking/TripCard';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
 import { useTheme } from '../../../context/ThemeContext';
-import { formatDate, formatTime } from '../../../utils/helpers';
-import { Trip, Station, StationOption } from '../../../types';
+import { formatDate } from '../../../utils/helpers';
+import { Trip, StationOption } from '../../../types';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
+
 
 export default function TripsScreen() {
   const insets = useSafeAreaInsets();
@@ -61,7 +56,7 @@ export default function TripsScreen() {
     passengers: passengers ? parseInt(passengers) : 1,
   });
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showSearchSummary, setShowSearchSummary] = useState(!!origin && !!destination);
@@ -81,27 +76,15 @@ export default function TripsScreen() {
     }
   }, [params.id, params.tripId]);
 
-  useEffect(() => {
-    loadStations();
-  }, []);
-
-  useEffect(() => {
-    if (origin && destination) {
-      handleUrlSearch();
-    } else {
-      loadInitialTrips();
-    }
-  }, []);
-
-  const loadStations = async () => {
+  const loadStations = useCallback(async () => {
     try {
       await fetchStations();
     } catch (error) {
       console.error('Failed to load stations:', error);
     }
-  };
+  }, [fetchStations]);
 
-  const loadInitialTrips = async () => {
+  const loadInitialTrips = useCallback(async () => {
     try {
       await fetchAllTrips({
         date: new Date().toISOString().split('T')[0],
@@ -110,20 +93,9 @@ export default function TripsScreen() {
     } catch (error) {
       console.error('Failed to load initial trips:', error);
     }
-  };
+  }, [fetchAllTrips]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadStations();
-    if (origin && destination) {
-      await handleUrlSearch();
-    } else {
-      await loadInitialTrips();
-    }
-    setRefreshing(false);
-  };
-
-  const handleUrlSearch = async () => {
+  const handleUrlSearch = useCallback(async () => {
     if (!origin || !destination) {
       return;
     }
@@ -145,9 +117,32 @@ export default function TripsScreen() {
 
       setShowSearchSummary(true);
       setShowFilters(false);
-    } catch (error) {
+    } catch {
       Alert.alert(translate('error'), translate('something_went_wrong'));
     }
+  }, [origin, destination, date, passengers, searchTrips, translate]);
+
+  useEffect(() => {
+    loadStations();
+  }, [loadStations]);
+
+  useEffect(() => {
+    if (origin && destination) {
+      handleUrlSearch();
+    } else {
+      loadInitialTrips();
+    }
+  }, [origin, destination, handleUrlSearch, loadInitialTrips]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadStations();
+    if (origin && destination) {
+      await handleUrlSearch();
+    } else {
+      await loadInitialTrips();
+    }
+    setRefreshing(false);
   };
 
   const handleApplyFilters = () => {
@@ -216,20 +211,6 @@ export default function TripsScreen() {
     return null;
   }
 
-  const handleSwapLocations = () => {
-    setSearchParams(prev => ({
-      ...prev,
-      origin: prev.destination,
-      destination: prev.origin,
-    }));
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setSearchParams(prev => ({ ...prev, date: selectedDate }));
-    }
-  };
 
   const handleTripSelect = (trip: Trip) => {
     const tripId = trip._id;

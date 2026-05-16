@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -19,7 +19,6 @@ import {
   Calendar,
   MapPin,
   Copy,
-  AlertTriangle,
   Ticket,
   Eye,
   CreditCard
@@ -32,7 +31,6 @@ import { AppText } from '../../../components/common/AppText';
 import { useTheme } from '../../../context/ThemeContext';
 import { Booking, Trip, Station } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
-import { COLORS } from '../../../constants/colors';
 import * as Haptics from 'expo-haptics';
 
 export default function BookingConfirmationScreen() {
@@ -57,21 +55,7 @@ export default function BookingConfirmationScreen() {
     [bookingIds, bookingId]
   );
 
-  useEffect(() => {
-    if (parsedBookingIds.length > 0 && !currentBooking) {
-      fetchAllBookings();
-    } else if (currentBooking) {
-      setBookings([currentBooking]);
-    }
-  }, [parsedBookingIds, currentBooking]);
-
-  useEffect(() => {
-    if (success === 'true' && bookings.length > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-  }, [success, bookings]);
-
-  const fetchAllBookings = async () => {
+  const fetchAllBookings = useCallback(async () => {
     try {
       const allBookings: Booking[] = [];
 
@@ -90,18 +74,22 @@ export default function BookingConfirmationScreen() {
     } catch (error) {
       console.error('Error fetching bookings:', error);
     }
-  };
+  }, [parsedBookingIds, getBookingById]);
 
-  const fetchBooking = async () => {
-    try {
-      const data = await getBookingById(bookingId);
-      if (data) {
-        setBookings([data]);
-      }
-    } catch (error) {
-      console.error('Error fetching booking:', error);
+  useEffect(() => {
+    if (parsedBookingIds.length > 0 && !currentBooking) {
+      fetchAllBookings();
+    } else if (currentBooking) {
+      setBookings([currentBooking]);
     }
-  };
+  }, [parsedBookingIds, currentBooking, fetchAllBookings]);
+
+  useEffect(() => {
+    if (success === 'true' && bookings.length > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [success, bookings]);
+
 
   const handleCopyCode = async () => {
     const code = bookings[0]?.bookingNumber || bookings[0]?._id?.slice(-6).toUpperCase() || '';
@@ -138,7 +126,7 @@ export default function BookingConfirmationScreen() {
           year: 'numeric', month: 'short', day: 'numeric',
           hour: '2-digit', minute: '2-digit'
         });
-      } catch (e) { }
+      } catch { }
     }
 
     const amount = booking.totalPrice || booking.amount || 0;
@@ -234,7 +222,6 @@ export default function BookingConfirmationScreen() {
   );
 
   const totalAmount = booking.totalPrice || booking.amount || 0;
-  const pricePerSeat = seatNumbers.length > 0 ? totalAmount / seatNumbers.length : 0;
 
   const cancelBtnClass = cancelling ? 'bg-gray-400' : 'bg-red-600';
 
