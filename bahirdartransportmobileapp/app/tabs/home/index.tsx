@@ -32,7 +32,6 @@ import {
   MapPin,
   Clock,
   Car,
-  User,
   AlertCircle,
   PlusCircle,
   History,
