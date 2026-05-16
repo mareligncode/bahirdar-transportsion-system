@@ -6,7 +6,7 @@
     "icon": "./assets/images/icon.png",
     "orientation": "portrait",
     "jsEngine": "hermes",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash.png",
