@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -70,6 +70,7 @@ export default function SeatSelectionScreen() {
   const [showFeatures, setShowFeatures] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [myBookedSeats, setMyBookedSeats] = useState<Set<string>>(new Set<string>());
+  const [dynamicAvailableSeats, setDynamicAvailableSeats] = useState<number | null>(null);
 
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
   const slideAnim = useRef(new RNAnimated.Value(50)).current;
@@ -336,6 +337,13 @@ export default function SeatSelectionScreen() {
     }
   };
 
+  const totalSeats = useMemo(() => {
+    if (!trip) return 40;
+    const raw = trip.totalSeats ?? trip.vehicle?.totalCapacity ?? 40;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 40;
+  }, [trip]);
+
   if (loading || tripLoading || !trip || !isInitialized) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -346,8 +354,8 @@ export default function SeatSelectionScreen() {
   }
 
   const totalPrice = (trip?.price || 0) * selectedSeats.length;
-  const totalSeats = trip?.totalSeats || 50;
-  const isFullyBooked = (trip?.availableSeats || 0) === 0;
+  const displayAvailableSeats = dynamicAvailableSeats !== null ? dynamicAvailableSeats : (trip?.availableSeats || 0);
+  const isFullyBooked = displayAvailableSeats === 0;
   const origin = trip.origin as Station;
   const destination = trip.destination as Station;
 
@@ -459,7 +467,7 @@ export default function SeatSelectionScreen() {
                 <CheckCircle size={24} color={colors.success} />
                 <View className="ml-3 flex-1">
                   <AppText variant="bodyMedium" weight="semibold" color={colors.success}>
-                    {trip.availableSeats} / {totalSeats}
+                    {displayAvailableSeats} / {totalSeats}
                   </AppText>
                   <AppText variant="bodySmall" color={colors.textSecondary}>
                     {translate('available_seats')}
@@ -537,8 +545,9 @@ export default function SeatSelectionScreen() {
   trip={trip}
   selectedSeats={selectedSeats}
   onSeatSelect={handleSeatSelect}
-  maxSelectable={Math.min(8, trip.availableSeats || 0)}
+  maxSelectable={Math.min(8, displayAvailableSeats || 0)}
   userBookedSeats={Array.from(myBookedSeats)}
+  onAvailableSeatsChange={setDynamicAvailableSeats}
 />
 
         {selectedSeats.length > 0 && (
@@ -597,7 +606,7 @@ export default function SeatSelectionScreen() {
               <View className="items-end">
                 <View style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6' }} className="px-3 py-2 rounded-lg mb-2">
                   <AppText variant="bodySmall" weight="500" color={colors.text} className="text-center">
-                    {selectedSeats.length}/{trip.availableSeats}
+                    {selectedSeats.length}/{displayAvailableSeats}
                   </AppText>
                 </View>
               </View>

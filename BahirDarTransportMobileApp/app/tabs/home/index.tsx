@@ -88,8 +88,8 @@ export default function PassengerDashboard() {
   const { translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user, logout, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { trips, fetchAllTrips } = useTrips();
-  const { bookings, fetchMyBookings, loading: bookingsLoading } = useBooking();
+  const { fetchAllTrips } = useTrips();
+  const { getMyBookings, loading: bookingsLoading } = useBooking();
   const { getPaymentHistory } = usePayment();
   const { colors, isDark } = useTheme();
 
@@ -124,17 +124,17 @@ export default function PassengerDashboard() {
       setError(null);
 
       const [bookingsData, , tripsData] = await Promise.all([
-        fetchMyBookings().then(() => bookings),
+        getMyBookings(true),
         getPaymentHistory(),
-        fetchAllTrips({ 
-          limit: 20, 
+        fetchAllTrips({
+          limit: 20,
           _t: Date.now() // Cache busting
         })
       ]);
 
       if (bookingsData) {
         setUserBookings(bookingsData);
-        
+
         // Calculate total spent
         const spent = bookingsData
           .filter(b => b.status === 'confirmed' || b.status === 'completed')
@@ -142,8 +142,8 @@ export default function PassengerDashboard() {
         setTotalSpent(spent);
       }
 
-      const tripsToFilter = tripsData || trips;
-      
+      const tripsToFilter = tripsData || [];
+
       const upcoming = tripsToFilter
         .filter(trip => {
           const status = trip.tripStatus?.toLowerCase();
@@ -160,10 +160,10 @@ export default function PassengerDashboard() {
           const bTotal = b.totalSeats || 50;
           const aOcc = aTotal - (a.availableSeats ?? aTotal);
           const bOcc = bTotal - (b.availableSeats ?? bTotal);
-          return bOcc - aOcc; 
+          return bOcc - aOcc;
         })
         .slice(0, 5);
-        
+
       setPopularRoutes(popular.length > 0 ? popular : upcoming);
 
     } catch (error) {
@@ -172,7 +172,7 @@ export default function PassengerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [fetchMyBookings, getPaymentHistory, fetchAllTrips, bookings, trips, translate]);
+  }, [getMyBookings, getPaymentHistory, fetchAllTrips, translate]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -350,7 +350,7 @@ export default function PassengerDashboard() {
 
   const HeaderRightActions = () => {
     const unreadCount = useUnreadCount();
-    
+
     return (
       <View className="flex-row items-center gap-4">
         <TouchableOpacity
@@ -395,7 +395,7 @@ export default function PassengerDashboard() {
           </TouchableOpacity>
 
           <View className="flex-1">
-            <AppText variant="h2" color={colors.primary} weight="bold" numberOfLines={1}>
+            <AppText variant="h3" color={colors.primary} weight="bold" numberOfLines={2}>
               {translate('app_name')}
             </AppText>
           </View>
@@ -404,29 +404,16 @@ export default function PassengerDashboard() {
       </View>
 
       <View className="mt-6 flex-row items-end justify-between">
-        <View className="flex-1 mr-4">
-          <AppText variant="h1" color={isDark ? 'white' : 'black'} weight="bold">
-            {getGreeting()}
+        <View className="flex-1 mr-4 flex-row items-center flex-wrap">
+          <AppText variant="h3" color={isDark ? 'white' : 'black'} weight="bold" className="mr-1">
+            {getGreeting()},
           </AppText>
-          <AppText variant="bodyLarge" color={isDark ? colors.gray400 : colors.gray600} className="mt-1">
+          <AppText variant="h3" color={isDark ? colors.gray400 : colors.gray600} weight="medium">
             {user?.fullName || translate('passenger_label')}! 👋
           </AppText>
         </View>
-        
-        {/* Passenger Info Badge - similar to website */}
-        <View className={`${isDark ? 'bg-blue-900/20' : 'bg-blue-50/50'} px-4 py-2.5 rounded-2xl border ${isDark ? 'border-blue-800/50' : 'border-blue-100'} flex-row items-center shadow-sm`}>
-          <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-800' : 'bg-blue-100'} items-center justify-center mr-2`}>
-            <User size={12} color={colors.primary} />
-          </View>
-          <View>
-            <AppText variant="caption" color={isDark ? colors.gray400 : colors.gray500} className="text-[9px] uppercase tracking-widest">
-              {translate('passenger_id')}
-            </AppText>
-            <AppText variant="caption" weight="bold" color={colors.primary} className="text-[11px]">
-              {user?._id || 'N/A'}
-            </AppText>
-          </View>
-        </View>
+
+
       </View>
 
       {showWelcome && (pendingCount ?? 0) > 0 && (
@@ -589,14 +576,14 @@ export default function PassengerDashboard() {
 
         {/* Promo Banner Section */}
         <View className="px-4 mt-6">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={navigationActions.bookTrip}
             activeOpacity={0.9}
             className="rounded-2xl overflow-hidden shadow-lg"
           >
             <View className="relative h-44">
-              <Image 
-                source={require('../../../assets/images/banner.png')} 
+              <Image
+                source={require('../../../assets/images/banner.png')}
                 className="w-full h-full"
                 resizeMode="cover"
               />
@@ -690,7 +677,7 @@ export default function PassengerDashboard() {
               <ChevronRight size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <Card className={`p-0 overflow-hidden border ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
             {userBookings.length === 0 ? (
               <View className="p-8 items-center">
@@ -715,8 +702,8 @@ export default function PassengerDashboard() {
                           {formatDateStr(trip?.departureTime || '')} • {formatCurrency(booking.totalPrice || 0)}
                         </AppText>
                       </View>
-                      <Badge 
-                        text={booking.status?.toUpperCase()} 
+                      <Badge
+                        text={booking.status?.toUpperCase()}
                         variant={getBadgeVariant(booking.status || '')}
                       />
                     </TouchableOpacity>

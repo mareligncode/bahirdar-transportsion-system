@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -21,11 +21,7 @@ import {
   ArrowLeft,
   Bus,
   Clock,
-  Calendar,
   MapPin,
-  User,
-  Phone,
-  Mail,
   CreditCard,
   CheckCircle,
   XCircle,
@@ -36,16 +32,15 @@ import {
   AlertTriangle,
 } from 'lucide-react-native';
 import { useBooking } from '../../../hooks/useBooking';
-import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../components/common/Toast';
-import { Booking, Trip, Station, Vehicle } from '../../../types';
+import { Booking, Trip, Station } from '../../../types';
 import { formatDate, formatTime, formatCurrency } from '../../../utils/helpers';
 import { COLORS } from '../../../constants/colors';
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  // Unused user variable removed
   const { getBookingById, cancelBooking, canCancelBooking, loading } = useBooking();
   const { showToast } = useToast();
   const { translate } = useTranslation();
@@ -59,11 +54,18 @@ export default function BookingDetailScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  const fetchBooking = useCallback(async () => {
+    const data = await getBookingById(id);
+    if (data) {
+      setBooking(data);
+    }
+  }, [id, getBookingById]);
+
   useEffect(() => {
     if (id) {
       fetchBooking();
     }
-  }, [id]);
+  }, [id, fetchBooking]);
 
   useEffect(() => {
     if (booking) {
@@ -80,14 +82,7 @@ export default function BookingDetailScreen() {
         }),
       ]).start();
     }
-  }, [booking]);
-
-  const fetchBooking = async () => {
-    const data = await getBookingById(id);
-    if (data) {
-      setBooking(data);
-    }
-  };
+  }, [booking, fadeAnim, slideAnim]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -152,7 +147,9 @@ export default function BookingDetailScreen() {
           year: 'numeric', month: 'short', day: 'numeric',
           hour: '2-digit', minute: '2-digit'
         });
-      } catch (e) { }
+      } catch (e) {
+        console.warn('Failed to parse date:', e);
+      }
     }
 
     const amount = booking.totalPrice || booking.amount || 0;
@@ -258,7 +255,6 @@ export default function BookingDetailScreen() {
   const needsPayment = isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending');
 
   const trip = (booking.tripID || {}) as Trip;
-  const vehicle = (trip.vehicle || {}) as Vehicle;
   const origin = (trip.origin || {}) as Station;
   const destination = (trip.destination || {}) as Station;
   const seatNumbers = booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []);

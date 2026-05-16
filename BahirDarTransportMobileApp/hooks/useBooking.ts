@@ -71,8 +71,9 @@ export const useBooking = () => {
     if (!isAuthenticated) return [];
 
     // If we already have bookings and don't need refresh, return them
-    if (bookings.length > 0 && !refresh) {
-      return bookings;
+    const currentBookings = useBookingStore.getState().bookings;
+    if (currentBookings.length > 0 && !refresh) {
+      return currentBookings;
     }
 
     setLoading(true);
@@ -107,7 +108,7 @@ export const useBooking = () => {
     } finally {
       setLoading(false);
     }
-  }, [setBookings, bookings.length]);
+  }, [setBookings]);
 
   const createBooking = useCallback(async (trip: Trip, seatNumbers: number[]): Promise<Booking[] | null> => {
     if (!user) {

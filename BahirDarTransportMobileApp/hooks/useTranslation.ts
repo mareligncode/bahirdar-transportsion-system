@@ -1,9 +1,10 @@
+import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export const useTranslation = () => {
   const { t, language, setLanguage, isLoading } = useLanguage();
 
-  const translate = (key: keyof typeof t, params?: Record<string, string | number>) => {
+  const translate = React.useCallback((key: keyof typeof t, params?: Record<string, string | number>) => {
     let text = t[key] || String(key);
 
     if (params) {
@@ -13,13 +14,13 @@ export const useTranslation = () => {
     }
 
     return text;
-  };
+  }, [t]);
 
-  const pluralize = (key: string, count: number, params?: Record<string, string | number>) => {
+  const pluralize = React.useCallback((key: string, count: number, params?: Record<string, string | number>) => {
     const pluralKey = `${key}_plural` as keyof typeof t;
     const translationKey = count === 1 ? key : (t[pluralKey] ? pluralKey : key);
     return translate(translationKey as keyof typeof t, { count, ...params });
-  };
+  }, [t, translate]);
 
   return {
     t,

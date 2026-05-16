@@ -239,7 +239,7 @@ export default function BookingConfirmationScreen() {
   const cancelBtnClass = cancelling ? 'bg-gray-400' : 'bg-red-600';
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right', 'bottom']}>
         <View style={{ borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#e5e7eb' }} className="px-4 py-3 border-b flex-row items-center">
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/home')} className="mr-3">
             <ArrowLeft size={24} color={colors.text} />
@@ -249,7 +249,11 @@ export default function BookingConfirmationScreen() {
           </AppText>
         </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {success === 'true' && !isCancelled && (
           <View className={`mx-4 mt-4 p-4 ${isDark ? 'bg-green-900/20 border-green-800/30' : 'bg-green-50 border-green-200'} rounded-xl border`}>
           <View className="flex-row items-center gap-2">
@@ -399,7 +403,7 @@ export default function BookingConfirmationScreen() {
           </View>
         </View>
 
-        <View className="px-4 pb-4 gap-3">
+        <View className="px-4 pb-4 gap-3 mt-6">
           {isPending && (!booking.paymentStatus || booking.paymentStatus === 'pending') && (
             <TouchableOpacity
               onPress={handleMakePayment}

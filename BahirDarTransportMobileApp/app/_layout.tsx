@@ -131,6 +131,7 @@ function AppContent() {
       try {
         await SplashScreen.hideAsync();
       } catch (e) {
+        console.warn('Failed to hide splash screen:', e);
       }
     };
 

@@ -273,13 +273,13 @@ export default function PaymentCheckoutScreen() {
     // Chapa specific: If we are on a Chapa domain and not completed,
     // start a more aggressive verification timer if it looks like a receipt/success page
     if (url.includes('chapa.co') && !paymentCompleted) {
-      const isLikelySuccess = 
-        url.includes('receipt') || 
-        url.includes('success') || 
+      const isLikelySuccess =
+        url.includes('receipt') ||
+        url.includes('success') ||
         url.includes('completed') ||
         url.includes('test-payment') ||
         url.includes('checkout/test');
-      
+
       if (chapaTimerRef.current) {
         clearTimeout(chapaTimerRef.current);
       }
@@ -457,15 +457,9 @@ export default function PaymentCheckoutScreen() {
   const paymentMethods: { id: PaymentMethodType; name: string; icon: any; description: string }[] = [
     {
       id: 'mobile_money',
-      name: translate('mobile_money'),
+      name: translate('online_payment(chapa)'),
       icon: Smartphone,
       description: translate('mobile_money_desc')
-    },
-    {
-      id: 'card',
-      name: translate('card_payment'),
-      icon: CreditCard,
-      description: translate('card_payment_desc')
     },
     {
       id: 'bank_transfer',
@@ -534,8 +528,8 @@ export default function PaymentCheckoutScreen() {
         </AppText>
       </View>
 
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >

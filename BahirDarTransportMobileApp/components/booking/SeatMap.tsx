@@ -25,6 +25,7 @@ interface SeatMapProps {
   onSeatSelect: (seatNumber: number) => void;
   maxSelectable?: number;
   userBookedSeats?: string[];
+  onAvailableSeatsChange?: (count: number) => void;
 }
 
 export default function SeatMap({
@@ -33,6 +34,7 @@ export default function SeatMap({
   onSeatSelect,
   maxSelectable = 8,
   userBookedSeats = [],
+  onAvailableSeatsChange,
 }: SeatMapProps) {
 
   const [loading, setLoading] = useState(false);
@@ -123,6 +125,12 @@ export default function SeatMap({
   const bookedCount = bookedSeats.size;
   const availableCount = totalSeats - bookedCount;
   const isFullyBooked = availableCount === 0;
+
+  useEffect(() => {
+    if (onAvailableSeatsChange) {
+      onAvailableSeatsChange(availableCount);
+    }
+  }, [availableCount, onAvailableSeatsChange]);
 
   const handleSeatPress = useCallback((seatId: string) => {
     const seatNumber = parseInt(seatId, 10);
