@@ -23,7 +23,6 @@ export const createVehicle = async (req, res) => {
             features
         } = req.body;
 
-        // Validate station exists and is active
         const station = await Station.findById(stationID);
         if (!station) {
             return res.status(400).json({
@@ -49,7 +48,6 @@ export const createVehicle = async (req, res) => {
             });
         }
 
-        // Check if vehicle already exists
         const existingVehicle = await Vehicle.findOne({ plateNumber });
         if (existingVehicle) {
             return res.status(400).json({
@@ -58,7 +56,6 @@ export const createVehicle = async (req, res) => {
             });
         }
 
-        // Validate driver (if provided)
         if (driverID) {
             const driver = await User.findOne({
                 _id: driverID,
@@ -73,7 +70,6 @@ export const createVehicle = async (req, res) => {
             }
         }
 
-        // Validate owner details for new vehicles
         const { ownerDetails } = req.body;
         if (!ownerDetails || !ownerDetails.ownerName || !ownerDetails.phoneNumber ||
             !ownerDetails.bankDetails || !ownerDetails.bankDetails.accountNumber ||
@@ -98,14 +94,13 @@ export const createVehicle = async (req, res) => {
             driverID,
             fuelType,
             features,
-            ownerDetails,//new
+            ownerDetails,
             createdBy: req.user._id,
             currentStatus: driverID ? 'active' : 'available'
         });
 
         await vehicle.save();
 
-        // Populate station and driver details
         await vehicle.populate([
             {
                 path: 'stationID',
@@ -142,27 +137,21 @@ export const getAllVehicles = async (req, res) => {
             page = 1,
             limit = 10,
             search,
-            hasImages, // New filter: true/false to filter vehicles with/without images
+            hasImages,
             sortBy = 'createdAt',
             sortOrder = 'desc'
         } = req.query;
 
         const query = { isActive: true };
 
-
-
-        // FIXED: Add ObjectId validation with proper error handling start
         if (req.user.role === 'station_admin') {
             if (req.user.stationID) {
                 query.stationID = req.user.stationID;
             } else {
                 console.warn(`Station admin ${req.user._id} has no stationID assigned`);
-                // Return empty result for security
                 query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
-
-        //end
         else if (stationID && req.user.role === 'super_admin') {
             try {
                 if (mongoose.Types.ObjectId.isValid(stationID)) {
@@ -182,7 +171,6 @@ export const getAllVehicles = async (req, res) => {
             }
         }
 
-        // Apply other filters
         if (carType) query.carType = carType;
         if (status) query.currentStatus = status;
         if (driverID) {
@@ -214,7 +202,6 @@ export const getAllVehicles = async (req, res) => {
             ]; // Vehicles without images
         }
 
-        // Search functionality
         if (search) {
             query.$or = [
                 { plateNumber: { $regex: search, $options: 'i' } },
@@ -224,7 +211,6 @@ export const getAllVehicles = async (req, res) => {
             ];
         }
 
-        // Pagination
         const skip = (page - 1) * limit;
 
         // Determine sort order
@@ -232,10 +218,8 @@ export const getAllVehicles = async (req, res) => {
         const sortOptions = {};
         sortOptions[sortBy] = sortDirection;
 
-        // Count documents with the same query
         const total = await Vehicle.countDocuments(query);
 
-        // Fetch vehicles with population
         const vehicles = await Vehicle.find(query)
             .populate([
                 {
@@ -257,7 +241,6 @@ export const getAllVehicles = async (req, res) => {
             .limit(parseInt(limit))
             .lean(); // Use lean() for better performance
 
-        // Enhance vehicle data with image info
         const enhancedVehicles = vehicles.map(vehicle => ({
             ...vehicle,
             imagesCount: vehicle.images ? vehicle.images.length : 0,
@@ -266,7 +249,6 @@ export const getAllVehicles = async (req, res) => {
             thumbnail: vehicle.thumbnailImage || (vehicle.images && vehicle.images[0] ? vehicle.images[0].url : null)
         }));
 
-        // Prepare response
         const response = {
             success: true,
             data: { vehicles: enhancedVehicles },
@@ -285,7 +267,6 @@ export const getAllVehicles = async (req, res) => {
             }
         };
 
-        // Add warning if station admin has invalid stationID
         if (req.user.role === 'station_admin' && req.user.stationID &&
             !mongoose.Types.ObjectId.isValid(req.user.stationID)) {
             response.warning = 'Station admin is not assigned to a valid station. Showing all available vehicles.';
@@ -308,7 +289,6 @@ export const getVehicleById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Validate vehicle ID
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
@@ -316,7 +296,6 @@ export const getVehicleById = async (req, res) => {
             });
         }
 
-        // Get vehicle with ALL populated data
         const vehicle = await Vehicle.findById(id)
             .populate([
                 {

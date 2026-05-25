@@ -13,13 +13,11 @@ export const getDashboardStats = async (req, res) => {
         let effectiveStationId = stationId;
         let matchQuery = {};
 
-        // Force Station Admin to only see their own station's stats
         if (req.user.role === 'station_admin') {
             effectiveStationId = req.user.stationID.toString();
         }
 
         if (effectiveStationId) {
-            // Find trips originating from this station
             const tripsAtStation = await Trip.find({ origin: effectiveStationId }).select('_id');
             const tripIds = tripsAtStation.map(t => t._id);
             matchQuery.tripID = { $in: tripIds };
@@ -85,7 +83,6 @@ export const getRevenueReport = async (req, res) => {
     try {
         let { period = 'month', stationId } = req.query;
 
-        // Force Station Admin to only see their own revenue
         if (req.user.role === 'station_admin') {
             stationId = req.user.stationID.toString();
         }
@@ -148,7 +145,6 @@ export const getBookingStats = async (req, res) => {
         let effectiveStationId = stationId;
         let matchQuery = {};
 
-        // Force Station Admin
         if (req.user.role === 'station_admin') {
             effectiveStationId = req.user.stationID.toString();
         }
@@ -194,7 +190,6 @@ export const getBookingStats = async (req, res) => {
 
 export const getStationPerformance = async (req, res) => {
     try {
-        // If Station Admin, they can only see their own performance, or we could block this for them if it's meant to be comparative
         let matchQuery = {};
         if (req.user.role === 'station_admin') {
             matchQuery = { 'trip.origin': new mongoose.Types.ObjectId(req.user.stationID) };
@@ -265,7 +260,6 @@ export const getRecentActivity = async (req, res) => {
         let { stationId } = req.query;
         let bookingMatch = {};
 
-        // Force Station Admin
         if (req.user.role === 'station_admin') {
             stationId = req.user.stationID.toString();
         }

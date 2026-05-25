@@ -38,7 +38,6 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const checkOrigin = (origin, callback) => {
-    // Always allow all origins and reflect them for credentials support
     callback(null, true);
 };
 
@@ -129,7 +128,7 @@ io.on('connection', (socket) => {
 });
 
 app.use(helmet({
-    contentSecurityPolicy: false, // Disable CSP to allow raw ngrok/socket connections
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: false
 }));
 const generalLimiter = rateLimit({
@@ -154,7 +153,7 @@ const authLimiter = rateLimit({
     }
 });
 
-// CORS Logging & Management
+
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
@@ -172,10 +171,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: function (origin, callback) {
-        // Broadly allow all for "all parts" support
-        callback(null, true);
-    },
+    origin: checkOrigin,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["*", "Content-Type", "Authorization", "X-Requested-With", "Accept", "Cache-Control", "Pragma", "Expires", "ngrok-skip-browser-warning"],
@@ -185,8 +181,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// app.use('/api', generalLimiter);
-// app.use('/api/auth', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -209,7 +203,6 @@ server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`)
     console.log(`Socket.io enabled for real-time notifications`)
 
-    // Start Live Location Simulation
     const simulator = new LocationSimulator(io);
     simulator.start();
 });
