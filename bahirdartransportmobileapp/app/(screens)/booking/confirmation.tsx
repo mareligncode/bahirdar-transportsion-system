@@ -161,6 +161,7 @@ export default function BookingConfirmationScreen() {
     );
   };
 
+
   const handleMakePayment = () => {
     if (!booking) return;
     router.push({
@@ -209,7 +210,8 @@ export default function BookingConfirmationScreen() {
     (success === 'true' && booking.status?.toLowerCase() !== 'cancelled');
   const isPending = booking.status?.toLowerCase() === 'pending' && success !== 'true';
   const isCancelled = booking.status?.toLowerCase() === 'cancelled';
-  const canCancel = canCancelBooking(booking) && !isCancelled;
+  const isPaymentPending = !booking.paymentStatus || booking.paymentStatus?.toLowerCase() === 'pending';
+  const canCancel = canCancelBooking(booking) && !isCancelled && isPending;
 
   const trip = typeof booking.tripID === 'object' && booking.tripID !== null
     ? booking.tripID as Trip
@@ -224,6 +226,7 @@ export default function BookingConfirmationScreen() {
   const totalAmount = booking.totalPrice || booking.amount || 0;
 
   const cancelBtnClass = cancelling ? 'bg-gray-400' : 'bg-red-600';
+
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1" edges={['top', 'left', 'right', 'bottom']}>
@@ -418,7 +421,9 @@ export default function BookingConfirmationScreen() {
             </TouchableOpacity>
           )}
 
-          {canCancel && !isCancelled && (
+
+
+          {canCancel && (
             <TouchableOpacity
               onPress={handleCancelBooking}
               disabled={cancelling}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, RefreshControl, View, Alert } from 'react-native';
+import { FlatList, RefreshControl, View } from 'react-native';
 import { AppText } from '../common/AppText';
 import { Bell } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
@@ -26,14 +26,7 @@ export function NotificationList({
   const { isDark } = useTheme();
   
   const handleNotificationPress = (item: Notification) => {
-
-    Alert.alert(
-      item.title,
-      item.message,
-      [
-        { text: 'OK', onPress: () => onPressItem?.(item.id) }
-      ]
-    );
+    onPressItem?.(item.id);
   };
   if (!items?.length) {
     return (

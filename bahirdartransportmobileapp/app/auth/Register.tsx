@@ -261,7 +261,7 @@ export default function Register() {
               <View className="mb-8">
                 <TouchableOpacity
                   onPress={() => router.back()}
-                  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  className={`mb-6 w-10 h-10 rounded-full ${isDark ? 'bg-gray-800' : 'bg-gray-100'} items-center justify-center`}
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
@@ -282,22 +282,22 @@ export default function Register() {
                 </View>
               </View>
               {success && (
-                <Card className="bg-green-50 border-green-200 mb-6">
+                <Card className={`${isDark ? 'bg-green-950/20 border-green-900/50' : 'bg-green-50 border-green-200'} mb-6`}>
                   <View className="flex-row items-start">
                     <CheckCircle size={20} color="#10B981" className="mt-0.5 mr-3" />
                     <View className="flex-1">
-                      <AppText weight="medium" className="text-green-700">{success}</AppText>
+                      <AppText weight="medium" className={isDark ? 'text-green-400' : 'text-green-700'}>{success}</AppText>
                     </View>
                   </View>
                 </Card>
               )}
               {error && (
-                <Card className="bg-red-50 border-red-200 mb-6">
+                <Card className={`${isDark ? 'bg-red-950/20 border-red-900/50' : 'bg-red-50 border-red-200'} mb-6`}>
                   <View className="flex-row items-start">
                     <AlertCircle size={20} color="#EF4444" className="mt-0.5 mr-3" />
                     <View className="flex-1">
-                      <AppText weight="medium" className="text-red-600">{translate('registration_failed')}</AppText>
-                      <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
+                      <AppText weight="medium" className={isDark ? 'text-red-400' : 'text-red-600'}>{translate('registration_failed')}</AppText>
+                      <AppText variant="bodySmall" className={`${isDark ? 'text-red-300' : 'text-red-600'} mt-1`}>{error}</AppText>
                     </View>
                   </View>
                 </Card>
@@ -677,14 +677,14 @@ export default function Register() {
                         activeOpacity={0.7}
                         className="mt-0.5 mr-3"
                       >
-                        <View className={`w-5 h-5 rounded border items-center justify-center ${value ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        <View className={`w-5 h-5 rounded border items-center justify-center ${value ? 'bg-blue-600 border-blue-600' : (isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white')
                           }`}>
                           {value && <CheckCircle size={12} color="white" />}
                         </View>
                       </TouchableOpacity>
                       <View className="flex-1">
                         <View className="flex-row flex-wrap items-center">
-                          <AppText variant="bodySmall" className="text-gray-700 mr-1">
+                           <AppText variant="bodySmall" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mr-1`}>
                             {translate('i_agree')}
                           </AppText>
                           <TouchableOpacity
@@ -698,7 +698,7 @@ export default function Register() {
                             </AppText>
                           </TouchableOpacity>
 
-                          <AppText variant="bodySmall" className="text-gray-700 mx-1">{translate('and')}</AppText>
+                           <AppText variant="bodySmall" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} mx-1`}>{translate('and')}</AppText>
 
                           <TouchableOpacity
                             onPress={() => router.push('/privacy')}
@@ -711,7 +711,7 @@ export default function Register() {
                             </AppText>
                           </TouchableOpacity>
 
-                          <AppText variant="bodySmall" className="text-gray-700 ml-1">.*</AppText>
+                           <AppText variant="bodySmall" className={`${isDark ? 'text-gray-300' : 'text-gray-700'} ml-1`}>.*</AppText>
                         </View>
                       </View>
                     </View>
@@ -772,13 +772,14 @@ export default function Register() {
                   <AppText variant="h3" weight="semibold" className={`text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>{translate('select_country')}</AppText>
 
                   <View className="mt-4">
-                    <View className="flex-row items-center bg-gray-50 rounded-lg px-3 py-3 border border-gray-300">
+                    <View className={`flex-row items-center ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'} rounded-lg px-3 py-3 border`}>
                       <Search size={20} color="#6B7280" className="mr-3" />
                       <TextInput
                         placeholder={translate('search_country')}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        className="flex-1 text-gray-800 text-base"
+                        className={`flex-1 ${isDark ? 'text-white' : 'text-gray-800'} text-base`}
+                        placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                         autoFocus={true}
                         clearButtonMode="while-editing"
                       />
@@ -792,14 +793,14 @@ export default function Register() {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       onPress={() => handleCountrySelect(item)}
-                      className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
+                      className={`px-4 py-3 border-b ${isDark ? 'border-gray-700 active:bg-gray-700' : 'border-gray-100 active:bg-gray-50'}`}
                       activeOpacity={0.5}
                     >
                       <View className="flex-row items-center">
                         <AppText className="text-2xl mr-3">{item.flag}</AppText>
                         <View className="flex-1">
-                          <AppText weight="medium" className="text-gray-800">{item.name}</AppText>
-                          <AppText variant="caption" className="text-gray-600">
+                          <AppText weight="medium" className={isDark ? 'text-white' : 'text-gray-800'}>{item.name}</AppText>
+                          <AppText variant="caption" className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                             {item.code} • {item.minLength} {translate('digits')}{item.pattern ? ` • ${translate('starting_with')} ${item.pattern}` : ''}
                           </AppText>
                         </View>
@@ -828,7 +829,7 @@ export default function Register() {
                     setIsCountryOpen(false);
                     setSearchQuery('');
                   }}
-                  className="p-4 border-t border-gray-200 active:bg-gray-50"
+                  className={`p-4 border-t ${isDark ? 'border-gray-700 active:bg-gray-700' : 'border-gray-200 active:bg-gray-50'}`}
                   activeOpacity={0.7}
                 >
                   <AppText variant="h3" weight="medium" className="text-center text-blue-600">

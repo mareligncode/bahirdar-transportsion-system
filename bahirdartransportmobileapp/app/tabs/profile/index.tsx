@@ -7,6 +7,8 @@ import {
   Modal,
   Image,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { AppText } from '@/components/common/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -339,11 +341,15 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
+        >
         <View className="items-center mt-6">
           <TouchableOpacity
             onPress={() => setShowAvatarDialog(true)}
@@ -469,24 +475,51 @@ export default function ProfileScreen() {
           )}
         </View>
         {viewMode === 'view' && (
-          <View className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} mx-4 mt-6 p-5 rounded-xl border`}>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <View className={`w-10 h-10 ${isDark ? 'bg-orange-900/50' : 'bg-orange-100'} rounded-full items-center justify-center mr-3`}>
+          <View
+            style={{
+              backgroundColor: isDark ? '#1f2937' : '#ffffff',
+              borderColor: isDark ? '#374151' : '#e5e7eb',
+              borderWidth: 1,
+              marginHorizontal: 16,
+              marginTop: 24,
+              padding: 20,
+              borderRadius: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Left: icon + text */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    backgroundColor: isDark ? 'rgba(124,45,18,0.5)' : '#ffedd5',
+                    borderRadius: 20,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
                   <Lock size={20} color="#f97316" />
                 </View>
-                <View>
-                  <AppText variant="bodyLarge" weight="semibold" color={isDark ? 'white' : colors.gray800}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodyLarge" weight="semibold" color={isDark ? 'white' : colors.gray800} numberOfLines={1}>
                     {translate('change_password')}
                   </AppText>
-                  <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500}>
+                  <AppText variant="bodySmall" color={isDark ? colors.gray400 : colors.gray500} numberOfLines={1}>
                     {translate('change_pass_regularly')}
                   </AppText>
                 </View>
               </View>
+              {/* Right: Change button — always visible */}
               <TouchableOpacity
                 onPress={() => setShowPasswordDialog(true)}
-                className={`${isDark ? 'bg-blue-600' : 'bg-blue-500'} px-4 py-2 rounded-lg`}
+                style={{
+                  backgroundColor: isDark ? '#2563eb' : '#3b82f6',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
               >
                 <AppText variant="label" weight="500" color="white">{translate('change')}</AppText>
               </TouchableOpacity>
@@ -539,6 +572,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
       <Modal
         visible={showAvatarDialog}
         transparent
@@ -604,7 +638,10 @@ export default function ProfileScreen() {
           setPasswordErrors({});
         }}
       >
-        <View className="flex-1 justify-center items-center bg-black/50 p-4">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1 justify-center items-center bg-black/50 p-4"
+        >
           <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl w-full max-w-md p-6`}>
             <AppText variant="h2" weight="bold" color={isDark ? 'white' : 'black'} className="mb-4">{translate('change_password')}</AppText>
             
@@ -689,7 +726,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

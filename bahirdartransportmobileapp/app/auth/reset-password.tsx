@@ -150,7 +150,7 @@ export default function ResetPassword() {
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center mb-8">
-             <View className="w-20 h-20 bg-red-100 rounded-full items-center justify-center mb-4">
+             <View className={`w-20 h-20 ${isDark ? 'bg-red-950/30' : 'bg-red-100'} rounded-full items-center justify-center mb-4`}>
               <AlertCircle size={40} color="#DC2626" />
             </View>
             <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
@@ -177,7 +177,7 @@ export default function ResetPassword() {
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 justify-center">
           <View className="items-center">
-             <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
+             <View className={`w-20 h-20 ${isDark ? 'bg-green-950/30' : 'bg-green-100'} rounded-full items-center justify-center mb-4`}>
               <CheckCircle size={40} color="#10B981" />
             </View>
             <AppText variant="h2" weight="bold" className={`${isDark ? 'text-white' : 'text-gray-900'} mb-2 text-center`}>
@@ -221,14 +221,14 @@ export default function ResetPassword() {
               <View className="mb-8">
                 <TouchableOpacity
                   onPress={() => router.back()}
-                  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  className={`mb-6 w-10 h-10 rounded-full ${isDark ? 'bg-gray-800' : 'bg-gray-100'} items-center justify-center`}
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
                 </TouchableOpacity>
 
                 <View className="items-center mb-4">
-                  <View className="w-20 h-20 bg-blue-100 rounded-full items-center justify-center mb-4">
+                  <View className={`w-20 h-20 ${isDark ? 'bg-blue-900/50' : 'bg-blue-100'} rounded-full items-center justify-center mb-4`}>
                     <View className="w-16 h-16 bg-blue-600 rounded-lg items-center justify-center">
                       <AppText weight="bold" variant="h1" className="text-white">B</AppText>
                     </View>
@@ -242,11 +242,11 @@ export default function ResetPassword() {
                 </View>
               </View>
               {error ? (
-                <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex-row items-start">
+                <View className={`${isDark ? 'bg-red-950/20 border border-red-900/50' : 'bg-red-50 border border-red-200'} rounded-lg p-4 mb-6 flex-row items-start`}>
                    <AlertCircle size={20} color="#DC2626" style={{ marginTop: 2 }} />
                    <View className="flex-1 ml-3">
-                    <AppText weight="medium" className="text-red-600">{translate('error')}</AppText>
-                    <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
+                    <AppText weight="medium" className={isDark ? 'text-red-400' : 'text-red-600'}>{translate('error')}</AppText>
+                    <AppText variant="bodySmall" className={`${isDark ? 'text-red-300' : 'text-red-600'} mt-1`}>{error}</AppText>
                   </View>
                 </View>
               ) : null}
@@ -271,7 +271,7 @@ export default function ResetPassword() {
                         error={errors.code?.message ? translate(errors.code.message as any) : undefined}
                         keyboardType="number-pad"
                         maxLength={6}
-                        className="bg-white border border-gray-300"
+                        className=""
                         editable={!loading}
                       />
                     </View>
@@ -304,7 +304,7 @@ export default function ResetPassword() {
                             }
                           </TouchableOpacity>
                         }
-                        className="bg-white border border-gray-300"
+                        className=""
                         editable={!loading}
                       />
                       {value ? (
@@ -317,7 +317,7 @@ export default function ResetPassword() {
                                {strength.label}
                              </AppText>
                           </View>
-                          <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <View className={`h-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
                             <View
                               style={{
                                 width: `${strength.width}%`,
@@ -365,30 +365,30 @@ export default function ResetPassword() {
                             }
                           </TouchableOpacity>
                         }
-                        className="bg-white border border-gray-300"
+                        className=""
                         editable={!loading}
                       />
                     </View>
                   )}
                 />
-                 <View className="bg-blue-50 p-4 rounded-lg">
-                  <AppText weight="semibold" className="text-blue-800 mb-2">
+                 <View className={`${isDark ? 'bg-blue-950/20 border border-blue-900/50' : 'bg-blue-50'} p-4 rounded-lg`}>
+                  <AppText weight="semibold" className={`${isDark ? 'text-blue-200' : 'text-blue-800'} mb-2`}>
                     {translate('pass_requirements')}
                   </AppText>
                   <View className="space-y-1">
-                    <AppText variant="bodySmall" className="text-blue-700">
+                    <AppText variant="bodySmall" className={isDark ? 'text-blue-300' : 'text-blue-700'}>
                       {translate('pass_req_min_6')}
                     </AppText>
-                    <AppText variant="bodySmall" className="text-blue-700">
+                    <AppText variant="bodySmall" className={isDark ? 'text-blue-300' : 'text-blue-700'}>
                       {translate('pass_req_uppercase')}
                     </AppText>
-                    <AppText variant="bodySmall" className="text-blue-700">
+                    <AppText variant="bodySmall" className={isDark ? 'text-blue-300' : 'text-blue-700'}>
                       {translate('pass_req_lowercase')}
                     </AppText>
-                    <AppText variant="bodySmall" className="text-blue-700">
+                    <AppText variant="bodySmall" className={isDark ? 'text-blue-300' : 'text-blue-700'}>
                       {translate('pass_req_number')}
                     </AppText>
-                    <AppText variant="bodySmall" className="text-blue-700">
+                    <AppText variant="bodySmall" className={isDark ? 'text-blue-300' : 'text-blue-700'}>
                       {translate('pass_req_special')}
                     </AppText>
                   </View>

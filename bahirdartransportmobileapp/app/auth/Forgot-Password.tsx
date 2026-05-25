@@ -108,7 +108,7 @@ export default function ForgotPassword() {
           <View className="flex-1 items-center justify-center px-6 py-8">
 
             <View className="items-center mb-8">
-              <View className="w-24 h-24 bg-green-100 rounded-full items-center justify-center mb-4">
+              <View className={`w-24 h-24 ${isDark ? 'bg-green-950/30' : 'bg-green-100'} rounded-full items-center justify-center mb-4`}>
                 <CheckCircle size={48} color="#10B981" />
               </View>
 
@@ -123,56 +123,56 @@ export default function ForgotPassword() {
               </AppText>
             </View>
 
-            <View className="w-full bg-blue-50 rounded-xl p-5 mb-6 border border-blue-100">
+            <View className={`w-full ${isDark ? 'bg-blue-950/20 border-blue-900/50' : 'bg-blue-50 border-blue-100'} rounded-xl p-5 mb-6 border`}>
               <View className="flex-row items-center mb-3">
                 <Smartphone size={20} color="#3B82F6" />
-                <AppText variant="h3" weight="bold" className="text-blue-800 ml-2">
+                <AppText variant="h3" weight="bold" className={`${isDark ? 'text-blue-200' : 'text-blue-800'} ml-2`}>
                   📱 {translate('mobile_users')}
                 </AppText>
               </View>
 
               <View className="space-y-3">
                 <View className="flex-row items-start">
-                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">1</AppText>
+                  <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-900/50' : 'bg-blue-200'} items-center justify-center mr-2 mt-0.5`}>
+                    <AppText weight="bold" variant="bodySmall" className={isDark ? 'text-blue-200' : 'text-blue-800'}>1</AppText>
                   </View>
-                   <AppText className="text-blue-800 flex-1">
+                   <AppText className={`${isDark ? 'text-blue-200' : 'text-blue-800'} flex-1`}>
                     {translate('step_1')}
                   </AppText>
                 </View>
 
                 <View className="flex-row items-start">
-                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">2</AppText>
+                  <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-900/50' : 'bg-blue-200'} items-center justify-center mr-2 mt-0.5`}>
+                    <AppText weight="bold" variant="bodySmall" className={isDark ? 'text-blue-200' : 'text-blue-800'}>2</AppText>
                   </View>
-                   <AppText className="text-blue-800 flex-1">
+                   <AppText className={`${isDark ? 'text-blue-200' : 'text-blue-800'} flex-1`}>
                     {translate('step_2')}
                   </AppText>
                 </View>
 
                 <View className="flex-row items-start">
-                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">3</AppText>
+                  <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-900/50' : 'bg-blue-200'} items-center justify-center mr-2 mt-0.5`}>
+                    <AppText weight="bold" variant="bodySmall" className={isDark ? 'text-blue-200' : 'text-blue-800'}>3</AppText>
                   </View>
-                   <AppText className="text-blue-800 flex-1">
+                   <AppText className={`${isDark ? 'text-blue-200' : 'text-blue-800'} flex-1`}>
                     {translate('step_3')}
                   </AppText>
                 </View>
 
                 <View className="flex-row items-start">
-                  <View className="w-6 h-6 rounded-full bg-blue-200 items-center justify-center mr-2 mt-0.5">
-                    <AppText weight="bold" variant="bodySmall" className="text-blue-800">4</AppText>
+                  <View className={`w-6 h-6 rounded-full ${isDark ? 'bg-blue-900/50' : 'bg-blue-200'} items-center justify-center mr-2 mt-0.5`}>
+                    <AppText weight="bold" variant="bodySmall" className={isDark ? 'text-blue-200' : 'text-blue-800'}>4</AppText>
                   </View>
-                   <AppText className="text-blue-800 flex-1">
+                   <AppText className={`${isDark ? 'text-blue-200' : 'text-blue-800'} flex-1`}>
                     {translate('step_4')}
                   </AppText>
                 </View>
               </View>
 
-              <View className="mt-4 pt-3 border-t border-blue-200">
+              <View className={`mt-4 pt-3 border-t ${isDark ? 'border-blue-900/50' : 'border-blue-200'}`}>
                 <View className="flex-row items-center">
                   <Info size={16} color="#3B82F6" />
-                  <AppText variant="bodySmall" className="text-blue-700 ml-2">
+                  <AppText variant="bodySmall" className={`${isDark ? 'text-blue-300' : 'text-blue-700'} ml-2`}>
                     {translate('expo_go_note')}
                   </AppText>
                 </View>
@@ -194,7 +194,7 @@ export default function ForgotPassword() {
             <View className="w-full space-y-3">
               <TouchableOpacity
                 onPress={openEmailApp}
-                className="w-full bg-blue-50 py-4 px-6 rounded-lg flex-row items-center justify-center border border-blue-200"
+                className={`w-full ${isDark ? 'bg-blue-950/20 border-blue-900/50' : 'bg-blue-50 border-blue-200'} py-4 px-6 rounded-lg flex-row items-center justify-center border`}
               >
                 <ExternalLink size={20} color="#3B82F6" />
                  <AppText weight="semibold" className="text-blue-600 ml-2">
@@ -251,7 +251,7 @@ export default function ForgotPassword() {
               <View className="mb-8">
                 <TouchableOpacity
                   onPress={() => router.back()}
-                  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  className={`mb-6 w-10 h-10 rounded-full ${isDark ? 'bg-gray-800' : 'bg-gray-100'} items-center justify-center`}
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
@@ -261,7 +261,7 @@ export default function ForgotPassword() {
                     <AppText variant="h1" weight="bold" className="text-blue-600 mb-2">
                      {translate('reset_password_title')}
                    </AppText>
-                   <AppText className="text-gray-600 text-base">
+                   <AppText className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-base`}>
                      {translate('reset_password_sub')}
                    </AppText>
                 </View>
@@ -286,7 +286,7 @@ export default function ForgotPassword() {
                         autoComplete="email"
                         textContentType="emailAddress"
                         leftIcon={<Mail size={20} color="#6B7280" />}
-                        className="bg-gray-50"
+                        className=""
                       />
 
                        <View className="flex-row items-center mt-2">
@@ -299,20 +299,20 @@ export default function ForgotPassword() {
                   )}
                 />
 
-                 <View className="bg-blue-50 p-4 rounded-lg mt-2">
-                    <AppText weight="semibold" className="text-blue-800 mb-2">
-                     📱 {translate('how_it_works')}:
-                   </AppText>
-                   <AppText variant="bodySmall" className="text-blue-700 mb-1">
-                     1. {translate('enter_email_step')}
-                   </AppText>
-                   <AppText variant="bodySmall" className="text-blue-700 mb-1">
-                     2. {translate('click_link_step')}
-                   </AppText>
-                   <AppText variant="bodySmall" className="text-blue-700">
-                     3. {translate('app_opens_step')}
-                   </AppText>
-                 </View>
+                  <View className={`${isDark ? 'bg-blue-950/20 border border-blue-900/50' : 'bg-blue-50'} p-4 rounded-lg mt-2`}>
+                     <AppText weight="semibold" className={`${isDark ? 'text-blue-200' : 'text-blue-800'} mb-2`}>
+                      📱 {translate('how_it_works')}:
+                    </AppText>
+                    <AppText variant="bodySmall" className={`${isDark ? 'text-blue-300' : 'text-blue-700'} mb-1`}>
+                      1. {translate('enter_email_step')}
+                    </AppText>
+                    <AppText variant="bodySmall" className={`${isDark ? 'text-blue-300' : 'text-blue-700'} mb-1`}>
+                      2. {translate('click_link_step')}
+                    </AppText>
+                    <AppText variant="bodySmall" className={`${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                      3. {translate('app_opens_step')}
+                    </AppText>
+                  </View>
 
                  <Button
                   title={translate('send_reset')}

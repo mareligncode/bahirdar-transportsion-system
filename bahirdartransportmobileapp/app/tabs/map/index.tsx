@@ -7,7 +7,7 @@ import {
   FlatList,
   StatusBar
 } from 'react-native';
-import MapView, { Marker, Polyline, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { 
   MapPin, 
@@ -28,68 +28,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Trip } from '@/types/trip';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-
-
-// Bahir Dar Meneharia Center
-const INITIAL_REGION = {
-  latitude: 11.5944,
-  longitude: 37.3912,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
-
-const MAP_DARK_STYLE = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#242f3e" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#746855" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#242f3e" }]
-  },
-  {
-    "featureType": "administrative.locality",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#d59563" }]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#d59563" }]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#263c3f" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#38414e" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#212a37" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#746855" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#17263c" }]
-  }
-];
-
 export default function LiveMapScreen() {
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
   const { translate } = useTranslation();
   const { colors, isDark } = useTheme();
   const { fetchAllTrips, stations, fetchStations, loading: tripsLoading } = useTrips();
@@ -99,6 +39,7 @@ export default function LiveMapScreen() {
   const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard');
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [showTripList, setShowTripList] = useState(false);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
   
   // Use ref to avoid useEffect dependency issues with selectedTrip
   const selectedTripRef = useRef(selectedTrip);
@@ -136,20 +77,22 @@ export default function LiveMapScreen() {
       setUserLocation(initialLocation);
       
       // Auto-focus on start if no selected trip
-      if (!selectedTripRef.current) {
-        mapRef.current?.animateToRegion({
-          latitude: initialLocation.coords.latitude,
-          longitude: initialLocation.coords.longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }, 1000);
+      if (!selectedTripRef.current && isMapLoaded) {
+        webViewRef.current?.injectJavaScript(`
+          try {
+            if (window.map) {
+              window.map.setView([${initialLocation.coords.latitude}, ${initialLocation.coords.longitude}], 14);
+            }
+          } catch(e) {}
+          true;
+        `);
       }
 
       // Watch position
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 10, // Update every 10 meters
+          distanceInterval: 10,
         },
         (location) => {
           setUserLocation(location);
@@ -161,55 +104,135 @@ export default function LiveMapScreen() {
     return () => {
       if (subscription) subscription.remove();
     };
-  }, []);
+  }, [isMapLoaded]);
+
+  // Send update to map whenever activeTrips or stations change
+  useEffect(() => {
+    if (!isMapLoaded || !webViewRef.current) return;
+
+    const filteredStations = stations
+      .filter(s => s.city?.toLowerCase() === 'bahir dar' && s.label?.toLowerCase() !== 'lamberet')
+      .map(s => {
+        const coords = (s as any).coordinates || { lat: 11.5944, lng: 37.3912 };
+        return { id: s.value, label: s.label, city: s.city, lat: coords.lat, lng: coords.lng };
+      });
+
+    const filteredTrips = activeTrips
+      .filter(t => t.currentCoordinates && (t.origin?.city?.toLowerCase() === 'bahir dar' || t.destination?.city?.toLowerCase() === 'bahir dar'))
+      .map(t => ({
+        id: t._id,
+        plateNumber: t.vehicle?.plateNumber,
+        origin: t.origin?.stationName,
+        destination: t.destination?.stationName,
+        lat: t.currentCoordinates!.lat,
+        lng: t.currentCoordinates!.lng,
+        isRealtime: t.isRealtimeTracking
+      }));
+
+    let selectedTripRoute = null;
+    if (selectedTrip) {
+      selectedTripRoute = {
+        origin: { lat: (selectedTrip.origin as any).coordinates?.lat || 11.5944, lng: (selectedTrip.origin as any).coordinates?.lng || 37.3912 },
+        dest: { lat: (selectedTrip.destination as any).coordinates?.lat || 11.5944, lng: (selectedTrip.destination as any).coordinates?.lng || 37.3912 }
+      };
+    }
+
+    const payload = {
+      type: 'updateData',
+      stations: filteredStations,
+      trips: filteredTrips,
+      selectedTripRoute,
+      selectedTripId: selectedTrip ? selectedTrip._id : null
+    };
+
+    webViewRef.current.injectJavaScript(`
+      try {
+        window.postMessage(JSON.stringify(${JSON.stringify(payload)}), '*');
+      } catch(e) {}
+      true;
+    `);
+
+  }, [activeTrips, stations, isMapLoaded, selectedTrip]);
+
+  // Update Theme
+  useEffect(() => {
+    if (!isMapLoaded || !webViewRef.current) return;
+    
+    const payload = { type: 'setTheme', isDark, mapType };
+    webViewRef.current.injectJavaScript(`
+      try {
+        window.postMessage(JSON.stringify(${JSON.stringify(payload)}), '*');
+      } catch(e) {}
+      true;
+    `);
+  }, [isDark, mapType, isMapLoaded]);
+
 
   const handleLocateMe = () => {
-    if (userLocation) {
-      mapRef.current?.animateToRegion({
-        latitude: userLocation.coords.latitude,
-        longitude: userLocation.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
+    if (userLocation && isMapLoaded) {
+      webViewRef.current?.injectJavaScript(`
+        try {
+          if (window.map) {
+            window.map.flyTo([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], 15, { duration: 1 });
+          }
+        } catch(e) {}
+        true;
+      `);
     }
   };
 
-  // 3. Fit All Markers
   const handleFitAll = () => {
-    const markers = [
+    if (!isMapLoaded) return;
+    
+    const bounds = [
       ...activeTrips
         .filter(t => t.currentCoordinates)
-        .map(t => ({ latitude: t.currentCoordinates!.lat, longitude: t.currentCoordinates!.lng })),
+        .map(t => [t.currentCoordinates!.lat, t.currentCoordinates!.lng]),
       ...stations
-        .filter(s => s.location && typeof s.location === 'object') // Assuming coordinates might be in location or we use the lat/lng we added
+        .filter(s => s.city?.toLowerCase() === 'bahir dar')
         .map(s => {
-            // Check if coordinates exist in the station object (we added them to the type)
-            // But let's fall back to some defaults if not found
             const coords = (s as any).coordinates || { lat: 11.5944, lng: 37.3912 };
-            return { latitude: coords.lat, longitude: coords.lng };
+            return [coords.lat, coords.lng];
         })
     ];
 
-    if (markers.length > 0) {
-      mapRef.current?.fitToCoordinates(markers, {
-        edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
-        animated: true,
-      });
+    if (bounds.length > 0) {
+      webViewRef.current?.injectJavaScript(`
+        try {
+          if (window.map) {
+            window.map.fitBounds(${JSON.stringify(bounds)}, { padding: [50, 50], duration: 1 });
+          }
+        } catch(e) {}
+        true;
+      `);
     }
   };
 
-  // 4. Focus Trip
   const focusTrip = (trip: Trip) => {
     setSelectedTrip(trip);
     setShowTripList(false);
-    if (trip.currentCoordinates) {
-      mapRef.current?.animateToRegion({
-        latitude: trip.currentCoordinates.lat,
-        longitude: trip.currentCoordinates.lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
+    if (trip.currentCoordinates && isMapLoaded) {
+      webViewRef.current?.injectJavaScript(`
+        try {
+          if (window.map) {
+            window.map.flyTo([${trip.currentCoordinates.lat}, ${trip.currentCoordinates.lng}], 15, { duration: 1 });
+          }
+        } catch(e) {}
+        true;
+      `);
     }
+  };
+
+  const onMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'tripSelected') {
+        const trip = activeTrips.find(t => t._id === data.tripId);
+        if (trip) {
+          setSelectedTrip(trip);
+        }
+      }
+    } catch(e) {}
   };
 
   const renderTripItem = ({ item }: { item: Trip }) => (
@@ -246,6 +269,148 @@ export default function LiveMapScreen() {
     </TouchableOpacity>
   );
 
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { padding: 0; margin: 0; }
+        html, body, #map { height: 100%; width: 100vw; background-color: ${isDark ? '#111827' : '#f9fafb'}; }
+        
+        .station-marker {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 50%;
+            border: 2px solid white;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .vehicle-marker {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            border: 2px solid white;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        .vehicle-marker.active {
+            background-color: #22c55e;
+        }
+        .vehicle-marker.selected {
+            background-color: #f59e0b;
+            transform: scale(1.1);
+            z-index: 1000 !important;
+        }
+        
+        /* Hide leaflet controls for cleaner UI */
+        .leaflet-control-attribution { display: none; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map', { zoomControl: false }).setView([11.5944, 37.3912], 13);
+        
+        var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        var markersGroup = L.layerGroup().addTo(map);
+        var routeLine = null;
+
+        window.addEventListener("message", function(event) {
+            try {
+                var data = JSON.parse(event.data);
+                
+                if (data.type === 'setTheme') {
+                    var isDark = data.isDark;
+                    var mapType = data.mapType;
+                    
+                    var url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                    
+                    if (mapType === 'satellite') {
+                        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                    } else if (isDark) {
+                        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                    }
+                    
+                    tileLayer.setUrl(url);
+                }
+                
+                if (data.type === 'updateData') {
+                    markersGroup.clearLayers();
+                    
+                    // Add Stations
+                    data.stations.forEach(function(station) {
+                        var icon = L.divIcon({
+                            className: 'station-marker',
+                            html: 'S',
+                            iconSize: [24, 24]
+                        });
+                        L.marker([station.lat, station.lng], {icon: icon})
+                         .bindPopup('<b style="font-size:14px; color:#1e3a8a;">' + station.label + '</b><br>' + station.city)
+                         .addTo(markersGroup);
+                    });
+
+                    // Add Vehicles
+                    data.trips.forEach(function(trip) {
+                        var isSelected = trip.id === data.selectedTripId;
+                        var className = 'vehicle-marker';
+                        if (trip.isRealtime) className += ' active';
+                        if (isSelected) className += ' selected';
+                        
+                        var icon = L.divIcon({
+                            className: className,
+                            html: '🚌 ' + trip.plateNumber,
+                            iconSize: [70, 24]
+                        });
+                        
+                        var marker = L.marker([trip.lat, trip.lng], {icon: icon, zIndexOffset: isSelected ? 1000 : 0})
+                         .addTo(markersGroup);
+                         
+                        // Send message back to React Native when tapped
+                        marker.on('click', function() {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                                type: 'tripSelected',
+                                tripId: trip.id
+                            }));
+                        });
+                    });
+
+                    // Draw Route if selectedTrip exists
+                    if (routeLine) {
+                        map.removeLayer(routeLine);
+                        routeLine = null;
+                    }
+
+                    if (data.selectedTripRoute) {
+                        var route = data.selectedTripRoute;
+                        routeLine = L.polyline([
+                            [route.origin.lat, route.origin.lng],
+                            [route.dest.lat, route.dest.lng]
+                        ], {color: '#3b82f6', weight: 4, dashArray: '10, 10'}).addTo(map);
+                    }
+                }
+
+            } catch(e) {}
+        });
+    </script>
+</body>
+</html>
+  `;
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -270,96 +435,33 @@ export default function LiveMapScreen() {
       </View>
 
       <View className="flex-1 relative">
-        <MapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFill}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={INITIAL_REGION}
-          customMapStyle={isDark ? MAP_DARK_STYLE : []}
-          mapType={mapType}
-          showsUserLocation
-          followsUserLocation
-          loadingEnabled
-          showsMyLocationButton={false}
-        >
-          {/* Station Markers */}
-          {stations
-            .filter(s => s.city?.toLowerCase() === 'bahir dar' && s.label?.toLowerCase() !== 'lamberet')
-            .map((station) => {
-            const coords = (station as any).coordinates;
-            if (!coords || !coords.lat || !coords.lng) return null;
-            return (
-              <Marker
-                key={station.value}
-                coordinate={{ latitude: coords.lat, longitude: coords.lng }}
-                title={station.label}
-                description={station.city}
-              >
-                <View className="items-center">
-                  <View className="bg-blue-600 p-1.5 rounded-full border-2 border-white shadow-lg">
-                    <MapPin size={12} color="white" />
-                  </View>
-                  <View className="bg-white/90 px-2 py-0.5 rounded-full mt-1 border border-gray-100">
-                    <AppText style={{ fontSize: 8 }} weight="bold" color="#1e3a8a">{station.label}</AppText>
-                  </View>
-                </View>
-              </Marker>
-            );
-          })}
-
-          {/* Vehicle Markers */}
-          {activeTrips
-            .filter(t => 
-              t.currentCoordinates && 
-              (t.origin?.city?.toLowerCase() === 'bahir dar' || t.destination?.city?.toLowerCase() === 'bahir dar')
-            )
-            .map((trip) => (
-            <Marker
-              key={trip._id}
-              coordinate={{ 
-                latitude: trip.currentCoordinates!.lat, 
-                longitude: trip.currentCoordinates!.lng 
-              }}
-              onPress={() => setSelectedTrip(trip)}
-            >
-              <View className="items-center">
-                <View className={`${trip.isRealtimeTracking ? 'bg-green-500' : 'bg-blue-500'} p-2 rounded-2xl border-2 border-white shadow-2xl`}>
-                  <Bus size={18} color="white" />
-                </View>
-                {trip.isRealtimeTracking && (
-                  <View className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border border-white" />
-                )}
-                <View className={`${trip.isRealtimeTracking ? 'bg-green-900/80' : 'bg-blue-900/80'} px-2 py-0.5 rounded-full mt-1`}>
-                  <AppText style={{ fontSize: 9 }} weight="bold" color="white">{trip.vehicle?.plateNumber}</AppText>
-                </View>
-              </View>
-              <Callout tooltip>
-                <View className={`${isDark ? 'bg-gray-900' : 'bg-white'} p-3 rounded-2xl border border-gray-200 min-w-[150px]`}>
-                  <AppText weight="bold" color={colors.textPrimary}>{trip.vehicle?.plateNumber}</AppText>
-                  <AppText variant="caption" color={colors.textSecondary}>
-                    {trip.origin?.stationName} → {trip.destination?.stationName}
-                  </AppText>
-                  <View className="h-1 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                    <View className="bg-blue-600 h-full w-[60%]" />
-                  </View>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-
-          {/* Route Line for selected trip */}
-          {selectedTrip && (
-            <Polyline
-              coordinates={[
-                { latitude: (selectedTrip.origin as any).coordinates?.lat || 11.5944, longitude: (selectedTrip.origin as any).coordinates?.lng || 37.3912 },
-                { latitude: (selectedTrip.destination as any).coordinates?.lat || 11.5944, longitude: (selectedTrip.destination as any).coordinates?.lng || 37.3912 }
-              ]}
-              strokeColor={colors.primary}
-              strokeWidth={3}
-              lineDashPattern={[10, 10]}
-            />
-          )}
-        </MapView>
+        <WebView
+          ref={webViewRef}
+          source={{ html: htmlContent }}
+          style={{ flex: 1, backgroundColor: isDark ? '#111827' : '#f9fafb' }}
+          onMessage={onMessage}
+          onLoadEnd={() => {
+            setIsMapLoaded(true);
+            // Initial theme setup
+            webViewRef.current?.injectJavaScript(`
+              try {
+                window.postMessage(JSON.stringify({ type: 'setTheme', isDark: ${isDark}, mapType: '${mapType}' }), '*');
+              } catch(e) {}
+              true;
+            `);
+          }}
+          originWhitelist={['*']}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          allowFileAccessFromFileURLs={true}
+          allowUniversalAccessFromFileURLs={true}
+          mixedContentMode="always"
+          javaScriptEnabled={true}
+          scrollEnabled={false}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        />
 
         {/* Floating Controls */}
         <View className="absolute top-4 right-4 gap-y-3">
@@ -463,5 +565,3 @@ export default function LiveMapScreen() {
     </SafeAreaView>
   );
 }
-
-

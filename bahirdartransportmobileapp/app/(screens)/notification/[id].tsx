@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,13 @@ export default function NotificationDetailScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const notification = notifications.find((n) => n.id === id);
+
+  // Auto-mark as read when the detail screen is opened
+  useEffect(() => {
+    if (notification && !notification.is_read) {
+      markAsRead(notification.id);
+    }
+  }, [notification?.id]);
 
   if (!notification) {
     return (

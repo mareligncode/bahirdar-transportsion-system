@@ -545,12 +545,12 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
         <ViewShot
           ref={viewShotRef}
           options={{ format: 'png', quality: 0.9 }}
-          style={{ backgroundColor: 'white' }} 
+          style={{ backgroundColor: isDark ? '#1f2937' : 'white' }} 
         >
-          <View className="mx-4 mt-4 bg-white p-6 shadow-sm border border-gray-200" style={{ minHeight: 500 }}>
+          <View className={`mx-4 mt-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} p-6 shadow-sm border`} style={{ minHeight: 500 }}>
             <View className="items-center mb-6">
               <AppText weight="bold" className="text-xl">🚌 {translate('mengedenya')}</AppText>
-              <AppText variant="caption" className="text-gray-600">{translate('public_transport_service')}</AppText>
+              <AppText variant="caption" color={isDark ? colors.textSecondary : '#4b5563'}>{translate('public_transport_service')}</AppText>
             </View>
 
             <View className="mb-2">
@@ -571,7 +571,7 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
               </AppText>
             </View>
 
-            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: isDark ? '#4b5563' : '#000', marginVertical: 10 }} />
 
             <View className="mb-2">
               <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
@@ -585,7 +585,7 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
               </AppText>
             </View>
 
-            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: isDark ? '#4b5563' : '#000', marginVertical: 10 }} />
 
             <View className="mb-2">
               <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
@@ -599,7 +599,7 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
               </AppText>
             </View>
 
-            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: isDark ? '#4b5563' : '#000', marginVertical: 10 }} />
 
             <View className="mb-2">
               <AppText variant="bodySmall" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
@@ -616,7 +616,7 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
               </AppText>
             </View>
 
-            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginVertical: 10 }} />
+            <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: isDark ? '#4b5563' : '#000', marginVertical: 10 }} />
 
             <View className="mb-6">
               <AppText variant="caption" style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
@@ -701,7 +701,7 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
           onPress={() => setQrModalVisible(false)}
           className="flex-1 bg-black/90 justify-center items-center"
         >
-          <View className="bg-white p-6 rounded-2xl">
+          <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} p-6 rounded-2xl`}>
             <QrCodeDisplay
               value={qrValue}
               size={280}
@@ -714,9 +714,9 @@ ${translate('confirmation_number')} : ${booking.bookingNumber || booking._id?.sl
                 setQrModalVisible(false);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              className="mt-4 bg-gray-200 py-2 px-4 rounded-full self-center"
+              className={`mt-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} py-2 px-4 rounded-full self-center`}
             >
-              <AppText variant="bodyMedium" weight="500" color={isDark ? colors.gray300 : colors.gray700} className="text-center">Close</AppText>
+              <AppText variant="bodyMedium" weight="500" color={isDark ? colors.text : colors.gray700} className="text-center">Close</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

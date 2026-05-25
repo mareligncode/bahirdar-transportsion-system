@@ -97,8 +97,13 @@ export const notificationsApi = {
     return response.data as ApiResponse;
   },
 
+  markAllAsRead: async (): Promise<ApiResponse> => {
+    const response = await apiClient.put('/notifications/mark-all-read');
+    return response.data as ApiResponse;
+  },
+
   deleteNotification: async (id: string): Promise<ApiResponse> => {
-    const response = await apiClient.delete(`/notifications/${id}/archive`);
+    const response = await apiClient.delete(`/notifications/${id}`);
     return response.data as ApiResponse;
   },
 };

@@ -18,7 +18,7 @@ import { AppText } from '@/components/common/AppText';
 import { registerForPushNotificationsAsync, setupNotificationListeners } from '../../../lib/notifications';
 
 export default function NotificationScreen() {
-  const { notifications, unreadCount, isLoading, fetchNotifications, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { notifications, isLoading, fetchNotifications, markAllAsRead, deleteNotification } = useNotificationStore();
   const { showToast } = useToast();
   const router = useRouter();
   const { isDark, colors } = useTheme();
@@ -31,27 +31,9 @@ export default function NotificationScreen() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    
-    // Set up local notification listeners regardless of push notification availability
-    unsubscribe = setupNotificationListeners();
-    
-    // Only attempt to register for push notifications if not in Expo Go
-    registerForPushNotificationsAsync().then((token) => {
-      if (token) {
-        console.log('Push notification token registered:', token);
-      } else {
-        console.log('Push notifications not available (likely running in Expo Go)');
-      }
-    }).catch(error => {
-      console.log('Push notification registration skipped:', error.message);
-    });
-    
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+  // Compute counts directly from the notifications list (single source of truth)
+  const unreadList = notifications.filter(n => !n.is_read);
+  const localUnreadCount = unreadList.length;
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -85,7 +67,7 @@ export default function NotificationScreen() {
     );
   };
 
-  const filtered = activeTab === 'unread' ? notifications.filter(n => !n.is_read) : notifications;
+  const filtered = activeTab === 'unread' ? unreadList : notifications;
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -93,7 +75,7 @@ export default function NotificationScreen() {
         <View className={`${isDark ? 'bg-blue-700' : 'bg-blue-600'} px-4 py-3`}>
           <View className="flex-row justify-between items-center">
             <AppText className="text-white font-semibold text-lg">{translate('notifications')}</AppText>
-            {unreadCount > 0 && (
+            {localUnreadCount > 0 && (
               <TouchableOpacity
                 onPress={handleMarkAllAsRead}
                 className={`px-3 py-2 ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg`}
@@ -131,7 +113,7 @@ export default function NotificationScreen() {
                   activeTab === 'unread' ? (isDark ? 'text-blue-400' : 'text-blue-600') : 'text-white'
                 }`}
               >
-                {translate('unread_filter')} ({unreadCount})
+                {translate('unread_filter')} ({localUnreadCount})
               </AppText>
             </TouchableOpacity>
           </View>
@@ -144,7 +126,7 @@ export default function NotificationScreen() {
         ) : (
           <NotificationList
             items={filtered}
-            unreadCount={unreadCount}
+            unreadCount={localUnreadCount}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             onPressItem={handleViewNotification}

@@ -46,7 +46,6 @@ import {
   Shield,
   Menu,
   Award,
-  Gift,
   Timer,
   Wallet,
 } from 'lucide-react-native';
@@ -573,35 +572,6 @@ export default function PassengerDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Promo Banner Section */}
-        <View className="px-4 mt-6">
-          <TouchableOpacity
-            onPress={navigationActions.bookTrip}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden shadow-lg"
-          >
-            <View className="relative h-44">
-              <Image
-                source={require('../../../assets/images/banner.png')}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-              <View className="absolute inset-0 bg-black/30 p-5 justify-end">
-                <View className="bg-blue-600 self-start px-2 py-1 rounded-md mb-2">
-                  <AppText variant="caption" weight="bold" color="white" className="uppercase tracking-widest">
-                    {translate('limited_offer')}
-                  </AppText>
-                </View>
-                <AppText variant="h2" color="white" weight="bold">
-                  {translate('explore_bahirdar')}
-                </AppText>
-                <AppText variant="bodySmall" color="white" className="mt-1">
-                  {translate('explore_bahirdar_desc')}
-                </AppText>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
 
         {/* Stats Section Moved to Top */}
         <View className="px-4 mt-4">
@@ -702,7 +672,7 @@ export default function PassengerDashboard() {
                         </AppText>
                       </View>
                       <Badge
-                        text={booking.status?.toUpperCase()}
+                        text={translate(`ticket_status_${booking.status?.toLowerCase()}` as any) || booking.status?.toUpperCase()}
                         variant={getBadgeVariant(booking.status || '')}
                       />
                     </TouchableOpacity>
@@ -750,22 +720,6 @@ export default function PassengerDashboard() {
           </View>
         </View>
 
-        <View className="px-4 mt-2">
-          <TouchableOpacity
-            onPress={navigationActions.bookTrip}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4"
-            activeOpacity={0.9}
-          >
-            <View className="flex-row items-center">
-              <Gift size={24} color="white" />
-              <View className="ml-3 flex-1">
-                <AppText variant="h3" weight="bold" color="white">{translate('promo_first_trip')}</AppText>
-                <AppText variant="bodySmall" color="rgba(255,255,255,0.9)">{translate('promo_desc')}</AppText>
-              </View>
-              <ArrowRight size={20} color="white" />
-            </View>
-          </TouchableOpacity>
-        </View>
         <View className="px-4 mt-2 mb-8">
           <Card className={`${isDark ? 'bg-green-900/20 border-green-900/50' : 'bg-green-50 border-green-200'}`}>
             <View className="p-3 flex-row items-center">

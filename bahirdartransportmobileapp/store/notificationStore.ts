@@ -22,6 +22,7 @@ interface NotificationActions {
   addNotification: (notification: Notification) => void;
   clearError: () => void;
   clearAllNotifications: () => void;
+  refreshOnLogin: () => Promise<void>;
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -33,6 +34,10 @@ const defaultPreferences: NotificationPreferences = {
   email_enabled: true,
 };
 
+/** Helper: count unread from a notification list */
+const countUnread = (items: Notification[]): number =>
+  items.filter((n) => !n.is_read).length;
+
 export const useNotificationStore = create<NotificationState & NotificationActions>()(
   persist(
     (set, get) => ({
@@ -42,18 +47,20 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       isLoading: false,
       error: null,
 
-      fetchNotifications: async (unreadOnly?: boolean) => {
+      /**
+       * Fetch all notifications from the server.
+       * Always stores the FULL list — the UI filters for the "unread" tab.
+       */
+      fetchNotifications: async (_unreadOnly?: boolean) => {
         set({ isLoading: true, error: null });
         try {
           const res = await notificationsApi.getNotifications({ page: 1, limit: 50 });
-          const items = res.mobile || [];
-          const filtered = unreadOnly ? items.filter((n: any) => !n.is_read) : items;
-          const unreadRes = await notificationsApi.getUnreadCount();
-          const unreadCount = unreadRes?.data?.unreadCount ?? filtered.filter((n: any) => !n.is_read).length;
+          const items: Notification[] = res.mobile || [];
 
+          // Always store the complete list; compute unread locally
           set({
-            notifications: filtered,
-            unreadCount,
+            notifications: items,
+            unreadCount: countUnread(items),
           });
         } catch (error: any) {
           console.error('Error fetching notifications:', error);
@@ -67,58 +74,96 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         set({ isLoading: true, error: null });
         try {
           const res = await notificationsApi.getNotifications({ page: 1, limit: 50 });
-          const items = res.mobile || [];
-          const unreadRes = await notificationsApi.getUnreadCount();
-          const unreadCount = unreadRes?.data?.unreadCount ?? items.filter((n: any) => !n.is_read).length;
+          const items: Notification[] = res.mobile || [];
 
           set({
             notifications: items,
-            unreadCount,
+            unreadCount: countUnread(items),
           });
         } catch (error: any) {
-          console.error('Error refreshing notifications on login:', error);
+          if (error.response?.status !== 401) {
+            console.error('Error refreshing notifications on login:', error);
+          }
           set({ error: error.message || 'Failed to refresh notifications' });
         } finally {
           set({ isLoading: false });
         }
       },
 
+      /**
+       * Mark a single notification as read.
+       * Guards against already-read notifications to prevent negative counts.
+       */
       markAsRead: async (notificationId: string) => {
+        const { notifications } = get();
+        const target = notifications.find((n) => n.id === notificationId);
+
+        // Skip if already read or not found
+        if (!target || target.is_read) return;
+
+        // Optimistic update
+        const updated = notifications.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n
+        );
+        set({
+          notifications: updated,
+          unreadCount: countUnread(updated),
+        });
+
+        // Fire API in background — don't revert on failure
         try {
           await notificationsApi.markAsRead(notificationId);
-          const { notifications, unreadCount } = get();
-          const updated = notifications.map((n: any) =>
-            n.id === notificationId ? { ...n, is_read: true } : n
-          );
-          set({
-            notifications: updated,
-            unreadCount: Math.max(0, unreadCount - 1),
-          });
         } catch (error: any) {
           console.error('Error marking notification as read:', error);
         }
       },
 
+      /**
+       * Mark ALL notifications as read.
+       * Uses optimistic local update first, then marks each unread one
+       * via the existing per-notification API endpoint.
+       */
       markAllAsRead: async () => {
+        const { notifications } = get();
+        const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+
+        if (unreadIds.length === 0) return;
+
+        // Optimistic update — UI reflects immediately
+        const updated = notifications.map((n) => ({ ...n, is_read: true }));
+        set({ notifications: updated, unreadCount: 0 });
+
+        // Try the bulk endpoint first (may not exist on backend)
         try {
-          const { notifications } = get();
-          const unread = notifications.filter((n: any) => !n.is_read);
-          await Promise.all(unread.map((n: any) => notificationsApi.markAsRead(n.id)));
-          const updated = notifications.map((n: any) => ({ ...n, is_read: true }));
-          set({ notifications: updated, unreadCount: 0 });
-        } catch (error: any) {
-          console.error('Error marking all notifications as read:', error);
+          await notificationsApi.markAllAsRead();
+        } catch {
+          // Bulk endpoint unavailable — fall back to individual calls
+          await Promise.allSettled(
+            unreadIds.map((id) =>
+              notificationsApi.markAsRead(id).catch(() => {})
+            )
+          );
         }
       },
 
+      /**
+       * Delete a notification.
+       * Only decrements unread count if the deleted notification was actually unread.
+       */
       deleteNotification: async (notificationId: string) => {
         try {
           await notificationsApi.deleteNotification(notificationId);
-          const { notifications, unreadCount } = get();
-          const toDelete = notifications.find((n: any) => n.id === notificationId);
-          const updated = notifications.filter((n: any) => n.id !== notificationId);
-          const newUnread = toDelete?.is_read ? unreadCount : Math.max(0, unreadCount - 1);
-          set({ notifications: updated, unreadCount: newUnread });
+          const { notifications } = get();
+          const toDelete = notifications.find((n) => n.id === notificationId);
+          const updated = notifications.filter((n) => n.id !== notificationId);
+          const wasUnread = toDelete && !toDelete.is_read;
+
+          set({
+            notifications: updated,
+            unreadCount: wasUnread
+              ? Math.max(0, get().unreadCount - 1)
+              : get().unreadCount,
+          });
         } catch (error: any) {
           console.error('Error deleting notification:', error);
         }
@@ -144,12 +189,15 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       },
 
       addNotification: (notification: Notification) => {
-        const { notifications, unreadCount } = get();
-        const newUnreadCount = (notification as any).is_read ? unreadCount : unreadCount + 1;
+        const { notifications } = get();
 
+        // Prevent duplicate notifications (e.g. from socket + push)
+        if (notifications.some((n) => n.id === notification.id)) return;
+
+        const newList = [notification, ...notifications];
         set({
-          notifications: [notification, ...notifications],
-          unreadCount: newUnreadCount,
+          notifications: newList,
+          unreadCount: countUnread(newList),
         });
       },
 

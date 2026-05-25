@@ -143,7 +143,7 @@ export default function Login() {
                       router.replace('/');
                     }
                   }}
-                  className="mb-6 w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  className={`mb-6 w-10 h-10 rounded-full ${isDark ? 'bg-gray-800' : 'bg-gray-100'} items-center justify-center`}
                   activeOpacity={0.7}
                 >
                   <ArrowLeft size={20} color="#3B82F6" />
@@ -165,23 +165,23 @@ export default function Login() {
               </View>
 
               {success && (
-                <Card className="bg-green-50 border-green-200 mb-6">
+                <Card className={`${isDark ? 'bg-green-950/20 border-green-900/50' : 'bg-green-50 border-green-200'} mb-6`}>
                   <View className="flex-row items-start">
                     <CheckCircle size={20} color="#10B981" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
-                      <AppText weight="medium" className="text-green-700">{success}</AppText>
+                      <AppText weight="medium" className={isDark ? 'text-green-400' : 'text-green-700'}>{success}</AppText>
                     </View>
                   </View>
                 </Card>
               )}
 
               {error && (
-                <Card className="bg-red-50 border-red-200 mb-6">
+                <Card className={`${isDark ? 'bg-red-950/20 border-red-900/50' : 'bg-red-50 border-red-200'} mb-6`}>
                   <View className="flex-row items-start">
                     <AlertCircle size={20} color="#EF4444" style={{ marginTop: 2, marginRight: 12 }} />
                     <View className="flex-1">
-                      <AppText weight="medium" className="text-red-600">{translate('login_failed')}</AppText>
-                      <AppText variant="bodySmall" className="text-red-600 mt-1">{error}</AppText>
+                      <AppText weight="medium" className={isDark ? 'text-red-400' : 'text-red-600'}>{translate('login_failed')}</AppText>
+                      <AppText variant="bodySmall" className={isDark ? 'text-red-300/80' : 'text-red-600' + ' mt-1'}>{error}</AppText>
                     </View>
                   </View>
                 </Card>

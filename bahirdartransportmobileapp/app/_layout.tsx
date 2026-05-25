@@ -13,6 +13,10 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { FontProvider } from '@/context/FontContext';
+import { socketService } from '@/lib/socketService';
+import { useNotificationStore } from '@/store/notificationStore';
+import { registerForPushNotificationsAsync, setupNotificationListeners } from '@/lib/notifications';
+import { AppState, AppStateStatus } from 'react-native';
 
 LogBox.ignoreLogs(['Unable to activate keep awake']);
 
@@ -23,6 +27,50 @@ function AppContent() {
   const { translate } = useTranslation();
   const segments = useSegments();
   const router = useRouter();
+  const refreshNotifications = useNotificationStore(state => state.refreshOnLogin);
+
+  // Set up notifications and sockets globally when authenticated
+  useEffect(() => {
+    let unsubscribeNotifications: (() => void) | undefined;
+
+    if (isAuthenticated) {
+      // Connect to Socket.io for real-time in-app notifications
+      socketService.connect();
+
+      // Register for push notifications globally
+      registerForPushNotificationsAsync().then((token) => {
+        if (token) {
+          console.log('📱 Global Push token registered:', token);
+        }
+      }).catch(err => console.log('📱 Push registration skipped:', err.message));
+
+      // Set up listeners for local/push notifications
+      unsubscribeNotifications = setupNotificationListeners();
+
+      // Refresh notifications when logging in or App comes to foreground
+      refreshNotifications();
+    } else {
+      socketService.disconnect();
+    }
+
+    return () => {
+      if (unsubscribeNotifications) unsubscribeNotifications();
+      socketService.disconnect();
+    };
+  }, [isAuthenticated, refreshNotifications]);
+
+  // Refresh notifications when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && isAuthenticated) {
+        refreshNotifications();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated, refreshNotifications]);
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
