@@ -9,7 +9,9 @@ import mongoose from 'mongoose';
 
 export const getDashboardStats = async (req, res) => {
     try {
+        const { stationId } = req.query;
         let effectiveStationId = stationId;
+        let matchQuery = {};
 
         // Force Station Admin to only see their own station's stats
         if (req.user.role === 'station_admin') {
@@ -49,7 +51,7 @@ export const getDashboardStats = async (req, res) => {
                 {
                     $match: {
                         paymentStatus: 'success',
-                        ...(stationId ? { 'booking.tripID': { $in: await getTripIdsByStation(stationId) } } : {})
+                        ...(effectiveStationId ? { 'booking.tripID': { $in: await getTripIdsByStation(effectiveStationId) } } : {})
                     }
                 },
                 { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -142,7 +144,9 @@ export const getRevenueReport = async (req, res) => {
 
 export const getBookingStats = async (req, res) => {
     try {
+        const { stationId } = req.query;
         let effectiveStationId = stationId;
+        let matchQuery = {};
 
         // Force Station Admin
         if (req.user.role === 'station_admin') {
