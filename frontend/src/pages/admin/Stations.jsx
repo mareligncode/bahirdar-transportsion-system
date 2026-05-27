@@ -1023,7 +1023,6 @@ const Stations = () => {
                                 size="small"
                                 color="error"
                                 onClick={() => openDelete(station)}
-                                disabled={station.isActive}
                                 sx={{
                                   bgcolor: '#ffebee',
                                   '&:hover': { bgcolor: '#ffcdd2' },
@@ -1835,23 +1834,7 @@ const Stations = () => {
           <Typography variant="h6" gutterBottom>
             {t('delete_confirm_question', { name: selectedStation?.stationName })}
           </Typography>
-          {selectedStation?.isActive && (
-            <Alert
-              severity="warning"
-              sx={{
-                mb: 2,
-                borderRadius: 2,
-                '& .MuiAlert-icon': { alignItems: 'center' }
-              }}
-            >
-              <Typography variant="body2" fontWeight="bold">
-                {t('station_active_warning')}
-              </Typography>
-              <Typography variant="body2">
-                {t('deactivate_before_delete_hint')}
-              </Typography>
-            </Alert>
-          )}
+
           <Alert
             severity="error"
             sx={{
@@ -1879,7 +1862,7 @@ const Stations = () => {
             onClick={handleDeleteStation}
             variant="contained"
             color="error"
-            disabled={formLoading || selectedStation?.isActive}
+            disabled={formLoading}
             startIcon={formLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
             sx={{ borderRadius: 2 }}
           >
