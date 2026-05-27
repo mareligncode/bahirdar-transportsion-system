@@ -1144,7 +1144,7 @@ const Trips = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <MoneyIcon color="success" />
                         <Typography variant="body2" fontWeight="medium">
-                          ${trip.price || 0}
+                          ETB {trip.price || 0}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -1835,7 +1835,7 @@ const Trips = () => {
                         {t('Price per Seat')}
                       </Typography>
                       <Typography variant="h4" color="success">
-                        ${selectedTrip.price || 0}
+                        ETB {selectedTrip.price || 0}
                       </Typography>
                     </CardContent>
                   </Card>

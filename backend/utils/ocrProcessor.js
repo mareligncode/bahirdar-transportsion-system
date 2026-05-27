@@ -54,15 +54,37 @@ class OCRProcessor {
         const dateMatch = cleanText.match(/(\d{1,2}-[A-Z]{3}-\d{4})/i) || cleanText.match(/ON\s+(\d{1,2}\s+[A-Z]{3}\s+\d{4})/i);
         if (dateMatch) result.date = dateMatch[1].replace(/\s+/g, '-');
 
-        const idMatch = cleanText.match(/(?:REF|TXN ID|TXN|REFERENCE)[:\s#]*([A-Z0-9\s-]{6,20})/i);
+        // 1. Look for common transaction ID prefixes
+        const idMatch = cleanText.match(/(?:REF|TXN ID|TXN|REFERENCE|JOURNAL|RECEIPT NO|TID|ID|TRANSACTION)[:\s.#-]*([A-Z0-9]{6,20})/i);
         if (idMatch) {
-            // Clean the ID: take the first continuous alphanumeric block
-            result.transactionID = idMatch[1].trim().split(' ')[0];
+            result.transactionID = idMatch[1].trim();
         }
 
+        // 2. Look for CBE 'FT' transaction IDs anywhere
         if (!result.transactionID) {
-            const genericIDMatch = cleanText.match(/\b([A-Z0-9]{10,20})\b/i);
-            if (genericIDMatch) result.transactionID = genericIDMatch[1];
+            const ftMatch = cleanText.match(/(FT[A-Z0-9]{8,15})/i);
+            if (ftMatch) result.transactionID = ftMatch[1];
+        }
+
+        // 3. Look for Telebirr/other standard alphanumeric IDs
+        if (!result.transactionID) {
+            // Find any 8-20 char word with BOTH letters and numbers
+            const words = cleanText.split(/[^A-Z0-9]+/);
+            for (const word of words) {
+                if (word.length >= 8 && word.length <= 20 && /[A-Z]/.test(word) && /[0-9]/.test(word)) {
+                    result.transactionID = word;
+                    break;
+                }
+            }
+        }
+
+        // 4. Last resort: Look for purely numeric IDs (like some bank references) between 8 and 15 digits
+        if (!result.transactionID) {
+            const numMatch = cleanText.match(/\b([0-9]{8,15})\b/);
+            // We ensure it doesn't match a date or phone number, but basic check is length
+            if (numMatch && !numMatch[1].startsWith('09')) {
+                result.transactionID = numMatch[1];
+            }
         }
 
         const receivePart = cleanText.match(/(?:TO|FOR)[:\s]+([A-Z\s]{5,40})/i);
