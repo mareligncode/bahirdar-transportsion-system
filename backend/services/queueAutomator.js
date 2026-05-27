@@ -5,15 +5,10 @@ import Vehicle from '../models/Vehicle.js';
 import NotificationService from './notificationService.js';
 
 class QueueAutomator {
-    /**
-     * Process the next vehicle in the queue for a specific route
-     * @param {string} routeID - The ID of the route
-     * @param {string} stationID - The ID of the station starting the trip
-     * @param {string} createdBy - The ID of the admin/user triggering this (or system ID)
-     */
+    // Process the next vehicle in the queue for a specific route
     static async processNextInQueue(routeID, stationID, createdBy) {
         try {
-            // 1. Check if a trip is already active for this route TODAY with available seats
+            // Check active trips
             const today = new Date();
             const startOfDay = new Date(today.setHours(0, 0, 0, 0));
             const endOfDay = new Date(today.setHours(23, 59, 59, 999));
@@ -35,7 +30,7 @@ class QueueAutomator {
                 return { success: false, message: 'Existing active trip with seats found' };
             }
 
-            // 2. Get the next vehicle in the queue for this route
+            // Get next vehicle
             const nextInLine = await Queue.findOne({
                 route: routeID,
                 station: stationID,
@@ -46,7 +41,6 @@ class QueueAutomator {
 
             if (!nextInLine) {
                 console.log(`[QueueAutomator] No 'waiting' vehicles found for route ${routeID} at station ${stationID}.`);
-                // Check if any exists with DIFFERENT status
                 const otherStatus = await Queue.find({ route: routeID, station: stationID });
                 console.log(`[QueueAutomator] DEBUG: Found ${otherStatus.length} total entries for this route. Statuses: ${otherStatus.map(o => o.status).join(', ')}`);
                 return { success: false, message: 'Queue is empty' };
@@ -58,18 +52,18 @@ class QueueAutomator {
                 return { success: false, message: 'Driver missing' };
             }
 
-            // 3. Get Route Details
+            // Get route details
             const routeDetails = await Route.findById(routeID);
             if (!routeDetails) return { success: false, message: 'Route not found' };
 
-            // 4. Create the Trip automatically
+            // Create trip
             const departureTime = new Date();
-            departureTime.setMinutes(departureTime.getMinutes() + 50); // Default 50 mins from now for boarding
+            departureTime.setMinutes(departureTime.getMinutes() + 50);
 
             const arrivalTime = new Date(departureTime);
 
-            // IMPROVED DURATION PARSING: Handle strings like "2h 30m" or "150"
-            let duration = 120; // Default 2 hours
+            // Parse duration
+            let duration = 120;
             if (routeDetails.estimatedDuration) {
                 const rawDuration = routeDetails.estimatedDuration.toString();
                 if (rawDuration.includes('h')) {
@@ -81,7 +75,7 @@ class QueueAutomator {
                 }
             }
 
-            // Ensure it meets the minimum validation of 15 minutes defined in Trip model
+            // Validate duration
             if (duration < 15) {
                 console.warn(`[QueueAutomator] duration ${duration} is too low. Adjusting to 15 mins minimum.`);
                 duration = 15;
@@ -89,7 +83,7 @@ class QueueAutomator {
 
             arrivalTime.setMinutes(arrivalTime.getMinutes() + duration);
 
-            // Robust capacity and price fallbacks
+            // Set trip details
             const finalCapacity = nextInLine.vehicle?.totalCapacity || 30;
             const finalPrice = routeDetails.basePrice || 100;
             const systemCreator = routeDetails.createdBy || nextInLine.driver?._id || nextInLine.driver;
@@ -107,12 +101,12 @@ class QueueAutomator {
                 totalSeats: finalCapacity,
                 station: stationID,
                 estimatedDuration: duration,
-                tripStatus: 'boarding', // Start directly in boarding status so passengers can book
+                tripStatus: 'boarding',
                 isActive: true,
                 createdBy: systemCreator
             });
 
-            // Generate trip number (simplified for now, can be improved)
+            // Generate trip number
             const count = await Trip.countDocuments();
             trip.tripNumber = `TRP-${Date.now().toString().slice(-6)}-${count + 1}`;
 
@@ -129,16 +123,16 @@ class QueueAutomator {
                 throw saveErr;
             }
 
-            // 5. Update Queue Entry Status
-            nextInLine.status = 'loading'; // Changed from waiting to loading
+            // Update queue
+            nextInLine.status = 'loading';
             await nextInLine.save();
 
-            // 6. Update Vehicle Status
+            // Update vehicle
             await Vehicle.findByIdAndUpdate(nextInLine.vehicle._id, {
                 currentStatus: 'boarding'
             });
 
-            // 7. Notify Driver
+            // Notify driver
             try {
                 await NotificationService.createNotification({
                     userID: nextInLine.driver._id,
@@ -168,18 +162,12 @@ class QueueAutomator {
         }
     }
 
-    /**
-     * Triggered when a trip is completed or cancelled, or when explicitly started by admin
-     */
+    // Triggered on trip update
     static async triggerNextTrip(routeID, stationID, createdBy) {
         return await this.processNextInQueue(routeID, stationID, createdBy);
     }
 
-    /**
-     * Path: backend/services/queueAutomator.js
-     * Automatically re-queues a vehicle at its ORIGIN station when a trip is completed.
-     * @param {Object} trip - The trip that was just completed
-     */
+    // Re-queue vehicle at origin
     static async reQueueVehicle(trip) {
         try {
             if (!trip || !trip.origin || !trip.route || !trip.vehicle) {
@@ -195,7 +183,7 @@ class QueueAutomator {
             const driverID = trip.driver?._id || trip.driver;
             const destinationID = trip.destination?._id || trip.destination;
 
-            // 1. Prevent duplicate entries at the origin
+            // Check existing queue
             const existing = await Queue.findOne({
                 vehicle: vehicleID,
                 station: originID,
@@ -207,7 +195,7 @@ class QueueAutomator {
                 return { success: false, message: 'Already in origin queue' };
             }
 
-            // 2. Calculate next position at the origin
+            // Get next position
             const lastEntry = await Queue.findOne({
                 station: originID,
                 route: routeID,
@@ -216,7 +204,7 @@ class QueueAutomator {
 
             const nextPosition = lastEntry ? lastEntry.queuePosition + 1 : 1;
 
-            // 3. Create new Queue Entry at ORIGIN
+            // Create queue entry
             const newQueueEntry = new Queue({
                 station: originID,
                 destination: destinationID,
@@ -231,7 +219,7 @@ class QueueAutomator {
             await newQueueEntry.save();
             console.log(`[QueueAutomator] SUCCESS: Vehicle ${vehicleID} is reset to Origin Queue (Pos: ${nextPosition})`);
 
-            // 4. Trigger the next trip at the origin station immediately
+            // Trigger next trip
             this.triggerNextTrip(routeID, originID, driverID).catch(err => {
                 console.error('[QueueAutomator] Auto-trigger after reset failed:', err);
             });
