@@ -1285,10 +1285,7 @@ export const getVehicleImages = async (req, res) => {
     }
 };
 
-/**
- * Get all active vehicles for the Public Landing Page Map
- * Returns only safe, non-private information
- */
+
 export const getPublicLiveVehicles = async (req, res) => {
     try {
         const vehicles = await Vehicle.find({

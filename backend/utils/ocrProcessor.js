@@ -2,7 +2,6 @@ import Tesseract from 'tesseract.js';
 
 class OCRProcessor {
     /**
-     * Process a CBE Receipt screenshot
      * @param {string} imagePath - Path to the image file
      * @returns {Promise<Object>} - Extracted data
      */

@@ -1,8 +1,4 @@
-/**
- * Public base URL of this API (no trailing slash).
- * Used for Chapa callback_url / return_url so redirects are not stuck on localhost
- * when BASE_URL was left as a dev default on a deployed host.
- */
+
 export function getPublicApiBaseUrl(req) {
     const strip = (s) => (s || '').trim().replace(/\/+$/, '');
     const isLocalHost = (urlOrHost) => /localhost|127\.0\.0\.1/i.test(urlOrHost || '');

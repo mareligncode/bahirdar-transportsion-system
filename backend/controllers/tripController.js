@@ -132,24 +132,19 @@ export const getAllTrips = async (req, res) => {
     try {
         const { status, origin, destination, page = 1, limit = 20 } = req.query;
 
-        // Build query based on user role
         let query = {};
 
-        // Station admin can only see their station's trips
         if (req.user.role === 'station_admin') {
             if (req.user.stationID) {
                 query.station = req.user.stationID;
             } else {
                 console.warn(`Station admin ${req.user._id} has no stationID assigned`);
-                // For unassigned station admin, return empty result to prevent unauthorized access
                 query.station = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
 
         // Driver can only see their trips
         if (req.user.role === 'driver') {
-
-            //leul
             query.driver = req.user.id;
         }
 
@@ -158,9 +153,6 @@ export const getAllTrips = async (req, res) => {
             query.isActive = true;
             query.tripStatus = { $in: ['scheduled', 'boarding'] };
             query.availableSeats = { $gt: 0 };
-
-            // Show trips that are either currently boarding (even if past time)
-            // or scheduled for the future. Also restrict to today onwards to avoid stale trips.
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
 
@@ -278,16 +270,7 @@ export const updateTrip = async (req, res) => {
             });
         }
 
-        // // Check permissions
-        // if (req.user.role === 'station_admin') {
-        //     const station = await Station.findOne({ manager: req.user._id });
-        //     if (!station || !trip.station.equals(station._id)) {
-        //         return res.status(403).json({
-        //             success: false,
-        //             message: 'Not authorized to update this trip'
-        //         });
-        //     }
-        // }
+       
 
         // Update trip fields
         const updates = req.body;

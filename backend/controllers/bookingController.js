@@ -155,26 +155,21 @@ export const getAllBookings = async (req, res) => {
     try {
         const { status, tripID, passengerID, page = 1, limit = 20 } = req.query;
 
-        // Build query based on user role
         let query = {};
 
-        // Station admin can only see their station's bookings
         if (req.user.role === 'station_admin') {
             if (req.user.stationID) {
                 query.stationID = req.user.stationID;
             } else {
                 console.warn(`Station admin ${req.user._id} has no stationID assigned`);
-                // For unassigned station admin, return empty result to prevent unauthorized access
                 query.stationID = new mongoose.Types.ObjectId('000000000000000000000000');
             }
         }
 
-        // Driver can only see their trip bookings
         if (req.user.role === 'driver') {
             query.driverID = req.user.id;
         }
 
-        // Passengers can only see their own bookings
         if (req.user.role === 'passenger') {
             query.passengerID = req.user.id;
         }

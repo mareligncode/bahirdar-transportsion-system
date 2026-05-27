@@ -968,9 +968,9 @@ export const refundPayment = async (req, res) => {
     }
 };
 
-/**
- * Record a manual cash payment (Station Admin / Super Admin only)
- */
+
+ // Record a manual cash payment (Station Admin / Super Admin only)
+ 
 export const recordCashPayment = async (req, res) => {
     try {
         const { bookingId, amount, notes } = req.body;
@@ -1057,9 +1057,9 @@ export const recordCashPayment = async (req, res) => {
         });
     }
 };
-/**
- * Verify CBE Bank Receipt Screenshot using OCR (Smart Review)
- */
+
+ // Verify CBE Bank Receipt Screenshot using OCR (Smart Review)
+ 
 export const verifyBankReceipt = async (req, res) => {
     try {
         const { bookingId } = req.body;
@@ -1221,9 +1221,9 @@ export const verifyBankReceipt = async (req, res) => {
     }
 };
 
-/**
- * Get payment instructions for a booking (CBE details)
- */
+
+  //Get payment instructions for a booking (CBE details)
+
 export const getPaymentInstructions = async (req, res) => {
     try {
         const { bookingId } = req.params;

@@ -6,9 +6,9 @@ import Route from '../models/Route.js';
 import QueueAutomator from '../services/queueAutomator.js';
 import NotificationService from '../services/notificationService.js';
 
-/**
- * Join the station queue (FOR A SPECIFIC DESTINATION)
- */
+
+ // Join the station queue (FOR A SPECIFIC DESTINATION)
+ 
 export const joinQueue = async (req, res) => {
     try {
         const { stationID, destinationID, routeID, vehicleID, driverID, notes } = req.body;
@@ -94,10 +94,9 @@ export const joinQueue = async (req, res) => {
             });
         }
 
-        // SMART AUTOMATION: If this is the FIRST vehicle in the queue and there is no active trip,
         // automatically trigger the creation of the first trip.
         if (newPosition === 1 && routeID) {
-            console.log(`🚀 Route ${routeID} has its first queue entry. Attempting to start the trip...`);
+            console.log(` Route ${routeID} has its first queue entry. Attempting to start the trip...`);
             QueueAutomator.triggerNextTrip(routeID, stationID, req.user.id)
                 .catch(err => console.error('Initial Automation Error:', err));
         }

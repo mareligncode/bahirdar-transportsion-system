@@ -31,11 +31,11 @@ export const authMiddleware = (requiredRoles = []) => {
                 });
             }
 
-            console.log('User role from DB:', user.role); // Add this
-            console.log('User role type:', typeof user.role); // Add this
+            console.log('User role from DB:', user.role); 
+            console.log('User role type:', typeof user.role); 
 
             if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
-                console.log('Role check failed. User role:', user.role, 'Required:', requiredRoles); // Add this
+                console.log('Role check failed. User role:', user.role, 'Required:', requiredRoles); 
                 return res.status(403).json({
                     success: false,
                     message: `User role ${user.role} is not authorized to access this route`
