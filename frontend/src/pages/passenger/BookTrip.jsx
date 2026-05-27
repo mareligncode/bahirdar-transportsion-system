@@ -19,7 +19,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  IconButton
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -606,13 +607,27 @@ export default function BookTrip() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
-          {t('Book Your Trip')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('Find and book your next journey with Bahir Dar Transport System')}
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+        {activeStep > 0 && (
+          <IconButton
+            onClick={handleBack}
+            sx={{
+              bgcolor: 'background.paper',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              '&:hover': { bgcolor: 'grey.100' }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+        )}
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
+            {t('Book Your Trip')}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {t('Find and book your next journey with Bahir Dar Transport System')}
+          </Typography>
+        </Box>
       </Box>
 
       <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
