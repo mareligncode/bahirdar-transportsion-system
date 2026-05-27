@@ -1,18 +1,10 @@
 import mongoose from 'mongoose';
 import User from '../models/Users.js';
 import Station from '../models/Station.js';
-
-/**
- * Migration script to convert stationID from String to ObjectId
- * This script handles the transition from the old schema to the new schema
- */
-
 async function migrateStationIds() {
     try {
         console.log('Starting station ID migration...');
-        
-        // Find all users with stationID as string
-        const usersWithStringStationIds = await User.find({
+                const usersWithStringStationIds = await User.find({
             stationID: { $type: 'string', $ne: '' }
         });
 
@@ -24,18 +16,14 @@ async function migrateStationIds() {
         for (const user of usersWithStringStationIds) {
             try {
                 const stationIdString = user.stationID;
-                
-                // Try to convert to ObjectId
-                if (!mongoose.Types.ObjectId.isValid(stationIdString)) {
+                                if (!mongoose.Types.ObjectId.isValid(stationIdString)) {
                     console.log(`Skipping user ${user._id} - invalid stationID format: ${stationIdString}`);
                     skippedCount++;
                     continue;
                 }
 
                 const stationObjectId = new mongoose.Types.ObjectId(stationIdString);
-                
-                // Verify the station exists
-                const station = await Station.findById(stationObjectId);
+                                const station = await Station.findById(stationObjectId);
                 if (!station) {
                     console.log(`Skipping user ${user._id} - station not found: ${stationIdString}`);
                     skippedCount++;

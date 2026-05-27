@@ -99,8 +99,6 @@ class NotificationService {
      * Get email template based on notification type
      */
     static getEmailTemplate(notification) {
-        // The user data should be populated when the notification is created
-        // But we'll use the metadata.userName if available, otherwise fall back to User model
         const userName = notification.metadata?.userName || 'Valued Customer';
 
         switch (notification.type) {

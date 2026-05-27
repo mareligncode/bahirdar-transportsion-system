@@ -21,7 +21,7 @@ class OCRProcessor {
             console.table({
                 'Confidence': `${confidence}%`,
                 'Transaction ID': parsedData.transactionID || ' NOT FOUND',
-                'Amount': parsedData.amount ? `ETB ${parsedData.amount}` : '❌ NOT FOUND',
+                'Amount': parsedData.amount ? `ETB ${parsedData.amount}` : ' NOT FOUND',
                 'Receiver': parsedData.receiverName || ' NOT FOUND',
                 'Date': parsedData.date || ' NOT FOUND'
             });
