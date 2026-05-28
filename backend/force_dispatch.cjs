@@ -6,9 +6,7 @@ async function run() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Connected to DB');
 
-        // Since the main code is ES Module, we might need a workaround or just mock the call
-        // Actually, I can just call the method if I import it.
-        // But dynamic import in CJS returns a promise.
+      
         const { default: QueueAutomator } = await import('./services/queueAutomator.js');
         
         const routeID = '69e9c35105b21a67f2ed0747'; // Bahir Dar - Gondar
