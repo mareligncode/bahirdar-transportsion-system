@@ -1304,9 +1304,9 @@ export const getPublicLiveVehicles = async (req, res) => {
     }
 };
 
-/**
- * Get the vehicle assigned to the current driver
- */
+
+ // Get the vehicle assigned to the current driver
+ 
 export const getMyVehicle = async (req, res) => {
     try {
         const vehicle = await Vehicle.findOne({ driverID: req.user.id })

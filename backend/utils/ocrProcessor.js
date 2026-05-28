@@ -68,7 +68,6 @@ class OCRProcessor {
 
         // 3. Look for Telebirr/other standard alphanumeric IDs
         if (!result.transactionID) {
-            // Find any 8-20 char word with BOTH letters and numbers
             const words = cleanText.split(/[^A-Z0-9]+/);
             for (const word of words) {
                 if (word.length >= 8 && word.length <= 20 && /[A-Z]/.test(word) && /[0-9]/.test(word)) {
@@ -81,7 +80,6 @@ class OCRProcessor {
         // 4. Last resort: Look for purely numeric IDs (like some bank references) between 8 and 15 digits
         if (!result.transactionID) {
             const numMatch = cleanText.match(/\b([0-9]{8,15})\b/);
-            // We ensure it doesn't match a date or phone number, but basic check is length
             if (numMatch && !numMatch[1].startsWith('09')) {
                 result.transactionID = numMatch[1];
             }

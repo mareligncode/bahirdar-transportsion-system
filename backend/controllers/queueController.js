@@ -203,9 +203,8 @@ export const leaveQueue = async (req, res) => {
     }
 };
 
-/**
- * Get the next vehicle for a specific route
- */
+ // Get the next vehicle for a specific route
+ 
 export const getNextVehicle = async (req, res) => {
     try {
         const { stationID } = req.params;
@@ -286,9 +285,9 @@ export const dispatchNextVehicle = async (req, res) => {
     }
 };
 
-/**
- * Reorder the queue within a specific route
- */
+
+ // Reorder the queue within a specific route
+ 
 export const reorderQueue = async (req, res) => {
     try {
         const { queueID } = req.params;
@@ -339,9 +338,9 @@ export const reorderQueue = async (req, res) => {
     }
 };
 
-/**
- * Get current queue status for the logged-in driver
- */
+
+ // Get current queue status for the logged-in driver
+ 
 export const getMyQueueStatus = async (req, res) => {
     try {
         const driverID = req.user.id;
