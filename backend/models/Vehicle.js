@@ -47,16 +47,19 @@ const vehicleSchema = new mongoose.Schema({
         min: [1980, 'Year must be 1980 or later'],
         max: [new Date().getFullYear() + 1, 'Year cannot be in the future']
     },
-    images: [{
-        url: String,
-        publicId: String,
-        fileName: String,
-        fileType: String,
-        fileSize: Number,
-        isPrimary: { type: Boolean, default: false },
-        position: String, // optional: for "front", "back", etc.
-        uploadedAt: { type: Date, default: Date.now }
-    }],
+    images: {
+        type: [{
+            url: String,
+            publicId: String,
+            fileName: String,
+            fileType: String,
+            fileSize: Number,
+            isPrimary: { type: Boolean, default: false },
+            position: String, // optional: for "front", "back", etc.
+            uploadedAt: { type: Date, default: Date.now }
+        }],
+        default: []
+    },
     color: {
         type: String,
         default: 'white'

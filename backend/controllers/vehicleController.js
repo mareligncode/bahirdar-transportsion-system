@@ -1060,39 +1060,33 @@ export const uploadVehicleImages = async (req, res) => {
             for (let i = 0; i < req.files.length; i++) {
                 const file = req.files[i];
 
-                try {
-                    const result = await new Promise((resolve, reject) => {
-                        const stream = cloudinary.uploader.upload_stream(
-                            {
-                                folder: process.env.CLOUDINARY_FOLDER || 'transport_system/vehicles',
-                                public_id: `vehicle_${vehicleId}_${Date.now()}_${i}`,
-                                resource_type: 'auto'
-                            },
-                            (error, result) => {
-                                if (error) reject(error);
-                                else resolve(result);
-                            }
-                        );
+                const result = await new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: process.env.CLOUDINARY_FOLDER || 'transport_system/vehicles',
+                            public_id: `vehicle_${vehicleId}_${Date.now()}_${i}`,
+                            resource_type: 'auto'
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
 
-                        stream.end(file.buffer);
-                    });
+                    stream.end(file.buffer);
+                });
 
-                    const imageData = {
-                        url: result.secure_url,
-                        publicId: result.public_id,
-                        fileName: file.originalname,
-                        fileType: file.mimetype,
-                        fileSize: file.size,
-                        isPrimary: vehicle.images.length === 0 && i === 0 // First image becomes primary
-                    };
+                const imageData = {
+                    url: result.secure_url,
+                    publicId: result.public_id,
+                    fileName: file.originalname,
+                    fileType: file.mimetype,
+                    fileSize: file.size,
+                    isPrimary: vehicle.images.length === 0 && i === 0 // First image becomes primary
+                };
 
-                    uploadedImages.push(imageData);
-                    vehicle.images.push(imageData);
-
-                } catch (cloudinaryError) {
-                    console.error('Cloudinary upload error:', cloudinaryError);
-                    continue;
-                }
+                uploadedImages.push(imageData);
+                vehicle.images.push(imageData);
             }
 
             await vehicle.save();
