@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { Booking, BookingCreateData, Trip } from '../types';
 import { useToast } from '../components/common/Toast';
 import { useAuthStore } from '../store/authStore';
+import { usePaymentStore } from '../store/paymentStore';
 
 export const useBooking = () => {
   const [loading, setLoading] = useState(false);
@@ -40,14 +41,24 @@ export const useBooking = () => {
     try {
       const response = await bookingsApi.getMyBookings();
       if (response.success) {
-        const enhancedBookings = response.data.map(booking => ({
-          ...booking,
-          seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
-          totalPrice: booking.totalPrice || booking.amount ||
-            (typeof booking.tripID === 'object' && booking.tripID?.price
-              ? booking.tripID.price * (booking.seatNumbers?.length || booking.seatNumber ? 1 : 0)
-              : 0)
-        }));
+        const payments = usePaymentStore.getState().payments;
+        const enhancedBookings = response.data.map(booking => {
+          const hasSuccessfulPayment = payments.some(p => 
+            (p.bookingID === booking._id || (typeof p.bookingID === 'object' && (p.bookingID as any)?._id === booking._id)) && 
+            p.paymentStatus === 'success'
+          );
+
+          return {
+            ...booking,
+            status: hasSuccessfulPayment && booking.status === 'pending' ? 'confirmed' : booking.status,
+            paymentStatus: hasSuccessfulPayment && (!booking.paymentStatus || booking.paymentStatus === 'pending') ? 'success' : booking.paymentStatus,
+            seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
+            totalPrice: booking.totalPrice || booking.amount ||
+              (typeof booking.tripID === 'object' && booking.tripID?.price
+                ? booking.tripID.price * (booking.seatNumbers?.length || booking.seatNumber ? 1 : 0)
+                : 0)
+          };
+        });
         setBookings(enhancedBookings);
       }
     } catch (err: any) {
@@ -82,14 +93,24 @@ export const useBooking = () => {
     try {
       const response = await bookingsApi.getMyBookings();
       if (response.success) {
-        const enhancedBookings = response.data.map(booking => ({
-          ...booking,
-          seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
-          totalPrice: booking.totalPrice || booking.amount ||
-            (typeof booking.tripID === 'object' && booking.tripID?.price
-              ? booking.tripID.price * (booking.seatNumbers?.length || (booking.seatNumber ? 1 : 0))
-              : 0)
-        }));
+        const payments = usePaymentStore.getState().payments;
+        const enhancedBookings = response.data.map(booking => {
+          const hasSuccessfulPayment = payments.some(p => 
+            (p.bookingID === booking._id || (typeof p.bookingID === 'object' && (p.bookingID as any)?._id === booking._id)) && 
+            p.paymentStatus === 'success'
+          );
+
+          return {
+            ...booking,
+            status: hasSuccessfulPayment && booking.status === 'pending' ? 'confirmed' : booking.status,
+            paymentStatus: hasSuccessfulPayment && (!booking.paymentStatus || booking.paymentStatus === 'pending') ? 'success' : booking.paymentStatus,
+            seatNumbers: booking.seatNumbers || (booking.seatNumber ? [booking.seatNumber] : []),
+            totalPrice: booking.totalPrice || booking.amount ||
+              (typeof booking.tripID === 'object' && booking.tripID?.price
+                ? booking.tripID.price * (booking.seatNumbers?.length || (booking.seatNumber ? 1 : 0))
+                : 0)
+          };
+        });
         setBookings(enhancedBookings);
         return enhancedBookings;
       }
@@ -246,8 +267,16 @@ export const useBooking = () => {
           totalPrice = data.tripID.price * (data.seatNumbers?.length || 1);
         }
 
+        const payments = usePaymentStore.getState().payments;
+        const hasSuccessfulPayment = payments.some(p => 
+          (p.bookingID === data._id || (typeof p.bookingID === 'object' && (p.bookingID as any)?._id === data._id)) && 
+          p.paymentStatus === 'success'
+        );
+
         const enhancedBooking = {
           ...data,
+          status: hasSuccessfulPayment && data.status === 'pending' ? 'confirmed' : data.status,
+          paymentStatus: hasSuccessfulPayment && (!data.paymentStatus || data.paymentStatus === 'pending') ? 'success' : data.paymentStatus,
           seatNumbers: data.seatNumbers,
           totalPrice: totalPrice,
           pricePerSeat: data.pricePerSeat || (totalPrice / (data.seatNumbers?.length || 1))

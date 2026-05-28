@@ -28,6 +28,7 @@ import { AppText } from '../../../components/common/AppText';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useTheme } from '../../../context/ThemeContext';
 import ReceiptUpload from '../../../components/payment/ReceiptUpload';
+import { usePaymentStore } from '../../../store/paymentStore';
 
 type PaymentMethodType = 'mobile_money' | 'card' | 'bank_transfer' | 'cash';
 
@@ -295,6 +296,22 @@ export default function PaymentCheckoutScreen() {
       console.log('✅ Payment success detected from URL:', url);
       setShowWebView(false);
       setPaymentCompleted(true);
+      
+      const { addPayment } = usePaymentStore.getState();
+      parsedBookingIds.forEach((id: string) => {
+        addPayment({
+          _id: globalTxRef || 'opt_' + Date.now().toString(),
+          bookingID: id,
+          paymentStatus: 'success',
+          amount: totalAmount,
+          currency: 'ETB',
+          paymentMethod: selectedMethod,
+          paymentGateway: 'chapa',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        } as any);
+      });
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast(translate('success'), 'success');
 
