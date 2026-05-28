@@ -116,10 +116,7 @@ export const joinQueue = async (req, res) => {
         });
     }
 };
-
-/**
- * Get vehicles waiting for a specific destination from a station
- */
+ // Get vehicles waiting for a specific destination from a station
 export const getQueueByStation = async (req, res) => {
     try {
         const { stationID } = req.params;
@@ -156,9 +153,7 @@ export const getQueueByStation = async (req, res) => {
     }
 };
 
-/**
- * Remove a vehicle from the route queue
- */
+ // Remove a vehicle from the route queue
 export const leaveQueue = async (req, res) => {
     try {
         const { queueID } = req.params;
@@ -242,9 +237,9 @@ export const getNextVehicle = async (req, res) => {
     }
 };
 
-/**
- * ACTUALLY dispatch the next vehicle (trigger Trip creation)
- */
+
+ // ACTUALLY dispatch the next vehicle (trigger Trip creation)
+
 export const dispatchNextVehicle = async (req, res) => {
     try {
         const { stationID } = req.params;
