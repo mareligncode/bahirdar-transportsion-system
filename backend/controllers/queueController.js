@@ -162,7 +162,7 @@ export const getQueueByStation = async (req, res) => {
 export const leaveQueue = async (req, res) => {
     try {
         const { queueID } = req.params;
-        const { reason } = req.body;
+        const { reason } = req.body || {};
 
         const queueItem = await Queue.findById(queueID);
         if (!queueItem) {

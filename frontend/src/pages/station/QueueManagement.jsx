@@ -137,7 +137,7 @@ const QueueManagement = () => {
         if (!window.confirm('Remove this vehicle from the queue?')) return;
 
         try {
-            const response = await api.post(`/api/queue/leave/${queueID}`);
+            const response = await api.post(`/api/queue/leave/${queueID}`, {});
             if (response.data.success) {
                 toast.success('Vehicle removed from queue');
                 fetchQueue();

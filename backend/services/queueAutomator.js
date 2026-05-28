@@ -58,7 +58,7 @@ class QueueAutomator {
 
             // Create trip
             const departureTime = new Date();
-            departureTime.setMinutes(departureTime.getMinutes() + 50);
+            departureTime.setMinutes(departureTime.getMinutes() + 120);
 
             const arrivalTime = new Date(departureTime);
 

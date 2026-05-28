@@ -126,7 +126,7 @@ const DriverQueue = () => {
         if (!window.confirm(t('Are you sure you want to leave the queue? You will lose your position!'))) return;
 
         try {
-            const response = await api.post(`/api/queue/leave/${queueID}`);
+            const response = await api.post(`/api/queue/leave/${queueID}`, {});
             if (response.data.success) {
                 toast.success(t('You have left the queue'));
                 setInQueue(false);
