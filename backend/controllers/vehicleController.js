@@ -1319,10 +1319,10 @@ export const getMyVehicle = async (req, res) => {
             });
         }
 
-        res.status(200).json({
-            success: true,
-            data: vehicle
-        });
+            res.status(200).json({
+                success: true,
+                data: { vehicle }
+            });
     } catch (error) {
         console.error('Get my vehicle error:', error);
         res.status(500).json({
