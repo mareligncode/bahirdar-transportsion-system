@@ -653,6 +653,34 @@ export const updateTripStatus = async (req, res) => {
                     }));
                 }
 
+                // 🚗 Notify driver if trip is ongoing
+                if (status === 'ongoing' && trip.driver) {
+                    try {
+                        await NotificationService.createNotification({
+                            userID: trip.driver._id || trip.driver,
+                            title: 'Trip Started: All Set!',
+                            message: `Your trip ${trip.tripNumber} to ${trip.destination?.stationName || 'your destination'} is now ongoing. Have a safe journey!`,
+                            type: 'trip_update',
+                            channel: 'all',
+                            priority: 'high',
+                            metadata: {
+                                userName: trip.driver.fullName || 'Driver',
+                                trip: {
+                                    tripNumber: trip.tripNumber,
+                                    origin: trip.origin?.stationName,
+                                    destination: trip.destination?.stationName,
+                                    departureTime: trip.departureTime,
+                                    status
+                                },
+                                actionURL: `${process.env.CLIENT_URL}/dashboard/driver`,
+                                actionText: 'View Dashboard'
+                            }
+                        });
+                    } catch (err) {
+                        console.error(`Failed to notify driver ${trip.driver._id || trip.driver}:`, err);
+                    }
+                }
+
                 // 🚀 Queue Automation & Circular Logic
                 if (status === 'ongoing') {
                     // Update queue status to on_trip when trip starts
