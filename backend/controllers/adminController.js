@@ -1,5 +1,5 @@
 import User from '../models/Users.js';
-
+//selam   
 export const changeUserRole = async (req, res) => {
     try {
         const { userId, newRole } = req.body;
@@ -10,7 +10,7 @@ export const changeUserRole = async (req, res) => {
                 message: 'Only super admin can change user roles'
             });
         }
-
+///ssssss
         const validRoles = ['passenger', 'driver', 'station_admin', 'super_admin'];
         if (!validRoles.includes(newRole)) {
             return res.status(400).json({
